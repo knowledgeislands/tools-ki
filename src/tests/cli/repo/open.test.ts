@@ -16,6 +16,7 @@ const localRegistry = (
     readonly path: string
     readonly sources?: string
     readonly legacy?: string
+    readonly absent?: readonly string[]
   }[]
 ): string =>
   [
@@ -26,6 +27,7 @@ const localRegistry = (
       `[repositories.${JSON.stringify(entry.key)}]`,
       `repository = ${JSON.stringify(entry.repository)}`,
       `path = ${JSON.stringify(entry.path)}`,
+      ...(entry.absent ? [`absent_stores = ${JSON.stringify(entry.absent)}`] : []),
       ...(entry.sources || entry.legacy
         ? [
             '',
@@ -64,7 +66,7 @@ describe('[ki repo open]', () => {
     expect(calls).toEqual(['zed -n', `zed -e ${notes}`, `zed -e ${sources}`, `zed -e ${legacy}`])
   })
 
-  test('opens only canonical notes roots with --no-stores and requires a complete binding otherwise', async () => {
+  test('opens only canonical notes roots with --no-stores and warns about an unbound store otherwise', async () => {
     const box = await sandbox()
     const notes = await realpath(box.project.path)
     await box.project.write('.ki.toml', repositoryConfiguration('https://github.com/example/knowledge', true))
@@ -79,10 +81,42 @@ describe('[ki repo open]', () => {
       output: 'ki repo open --target vscode: opened 1 repositories\n'
     })
     expect(calls).toEqual([`code --new-window ${notes}`])
-    expect(await box.run('ki repo open --target vscode')).toEqual({
-      exitCode: 1,
-      output: `ki: error: Knowledge Base ${notes} has an unavailable declared store: declared sources store is not bound; run ki repo --repo ${notes} store list\n`
+    const unbound = await box.run('ki repo open --target vscode')
+    expect(unbound.exitCode).toBe(0)
+    expect(unbound.stderr).toBe(
+      `ki: warning: Knowledge Base ${notes} opens without its sources store, unavailable on this host (not bound); fix: ki repo --repo ${notes} store bind sources <absolute-path> --write, or ki repo --repo ${notes} store absent sources --write\n`
+    )
+    expect(calls).toEqual([`code --new-window ${notes}`, `code --new-window ${notes}`])
+  })
+
+  test('opens a Knowledge Base with a missing store and one with an absent store, warning only for the missing one', async () => {
+    const box = await sandbox()
+    const first = await realpath(box.project.path)
+    const second = await box.root.mkdir('second')
+    const secondSources = await box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-second')
+    await box.project.write('.ki.toml', repositoryConfiguration('https://github.com/example/first', true))
+    await box.root.write('second/.ki.toml', repositoryConfiguration('https://github.com/example/second', true))
+    await box.state.write(
+      'ki/registry.toml',
+      localRegistry([
+        { key: 'second', repository: 'https://github.com/example/second', path: second },
+        { key: 'project', repository: 'https://github.com/example/first', path: first, absent: ['sources'] }
+      ])
+    )
+    const calls: string[] = []
+    box.setRunner(async (command, arguments_) => {
+      calls.push(`${command} ${arguments_.join(' ')}`)
+      return { exitCode: 0, output: '' }
     })
+
+    const opened = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'open', '--target', 'vscode'])
+
+    expect(opened.exitCode).toBe(0)
+    expect(opened.stdout).toBe('ki repo open --target vscode: opened 2 repositories\n')
+    expect(opened.stderr).toBe(
+      `ki: warning: Knowledge Base ${second} opens without its sources store, unavailable on this host (not bound); fix: ki repo --repo ${second} store bind sources ${secondSources} --write, or ki repo --repo ${second} store absent sources --write\n`
+    )
+    expect(calls).toEqual([`code --new-window ${first} ${second}`])
   })
 
   test('opens repository roots in Delta without local stores and rejects an explicit store request', async () => {
@@ -107,7 +141,7 @@ describe('[ki repo open]', () => {
     expect(calls).toHaveLength(1)
   })
 
-  test('preserves notes-then-sources ordering across selected repositories and rejects unsafe source bindings', async () => {
+  test('preserves notes-then-sources ordering across selected repositories and skips unsafe source bindings', async () => {
     const box = await sandbox()
     const first = await realpath(box.project.path)
     const second = await box.root.mkdir('second')
@@ -145,10 +179,12 @@ describe('[ki repo open]', () => {
         { key: 'project', repository: 'https://github.com/example/first', path: first, sources: firstSources }
       ])
     )
-    expect(await box.run(['ki', 'repo', '--repo', second, 'open', '--target', 'vscode'])).toEqual({
-      exitCode: 1,
-      output: `ki: error: Knowledge Base ${second} has an unavailable declared store: sources store must be an existing direct directory; run ki repo --repo ${second} store list\n`
-    })
+    const linked = await box.run(['ki', 'repo', '--repo', second, 'open', '--target', 'vscode'])
+    expect(linked.exitCode).toBe(0)
+    expect(linked.stderr).toContain(
+      `opens without its sources store, unavailable on this host (sources store must be an existing direct directory); fix: ki repo --repo ${second} store bind sources`
+    )
+    expect(calls.at(-1)).toBe(`code --new-window ${second}`)
   })
 
   test('rejects conflicting store switches and unsupported targets', async () => {

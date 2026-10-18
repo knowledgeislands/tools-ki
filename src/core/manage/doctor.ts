@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 
-export type ManageCheckStatus = 'pass' | 'fail' | 'skip'
+export type ManageCheckStatus = 'pass' | 'warn' | 'fail' | 'skip'
 export type ManageSupportedRuntime = 'claude-code' | 'claude-desktop' | 'chatgpt-codex'
 
 export interface ManageDoctorCheck {
@@ -43,6 +43,17 @@ export interface ManageLocalHarness {
   readonly skills: readonly { readonly name: string; readonly source: string }[]
 }
 
+/** One declared external store of a registered Knowledge Base, as this host sees it. */
+export type ManageStoreState =
+  | { readonly repository: string; readonly role: string; readonly state: 'available' | 'absent' }
+  | {
+      readonly repository: string
+      readonly role: string
+      readonly state: 'unavailable'
+      readonly reason: string
+      readonly fix: string
+    }
+
 export interface ManagePathState {
   readonly isDirectory: () => boolean
   readonly isFile: () => boolean
@@ -58,6 +69,7 @@ export interface ManageDoctorPort {
   readonly readRepositorySkills: (path: string) => Promise<readonly unknown[]>
   readonly lstat: (path: string) => Promise<ManagePathState | undefined>
   readonly realpath: (path: string) => Promise<string | undefined>
+  readonly inspectStores: () => Promise<readonly ManageStoreState[]>
 }
 
 export interface ManageDoctorOptions {
@@ -114,6 +126,27 @@ const managedLink = async (
   return { link: true, target: await port.realpath(path) }
 }
 
+/** A warning per unavailable store, else one pass; a host with no declared stores has nothing to report. */
+const storeChecks = async (port: ManageDoctorPort): Promise<readonly ManageDoctorCheck[]> => {
+  let stores: readonly ManageStoreState[]
+  try {
+    stores = await port.inspectStores()
+  } catch (error) {
+    return [{ status: 'skip', label: 'Stores', detail: (error as Error).message }]
+  }
+  if (!stores.length) return []
+  const unavailable = stores.flatMap((store) => (store.state === 'unavailable' ? [store] : []))
+  if (!unavailable.length)
+    return [
+      { status: 'pass', label: 'Stores', detail: `${stores.length} declared stores available or absent by choice` }
+    ]
+  return unavailable.map((store) => ({
+    status: 'warn',
+    label: `Store ${store.role} of ${store.repository}`,
+    detail: `unavailable on this host (${store.reason}); fix: ${store.fix}`
+  }))
+}
+
 export const inspectManageDoctor = async (
   port: ManageDoctorPort,
   options: ManageDoctorOptions
@@ -151,6 +184,8 @@ export const inspectManageDoctor = async (
   } catch (error) {
     checks.push({ status: 'fail', label: 'Harness inventory', detail: (error as Error).message })
   }
+
+  checks.push(...(await storeChecks(port)))
 
   if (configuration.state !== 'valid') {
     checks.push({ status: 'skip', label: 'Agents', detail: 'configuration is not valid' })

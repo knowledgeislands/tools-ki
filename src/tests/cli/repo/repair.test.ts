@@ -237,7 +237,7 @@ describe('[ki repo repair]', () => {
     expect(repair.exitCode).toBe(0)
     expect(repair.output).toContain(`Registry: registered ${root}`)
     expect(repair.output).toContain(
-      `! Store: sources store is unavailable on this host (not bound); commands that need originals will fail; run ki repo --repo ${root} store list`
+      `! Store: sources store is unavailable on this host (not bound); commands that need originals will fail; fix: ki repo --repo ${root} store bind sources <absolute-path> --write, or ki repo --repo ${root} store absent sources --write`
     )
     expect(repair.output).not.toContain('Registry: complete')
     expect(repair.output).toContain('summary: REPOSITORIES=1 RESULT=PASS')
@@ -284,6 +284,19 @@ describe('[ki repo repair]', () => {
     expect(repair.exitCode).toBe(0)
     expect(repair.output).toContain(`Registry: complete ${root}`)
     expect(repair.output).not.toContain('! Store:')
+  })
+
+  test('reports a store marked absent on this host as information without a warning', async () => {
+    const box = await preparedKnowledgeBase()
+    const root = await realpath(box.project.path)
+    await box.state.write('ki/registry.toml', `${knowledgeBaseRegistry(root)}absent_stores = ["sources"]\n`)
+
+    const repair = await box.run('ki repo repair')
+
+    expect(repair.exitCode).toBe(0)
+    expect(repair.output).toContain('i Store: sources store is absent on this host by choice')
+    expect(repair.output).not.toContain('! Store:')
+    expect(repair.output).toContain(`Registry: complete ${root}`)
   })
 
   test('replays the CI sequence for a Knowledge Base whose store is absent from the runner', async () => {

@@ -14,10 +14,15 @@ import { registryEntry } from './local-registry.ts'
 import type { ExternalStoreRole } from './local-stores.ts'
 import { repositoryStoreDirectory } from './local-stores.ts'
 
+/** Whether a store can be used on this host: a bound store is available or not, an unbound one absent by choice or missing. */
+export type RepositoryStoreAvailability = 'available' | 'unavailable' | 'absent' | 'missing'
+
 export interface RepositoryStoreBinding {
   readonly role: KnowledgeBaseStoreRole
   readonly path?: string
   readonly state: 'bound' | 'unbound'
+  readonly availability: RepositoryStoreAvailability
+  readonly reason?: string
 }
 
 export interface RepositoryStoreInventory {
@@ -29,21 +34,60 @@ export interface RepositoryStoreInventory {
 export const externalStoreRoles = (roles: readonly KnowledgeBaseStoreRole[]): readonly ExternalStoreRole[] =>
   roles.filter((role): role is ExternalStoreRole => role !== 'notes')
 
-export const repositoryStoreInventory = (
+export const repositoryStoreInventory = async (
   root: string,
   identity: string,
   roles: readonly KnowledgeBaseStoreRole[],
   entries: readonly LocalRegistryEntry[]
-): RepositoryStoreInventory => {
+): Promise<RepositoryStoreInventory> => {
   const entry = entries.find((candidate) => candidate.repository === identity && candidate.path === root)
-  return {
-    repository: root,
-    identity,
-    stores: roles.map((role) => {
-      const path = role === 'notes' ? root : entry?.stores?.[role]
-      return { role, ...(path ? { path } : {}), state: path ? 'bound' : 'unbound' }
-    })
+  const stores: RepositoryStoreBinding[] = []
+  for (const role of roles) {
+    if (role === 'notes') {
+      stores.push({ role, path: root, state: 'bound', availability: 'available' })
+      continue
+    }
+    const path = entry?.stores?.[role]
+    if (!path) {
+      stores.push({ role, state: 'unbound', availability: entry?.absentStores?.includes(role) ? 'absent' : 'missing' })
+      continue
+    }
+    stores.push(
+      await repositoryStoreDirectory(role, path).then(
+        () => ({ role, path, state: 'bound' as const, availability: 'available' as const }),
+        (error: Error) => ({
+          role,
+          path,
+          state: 'bound' as const,
+          availability: 'unavailable' as const,
+          reason: error.message
+        })
+      )
+    )
   }
+  return { repository: root, identity, stores }
+}
+
+/**
+ * The commands that settle an unavailable or missing store: bind it, naming the path when exactly one
+ * conventional folder matches, or record that this host does without it.
+ */
+export const storeFix = (root: string, role: ExternalStoreRole, candidates: readonly string[]): string =>
+  `ki repo --repo ${root} store bind ${role} ${candidates.length === 1 ? candidates[0] : '<absolute-path>'} --write, or ki repo --repo ${root} store absent ${role} --write`
+
+/** Existing conventional `sources-<name>` folders for the given names; only the sources role has a convention. */
+export const conventionalStoreCandidates = async (
+  homeDirectory: string,
+  role: ExternalStoreRole,
+  names: readonly string[]
+): Promise<readonly string[]> => {
+  if (role !== 'sources') return []
+  const candidates: string[] = []
+  for (const path of new Set(names.map((name) => conventionalSourcesStore(homeDirectory, name)))) {
+    const state = await lstat(path).catch(() => undefined)
+    if (state?.isDirectory() && !state.isSymbolicLink()) candidates.push(path)
+  }
+  return candidates
 }
 
 export const registryEntryForRepository = (
@@ -62,8 +106,31 @@ export const bindRepositoryStore = (
   entries: readonly LocalRegistryEntry[]
 ): LocalRegistryEntry => {
   const base = registryEntryForRepository(root, identity, entries)
-  return { ...base, stores: { ...base.stores, [role]: path } }
+  return withAbsentStores({ ...base, stores: { ...base.stores, [role]: path } }, (roles) =>
+    roles.filter((candidate) => candidate !== role)
+  )
 }
+
+const withAbsentStores = (
+  entry: LocalRegistryEntry,
+  change: (roles: readonly ExternalStoreRole[]) => readonly ExternalStoreRole[]
+): LocalRegistryEntry => {
+  const roles = [...change(entry.absentStores ?? [])].sort()
+  const { absentStores: _, ...rest } = entry
+  return roles.length ? { ...rest, absentStores: roles } : rest
+}
+
+/** Record, or with `clear` remove, that this host deliberately does without an unbound store. */
+export const markRepositoryStoreAbsent = (
+  root: string,
+  identity: string,
+  role: ExternalStoreRole,
+  clear: boolean,
+  entries: readonly LocalRegistryEntry[]
+): LocalRegistryEntry =>
+  withAbsentStores(registryEntryForRepository(root, identity, entries), (roles) =>
+    clear ? roles.filter((candidate) => candidate !== role) : [...new Set([...roles, role])]
+  )
 
 export const unbindRepositoryStore = (
   root: string,
@@ -170,11 +237,12 @@ const inspectSourcesStore = async (
   }
 }
 
-export const managedSourcesStore = async (homeDirectory: string, name: string): Promise<string> => {
+/** The managed store path; where the OneDrive root is missing the refusal names `fix`, the routes that remain. */
+export const managedSourcesStore = async (homeDirectory: string, name: string, fix: string): Promise<string> => {
   const root = sourcesStoreRoot(homeDirectory)
   const state = await lstat(root).catch(() => undefined)
   if (!state?.isDirectory() || state.isSymbolicLink())
-    throw new KiError(`OneDrive source-store root is unavailable: ${root}`, 1)
+    throw new KiError(`OneDrive source-store root is unavailable: ${root}; fix: ${fix}`, 1)
   const path = conventionalSourcesStore(homeDirectory, name)
   const store = await lstat(path).catch(() => undefined)
   if (store && (!store.isDirectory() || store.isSymbolicLink()))

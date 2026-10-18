@@ -73,7 +73,7 @@
         },
         {
           "invocation": "ki doctor",
-          "description": "Check the user configuration, configured agent skill directories, installed harnesses, and configured KI user-skill links without changing state. It also reports direct-CWD legacy .ki-meta/ and .ki/ directories, without searching for or operating on a repository. It validates a regular direct-CWD .ki.toml declaration without resolving its providers. A failing check produces a non-zero exit status after the complete report. Report the same context as diag, the read-only scope, verdict, and pass/warn/fail/skipped counts. Health does not imply package or release freshness."
+          "description": "Check the user configuration, configured agent skill directories, installed harnesses, and configured KI user-skill links without changing state. It also reports direct-CWD legacy .ki-meta/ and .ki/ directories, without searching for or operating on a repository. It validates a regular direct-CWD .ki.toml declaration without resolving its providers. For every registered Knowledge Base it warns once per declared external store that is unavailable on this host, naming its fix, and passes when every declared store is available or marked absent; a warning never changes the exit status. A failing check produces a non-zero exit status after the complete report. Report the same context as diag, the read-only scope, verdict, and pass/warn/fail/skipped counts. Health does not imply package or release freshness."
         },
         {
           "invocation": "ki repair [--apply | --dry-run]",
@@ -113,7 +113,7 @@
         },
         {
           "invocation": "ki vscode check",
-          "description": "Compare chezmoi-managed VS Code workspaces and trusted-folder source state with the local KI repository registry. Explicit sources bindings join their notes workspace and trusted-client projection; legacy bindings and unbound directories are ignored. Preview removal of folder paths that no longer resolve to directories and deletion of projects with no live folders. Existing projects outside the registry and intentionally empty workspaces are preserved. Missing registered checkouts are skipped without changing the registry. Report a source diff and exit non-zero when drift exists. This command never writes."
+          "description": "Compare chezmoi-managed VS Code workspaces and trusted-folder source state with the local KI repository registry. Explicit sources bindings join their notes workspace and trusted-client projection; a bound sources folder missing on this host is left out with a warning naming its fix. Legacy bindings and unbound directories are ignored. Preview removal of folder paths that no longer resolve to directories and deletion of projects with no live folders. Existing projects outside the registry and intentionally empty workspaces are preserved. Missing registered checkouts are skipped without changing the registry. Report a source diff and exit non-zero when drift exists. This command never writes."
         },
         {
           "invocation": "ki vscode sync [--write]",
@@ -171,7 +171,7 @@
         },
         {
           "invocation": "ki repo [repo-options] open --target <zed|vscode|delta> [--stores|--no-stores]",
-          "description": "Open every selected canonical repository in the requested local target. By default, a Knowledge Base opens its notes root followed by every declared, locally bound external store in declaration order. Each binding must be a direct directory recorded with the canonical repository; it is never made an estate member or territory participant. --no-stores opens canonical notes roots only, while --stores makes the default explicit. Delta opens repository roots only; it skips stores by default and rejects --stores. Delta's documented project flow stores repository and thread data on its servers even when using a local model."
+          "description": "Open every selected canonical repository in the requested local target. By default, a Knowledge Base opens its notes root followed by every declared, locally bound external store in declaration order. Each binding must be a direct directory recorded with the canonical repository; it is never made an estate member or territory participant. A store unavailable on this host is skipped with one warning naming its fix, a store marked absent is skipped silently, and the rest still open. --no-stores opens canonical notes roots only, while --stores makes the default explicit. Delta opens repository roots only; it skips stores by default and rejects --stores. Delta's documented project flow stores repository and thread data on its servers even when using a local model."
         },
         {
           "invocation": "ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>] [--staged] [--paths <path...>]",
@@ -211,7 +211,7 @@
         },
         {
           "invocation": "ki repo [repo-options] store list [--format <text|json>]",
-          "description": "List every store role declared by selected Knowledge Bases. The notes role is the repository root; external roles show their explicit machine-local path or unbound state. JSON emits the versioned ki/repository-stores/v1 contract."
+          "description": "List every store role declared by selected Knowledge Bases. The notes role is the repository root; external roles show their explicit machine-local path or unbound state and their availability on this host: a bound store is available or unavailable, with its reason, and an unbound one is absent by choice or missing. Unavailable and missing stores name their fix: the bind command, with the path filled in when exactly one conventional sources-<name> folder exists, or the absent command. JSON emits the versioned ki/repository-stores/v1 contract, whose state stays bound or unbound and which adds availability and reason."
         },
         {
           "invocation": "ki repo [repo-options] store scan",
@@ -219,15 +219,19 @@
         },
         {
           "invocation": "ki repo [repo-options] store create sources [--write]",
-          "description": "Preview the conventional opt-in OneDrive sources-<name> directory and registry binding. The name is the repository basename, or a territory Capital's canonical handle: its territory_prefix, else its registry key. A Capital with neither fails. With --write, create and bind it. Automatic creation is unavailable for legacy."
+          "description": "Preview the conventional opt-in OneDrive sources-<name> directory and registry binding. The name is the repository basename, or a territory Capital's canonical handle: its territory_prefix, else its registry key. A Capital with neither fails. With --write, create and bind it. Automatic creation is unavailable for legacy. Where the OneDrive root does not exist, as off macOS, it refuses and names the two remaining routes: bind an existing directory, or mark the store absent on this host."
         },
         {
           "invocation": "ki repo [repo-options] store bind <sources|legacy> <absolute-path> [--write]",
-          "description": "Preview an explicit binding for one declared external store. The path must be an existing absolute direct directory. With --write, publish the binding to the machine-local registry."
+          "description": "Preview an explicit binding for one declared external store. The path must be an existing absolute direct directory. With --write, publish the binding to the machine-local registry, clearing any absence marker for the role."
         },
         {
           "invocation": "ki repo [repo-options] store unbind <sources|legacy> [--write]",
-          "description": "Preview removal of one declared external-store binding. With --write, publish the registry change without deleting or modifying store content."
+          "description": "Preview removal of one declared external-store binding. With --write, publish the registry change without deleting or modifying store content. An absence marker is left unchanged."
+        },
+        {
+          "invocation": "ki repo [repo-options] store absent <sources|legacy> [--clear] [--write]",
+          "description": "Preview recording, in the machine-local registry entry's absent_stores, that this host deliberately does without one declared external store. A marked store is reported once as information and draws no warning. A bound role is refused until it is unbound; notes is refused. --clear removes the marker. With --write, publish the change."
         },
         {
           "invocation": "ki repo [repo-options] educate [--skill <skill>]",
@@ -239,7 +243,7 @@
         },
         {
           "invocation": "ki repo [repo-options] repair [--dry-run]",
-          "description": "Record each selected physical repository root in the local user register, then reconcile only missing, dangling, or stale KI-managed compatible projections. It never creates a declaration, adds an undeclared skill, overwrites foreign content, guesses a provider or runtime, or follows a symbolic declaration. The command writes by default. --dry-run reports the same actions without creating state directories or changing disk state. Store mutations and VS Code sync instead preview by default and require --write."
+          "description": "Record each selected physical repository root in the local user register, then reconcile only missing, dangling, or stale KI-managed compatible projections. It never creates a declaration, adds an undeclared skill, overwrites foreign content, guesses a provider or runtime, or follows a symbolic declaration. A Knowledge Base's declared external store that is unavailable on this host is a warning naming its fix, and one marked absent is reported as information; neither fails the repair. The command writes by default. --dry-run reports the same actions without creating state directories or changing disk state. Store mutations and VS Code sync instead preview by default and require --write."
         },
         {
           "invocation": "ki repo [repo-options] skill add <skill> [--replace]",

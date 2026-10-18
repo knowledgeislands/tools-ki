@@ -6,13 +6,13 @@ project: tools-burndown
 purpose: corrective
 kind: deliver
 component: repo
-horizon: next
-status: ready
+horizon: now
+status: awaiting-review
 blocks: [KI-TOOL-KI-CLI-136]
 blocked_by: [KI-TOOL-KI-CLI-126]
-baseline_ref: null
+baseline_ref: 314da867d09a7283ffc1e9574999284ea4466d3f
 created_at: 2026-10-14T20:57:30Z
-updated_at: 2026-10-18T05:50:00Z
+updated_at: 2026-10-18T06:05:00Z
 ---
 
 # Host-Absent Store State
@@ -59,17 +59,17 @@ Read at `46392f1a` on 16 October 2026.
 
 ## Steps
 
-- [ ] Registry: add `absent_stores` to `LocalRegistryEntry`, its validator (array of declared external role names, no duplicates, no role also in `stores`) and its TOML writer in `src/core/storage/local-registry.ts`.
-- [ ] Core: extend `knowledgeBaseStoreAvailability` to return `absent` for a marked role, and add a pure `storeFix(root, role, candidates)` in `src/core/storage/repository-stores.ts` that names the bind command, filling the path when exactly one conventional folder exists, else `<absolute-path>`, and the `store absent` alternative.
-- [ ] Core: `repositoryStoreInventory` gains `availability` and `reason`, checking bound paths with `repositoryStoreDirectory`; export through `src/core/storage/index.ts`.
-- [ ] Command: add `ki repo store absent <role> [--clear] [--write]` in `src/commands/repo/store.ts`, previewing without `--write`, refusing a bound role ("unbind it first") and `notes`; `store unbind` leaves the marker alone.
-- [ ] Command: `store list` text and JSON per Decision 5; `store create` refusal per Decision 3.
-- [ ] `ki repo open`: use the availability helper; skip unavailable, missing and absent stores, print one warning per unavailable or missing store with its fix, and open the rest.
-- [ ] VS Code workspace (`src/core/manage/vscode.ts`): skip an unavailable bound `sources` folder with a warning returned to the caller instead of throwing, in both the trust map and the workspace folders.
-- [ ] `ki repo repair`: replace the `store list` hint with the fix from `storeFix`; report an absent role as `Store: <role> store is absent on this host by choice` without a warning.
-- [ ] `ki doctor`: add `warn` to `ManageCheckStatus`, count it in the summary line in place of the hard-coded `warn=0`, and add a registered-repositories store check that warns once per unavailable or missing store with its fix and passes when every declared store is available or absent. A warning never changes the exit code.
-- [ ] Contract tests through `run(args, context)` and `sandbox()` (see Verify).
-- [ ] Documentation: `README.md` store section, `man/ki.1` and regenerated `man/ki.commands.json`, `docs/guides/user/repository-operations.md` and `vscode-management.md`, and `CHANGELOG.md`.
+- [x] Registry: add `absent_stores` to `LocalRegistryEntry`, its validator (array of declared external role names, no duplicates, no role also in `stores`) and its TOML writer in `src/core/storage/local-registry.ts`.
+- [x] Core: extend `knowledgeBaseStoreAvailability` to return `absent` for a marked role, and add a pure `storeFix(root, role, candidates)` in `src/core/storage/repository-stores.ts` that names the bind command, filling the path when exactly one conventional folder exists, else `<absolute-path>`, and the `store absent` alternative.
+- [x] Core: `repositoryStoreInventory` gains `availability` and `reason`, checking bound paths with `repositoryStoreDirectory`; export through `src/core/storage/index.ts`.
+- [x] Command: add `ki repo store absent <role> [--clear] [--write]` in `src/commands/repo/store.ts`, previewing without `--write`, refusing a bound role ("unbind it first") and `notes`; `store unbind` leaves the marker alone.
+- [x] Command: `store list` text and JSON per Decision 5; `store create` refusal per Decision 3.
+- [x] `ki repo open`: use the availability helper; skip unavailable, missing and absent stores, print one warning per unavailable or missing store with its fix, and open the rest.
+- [x] VS Code workspace (`src/core/manage/vscode.ts`): skip an unavailable bound `sources` folder with a warning returned to the caller instead of throwing, in both the trust map and the workspace folders.
+- [x] `ki repo repair`: replace the `store list` hint with the fix from `storeFix`; report an absent role as `Store: <role> store is absent on this host by choice` without a warning.
+- [x] `ki doctor`: add `warn` to `ManageCheckStatus`, count it in the summary line in place of the hard-coded `warn=0`, and add a registered-repositories store check that warns once per unavailable or missing store with its fix and passes when every declared store is available or absent. A warning never changes the exit code.
+- [x] Contract tests through `run(args, context)` and `sandbox()` (see Verify).
+- [x] Documentation: `README.md` store section, `man/ki.1` and regenerated `man/ki.commands.json`, `docs/guides/user/repository-operations.md` and `vscode-management.md`, and `CHANGELOG.md`.
 
 ## Files touched
 
@@ -116,6 +116,62 @@ None. `ki/repository-stores/v1` gains an additive field and keeps its existing f
 
 KI-TOOL-KI-CLI-136's boundary narrows by Decision 4.
 
+## Review
+
+### Delivered
+
+A host without a declared external store is now a supported, reported state. `ki repo store absent <role> [--clear] [--write]` records in the machine-local registry (`absent_stores`) that this host does without a store. `store list` reports each store as `available`, `unavailable` (with its reason), `absent` or `missing` and prints the fix for the last two kinds of trouble. `ki repo open` and `ki vscode sync` leave an unavailable or missing store out with a warning instead of failing, `ki repo repair` names the fix and reports an absent store as information, `ki doctor` warns once per unavailable or missing registered store and counts `warn`, and `store create` without the OneDrive root names both routes. Every fix names the exact command, with the path filled in when exactly one conventional `sources-<name>` folder matches.
+
+### Change Summary
+
+- `src/core/storage/local-registry.ts`: the `absent_stores` field, its validator (a non-empty array of external roles, no unknown role, no repeat, no role also bound) and its TOML writer.
+- `src/core/storage/local-stores.ts`: `knowledgeBaseStoreAvailability` returns `absent` for a marked role and `bound` for an unavailable one; the throwing `registeredKnowledgeBaseStoreRoots` is removed, since `open` was its last caller.
+- `src/core/storage/repository-stores.ts`: `availability` and `reason` in `repositoryStoreInventory`, the pure `storeFix`, `conventionalStoreCandidates`, `markRepositoryStoreAbsent`, and the two-route `store create` refusal.
+- `src/core/territory/naming.ts`: `repositoryStoreFix`, which finds the conventional candidates from the names `store scan` uses.
+- `src/commands/repo/store.ts`, `open.ts`, `repair.ts`; `src/core/manage/vscode.ts` and `src/commands/manage/vscode.ts`; `src/core/manage/doctor.ts` and `src/commands/manage/doctor.ts`.
+- Tests: `src/tests/cli/repo/store.test.ts`, `open.test.ts`, `repair.test.ts`, `src/tests/cli/manage/doctor.test.ts`, `vscode.test.ts` and `inventory.test.ts`.
+- `README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/repository-operations.md`, `vscode-management.md`, `CHANGELOG.md`.
+
+Judgement calls beyond the Steps, each provisional, for Kris to confirm:
+
+- `store bind` clears an absence marker for the role it binds, so a role is never both bound and absent; `store unbind` leaves the marker alone, as the Steps say.
+- The text form of `store list` prints the fix for `unavailable` and `missing` stores, following Decision 5; Verify 3's "the last two" reads as the same pair.
+- The doctor store check is left out when no registered repository declares an external store, so existing doctor counts do not change; an unreadable registered declaration is skipped, and an invalid registry makes the check `skip`.
+- `Registry: complete` in `repair` now appears when every declared store is available or absent.
+
+### Verification
+
+Verify 1 to 8 and 10 are covered through `run(args, context)` and `sandbox()`:
+
+- registry round-trip, the both-bound-and-absent, unknown, repeated, empty and non-array cases (`store.test.ts`);
+- `store absent` preview, write, repeat, `--clear` preview and write, `notes` and bound-role refusals, and `bind` clearing the marker (`store.test.ts`);
+- JSON `available`, `unavailable` (bound path deleted), `absent` and `missing`, the fix filled from a single `sources-kb` folder and the placeholder for none and for two, and the Observatory's `role`, `state` and `path`-exactly-when-bound fields (`store.test.ts`);
+- `open` against one Knowledge Base with a missing store and one with an absent store, and a symlinked store skipped with a warning (`open.test.ts`);
+- the VS Code workspace and trusted-folder inventory written without an unavailable `sources` folder, with the warning (`vscode.test.ts`);
+- `repair` with the fix for a missing store and information for an absent one; the KI-TOOL-KI-CLI-126 CI-replay test passes unchanged (`repair.test.ts`);
+- `store create` with no OneDrive root naming both routes (`store.test.ts`);
+- `doctor` with eight unbound stores reporting eight warnings and `warn=8` at exit 0, then pass when every store is absent, or bound and absent (`doctor.test.ts`).
+
+On 18 October 2026:
+
+- `bun run test:coverage` passed 1316 tests at 100% statements, branches, functions and lines.
+- `bunx tsc --noEmit`, `bunx biome check .` (no errors; its warnings predate this record), `bunx knip`, `mandoc -T lint man/ki.1` and rumdl were clean.
+- `ki repo audit --repo .` passed with FAIL=0; its two warnings, CI-1 (the inline `KI_VERSION` pin) and HOOK-1 (no committed pre-commit gate), predate this record.
+
+### Outstanding concerns
+
+- The `ki` on this machine runs from this working tree, so these behaviours were live here before commit.
+- vega's stopgap read-only `sources` binding can now become `ki repo --repo <ki-principal> store absent sources --write`; that change belongs to the agent-host Project and was not made.
+- The Observatory still reads only `state`; adopting `availability` is its own choice.
+
+### Post-change review
+
+`stores` keeps holding paths only, so every existing reader is unchanged, and `ki/repository-stores/v1` only gains fields. No unbound store fails a command it did not fail before; `open` and `vscode sync` now succeed where they failed, which is the Goal. Commands that need originals still fail on their own terms. The fix text is built in one place, `storeFix`, which KI-TOOL-KI-CLI-136 can turn into a structured suggestion.
+
+### Mini recap
+
+A host can now say it does without a store, and every command that meets a missing or unavailable store warns with the exact fix and carries on.
+
 ## Discussion
 
 Captured as triage when KI-TOOL-KI-CLI-126 was narrowed; adoption, horizon and plan belong to this repository's queue.
@@ -131,3 +187,5 @@ Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-b
 Planned on 16 October 2026 and left in draft only because KI-TOOL-KI-CLI-126 is not yet accepted: the roadmap audit (ITEM-5) refuses an active record with a non-done blocker. Once Kris accepts KI-TOOL-KI-CLI-126, set this record Ready unchanged.
 
 Set Ready unchanged on 18 October 2026 by the ki-burndown-3 run, once KI-TOOL-KI-CLI-126 was accepted provisionally on Fable's opinion of 18 October; provisional, for Kris to confirm.
+
+Built on 18 October 2026 by the ki-burndown-3 run and set awaiting-review; the judgement calls in the Review are provisional, for Kris to confirm.

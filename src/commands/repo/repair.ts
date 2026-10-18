@@ -18,6 +18,7 @@ import {
   publishLocalRegistryProposal,
   registryEntryForRepository
 } from '../../core/storage/index.ts'
+import { repositoryStoreFix } from '../../core/territory/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
 import {
   describeRepositoryOrphan,
@@ -40,6 +41,7 @@ export const createRepairCommand = (
       const failedMark = presentation('status.fail').terminal
       const passedMark = presentation('status.pass').terminal
       const warnMark = presentation('status.warn').terminal
+      const infoMark = presentation('status.info').terminal
       const dryRun = Boolean(options.dryRun)
       const global = await inspectUserConfiguration(context.paths.config)
       if (global.state === 'missing') throw new KiError('local KI configuration is missing; run ki bootstrap first', 1)
@@ -71,13 +73,15 @@ export const createRepairCommand = (
           } else if (!roles.length) entries.push(`${passedMark} Registry: already registered ${repository.root}`)
           // An unavailable store is a finding about this host, not a repair failure: registration,
           // projection and health still run, and only commands that need originals fail.
-          const unavailable = (await knowledgeBaseStoreAvailability(entry, roles)).filter(
-            (store) => 'unavailable' in store
-          )
-          for (const store of unavailable)
-            entries.push(
-              `${warnMark} Store: ${store.role} store is unavailable on this host (${store.unavailable}); commands that need originals will fail; run ki repo --repo ${repository.root} store list`
-            )
+          const stores = await knowledgeBaseStoreAvailability(entry, roles)
+          const unavailable = stores.filter((store) => 'unavailable' in store)
+          for (const store of stores)
+            if ('absent' in store)
+              entries.push(`${infoMark} Store: ${store.role} store is absent on this host by choice`)
+            else if ('unavailable' in store)
+              entries.push(
+                `${warnMark} Store: ${store.role} store is unavailable on this host (${store.unavailable}); commands that need originals will fail; fix: ${await repositoryStoreFix(context.homeDirectory, repository.root, entry.key, store.role)}`
+              )
           if (roles.length && !unavailable.length) entries.push(`${passedMark} Registry: complete ${repository.root}`)
         } catch (error) {
           entries.push(`${failedMark} Registry: ${(error as Error).message}`)

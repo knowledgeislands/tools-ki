@@ -7,12 +7,13 @@ import {
 } from '../../core/configuration/index.ts'
 import { KiError } from '../../core/errors.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
+import { externalStoreRoles, inspectLocalRegistry, knowledgeBaseStoreAvailability } from '../../core/storage/index.ts'
 import {
-  externalStoreRoles,
-  inspectLocalRegistry,
-  registeredKnowledgeBaseStoreRoots
-} from '../../core/storage/index.ts'
-import { type OpenTargetName, openLocalTarget, openTargetNames } from '../../core/territory/index.ts'
+  type OpenTargetName,
+  openLocalTarget,
+  openTargetNames,
+  repositoryStoreFix
+} from '../../core/territory/index.ts'
 
 interface OpenOptions {
   readonly target: OpenTargetName
@@ -67,14 +68,13 @@ export const createRepoOpenCommand = (
         const entry = registry.repositories.find(
           (candidate) => candidate.repository === identity && candidate.path === repository.root
         )
-        try {
-          roots.push(...(await registeredKnowledgeBaseStoreRoots(entry, roles)))
-        } catch (error) {
-          throw new KiError(
-            `Knowledge Base ${repository.root} has an unavailable declared store: ${(error as Error).message}; run ki repo --repo ${repository.root} store list`,
-            1
-          )
-        }
+        // An unavailable store is skipped with its fix, an absent one silently; the repository still opens.
+        for (const store of await knowledgeBaseStoreAvailability(entry, roles))
+          if ('root' in store) roots.push(store.root)
+          else if ('unavailable' in store)
+            context.stderr.write(
+              `ki: warning: Knowledge Base ${repository.root} opens without its ${store.role} store, unavailable on this host (${store.unavailable}); fix: ${await repositoryStoreFix(context.homeDirectory, repository.root, entry?.key, store.role)}\n`
+            )
       }
       const result = await openLocalTarget(options.target, roots, {
         runner: context.runner,

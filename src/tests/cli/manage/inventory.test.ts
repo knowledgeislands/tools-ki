@@ -64,7 +64,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   vscode: ['check', 'sync'],
   repo: repoCommands,
   'repo roadmap': ['demote', 'list', 'migrate', 'promote', 'prune', 'stats', 'summary'],
-  'repo store': ['bind', 'create', 'list', 'scan', 'unbind'],
+  'repo store': ['absent', 'bind', 'create', 'list', 'scan', 'unbind'],
   'repo skill': ['add', 'remove'],
   territory: territoryCommands,
   skill: ['add', 'remove'],

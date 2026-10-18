@@ -14,24 +14,15 @@ export const repositoryStoreDirectory = async (role: ExternalStoreRole, path: st
   return path
 }
 
-export const registeredKnowledgeBaseStoreRoots = async (
-  entry: LocalRegistryEntry | undefined,
-  roles: readonly ExternalStoreRole[]
-): Promise<readonly string[]> => {
-  const roots: string[] = []
-  for (const role of roles) {
-    const path = entry?.stores?.[role]
-    if (!path) throw new KiError(`declared ${role} store is not bound`, 1)
-    roots.push(await repositoryStoreDirectory(role, path))
-  }
-  return roots
-}
-
 export type KnowledgeBaseStoreAvailability =
   | { readonly role: ExternalStoreRole; readonly root: string }
-  | { readonly role: ExternalStoreRole; readonly unavailable: string }
+  | { readonly role: ExternalStoreRole; readonly absent: true }
+  | { readonly role: ExternalStoreRole; readonly unavailable: string; readonly bound: boolean }
 
-/** Report each declared external store as its validated root or the reason it is unavailable on this host. */
+/**
+ * Report each declared external store as its validated root, absent on this host by choice, or the
+ * reason it is unavailable: unbound without a marker, or bound to a path that is not a directory.
+ */
 export const knowledgeBaseStoreAvailability = async (
   entry: LocalRegistryEntry | undefined,
   roles: readonly ExternalStoreRole[]
@@ -39,12 +30,15 @@ export const knowledgeBaseStoreAvailability = async (
   const stores: KnowledgeBaseStoreAvailability[] = []
   for (const role of roles) {
     const path = entry?.stores?.[role]
-    if (!path) stores.push({ role, unavailable: 'not bound' })
+    if (!path)
+      stores.push(
+        entry?.absentStores?.includes(role) ? { role, absent: true } : { role, unavailable: 'not bound', bound: false }
+      )
     else
       stores.push(
         await repositoryStoreDirectory(role, path).then(
           (root) => ({ role, root }),
-          (error: Error) => ({ role, unavailable: error.message })
+          (error: Error) => ({ role, unavailable: error.message, bound: true })
         )
       )
   }

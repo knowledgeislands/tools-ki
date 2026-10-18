@@ -4,6 +4,7 @@ import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
 import type { Runner } from '../runtime/runner.ts'
 import { type LocalRegistryEntry, repositoryStoreDirectory, requiredLocalRegistry } from '../storage/index.ts'
+import { repositoryStoreFix } from '../territory/index.ts'
 
 const trustedClients = ['claude-desktop', 'chatgpt-codex', 'claude-code'] as const
 const runtimeClients: Readonly<Record<string, (typeof trustedClients)[number]>> = {
@@ -33,6 +34,7 @@ interface SourceWrite {
 
 export interface VscodeManagePort {
   readonly environment: NodeJS.ProcessEnv
+  readonly homeDirectory: string
   readonly stateDirectory: string
   readonly runner: Runner
   readonly stdout: { write: (text: string) => void }
@@ -54,8 +56,27 @@ const sourceRoot = async (port: VscodeManagePort): Promise<string> => {
   return path
 }
 
+/** A bound sources folder usable on this host, or undefined once its warning is recorded. */
+const availableSources = async (
+  port: VscodeManagePort,
+  repository: LocalRegistryEntry,
+  warnings: string[]
+): Promise<string | undefined> => {
+  const source = repository.stores?.sources
+  if (!source) return undefined
+  try {
+    return await repositoryStoreDirectory('sources', source)
+  } catch (error) {
+    warnings.push(
+      `Knowledge Base ${repository.path} is synchronised without its sources folder, unavailable on this host (${(error as Error).message}); fix: ${await repositoryStoreFix(port.homeDirectory, repository.path, repository.key, 'sources')}`
+    )
+    return undefined
+  }
+}
+
 const repositoryTrustClients = async (
-  repositories: readonly LocalRegistryEntry[]
+  repositories: readonly LocalRegistryEntry[],
+  sources: ReadonlyMap<string, string>
 ): Promise<ReadonlyMap<string, readonly string[]>> => {
   const result = new Map<string, readonly string[]>()
   for (const repository of repositories) {
@@ -82,10 +103,8 @@ const repositoryTrustClients = async (
       throw new KiError(`registered repository has no supported trusted runtime: ${repository.path}`, 1)
     }
     result.set(repository.path, granted)
-    if (repository.stores?.sources) {
-      const sources = await repositoryStoreDirectory('sources', repository.stores.sources)
-      result.set(sources, granted)
-    }
+    const source = sources.get(repository.path)
+    if (source) result.set(source, granted)
   }
   return result
 }
@@ -167,7 +186,8 @@ const existingDirectory = async (path: string): Promise<boolean> => {
 const buildPlan = async (
   port: VscodeManagePort,
   root: string,
-  repositories: readonly LocalRegistryEntry[]
+  repositories: readonly LocalRegistryEntry[],
+  warnings: string[]
 ): Promise<readonly SourceWrite[]> => {
   const workspaceDirectory = join(root, 'workspaces', 'vscode')
   const trustedFoldersPath = join(root, '.chezmoidata', 'trusted-folders.yaml')
@@ -189,7 +209,12 @@ const buildPlan = async (
   for (const repository of repositories) {
     if (await existingDirectory(repository.path)) availableRepositories.push(repository)
   }
-  const repositoryClients = await repositoryTrustClients(availableRepositories)
+  const sources = new Map<string, string>()
+  for (const repository of availableRepositories) {
+    const source = await availableSources(port, repository, warnings)
+    if (source) sources.set(repository.path, source)
+  }
+  const repositoryClients = await repositoryTrustClients(availableRepositories, sources)
 
   for (const repository of availableRepositories) {
     let matching = documents.filter(({ workspace }) =>
@@ -209,9 +234,8 @@ const buildPlan = async (
       documents.push(document)
       matching = [document]
     }
-    const source = repository.stores?.sources
+    const source = sources.get(repository.path)
     if (source) {
-      await repositoryStoreDirectory('sources', source)
       for (const document of matching) {
         if (!document.workspace.folders.some((folder) => folder.path === source)) {
           document.workspace.folders.push({ path: source })
@@ -273,7 +297,9 @@ const writeAtomically = async (write: SourceWrite): Promise<void> => {
 export const reconcileVscode = async (port: VscodeManagePort, write: boolean): Promise<VscodeManageResult> => {
   const root = await sourceRoot(port)
   const repositories = await requiredLocalRegistry(port.stateDirectory)
-  const writes = await buildPlan(port, root, repositories)
+  const warnings: string[] = []
+  const writes = await buildPlan(port, root, repositories, warnings)
+  for (const warning of warnings) port.stderr.write(`ki: warning: ${warning}\n`)
   if (!writes.length) {
     port.stdout.write('VS Code workspaces and trusted folders already match the KI registry.\n')
     return { changed: false }

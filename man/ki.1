@@ -54,8 +54,8 @@ Report eligible KI-managed stale state.
 Show share-safe installation facts; --full includes paths and local identities.
 .TP
 .B ki doctor
-Check user configuration, agents, harnesses, user-skill links, and direct-CWD
-legacy KI state and configuration.
+Check user configuration, agents, harnesses, user-skill links, registered
+Knowledge Base stores, and direct-CWD legacy KI state and configuration.
 .TP
 .B ki repair [--apply | --dry-run]
 Preview user-skill and configuration repairs; --apply writes them.
@@ -141,6 +141,9 @@ Preview or bind one declared external store.
 .TP
 .B ki repo [repo-options] store unbind <sources|legacy> [--write]
 Preview or remove one binding without deleting store content.
+.TP
+.B ki repo [repo-options] store absent <sources|legacy> [--clear] [--write]
+Preview or record that this host deliberately does without one store.
 .TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>] [--staged] [--paths <path...>]
 Run registered native repository audits.
@@ -591,7 +594,11 @@ Check the user configuration, configured agent skill directories, installed
 harnesses, and configured KI user-skill links without changing state. It also
 reports direct-CWD legacy \fB.ki-meta/\fR and \fB.ki/\fR directories, without
 searching for or operating on a repository. It validates a regular direct-CWD
-\fB.ki.toml\fR declaration without resolving its providers. A failing
+\fB.ki.toml\fR declaration without resolving its providers. For every
+registered Knowledge Base it warns once per declared external store that is
+unavailable on this host, naming its fix, and passes when every declared
+store is available or marked absent; a warning never changes the exit status.
+A failing
 check produces a non-zero exit status after the complete report. Report the same
 context as diag, the read-only scope, verdict, and
 pass/warn/fail/skipped counts.
@@ -695,10 +702,12 @@ complete versions remain available until explicit uninstall.
 .B ki vscode check
 Compare chezmoi-managed VS Code workspaces and trusted-folder source state with
 the local KI repository registry. Explicit sources bindings join their notes
-workspace and trusted-client projection; legacy bindings and unbound directories
-are ignored. Preview removal of folder paths that no longer resolve to
-directories and deletion of projects with no live folders. Existing projects
-outside the registry and intentionally empty workspaces are preserved. Missing
+workspace and trusted-client projection; a bound sources folder missing on this
+host is left out with a warning naming its fix. Legacy bindings and
+unbound directories are ignored. Preview removal of folder paths that no
+longer resolve to directories and deletion of projects with no live folders.
+Existing projects outside the registry and intentionally empty workspaces are
+preserved. Missing
 registered checkouts are skipped without changing the registry. Report a source
 diff and exit non-zero when drift exists. This command never writes.
 .TP
@@ -792,7 +801,9 @@ Open every selected canonical repository in the requested local target. By
 default, a Knowledge Base opens its notes root followed by every declared,
 locally bound external store in declaration order. Each binding must be a direct
 directory recorded with the canonical repository; it is never made an estate
-member or territory participant. \fB--no-stores\fR opens canonical notes roots
+member or territory participant. A store unavailable on this host is skipped
+with one warning naming its fix, a store marked absent is skipped silently, and
+the rest still open. \fB--no-stores\fR opens canonical notes roots
 only,
 while \fB--stores\fR makes the default explicit. Delta opens repository roots
 only; it skips stores by default and rejects \fB--stores\fR.
@@ -1072,8 +1083,14 @@ diagnostics that make the command exit with status 1.
 .B ki repo [repo-options] store list [--format <text|json>]
 List every store role declared by selected Knowledge Bases. The \fBnotes\fR role
 is the repository root; external roles show their explicit machine-local path
-or unbound state. JSON emits the versioned
-\fBki/repository-stores/v1\fR contract.
+or unbound state and their availability on this host: a bound store is
+\fBavailable\fR or \fBunavailable\fR, with its reason, and an unbound one is
+\fBabsent\fR by choice or \fBmissing\fR. Unavailable and missing stores name
+their fix: the bind command, with the path filled in when exactly one
+conventional \fBsources-<name>\fR folder exists, or the absent command.
+JSON emits
+the versioned \fBki/repository-stores/v1\fR contract, whose \fBstate\fR stays
+\fBbound\fR or \fBunbound\fR and which adds \fBavailability\fR and \fBreason\fR.
 .TP
 .B ki repo [repo-options] store scan
 Inspect selected repositories for direct conventional OneDrive
@@ -1094,16 +1111,26 @@ Preview the conventional opt-in OneDrive
 repository basename, or a territory Capital's canonical handle: its
 territory_prefix, else its registry key. A Capital with neither fails. With
 \fB--write\fR, create and bind it. Automatic creation is unavailable for
-\fBlegacy\fR.
+\fBlegacy\fR. Where the OneDrive root does not exist, as off macOS, it refuses
+and names the two remaining routes: bind an existing directory, or mark the
+store absent on this host.
 .TP
 .B ki repo [repo-options] store bind <sources|legacy> <absolute-path> [--write]
 Preview an explicit binding for one declared external store. The path must be
 an existing absolute direct directory. With \fB--write\fR, publish the binding
-to the machine-local registry.
+to the machine-local registry, clearing any absence marker for the role.
 .TP
 .B ki repo [repo-options] store unbind <sources|legacy> [--write]
 Preview removal of one declared external-store binding. With \fB--write\fR,
-publish the registry change without deleting or modifying store content.
+publish the registry change without deleting or modifying store content. An
+absence marker is left unchanged.
+.TP
+.B ki repo [repo-options] store absent <sources|legacy> [--clear] [--write]
+Preview recording, in the machine-local registry entry's
+\fBabsent_stores\fR, that this host deliberately does without one declared
+external store. A marked store is reported once as information and draws no
+warning. A bound role is refused until it is unbound; \fBnotes\fR is refused.
+\fB--clear\fR removes the marker. With \fB--write\fR, publish the change.
 .TP
 .B ki repo [repo-options] educate [--skill <skill>]
 Explain each selected repository's declared capabilities and their recommended
@@ -1119,6 +1146,9 @@ Record each selected physical repository root in the local user register, then
 reconcile only missing, dangling, or stale KI-managed compatible projections.
 It never creates a declaration, adds an undeclared skill, overwrites foreign
 content, guesses a provider or runtime, or follows a symbolic declaration.
+A Knowledge Base's declared external store that is unavailable on this host is
+a warning naming its fix, and one marked absent is reported as information;
+neither fails the repair.
 The command writes by default. \fB--dry-run\fR reports the same actions
 without creating state directories or changing disk state. Store mutations
 and VS Code sync instead preview by default and require \fB--write\fR.

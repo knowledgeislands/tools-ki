@@ -13,7 +13,27 @@ export interface LocalRegistryEntry {
   readonly repository: string
   readonly path: string
   readonly stores?: LocalRepositoryStores
+  /** External store roles this host deliberately does without. */
+  readonly absentStores?: readonly ExternalRegistryStoreRole[]
   readonly searchBoundary?: string
+}
+
+export type ExternalRegistryStoreRole = keyof LocalRepositoryStores
+
+const EXTERNAL_ROLES: readonly ExternalRegistryStoreRole[] = ['sources', 'legacy']
+
+const absentStoreErrors = (key: string, absent: unknown, stores: unknown): readonly string[] => {
+  if (absent === undefined) return []
+  if (!Array.isArray(absent) || !absent.length)
+    return [`repositories.${key}.absent_stores must be a non-empty array of store roles`]
+  const errors: string[] = []
+  for (const role of absent)
+    if (!(EXTERNAL_ROLES as readonly unknown[]).includes(role))
+      errors.push(`repositories.${key}.absent_stores has unknown role ${role}`)
+    else if (isRecord(stores) && stores[role] !== undefined)
+      errors.push(`repositories.${key} ${role} store cannot be both bound and absent`)
+  if (new Set(absent).size !== absent.length) errors.push(`repositories.${key}.absent_stores repeats a role`)
+  return errors
 }
 
 export interface LocalRepositoryStores {
@@ -87,7 +107,7 @@ export const inspectLocalRegistry = async (stateDirectory: string): Promise<Loca
         continue
       }
       for (const field of Object.keys(entry))
-        if (!['repository', 'path', 'stores', 'search_boundary'].includes(field))
+        if (!['repository', 'path', 'stores', 'absent_stores', 'search_boundary'].includes(field))
           errors.push(`repositories.${key} has unrecognised key ${field}`)
       if (!validKey(key)) errors.push(`repositories.${key} key must be a stable local repository name`)
       if (!canonicalRepositoryIdentity(entry['repository']))
@@ -108,7 +128,11 @@ export const inspectLocalRegistry = async (stateDirectory: string): Promise<Loca
             errors.push(`repositories.${key}.stores.${role} must be an absolute path`)
         if (!Object.keys(stores).length) errors.push(`repositories.${key}.stores must not be empty`)
       }
+      const absent = entry['absent_stores']
+      const absentErrors = absentStoreErrors(key, absent, stores)
+      errors.push(...absentErrors)
       if (
+        !absentErrors.length &&
         validKey(key) &&
         canonicalRepositoryIdentity(entry['repository']) &&
         typeof entry['path'] === 'string' &&
@@ -128,6 +152,7 @@ export const inspectLocalRegistry = async (stateDirectory: string): Promise<Loca
           repository: entry['repository'],
           path: entry['path'],
           ...(validBoundary(boundary) ? { searchBoundary: boundary } : {}),
+          ...(Array.isArray(absent) ? { absentStores: absent as ExternalRegistryStoreRole[] } : {}),
           ...(isRecord(stores)
             ? {
                 stores: {
@@ -181,6 +206,9 @@ export const renderLocalRegistry = (repositories: readonly LocalRegistryEntry[])
         `repository = ${JSON.stringify(repository.repository)}`,
         `path = ${JSON.stringify(repository.path)}`,
         ...(repository.searchBoundary ? [`search_boundary = ${JSON.stringify(repository.searchBoundary)}`] : []),
+        ...(repository.absentStores?.length
+          ? [`absent_stores = [${repository.absentStores.map((role) => JSON.stringify(role)).join(', ')}]`]
+          : []),
         ...(repository.stores
           ? [
               '',

@@ -1,8 +1,9 @@
 import { lstat, realpath } from 'node:fs/promises'
+import { join } from 'node:path'
 import { Command } from 'commander'
 import { agentSkillDirectory, compatibleWithSkill, configuredAgents, localHarness } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
-import { readRepositoryDeclaration } from '../../core/configuration/index.ts'
+import { declaredKnowledgeBaseStoreRoles, readRepositoryDeclaration } from '../../core/configuration/index.ts'
 import { KiExit } from '../../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import {
@@ -10,14 +11,46 @@ import {
   type ManageCheckStatus,
   type ManageConfiguration,
   type ManageDoctorCheck,
-  type ManageDoctorPort
+  type ManageDoctorPort,
+  type ManageStoreState
 } from '../../core/manage/index.ts'
-import { harnessDevelopmentEnabled } from '../../core/storage/index.ts'
+import {
+  externalStoreRoles,
+  harnessDevelopmentEnabled,
+  knowledgeBaseStoreAvailability,
+  requiredLocalRegistry
+} from '../../core/storage/index.ts'
+import { repositoryStoreFix } from '../../core/territory/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
 import { diagnosticContext } from './diagnostic-context.ts'
 import { manageConfiguration } from './manage-configuration.ts'
 
 const mark = (status: ManageCheckStatus): string => presentation(`status.${status}`).terminal
+
+/** Each registered Knowledge Base's declared external stores; an unreadable declaration is another check's finding. */
+const registeredStores = async (context: KiContext): Promise<readonly ManageStoreState[]> => {
+  const stores: ManageStoreState[] = []
+  for (const entry of await requiredLocalRegistry(context.paths.state)) {
+    const declaration = await readRepositoryDeclaration(join(entry.path, '.ki.toml')).catch(() => undefined)
+    if (!declaration) continue
+    for (const store of await knowledgeBaseStoreAvailability(
+      entry,
+      externalStoreRoles(declaredKnowledgeBaseStoreRoles(declaration))
+    ))
+      stores.push(
+        'unavailable' in store
+          ? {
+              repository: entry.path,
+              role: store.role,
+              state: 'unavailable',
+              reason: store.unavailable,
+              fix: await repositoryStoreFix(context.homeDirectory, entry.path, entry.key, store.role)
+            }
+          : { repository: entry.path, role: store.role, state: 'absent' in store ? 'absent' : 'available' }
+      )
+  }
+  return stores
+}
 
 const doctorPort = (context: KiContext, configuration: ManageConfiguration): ManageDoctorPort => ({
   inspectConfiguration: async () => configuration,
@@ -38,12 +71,14 @@ const doctorPort = (context: KiContext, configuration: ManageConfiguration): Man
   inspectLocalHarness: (source, identifier) => localHarness(source, identifier),
   readRepositorySkills: async (path) => (await readRepositoryDeclaration(path)).skills,
   lstat: (path) => lstat(path).catch(() => undefined),
-  realpath: (path) => realpath(path).catch(() => undefined)
+  realpath: (path) => realpath(path).catch(() => undefined),
+  inspectStores: () => registeredStores(context)
 })
 
 const report = (context: KiContext, configuration: string, checks: readonly ManageDoctorCheck[]): void => {
   const totals = {
     pass: checks.filter((check) => check.status === 'pass').length,
+    warn: checks.filter((check) => check.status === 'warn').length,
     fail: checks.filter((check) => check.status === 'fail').length,
     skip: checks.filter((check) => check.status === 'skip').length
   }
@@ -61,7 +96,7 @@ const report = (context: KiContext, configuration: string, checks: readonly Mana
           children: checks.map((check) => ({ label: `${mark(check.status)} ${check.label}: ${check.detail}` }))
         },
         { label: `Verdict: ${totals.fail ? 'unhealthy' : 'healthy'}` },
-        { label: `Checks: pass=${totals.pass} warn=0 fail=${totals.fail} skipped=${totals.skip}` }
+        { label: `Checks: pass=${totals.pass} warn=${totals.warn} fail=${totals.fail} skipped=${totals.skip}` }
       ]
     }).join('\n')}\n`
   )

@@ -310,7 +310,7 @@ describe('ki vscode', () => {
     expect((await box.run('ki vscode check')).output).toContain('has no trustedFolders root key')
   })
 
-  test('fails closed for unsafe workspace names, collisions, and invalid bound sources', async () => {
+  test('fails closed for unsafe workspace names and collisions', async () => {
     const invalid = await prepare(['bad_name'])
     expect((await invalid.box.run('ki vscode check')).output).toContain('cannot derive a safe VS Code workspace name')
 
@@ -319,20 +319,24 @@ describe('ki vscode', () => {
     expect((await collision.box.run('ki vscode check')).output).toContain(
       'workspace file exists but does not include its KI repository'
     )
+  })
 
-    const missing = await prepare(['knowledge'])
-    await missing.box.state.write(
-      'ki/registry.toml',
-      registry([
-        {
-          key: 'knowledge',
-          path: missing.repositories[0] as string,
-          sources: `${missing.box.root.path}/missing-sources`
-        }
-      ])
+  test('writes the workspace without an unavailable sources folder and warns with its fix', async () => {
+    const { box, repositories, sourceRoot } = await prepare(['knowledge'])
+    const root = repositories[0] as string
+    const missing = `${box.root.path}/missing-sources`
+    await box.state.write('ki/registry.toml', registry([{ key: 'knowledge', path: root, sources: missing }]))
+
+    const result = await box.run('ki vscode sync --write')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stderr).toBe(
+      `ki: warning: Knowledge Base ${root} is synchronised without its sources folder, unavailable on this host (sources store must be an existing direct directory); fix: ki repo --repo ${root} store bind sources <absolute-path> --write, or ki repo --repo ${root} store absent sources --write\n`
     )
-    expect((await missing.box.run('ki vscode check')).output).toContain(
-      'sources store must be an existing direct directory'
-    )
+    expect(JSON.parse(await readFile(`${sourceRoot}/workspaces/vscode/kis-knowledge.code-workspace`, 'utf8'))).toEqual({
+      folders: [{ path: root }]
+    })
+    expect(await readFile(`${sourceRoot}/.chezmoidata/trusted-folders.yaml`, 'utf8')).not.toContain(missing)
+    expect((await box.run('ki vscode check')).exitCode).toBe(0)
   })
 })

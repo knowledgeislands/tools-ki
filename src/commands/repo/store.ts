@@ -17,11 +17,15 @@ import {
   inspectUndeclaredSourcesStores,
   localRegistryWrite,
   managedSourcesStore,
+  markRepositoryStoreAbsent,
+  type RepositoryStoreBinding,
+  registryEntryForRepository,
   repositoryStoreInventory,
+  storeFix,
   unbindRepositoryStore,
   validateRepositoryStore
 } from '../../core/storage/index.ts'
-import { scannedSourcesStoreNames, sourcesStoreNames } from '../../core/territory/index.ts'
+import { repositoryStoreFix, scannedSourcesStoreNames, sourcesStoreNames } from '../../core/territory/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
 import type { RepositorySelection } from './selection.ts'
 
@@ -98,6 +102,14 @@ const publishRegistry = async (
   return true
 }
 
+const storeLabel = (store: RepositoryStoreBinding): string => {
+  const binding = `${store.role}: ${store.state}${store.path ? ` ${store.path}` : ''}`
+  if (store.availability === 'unavailable')
+    return `${presentation('status.warn').terminal} ${binding} (unavailable: ${store.reason})`
+  if (store.availability === 'missing') return `${presentation('status.warn').terminal} ${binding} (missing)`
+  return `${binding} (${store.availability === 'absent' ? 'absent by choice' : 'available'})`
+}
+
 const createStoreListCommand = (context: KiContext, selection: SelectRepositories): Command =>
   new Command('list')
     .description('list declared repository stores and their local bindings')
@@ -107,8 +119,10 @@ const createStoreListCommand = (context: KiContext, selection: SelectRepositorie
       if (options.format !== 'text' && options.format !== 'json')
         throw grammarError('repo store list --format must be text or json')
       const [repositories, entries] = await Promise.all([selected(context, selection), registryEntries(context)])
-      const inventory = repositories.map((repository) =>
-        repositoryStoreInventory(repository.root, repository.identity, repository.roles, entries)
+      const inventory = await Promise.all(
+        repositories.map((repository) =>
+          repositoryStoreInventory(repository.root, repository.identity, repository.roles, entries)
+        )
       )
       if (options.format === 'json') {
         context.stdout.write(
@@ -116,21 +130,39 @@ const createStoreListCommand = (context: KiContext, selection: SelectRepositorie
         )
         return
       }
+      const children = await Promise.all(
+        inventory.map(async (repository) => ({
+          label: repository.repository,
+          children: await Promise.all(
+            repository.stores.map(async (store) => ({
+              label: storeLabel(store),
+              ...(store.role !== 'notes' && (store.availability === 'unavailable' || store.availability === 'missing')
+                ? {
+                    children: [
+                      {
+                        label: `fix: ${await repositoryStoreFix(
+                          context.homeDirectory,
+                          repository.repository,
+                          entries.find((entry) => entry.repository === repository.identity)?.key,
+                          store.role
+                        )}`
+                      }
+                    ]
+                  }
+                : {})
+            }))
+          )
+        }))
+      )
+      const count = (test: (store: RepositoryStoreBinding) => boolean) =>
+        inventory.reduce((total, repository) => total + repository.stores.filter(test).length, 0)
       context.stdout.write(
         `${renderTree({
           title: 'KI REPO STORE',
           entries: [
+            { label: `repositories (${inventory.length})`, children },
             {
-              label: `repositories (${inventory.length})`,
-              children: inventory.map((repository) => ({
-                label: repository.repository,
-                children: repository.stores.map((store) => ({
-                  label: `${store.role}: ${store.state}${store.path ? ` ${store.path}` : ''}`
-                }))
-              }))
-            },
-            {
-              label: `summary: REPOSITORIES=${inventory.length} STORES=${inventory.reduce((total, repository) => total + repository.stores.length, 0)} BOUND=${inventory.reduce((total, repository) => total + repository.stores.filter((store) => store.state === 'bound').length, 0)}`
+              label: `summary: REPOSITORIES=${inventory.length} STORES=${count(() => true)} BOUND=${count((store) => store.state === 'bound')} ABSENT=${count((store) => store.availability === 'absent')} UNAVAILABLE=${count((store) => store.availability === 'unavailable' || store.availability === 'missing')}`
             }
           ]
         }).join('\n')}\n`
@@ -209,12 +241,7 @@ const createStoreCreateCommand = (context: KiContext, selection: SelectRepositor
       if (externalRole !== 'sources')
         throw new KiError('legacy store has no managed creation location; bind an existing directory instead', 2)
       const entries = await registryEntries(context)
-      const current = repositoryStoreInventory(
-        repository.root,
-        repository.identity,
-        repository.roles,
-        entries
-      ).stores.find((store) => store.role === role)
+      const current = registryEntryForRepository(repository.root, repository.identity, entries).stores?.[externalRole]
       const names = await sourcesStoreNames(
         repository.root,
         entries.find((entry) => entry.repository === repository.identity)?.key
@@ -224,9 +251,13 @@ const createStoreCreateCommand = (context: KiContext, selection: SelectRepositor
           'territory Capital has no territory handle to name its sources store; register it with ki registry add or declare territory_prefix',
           1
         )
-      const path = await managedSourcesStore(context.homeDirectory, names.canonical ?? names.historical)
-      if (current?.path && current.path !== path)
-        throw new KiError(`sources store is already bound to ${current.path}; use ki repo store bind to replace it`, 2)
+      const path = await managedSourcesStore(
+        context.homeDirectory,
+        names.canonical ?? names.historical,
+        storeFix(repository.root, externalRole, [])
+      )
+      if (current && current !== path)
+        throw new KiError(`sources store is already bound to ${current}; use ki repo store bind to replace it`, 2)
       const exists = Boolean(await lstat(path).catch(() => undefined))
       const entry = bindRepositoryStore(repository.root, repository.identity, externalRole, path, entries)
       const write = Boolean(options.write)
@@ -271,21 +302,52 @@ const createStoreUnbindCommand = (context: KiContext, selection: SelectRepositor
       const repository = await selectedOne(context, selection)
       const externalRole = requiredExternalRole(repository, role)
       const entries = await registryEntries(context)
-      const current = repositoryStoreInventory(
-        repository.root,
-        repository.identity,
-        repository.roles,
-        entries
-      ).stores.find((store) => store.role === role)
-      if (!current?.path) {
+      const current = registryEntryForRepository(repository.root, repository.identity, entries).stores?.[externalRole]
+      if (!current) {
         context.stdout.write(`ki repo store unbind ${role}: already unbound\n`)
         return
       }
       const entry = unbindRepositoryStore(repository.root, repository.identity, externalRole, entries)
       await publishRegistry(context, entry, Boolean(options.write))
       context.stdout.write(
-        `ki repo store unbind ${role}: ${options.write ? 'unbound' : 'would unbind'} ${current.path}; content is unchanged\n`
+        `ki repo store unbind ${role}: ${options.write ? 'unbound' : 'would unbind'} ${current}; content is unchanged\n`
       )
+    })
+
+const createStoreAbsentCommand = (context: KiContext, selection: SelectRepositories): Command =>
+  new Command('absent')
+    .description('preview recording that this host does without a store; --write applies')
+    .summary('mark a store absent on this host')
+    .argument('<role>', 'declared external store role')
+    .option('--clear', 'remove the absence marker')
+    .option('--write', 'publish the local marker')
+    .action(async (rawRole: string, options: { clear?: boolean; write?: boolean }) => {
+      const role = rawRole as KnowledgeBaseStoreRole
+      const repository = await selectedOne(context, selection)
+      const externalRole = requiredExternalRole(repository, role)
+      const entries = await registryEntries(context)
+      const clear = Boolean(options.clear)
+      const bound = registryEntryForRepository(repository.root, repository.identity, entries).stores?.[externalRole]
+      if (bound && !clear)
+        throw new KiError(
+          `${role} store is bound to ${bound}; unbind it first: ki repo --repo ${repository.root} store unbind ${role} --write`,
+          2
+        )
+      const entry = markRepositoryStoreAbsent(repository.root, repository.identity, externalRole, clear, entries)
+      const write = Boolean(options.write)
+      const changed = await publishRegistry(context, entry, write)
+      const outcome = clear
+        ? changed
+          ? write
+            ? 'cleared'
+            : 'would clear'
+          : 'not marked absent'
+        : changed
+          ? write
+            ? 'marked absent'
+            : 'would mark absent'
+          : 'already absent'
+      context.stdout.write(`ki repo store absent ${role}: ${outcome} on this host\n`)
     })
 
 export const createRepoStoreCommand = (context: KiContext, selection: SelectRepositories): Command =>
@@ -296,3 +358,4 @@ export const createRepoStoreCommand = (context: KiContext, selection: SelectRepo
     .addCommand(createStoreCreateCommand(context, selection))
     .addCommand(createStoreBindCommand(context, selection))
     .addCommand(createStoreUnbindCommand(context, selection))
+    .addCommand(createStoreAbsentCommand(context, selection))

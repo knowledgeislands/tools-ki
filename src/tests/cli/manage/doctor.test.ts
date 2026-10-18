@@ -1,4 +1,4 @@
-import { rm, symlink, unlink } from 'node:fs/promises'
+import { realpath, rm, symlink, unlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
@@ -300,6 +300,61 @@ harness = "example/harness"
       exitCode: 0,
       output: expect.not.stringContaining('✗')
     })
+  })
+
+  test('warns once per unavailable declared store without changing the exit code', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    const names = ['alpha', 'beta', 'gamma', 'delta']
+    const entries: [string, string][] = []
+    for (const name of names) {
+      const path = await box.root.mkdir(`kb/${name}`)
+      await box.root.write(
+        `kb/${name}/.ki.toml`,
+        // gamma claims to be a Capital without territory metadata, so only its suggested path is lost.
+        `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-kb"\nrepository = "https://github.com/example/${name}"\n${name === 'gamma' ? 'capital = "https://github.com/example/gamma"\n' : ''}repo_type = "kb"\nstore_roles = ["notes", "sources", "legacy"]\n`
+      )
+      entries.push([
+        name,
+        `[repositories.${name}]\nrepository = "https://github.com/example/${name}"\npath = ${JSON.stringify(path)}\n`
+      ])
+    }
+    const unreadable = await box.root.mkdir('kb/unreadable')
+    const registry = (extra = (_name: string) => '') =>
+      `schema = 1\n\n${entries.map(([name, entry]) => `${entry}${extra(name)}`).join('\n')}\n[repositories.unreadable]\nrepository = "https://github.com/example/unreadable"\npath = ${JSON.stringify(unreadable)}\n`
+    await box.state.write('ki/registry.toml', registry())
+
+    const unbound = await box.run('ki doctor')
+
+    expect(unbound.exitCode).toBe(0)
+    expect(unbound.output.match(/! Store /g)).toHaveLength(8)
+    const alpha = await realpath(`${box.root.path}/kb/alpha`)
+    expect(unbound.output).toContain(
+      `! Store sources of ${alpha}: unavailable on this host (not bound); fix: ki repo --repo ${alpha} store bind sources <absolute-path> --write, or ki repo --repo ${alpha} store absent sources --write`
+    )
+    expect(unbound.output).toMatch(/warn=8 fail=0/)
+
+    await box.state.write(
+      'ki/registry.toml',
+      registry(() => 'absent_stores = ["legacy", "sources"]\n')
+    )
+    const absent = await box.run('ki doctor')
+    expect(absent.exitCode).toBe(0)
+    expect(absent.output).toContain('✓ Stores: 8 declared stores available or absent by choice')
+    expect(absent.output).toMatch(/warn=0 fail=0/)
+
+    const sources = await box.root.mkdir('sources')
+    await box.state.write(
+      'ki/registry.toml',
+      registry(
+        (name) => `absent_stores = ["legacy"]\n\n[repositories.${name}.stores]\nsources = ${JSON.stringify(sources)}\n`
+      )
+    )
+    expect((await box.run('ki doctor')).output).toContain('✓ Stores: 8 declared stores available or absent by choice')
+
+    await box.state.write('ki/registry.toml', 'schema = 1\nextra = true\n')
+    expect((await box.run('ki doctor')).output).toContain('Stores: local KI repository registry is invalid')
   })
 
   test('reports a wrong managed user-skill target while local development is active', async () => {

@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { parse } from 'smol-toml'
 import { isRecord, REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
+import { conventionalStoreCandidates, type ExternalStoreRole, storeFix } from '../storage/index.ts'
 import { skillTable, territoryDeclarationFrom } from './declaration.ts'
 
 /**
@@ -41,3 +42,17 @@ export const sourcesStoreNames = async (root: string, registryKey: string | unde
 export const scannedSourcesStoreNames = (names: SourcesStoreNames): readonly string[] => [
   ...new Set([names.canonical, names.historical].filter((name): name is string => Boolean(name)))
 ]
+
+/**
+ * The fix for a declared store that is unavailable or missing on this host, naming a single matching
+ * conventional folder when there is one. Unreadable naming metadata only loses the suggested path.
+ */
+export const repositoryStoreFix = async (
+  homeDirectory: string,
+  root: string,
+  registryKey: string | undefined,
+  role: ExternalStoreRole
+): Promise<string> => {
+  const names = await sourcesStoreNames(root, registryKey).then(scannedSourcesStoreNames, () => [])
+  return storeFix(root, role, await conventionalStoreCandidates(homeDirectory, role, names))
+}

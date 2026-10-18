@@ -77,6 +77,7 @@ This baseline describes the `v0.11.0` release. Domain imports and extracted type
 - `ki repo store create <sources> [--write]`
 - `ki repo store bind <sources|legacy> <absolute-path> [--write]`
 - `ki repo store unbind <sources|legacy> [--write]`
+- `ki repo store absent <sources|legacy> [--clear] [--write]`
 - `ki repo audit [--staged] [--paths <path...>]`
 - `ki repo conform`
 - `ki repo diag`
@@ -217,6 +218,7 @@ This baseline describes the `v0.11.0` release. Domain imports and extracted type
 - `ki territory open <name> --target zed` adds the named owner last so Zed displays it first in the sidebar; canonical roots, the estate, and VS Code ordering are unchanged.
 - `ki territory open` and `ki repo open` support Delta as a local target, opening each selected repository in the running app.
 - `ki repo store scan` warns about undeclared conventional OneDrive source directories for selected repositories without creating or changing stores; `--estate` scans all registered repositories.
+- `ki repo store absent` records in the machine-local registry (`absent_stores`) that this host does without a declared store. `store list` adds `availability` (`available`, `unavailable` with `reason`, `absent` or `missing`) to `ki/repository-stores/v1` and prints the fix for an unavailable or missing store. `ki repo open` and `ki vscode sync` skip such a store with a warning instead of failing; `ki repo repair` names the fix and reports an absent store as information; `ki doctor` warns once per unavailable or missing registered store and counts `warn`; `store create` without the OneDrive root names both the bind and absent routes.
 - Closed current batch records validate selected work from their evidence commit, so later pruning and expiry do not invalidate archival verification.
 - `man/ki.commands.json` publishes the generated `ki/commands/v1` command and description inventory, reconciled against the manual and registered command tree.
 - `ki repo init` writes `.ki.toml` in the house TOML layout: multiline arrays with trailing commas, a blank line before every table, and section banners.

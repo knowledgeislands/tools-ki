@@ -69,7 +69,19 @@ ki repo store unbind sources
 ki repo store unbind sources --write
 ```
 
-Unbinding never deletes store content. For the established opt-in OneDrive source location, `ki repo store create sources` previews `sources-<repository-basename>` and `--write` creates and binds it. A territory Capital's store is instead named by its canonical territory handle, `territory_prefix` or else its registry key, so `-t ki` and `-t knowledge-islands` both create `sources-knowledge-islands`; a prefixless Capital must be registered first. `store scan` checks a Capital under both its handle and its old basename name. `legacy` has no automatic creation policy; bind its existing directory explicitly. Do not use stores for credentials.
+Unbinding never deletes store content. For the established opt-in OneDrive source location, `ki repo store create sources` previews `sources-<repository-basename>` and `--write` creates and binds it. A territory Capital's store is instead named by its canonical territory handle, `territory_prefix` or else its registry key, so `-t ki` and `-t knowledge-islands` both create `sources-knowledge-islands`; a prefixless Capital must be registered first. `store scan` checks a Capital under both its handle and its old basename name. `legacy` has no automatic creation policy; bind its existing directory explicitly. Where the OneDrive root is missing, such as on a CI runner or a host without OneDrive, `create` refuses and names both routes. Do not use stores for credentials.
+
+`store list` reports each store's availability on this host. A bound store is `available` or `unavailable`, with the reason; an unbound one is `missing` or, once you have recorded that this host does without it, `absent`. The text form prints the fix command for an unavailable or missing store, filling in the path when exactly one conventional `sources-<name>` folder matches, and the JSON form adds `availability` and `reason` beside the existing `role`, `state` and `path` fields of `ki/repository-stores/v1`.
+
+To record that this host does without a store, preview and then write the marker; `--clear` removes it, and binding the store clears it too:
+
+```sh
+ki repo store absent sources
+ki repo store absent sources --write
+ki repo store absent sources --clear --write
+```
+
+A bound store must be unbound before it can be marked absent. An absent store is reported once as information and never warned about. A missing or unavailable store only warns: `ki repo open` opens the repository without it, `ki repo repair` still passes, `ki vscode sync` leaves its folder out of the workspace, and `ki doctor` warns once per store without changing its exit status. Each warning names the fix.
 
 ## Run an audit
 
