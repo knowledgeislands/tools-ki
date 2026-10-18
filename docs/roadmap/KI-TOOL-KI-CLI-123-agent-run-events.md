@@ -11,7 +11,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 29d42d95d1989d1479ff15fadd96aaa9937a0681
 created_at: 2026-10-13T13:53:24Z
-updated_at: 2026-10-16T01:52:25Z
+updated_at: 2026-10-18T06:33:00Z
 ---
 
 # Agent Run Events
@@ -179,3 +179,13 @@ The strategy was written against the earlier report shape with a Failed section 
 - Whether the seen marker stays a per-run file or becomes a cursor the coordinator passes, which would let two coordinators watch one run.
 
 Planned to Ready on 16 October 2026 in the tools-burndown thread, which Kris's OWNER-LANE decision made this record's writer lane; the record stays in the ways-of-working Project. Decisions 3, 5 and 6 settle the three open questions above, and Decision 4 follows the owner-report shape of 14 October 2026.
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record, against Requirements 1 to 5 and Verify 1 to 8. No code was changed and nothing was accepted.
+
+- **Verdict:** ready for acceptance.
+- **Requirements:** `src/core/agent/events.ts` meets Decisions 1 to 8 as written: launcher-observed events through `recordEvent`, everything else from one locked `deriveEvents` pass ordered by source modification time then name, the three fixed status-line forms only, `needs-owner` keyed by agent, tag and title in both report shapes, and `attempt` from the `<name>.prev-<n>` folders.
+- **Verify 1 to 7:** each has a matching contract test through `run(args, context)` in `src/tests/cli/agent-events.test.ts` and `src/tests/cli/agent.test.ts`, including the `notify`, `review-astra`, `merge` order regression and the stale-lock takeover.
+- **Verify 8:** on the reviewed head, `bunx vitest run --coverage` passed 78 files and 1326 tests at 100% statements and branches; `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip`, `mandoc -T lint man/ki.1` and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 and two warnings, CI-1 and HOOK-1, neither from this record.
+- **Observation, not blocking:** an agent that writes `DONE` before its report gets a permanent `failed` ("no report") and never a later `done`, though its queries are still raised. The progress protocol orders the report first, so this follows Decision 3.
