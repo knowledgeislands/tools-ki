@@ -6,13 +6,12 @@ kind: deliver
 purpose: capability
 project: knowledge-acquisition
 component: acquire
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 14a8e39ce17e7c51b4f26d9b62c1db1a297ad002
 created_at: 2026-10-16T00:36:09Z
-updated_at: 2026-10-18T07:08:00Z
+updated_at: 2026-10-18T08:53:02Z
 ---
 
 # KI-TOOL-KI-CLI-141: Granola screenshots and markers
@@ -100,6 +99,10 @@ An independent runtime reviewer found missing screenshot-proof validation during
 ### Mini recap
 
 Read import remains source-read-only. Explicit marking adds one private membership after committed preservation checks, retains every original membership and verifies the result. No deletion, reset, migration, publication or push was performed. Owner acceptance remains pending.
+
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above and the independent review of 18 October, which found it ready for acceptance. In the ways-of-working walk-through Kris answered "Tools-sitting, yes, accepted", recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 5") as TOOLS-SITTING a): accept the ten reviewed tools-ki records, then cut v0.11.1 and install it on this Mac. Kris accepted what is there, so any provisional call named under Outstanding concerns stands as delivered.
 
 ## Discussion
 

@@ -6,13 +6,12 @@ project: tools-burndown
 purpose: corrective
 kind: deliver
 component: repo
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 7eeeb54e1ab551eefed5345dcfaf3c454efc74c0
 created_at: 2026-10-15T21:48:02Z
-updated_at: 2026-10-18T07:02:00Z
+updated_at: 2026-10-18T08:53:02Z
 ---
 
 # Warn Unknown Record Fields
@@ -143,6 +142,10 @@ The change adds data alongside existing data and leaves the failure paths alone.
 ### Mini recap
 
 KB Streams records now report fields outside the shared model, such as `priority`, naming the file and field without failing. A test checks the known set against the Harness checker's lists.
+
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above and the independent review of 18 October, which found it ready for acceptance. In the ways-of-working walk-through Kris answered "Tools-sitting, yes, accepted", recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 5") as TOOLS-SITTING a): accept the ten reviewed tools-ki records, then cut v0.11.1 and install it on this Mac. Kris accepted what is there, so any provisional call named under Outstanding concerns stands as delivered.
 
 ## Discussion
 

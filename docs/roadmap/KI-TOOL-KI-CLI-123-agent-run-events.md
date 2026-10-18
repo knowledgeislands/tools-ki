@@ -5,13 +5,12 @@ title: Agent run events
 project: ways-of-working
 component: agent
 kind: deliver
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 29d42d95d1989d1479ff15fadd96aaa9937a0681
 created_at: 2026-10-13T13:53:24Z
-updated_at: 2026-10-18T06:33:00Z
+updated_at: 2026-10-18T08:53:02Z
 ---
 
 # Agent Run Events
@@ -161,6 +160,10 @@ Derivation keeps every existing prompt valid: an agent that writes only its stat
 ### Mini recap
 
 `wait --next` now wakes the coordinator on finishes, failures, blocks and owner queries in the order they happened, from an append-only events log derived from the run packet.
+
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above and the independent review of 18 October, which found it ready for acceptance. In the ways-of-working walk-through Kris answered "Tools-sitting, yes, accepted", recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 5") as TOOLS-SITTING a): accept the ten reviewed tools-ki records, then cut v0.11.1 and install it on this Mac. Kris accepted what is there, so any provisional call named under Outstanding concerns stands as delivered.
 
 ## Discussion
 

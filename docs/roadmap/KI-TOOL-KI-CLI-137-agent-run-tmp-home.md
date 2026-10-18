@@ -6,13 +6,12 @@ project: tools-burndown
 purpose: capability
 kind: deliver
 component: agent
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: c79ff4c6a9c5a019d8132f0c180ef52936eb3478
 created_at: 2026-10-15T21:48:02Z
-updated_at: 2026-10-18T06:57:00Z
+updated_at: 2026-10-18T08:53:02Z
 ---
 
 # Agent Run Temporary Home
@@ -133,6 +132,10 @@ No repository is touched; launch only adds a directory and a sentence, and close
 ### Mini recap
 
 Background agents now have a temporary folder outside every repository that the run's close checks and removes.
+
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above and the independent review of 18 October, which found it ready for acceptance. In the ways-of-working walk-through Kris answered "Tools-sitting, yes, accepted", recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 5") as TOOLS-SITTING a): accept the ten reviewed tools-ki records, then cut v0.11.1 and install it on this Mac. Kris accepted what is there, so any provisional call named under Outstanding concerns stands as delivered.
 
 ## Discussion
 

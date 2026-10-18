@@ -5,13 +5,12 @@ title: Older runs start seen
 project: tools-burndown
 component: agent
 kind: deliver
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: d835eab86412290f9b11fa46dec5c2f1ba2f5bfc
 created_at: 2026-10-16T21:08:47Z
-updated_at: 2026-10-18T07:22:00Z
+updated_at: 2026-10-18T08:53:02Z
 ---
 
 # Older Runs Start Seen
@@ -110,6 +109,10 @@ Every existing agent test passes once its hand-written run is marked as started 
 ### Mini recap
 
 The first read of an older run no longer replays its past finishes, answered queries or `failed: no report`.
+
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above and the independent review of 18 October, which found it ready for acceptance. In the ways-of-working walk-through Kris answered "Tools-sitting, yes, accepted", recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 5") as TOOLS-SITTING a): accept the ten reviewed tools-ki records, then cut v0.11.1 and install it on this Mac. Kris accepted what is there, so any provisional call named under Outstanding concerns stands as delivered.
 
 ## Discussion
 

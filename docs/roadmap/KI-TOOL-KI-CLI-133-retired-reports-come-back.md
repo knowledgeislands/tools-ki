@@ -5,13 +5,12 @@ title: Retired reports come back
 project: tools-burndown
 purpose: corrective
 kind: deliver
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: f0f2192251cad452fb0f4cb3b47c35ce79e32aaa
 created_at: 2026-10-14T23:40:00Z
-updated_at: 2026-10-18T06:48:00Z
+updated_at: 2026-10-18T08:53:02Z
 ---
 
 # Retired Reports Come Back
@@ -138,6 +137,10 @@ The goal holds: the field case, a state folder still holding reports the thread 
 ### Mini recap
 
 Delivered the "adopt only what Git has never held" rule for `ki agent decide` and `close`, with contract tests, docs and a clean full gate at 100% coverage; the field reproduction now leaves the tree clean. No concerns. Learning route proposed, not promoted: threads that tidy their folder can rely on `ki` again, which the tools-burndown and techne threads may note when they next tidy.
+
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above and the independent review of 18 October, which found it ready for acceptance. In the ways-of-working walk-through Kris answered "Tools-sitting, yes, accepted", recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 5") as TOOLS-SITTING a): accept the ten reviewed tools-ki records, then cut v0.11.1 and install it on this Mac. Kris accepted what is there, so any provisional call named under Outstanding concerns stands as delivered.
 
 ## Discussion
 

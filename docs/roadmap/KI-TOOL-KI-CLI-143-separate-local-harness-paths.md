@@ -5,13 +5,12 @@ title: Separate local harness paths
 project: tools-burndown
 component: dev
 kind: deliver
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: df1c24ed60342c2d9d194bebee9970ab3974bede
 created_at: 2026-10-16T19:30:03Z
-updated_at: 2026-10-18T07:18:00Z
+updated_at: 2026-10-18T08:53:02Z
 ---
 
 # Separate local harness paths
@@ -134,6 +133,10 @@ The change keeps release settings, delegated tables and repository migration int
 ### Mini recap
 
 Each Mac now keeps its own harness checkout paths, and the shared configuration stops carrying them.
+
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above and the independent review of 18 October, which found it ready for acceptance. In the ways-of-working walk-through Kris answered "Tools-sitting, yes, accepted", recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 5") as TOOLS-SITTING a): accept the ten reviewed tools-ki records, then cut v0.11.1 and install it on this Mac. Kris accepted what is there, so any provisional call named under Outstanding concerns stands as delivered. The live checks on Terra and Sol, each against its own configuration, are not part of this closure: they follow through the chezmoi handoff under HARNESS-PATHS-LIVE a) ("owner answers, batch 3"), run on both Macs once v0.11.1 is installed.
 
 ## Discussion
 

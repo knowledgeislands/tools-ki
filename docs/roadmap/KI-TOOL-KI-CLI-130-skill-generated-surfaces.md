@@ -6,13 +6,12 @@ project: ways-of-working
 component: dev
 purpose: capability
 kind: deliver
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 41e11c949b746be916b554cf9b66859fdcd2fc8b
 created_at: 2026-10-14T20:46:12Z
-updated_at: 2026-10-18T06:36:00Z
+updated_at: 2026-10-18T08:53:02Z
 ---
 
 # Generated Skill Surfaces
@@ -119,6 +118,10 @@ The goal holds: a skill's standard can be the one source of the files its genera
 ### Mini recap
 
 `ki dev skill generate` shipped in `9c4c0c0e` and is in `v0.10.5`; Verify passed in full on 16 October 2026 against the live `ki-pmo` generator. No concerns. Learning route, not promoted: Verify steps that edit a generated file should name the generated region when a generator splices lines into a hand-kept file, as the `ki-pmo` hook generator does.
+
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above and the independent review of 18 October, which found it ready for acceptance. In the ways-of-working walk-through Kris answered "Tools-sitting, yes, accepted", recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 5") as TOOLS-SITTING a): accept the ten reviewed tools-ki records, then cut v0.11.1 and install it on this Mac. Kris accepted what is there, so any provisional call named under Outstanding concerns stands as delivered.
 
 ## Discussion
 

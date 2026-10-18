@@ -6,13 +6,12 @@ project: tools-burndown
 purpose: corrective
 kind: deliver
 component: agent
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: fed222765aebead409e0e53d4cd970dd4a0042aa
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-18T06:52:00Z
+updated_at: 2026-10-18T08:53:02Z
 ---
 
 # Reused Agent Name Overwrites
@@ -126,6 +125,10 @@ The refusal and the relaunch share one notion of "taken", so launch, queue and d
 ### Mini recap
 
 Agent names are now unique within a run unless `--relaunch` is passed, and a relaunch keeps the earlier packet in `<name>.prev-<n>/`.
+
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above and the independent review of 18 October, which found it ready for acceptance. In the ways-of-working walk-through Kris answered "Tools-sitting, yes, accepted", recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 5") as TOOLS-SITTING a): accept the ten reviewed tools-ki records, then cut v0.11.1 and install it on this Mac. Kris accepted what is there, so any provisional call named under Outstanding concerns stands as delivered.
 
 ## Discussion
 
