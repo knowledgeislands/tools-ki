@@ -8,4 +8,4 @@ export const territoryOptions = (command: Command): Command =>
     .option('-t, --territory <handle>', 'registered territory handle')
     .option('--estate', 'select the registered estate')
     .option('--principals', 'select every territory Capital, system Capital first')
-    .option('-f, --filter <prefix>', 'literal directory-name prefix (repeatable alternatives)', collectFilters, [])
+    .option('--filter <prefix>', 'literal directory-name prefix (repeatable alternatives)', collectFilters, [])

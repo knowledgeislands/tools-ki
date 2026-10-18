@@ -28,7 +28,7 @@ export const createTerritoryInspectCommand = (context: KiContext): Command =>
     .option('-t, --territory <handle>', 'registered territory handle')
     .option('--estate', 'registered estate')
     .option('--principals', 'territory Capitals')
-    .option('-f, --filter <prefix>', 'literal directory-name prefix', collectFilters, [])
+    .option('--filter <prefix>', 'literal directory-name prefix', collectFilters, [])
     .addOption(
       new Option('--target <target>', 'local target to inspect').choices(observeTargetNames).makeOptionMandatory()
     )

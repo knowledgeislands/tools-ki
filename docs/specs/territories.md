@@ -16,7 +16,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### TERRITORY-002 — Literal filters and native defaults
 
-Supported operations MUST accept `-t, --territory`, `--estate`, `--principals` and repeatable `-f, --filter`. Primary scopes MUST conflict with one another and explicit repository selection. Filters MUST match directory basenames literally and case-sensitively with OR semantics, before worktree expansion, including on the caller's native default. Empty values and zero matches MUST fail. Commands that cannot use selectors MUST reject them.
+Supported operations MUST accept `-t, --territory`, `--estate`, `--principals` and repeatable `--filter`, with no short form. Primary scopes MUST conflict with one another and explicit repository selection. Filters MUST match directory basenames literally and case-sensitively with OR semantics, before worktree expansion, including on the caller's native default. Empty values and zero matches MUST fail. Commands that cannot use selectors MUST reject them.
 
 _Conformance:_ conforming
 

@@ -136,9 +136,7 @@ describe('[ki completion]', () => {
     expect(bash.output).toContain("'repo open:--target') printf '%s\\n' 'zed vscode delta'")
     expect(zsh.output).toContain("'territory inspect:--target') printf '%s\\n' 'zed vscode'")
     expect(bash.output).toContain("'territory inspect:--target') printf '%s\\n' 'zed vscode'")
-    expect(zsh.output).toContain(
-      "'territory inspect') printf '%s\\n' '-t --territory -f --filter --target --workspace'"
-    )
+    expect(zsh.output).toContain("'territory inspect') printf '%s\\n' '-t --territory --filter --target --workspace'")
     expect(bash.output).toContain("'territory inspect:--workspace')")
     expect(zsh.output).toContain("'acquire list')")
     expect(zsh.output).toContain("'acquire import')")
@@ -152,7 +150,7 @@ describe('[ki completion]', () => {
     expect(bash.output).toContain("'repo roadmap')")
     expect(bash.output).toContain("'repo trade routes')")
     expect(bash.output).toContain(
-      "'repo trade routes list') printf '%s\\n' '-V --version -h --help --repo -t --territory -f --filter --estate --principals --incomplete --format'"
+      "'repo trade routes list') printf '%s\\n' '-V --version -h --help --repo -t --territory --filter --estate --principals --incomplete --format'"
     )
     expect(bash.output).toContain("'repo trade standing capture:--capture')")
     expect(bash.output).toContain("'repo trade policy compare:--baseline')")

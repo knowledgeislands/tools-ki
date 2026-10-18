@@ -8,13 +8,13 @@ Two ideas carry the whole surface. **Selection happens before anything runs**, a
 
 Use repeated `--repo <path-or-pattern>` for explicit physical roots. Use `-t, --territory <handle>` for a registered Capital's declared members, `--estate` for every registered repository, or `--principals` for the registered territory Capitals alone, system Capital first. These primary scopes are mutually exclusive. The optional Capital-only `territory_prefix` supplies the handle; without it use the Capital's local registry key.
 
-Repeated `-f, --filter <prefix>` arguments narrow directory basenames literally and case-sensitively with OR semantics. Filter alone narrows the native current-repository or direct-CWD mGit workspace default. Filtering happens before nested worktree expansion; empty prefixes and no matches fail.
+Repeated `--filter <prefix>` arguments narrow directory basenames literally and case-sensitively with OR semantics. Filter alone narrows the native current-repository or direct-CWD mGit workspace default. Filtering happens before nested worktree expansion; empty prefixes and no matches fail.
 
 Territory registration must be complete before filtering. Selected roots must be physical KI checkouts matching their registered identity and declared Capital. A registered unavailable root excluded by a filter does not block the remaining operation. See [territory selection](territory-selection.md) for the atomic roots interface and local projection tools.
 
 ```sh
 ki repo audit --repo .
-ki repo -t knowledge-islands -f tools- audit --concise
+ki repo -t knowledge-islands --filter tools- audit --concise
 ki repo audit --estate --concise
 ```
 

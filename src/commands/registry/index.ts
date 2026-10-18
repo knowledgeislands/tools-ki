@@ -17,7 +17,7 @@ export const createRegistryCommand = (context: KiContext): Command => {
     )
     .option('-t, --territory <handle>', 'select a registered territory')
     .option(
-      '-f, --filter <prefix>',
+      '--filter <prefix>',
       'literal directory-name prefix (repeatable alternatives)',
       (value: string, previous: readonly string[] = []) => [...previous, value],
       []

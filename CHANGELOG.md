@@ -65,7 +65,7 @@ This baseline describes the `v0.11.2` release. Domain imports and extracted type
 
 - `ki repo --repo <path-or-pattern>`
 - `ki repo -t, --territory <handle>`
-- `ki repo -f, --filter <prefix>`
+- `ki repo --filter <prefix>`
 - `ki repo --estate`
 
 #### Repository management
@@ -181,6 +181,7 @@ This baseline describes the `v0.11.2` release. Domain imports and extracted type
 ### Behaviours
 
 - `ki agent` writes the progress protocol's report path in the run's state folder and copies the report into the tracked work or thread folder when `status`, `watch` or `wait` first sees the agent's `DONE`, leaving a tracked copy with changes Git does not hold, and a retired report Git holds with the same contents, as when a lost `events.state.json` replays an ended agent; a brief naming either path draws no warning. A launch from the run's `<name>.queued.md` or `<name>.draft.md` removes that copy once started, and `ki agent sweep` previews, and with `--write` removes, closed runs in `_archive/` beyond the newest ten or `--keep <n>` and each such brief left beside a newer prompt.
+- `--filter <prefix>` has no short form: `-f` on `ki repo`, `ki registry` and the `ki territory` selectors is a usage error that names `--filter` and runs nothing, leaving `-f` free for force or file.
 - `KI_QUIET`, set to any value but an empty one or `0`, gives `ki repo audit` and `ki repo conform` the output of `--concise --progress never`, while a failing repository still renders its FAIL findings; any explicit `--concise`, `--progress`, `--progress-style` or `--reporter-levels` restores that call's ordinary output.
 - `ki` requires `ki-work-design` in place of `ki-pmo-design` among the canonical Harness's bootstrap user skills, following the Harness rename of `ki-pmo` to `ki-coordination` with no alias; `ki agent` help text and the manual name the run's work folder and the work's decisions log rather than a thread home.
 - The manual and `ki work` help name `ki-work-folder` and its work-folder standard, following the Harness rename of `ki-checkpoint` with no alias; `ki work status` still reads old checkpoints, `type: ki-checkpoint`, for the tolerance window.

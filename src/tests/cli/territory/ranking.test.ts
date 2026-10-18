@@ -86,7 +86,7 @@ describe('territory ranking', () => {
     // Ranked territories' members by path within each, then every unranked root in path order.
     const estate = lines(beta, alpha, member, system, loose)
     expect((await box.run('ki territory roots --estate')).stdout).toBe(estate)
-    expect((await box.run('ki territory roots --estate -f z- -f c-')).stdout).toBe(lines(beta, member))
+    expect((await box.run('ki territory roots --estate --filter z- --filter c-')).stdout).toBe(lines(beta, member))
     // One territory keeps its path order.
     expect((await box.run('ki territory roots -t alpha')).stdout).toBe(lines(alpha, member))
     const calls: (readonly string[])[] = []

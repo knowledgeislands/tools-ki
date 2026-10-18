@@ -19,8 +19,18 @@ const commandName = (command: Command): string => {
   return names.reverse().join(' ')
 }
 
+/** Whether the command or one of its parents declares the long option. */
+const declares = (command: Command, long: string): boolean => {
+  for (let current: Command | null = command; current; current = current.parent)
+    if (current.options.some((option) => option.long === long)) return true
+  return false
+}
+
 const parserError = (command: Command, text: string): string => {
   const option = /^error: unknown option '([^']+)'\n$/.exec(text)
+  // `--filter` has no short form; `-f` stays free for force or file.
+  if (option?.[1]?.startsWith('-f') && declares(command, '--filter'))
+    return `ki: error: option '-f' has been removed from '${commandName(command)}'; use --filter <prefix>\n`
   if (option) return `ki: error: unknown option '${option[1]}' for '${commandName(command)}'\n`
 
   const subcommand = /^error: unknown command '([^']+)'\n$/.exec(text)

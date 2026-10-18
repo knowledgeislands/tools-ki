@@ -78,7 +78,7 @@ describe('territory aliases', () => {
     })
     for (const flag of ['-t', '--territory'])
       expect(
-        (await box.run(['ki', 'repo', flag, 'ki', '-f', 'member', 'open', '--target', 'vscode', '--no-stores']))
+        (await box.run(['ki', 'repo', flag, 'ki', '--filter', 'member', 'open', '--target', 'vscode', '--no-stores']))
           .exitCode
       ).toBe(0)
     expect(opened).toHaveLength(2)

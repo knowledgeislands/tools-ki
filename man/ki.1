@@ -114,7 +114,7 @@ Select every repository in the registered estate.
 .B ki repo [--principals] [command]
 Select every registered territory Capital, system Capital first.
 .TP
-.B ki repo [-f|--filter <prefix>]... [command]
+.B ki repo [--filter <prefix>]... [command]
 Narrow any selected scope by literal case-sensitive directory-name prefixes.
 .SS Repository management
 \&
@@ -231,7 +231,7 @@ health does not attest index identity.
 .SS Registry management
 \&
 .TP
-.B ki registry [--repo <path-or-pattern>]... [-t|--territory <handle>] [--estate] [--principals] [-f|--filter <prefix>]... add [--dry-run] [--search-boundary <id>]
+.B ki registry [--repo <path-or-pattern>]... [-t|--territory <handle>] [--estate] [--principals] [--filter <prefix>]... add [--dry-run] [--search-boundary <id>]
 Record selected canonical KI repository roots in the machine-local registry
 without applying repository repairs.
 .TP
@@ -763,7 +763,7 @@ Without an explicit scope, keep the current repository or
 direct-CWD
 \&.mgit.toml workspace selection. KI does not invoke mgit.
 .TP
-.B -f, --filter <prefix>
+.B --filter <prefix>
 Repeat literal, case-sensitive non-empty directory-name prefixes with OR
 semantics
 to narrow any scope, including the native default. Filter before worktree
@@ -1224,7 +1224,7 @@ repository-operation or conformance verdict. The repository key names each
 record; each record holds a canonical HTTPS GitHub repository identity and
 physical checkout path.
 .TP
-.B ki registry [--repo <path-or-pattern>]... [-t|--territory <handle>] [--estate] [--principals] [-f|--filter <prefix>]... add [--dry-run] [--search-boundary <id>]
+.B ki registry [--repo <path-or-pattern>]... [-t|--territory <handle>] [--estate] [--principals] [--filter <prefix>]... add [--dry-run] [--search-boundary <id>]
 Record selected canonical KI repository roots in
 \fB$XDG_STATE_HOME/ki/registry.toml\fR without applying repository repairs.
 This explicit inventory action validates the selected root's declared canonical

@@ -71,13 +71,13 @@ The optional Capital-only `territory_prefix` supplies the territory handle, such
 
 A personal `[territories] ranking` of handles in `config.toml` puts your territories in your own order of priority. `--principals`, `ki territory list` and `--estate` follow it, and territories it omits keep the order above. See [Select a territory or the estate](docs/guides/user/territory-selection.md#rank-your-territories).
 
-`ki territory roots --null --territory knowledge-islands` returns deterministic absolute primary checkout paths separated by NUL bytes. Repeated `-f, --filter <prefix>` arguments narrow the directory basenames literally and case-sensitively, with OR semantics. Registration and naming metadata must be complete before filtering; an excluded registered unavailable checkout does not prevent a selected operation. The endpoint validates the complete selection before writing stdout.
+`ki territory roots --null --territory knowledge-islands` returns deterministic absolute primary checkout paths separated by NUL bytes. Repeated `--filter <prefix>` arguments narrow the directory basenames literally and case-sensitively, with OR semantics. Registration and naming metadata must be complete before filtering; an excluded registered unavailable checkout does not prevent a selected operation. The endpoint validates the complete selection before writing stdout.
 
 `ki territory inspect --territory knowledge-islands --target vscode --workspace <absolute-file>` compares a local projection read-only. It reports matched, missing, extra registered, unregistered KI and external roots. An exact projection exits `0`, drift exits `1`, and an invalid selection exits `2`. Opening uses the existing Zed, VS Code and Delta local adapters. Historical local Agora reference state is retained as provenance and has no selection role.
 
 ## Select repository targets
 
-Supported `ki repo` operations accept repeated `--repo <path-or-pattern>`, `-t, --territory <handle>`, `--estate`, or `--principals`. These primary scopes are mutually exclusive. Repeated `-f, --filter <prefix>` values narrow any scope, including the native default, using literal case-sensitive directory basenames. Empty prefixes or no matches fail before execution.
+Supported `ki repo` operations accept repeated `--repo <path-or-pattern>`, `-t, --territory <handle>`, `--estate`, or `--principals`. These primary scopes are mutually exclusive. Repeated `--filter <prefix>` values narrow any scope, including the native default, using literal case-sensitive directory basenames. Empty prefixes or no matches fail before execution.
 
 Without an explicit scope, KI keeps the current repository or direct-CWD `.mgit.toml` selection. Workspace manifests select their existing members, recurse through child workspaces, skip bare stores and apply filters before nested `main/` checkout expansion. KI never invokes `mgit`. Every selected physical root must be available; registered territory members must match their canonical identity and Capital. Registration completeness is checked before filtering.
 

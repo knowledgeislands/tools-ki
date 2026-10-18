@@ -44,19 +44,19 @@ describe('territory selection', () => {
     expect(selected.stdout).toBe(`${[capital, member].sort().join('\0')}\0`)
     expect((await roots(box, '-t', 'capital-key')).exitCode).toBe(2)
     for (const args of [
-      ['-f', 'Tool [*]'],
-      ['--filter', 'Tool', '-f', 'missing'],
-      ['-f', 'Tool', '-f', 'Tool']
+      ['--filter', 'Tool [*]'],
+      ['--filter', 'Tool', '--filter', 'missing'],
+      ['--filter', 'Tool', '--filter', 'Tool']
     ]) {
       expect((await roots(box, '-t', 'ki', ...args)).stdout).toBe(`${member}\0`)
     }
-    expect((await roots(box, '--estate', '-f', 'Capital')).stdout).toBe(`${capital}\0`)
+    expect((await roots(box, '--estate', '--filter', 'Capital')).stdout).toBe(`${capital}\0`)
     for (const prefix of ['tool', 'member-key', '*', '']) {
-      const failed = await roots(box, '-t', 'ki', '-f', prefix)
+      const failed = await roots(box, '-t', 'ki', '--filter', prefix)
       expect(failed.exitCode).toBe(2)
       expect(failed.stdout).toBe('')
     }
-    expect((await box.run(['ki', 'territory', 'roots', '-t', 'ki', '-f', 'Capital'])).stdout).toBe(`${capital}\n`)
+    expect((await box.run(['ki', 'territory', 'roots', '-t', 'ki', '--filter', 'Capital'])).stdout).toBe(`${capital}\n`)
   })
   test('fallback follows the Capital registry key while explicit prefixes survive key changes', async () => {
     const { box, entries } = await fixture(null)
@@ -80,14 +80,14 @@ describe('territory selection', () => {
   test('validates full membership registration before filtering and selected roots afterwards', async () => {
     const { box, entries, member } = await fixture()
     await registry(box, entries.slice(0, 1))
-    const missing = await roots(box, '-t', 'ki', '-f', 'Capital')
+    const missing = await roots(box, '-t', 'ki', '--filter', 'Capital')
     expect(missing.exitCode).toBe(2)
     expect(missing.stdout).toBe('')
     expect(missing.stderr).toContain('is not registered')
     await registry(box, entries)
     await rm(member, { recursive: true })
-    expect((await roots(box, '-t', 'ki', '-f', 'Capital')).exitCode).toBe(0)
-    expect((await roots(box, '--estate', '-f', 'Capital')).exitCode).toBe(0)
+    expect((await roots(box, '-t', 'ki', '--filter', 'Capital')).exitCode).toBe(0)
+    expect((await roots(box, '--estate', '--filter', 'Capital')).exitCode).toBe(0)
     const unavailable = await roots(box, '-t', 'ki')
     expect(unavailable.exitCode).toBe(2)
     expect(unavailable.stdout).toBe('')
@@ -120,7 +120,7 @@ describe('territory selection', () => {
     const malformed = await roots(box, '-t', 'ki')
     expect(malformed.stdout).toBe('')
     expect(malformed.stderr).toContain('must be available and valid TOML')
-    expect((await roots(box, '-t', 'ki', '-f', 'Capital')).exitCode).toBe(0)
+    expect((await roots(box, '-t', 'ki', '--filter', 'Capital')).exitCode).toBe(0)
     await box.project.write(
       'nested/Tool [*]\nname/.ki.toml',
       memberConfiguration('example/member', { capital: home('example/other') })
@@ -142,8 +142,8 @@ describe('territory selection', () => {
     for (const args of [
       ['ki', 'agora', 'list'],
       ['ki', 'registry', '-t', 'ki', 'list'],
-      ['ki', 'registry', '-f', 'Capital', 'remove', 'capital-key'],
-      ['ki', 'repo', '-f', 'Capital', 'init'],
+      ['ki', 'registry', '--filter', 'Capital', 'remove', 'capital-key'],
+      ['ki', 'repo', '--filter', 'Capital', 'init'],
       ['ki', 'repo', '-t', 'ki', '--estate', 'roadmap', 'list'],
       ['ki', 'repo', '-t', 'ki', '--repo', '.', 'roadmap', 'list']
     ])
@@ -152,8 +152,27 @@ describe('territory selection', () => {
       '.ki.toml',
       `${memberConfiguration('example/default')}\n[skills.ki-work]\nadapter = "roadmap"\n[skills.ki-work-roadmap]\n`
     )
-    expect((await box.run('ki repo -f project roadmap list')).exitCode).toBe(0)
-    expect((await box.run('ki repo -f absent roadmap list')).exitCode).toBe(2)
+    expect((await box.run('ki repo --filter project roadmap list')).exitCode).toBe(0)
+    expect((await box.run('ki repo --filter absent roadmap list')).exitCode).toBe(2)
+  })
+  test('refuses the removed -f short form, naming --filter and running nothing', async () => {
+    const { box } = await fixture()
+    for (const [args, command] of [
+      [['ki', 'territory', 'roots', '--estate', '-f', 'Capital'], 'ki territory roots'],
+      [['ki', 'territory', 'roots', '--estate', '-fCapital'], 'ki territory roots'],
+      [['ki', 'territory', 'inspect', '-f', 'Capital', '--target', 'zed', '--workspace', 'x'], 'ki territory inspect'],
+      [['ki', 'registry', '-f', 'Capital', 'list'], 'ki registry'],
+      [['ki', 'repo', '-f', 'Capital', 'roadmap', 'list'], 'ki repo'],
+      [['ki', 'repo', 'roadmap', 'list', '-f', 'Capital'], 'ki repo roadmap list']
+    ] as const) {
+      const refused = await box.run([...args])
+      expect(refused.exitCode).toBe(2)
+      expect(refused.stdout).toBe('')
+      expect(refused.stderr).toContain(
+        `ki: error: option '-f' has been removed from '${command}'; use --filter <prefix>\n`
+      )
+    }
+    expect((await box.run('ki territory roots --estate -h')).output).not.toContain('-f,')
   })
 })
 
@@ -173,7 +192,7 @@ test('opens, shows, discovers and audits selected territory roots through existi
   expect((await box.run('ki territory open -t ki --target zed')).exitCode).toBe(0)
   expect(calls.map((call) => call.args)).toEqual([['-n'], ['-e', member], ['-e', capital]])
   calls.length = 0
-  expect((await box.run('ki territory open -t ki -f Tool --target zed')).exitCode).toBe(0)
+  expect((await box.run('ki territory open -t ki --filter Tool --target zed')).exitCode).toBe(0)
   expect(calls.map((call) => call.args)).toEqual([['-n'], ['-e', member]])
   expect((await box.run('ki territory open --estate --target vscode')).exitCode).toBe(0)
   expect((await box.run('ki territory open --estate --target delta')).exitCode).toBe(0)
@@ -196,10 +215,10 @@ test('filters native mGit logical directory names before nested checkout validat
     'Tool/main/.ki.toml',
     `${memberConfiguration('example/tool')}\n[skills.ki-work]\nadapter = "roadmap"\n[skills.ki-work-roadmap]\n`
   )
-  const selected = await box.run('ki repo -f Tool roadmap list')
+  const selected = await box.run('ki repo --filter Tool roadmap list')
   expect(selected.exitCode).toBe(0)
   expect(selected.stdout).toContain('/Tool/main)')
-  expect((await box.run('ki repo -f main roadmap list')).exitCode).toBe(2)
+  expect((await box.run('ki repo --filter main roadmap list')).exitCode).toBe(2)
   expect((await box.run('ki repo roadmap list')).exitCode).toBe(2)
 })
 
@@ -215,7 +234,7 @@ test('filters explicit roots and rejects empty territory handles without changin
         capital,
         '--repo',
         'missing',
-        '-f',
+        '--filter',
         'Capital',
         'open',
         '--target',
@@ -225,7 +244,7 @@ test('filters explicit roots and rejects empty territory handles without changin
     ).exitCode
   ).toBe(0)
   expect((await box.run(['ki', 'repo', '-t', '', 'roadmap', 'list'])).exitCode).toBe(2)
-  expect((await box.run(['ki', 'repo', '--repo', capital, '-f', 'absent', 'roadmap', 'list'])).exitCode).toBe(2)
+  expect((await box.run(['ki', 'repo', '--repo', capital, '--filter', 'absent', 'roadmap', 'list'])).exitCode).toBe(2)
   // Pattern matches are narrowed before validation, so the non-KI `nested` directory is never inspected.
   const opened: (readonly string[])[] = []
   box.setRunner(async (_command, args) => {
@@ -234,9 +253,9 @@ test('filters explicit roots and rejects empty territory handles without changin
   })
   const open = (...args: string[]) => box.run(['ki', 'repo', ...args, 'open', '--target', 'vscode', '--no-stores'])
   expect((await open('--repo', '*')).exitCode).toBe(2)
-  expect((await open('--repo', '*', '-f', 'Capital')).exitCode).toBe(0)
+  expect((await open('--repo', '*', '--filter', 'Capital')).exitCode).toBe(0)
   box.cd('Capital checkout')
-  expect((await open('--repo', '.', '-f', 'Capital')).exitCode).toBe(0)
+  expect((await open('--repo', '.', '--filter', 'Capital')).exitCode).toBe(0)
   expect(opened).toEqual([
     ['--new-window', capital],
     ['--new-window', capital]

@@ -205,7 +205,7 @@ describe('[ki command inventory]', () => {
     expect(JSON.parse(generated).schema).toBe('ki/commands/v1')
     expect(
       manual.match(
-        /\.B ki registry \[--repo <path-or-pattern>]\.\.\. \[-t\|--territory <handle>] \[--estate] \[--principals] \[-f\|--filter <prefix>]\.\.\. add \[--dry-run]/g
+        /\.B ki registry \[--repo <path-or-pattern>]\.\.\. \[-t\|--territory <handle>] \[--estate] \[--principals] \[--filter <prefix>]\.\.\. add \[--dry-run]/g
       )
     ).toHaveLength(2)
 
@@ -220,7 +220,7 @@ describe('[ki command inventory]', () => {
     expect(manual).toContain('.B ki registry list')
     expect(manual).toContain('.B ki registry remove')
     expect(manual).toContain(
-      '.B ki registry [--repo <path-or-pattern>]... [-t|--territory <handle>] [--estate] [--principals] [-f|--filter <prefix>]... add [--dry-run]'
+      '.B ki registry [--repo <path-or-pattern>]... [-t|--territory <handle>] [--estate] [--principals] [--filter <prefix>]... add [--dry-run]'
     )
     for (const command of registryCommands) expect(changelog).toContain(`\`ki registry ${command}`)
 

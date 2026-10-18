@@ -61,10 +61,10 @@ describe('principals selection', () => {
     expect(shown.output).toContain('REPOSITORIES=4')
     expect(shown.output).not.toContain('member')
     expect((await box.run('ki territory audit --principals')).output).toContain('principals: healthy')
-    expect((await box.run('ki territory roots --principals -f d-alpha -f c-beta')).stdout).toBe(
+    expect((await box.run('ki territory roots --principals --filter d-alpha --filter c-beta')).stdout).toBe(
       `${ordered[1]}\n${ordered[2]}\n`
     )
-    const unmatched = await box.run('ki territory roots --principals -f member')
+    const unmatched = await box.run('ki territory roots --principals --filter member')
     expect(unmatched).toMatchObject({ exitCode: 2, stdout: '' })
     expect(unmatched.stderr).toBe(
       'ki: error: repository selection matched no repositories\nnext: compare --repo, --territory and --filter with the repositories ki registry list shows\n'
