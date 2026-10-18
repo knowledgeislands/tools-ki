@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 7eeeb54e1ab551eefed5345dcfaf3c454efc74c0
 created_at: 2026-10-15T21:48:02Z
-updated_at: 2026-10-16T02:21:00Z
+updated_at: 2026-10-18T07:02:00Z
 ---
 
 # Warn Unknown Record Fields
@@ -151,3 +151,14 @@ Capture only, on Kris Brown's explicit request in PRIORITY-FIELD; adoption, prio
 Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-burndown Project, on Kris Brown's TRIAGE-ADOPT answer (option a) as applied in the tools-burndown thread's BURN-OVERNIGHT decision.
 
 Planned and set Ready on 16 October 2026 under the tools-burndown thread's BURN-OVERNIGHT authority. The planning question above is settled in the Decision section: a pinned contract test on each side, since the harness checker's list has already landed.
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record, against Decisions 1 to 3 and Verify 1 to 7. No code was changed and nothing was accepted.
+
+- **Verdict:** ready for acceptance.
+- **Decision 1:** `kbStreamsKnownFields` in `src/core/work/items.ts:50` is `allowedFields` plus the six note fields. Read against the local `ki-agentic-harness` checkout, every one of the 23 fields in its `RECORD_FIELDS` and its six `KB_NOTE_FIELDS` is in the `tools-ki` set; the three extra fields here are the retired ones Decision 1 keeps, so the delivery's concern that the list was not re-read is now settled.
+- **Decision 3:** `ki repo roadmap` has no `next` view; `list` and `summary` are the views that read Streams records, and both carry the warnings.
+- **Verify 1 to 5:** covered by contract tests through `run(args, context)`, as the Verification lists.
+- **Verify 6:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc, biome, knip, mandoc and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1, neither from this record.
+- **Verify 7:** `ki repo --repo <ki-principal> roadmap list`, read-only, listed four records with no warnings, exit 0.
