@@ -544,7 +544,7 @@ export const runStatus = async (context: AgentContext, run: string): Promise<Age
   return { lines: [...current.lines, ...inbox], live: current.live }
 }
 
-/** One live item of a run, in the `ki-pmo` banner's `- [running] <agent> - <what>` form. */
+/** One live item of a run, in the `ki-coordination` banner's `- [running] <agent> - <what>` form. */
 export interface RunItem {
   readonly kind: 'running' | 'queued'
   readonly agent: string

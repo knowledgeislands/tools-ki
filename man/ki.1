@@ -416,13 +416,13 @@ Append one line, naming the sender, to a live run's inbox.
 Print each new run event and one status line per interval until the run ends.
 .TP
 .B ki agent home <run> [--work <id>] [--repo <dir>]
-Print the run's thread home, or record a work folder as it.
+Print the run's work folder, or record a work folder as it.
 .TP
 .B ki agent new <run> <name> [--repo <dir>]
 Write a prompt skeleton from the run contract.
 .TP
 .B ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--class <class>] [--repo <dir>]
-Append a numbered, timestamped owner decision to the thread's tracked log.
+Append a numbered, timestamped owner decision to the work's tracked log.
 .TP
 .B ki agent reconcile <run> <number> [<home>] [--class <class>]
 Write or replace one decision's durable home.
@@ -1755,7 +1755,7 @@ line, then one
 or
 .I "- [queued] <agent> - position <n>"
 line per live item, in the form the
-.B ki-pmo
+.B ki-coordination
 banner quotes. A run that predates its thread home shows
 .IR "(no thread home)" .
 .B --all
@@ -1833,40 +1833,40 @@ already ended as seen, so no finish, query or
 is replayed, while a live agent keeps ordinary derivation.
 .TP
 .B ki agent home <run> [--work <id>] [--repo <dir>]
-Print the run's thread home, resolving it as the first command would
+Print the run's work folder, resolving it as the first command would
 without recording it. With
 .BR --work ,
 record
 .I +/_WORK/<id>/
 as the home, for a new run or one homed elsewhere, once that folder holds
 .IR work.md ;
-it moves no file, so move the thread folder's contents first.
+it moves no file, so move the old folder's contents first.
 .TP
 .B ki agent new <run> <name> [--repo <dir>]
 Write a prompt skeleton from the
 .B ki-delegation
 run contract to
 .IR <name>.draft.md ,
-with the thread's decisions log and report paths filled in.
+with the work's decisions log and report paths filled in.
 .TP
 .B ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--class <class>] [--repo <dir>]
-Append a numbered owner decision, timestamped in UTC, to the thread's tracked
+Append a numbered owner decision, timestamped in UTC, to the work's tracked
 .I decisions.md
 or the named log, for prompts to cite as their authority. Writing the
-thread's own log, it first moves any
+work's own log, it first moves any
 .I decisions.md
 and
 .I <name>.report.md
 a run predating the tracked home kept in its state folder into the thread
 folder, where no copy exists and Git has never held one, and names them, so
-the tracked log continues the old numbering and a report the thread has
+the tracked log continues the old numbering and a report the work has
 retired stays retired.
 .I "<TAG> - <letter>"
 text, an owner's bare option letter, is logged as that option's
 .I "<letter>) <wording>"
 from the newest
 .I *.report.md
-in the thread folder carrying a
+in the work folder carrying a
 .I <TAG>
 query, with a
 .I source:
@@ -1879,7 +1879,7 @@ with a
 or a work-record identifier such as
 .IR KI-TOOL-KI-CLI-124 .
 .B --class
-writes the entry's ki-pmo class,
+writes the entry's ki-coordination class,
 .BR operational ,
 .BR rule ,
 .B standalone
@@ -1897,7 +1897,7 @@ line, the
 .I class:
 line given by
 .BR --class ,
-or both, of one decision in the thread's tracked log.
+or both, of one decision in the work's tracked log.
 .TP
 .B ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]
 Retire a finished run's state folder. The reconcile gate prints one line per

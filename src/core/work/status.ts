@@ -216,7 +216,7 @@ const legacyStates: Readonly<Record<string, { readonly state: WorkState; readonl
   hold: { state: 'on-hold', hold: { reason: 'paused', release: null } }
 }
 
-/** Maps one thread-model checkpoint to an entry under the ki-pmo Work naming rules, or undefined if it is not one. */
+/** Maps one thread-model checkpoint to an entry under the ki-coordination Work naming rules, or undefined if it is not one. */
 const checkpointEntry = (
   stem: string,
   text: string,

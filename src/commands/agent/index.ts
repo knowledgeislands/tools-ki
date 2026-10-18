@@ -54,11 +54,13 @@ const seconds = (value: string): number => {
 
 const repoOption = new Option(
   '--repo <dir>',
-  "repository owning the run's thread; default, the working directory's Git repository"
+  "repository holding the run's work folder; default, the working directory's Git repository"
 )
 
 const classOption = (): Option =>
-  new Option('--class <class>', "the decision's ki-pmo class; the close gate reads it").choices(decisionClasses)
+  new Option('--class <class>', "the decision's ki-coordination class; the close gate reads it").choices(
+    decisionClasses
+  )
 
 interface LaunchOptions {
   readonly runtime: AgentRuntime
@@ -185,7 +187,7 @@ export const createAgentCommand = (context: KiContext): Command => {
 
   command.addCommand(
     new Command('status')
-      .description("print each agent's latest status, or with no run every live thread's")
+      .description("print each agent's latest status, or with no run every live run's")
       .argument('[run]', 'run name; omitted, every run with an agent running or queued')
       .option('--all', 'with no run, also list the runs at rest')
       .action(async (run: string | undefined, options: { all?: boolean }) => {
@@ -218,7 +220,7 @@ export const createAgentCommand = (context: KiContext): Command => {
       .argument('<line...>', 'the line to send')
       .option(
         '--from <run>',
-        'sending run, when KI_AGENT_RUN is unset; default, the run whose thread this repository owns'
+        'sending run, when KI_AGENT_RUN is unset; default, the run whose work folder this repository holds'
       )
       .action(async (run: string, line: readonly string[], options: { from?: string }) =>
         write(
@@ -259,7 +261,7 @@ export const createAgentCommand = (context: KiContext): Command => {
 
   command.addCommand(
     new Command('home')
-      .description("print the run's thread home, or record a +/_WORK/<id>/ work folder as it")
+      .description("print the run's work folder, or record a +/_WORK/<id>/ work folder as it")
       .argument('<run>', 'run name')
       .option('--work <id>', 'record the work folder of this dotted work id as the home')
       .addOption(repoOption)
@@ -274,10 +276,10 @@ export const createAgentCommand = (context: KiContext): Command => {
 
   command.addCommand(
     new Command('decide')
-      .description("append a numbered, timestamped owner decision to the thread's tracked decisions log")
+      .description("append a numbered, timestamped owner decision to the work's tracked decisions log")
       .argument('<run>', 'run name')
       .argument('<text...>', "the decision, in the owner's words")
-      .option('--log <path>', "decisions log to append instead of the thread's own")
+      .option('--log <path>', "decisions log to append instead of the work's own")
       .option('--home <path-or-id>', "the decision's durable home: a committed path or a work-record identifier")
       .addOption(classOption())
       .addOption(repoOption)
@@ -303,7 +305,7 @@ export const createAgentCommand = (context: KiContext): Command => {
 
   command.addCommand(
     new Command('reconcile')
-      .description("write or replace one decision's durable home or class in the thread's tracked log")
+      .description("write or replace one decision's durable home or class in the work's tracked decisions log")
       .argument('<run>', 'run name')
       .argument('<number>', 'decision number', seconds)
       .argument('[home]', 'a committed path or a work-record identifier')

@@ -7,5 +7,5 @@ export const minimumBootstrapUserSkills = [
   'ki-accept',
   'ki-batch',
   'ki-recap',
-  'ki-pmo-design'
+  'ki-work-design'
 ] as const

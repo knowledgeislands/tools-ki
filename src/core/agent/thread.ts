@@ -30,7 +30,7 @@ const holdsWork = async (repository: string, id: string): Promise<boolean> =>
 
 /**
  * The folder a new run takes as its home: the one work folder whose slug is the run's name,
- * as `ki-pmo` names a work's coordinator run by its slug, or else the thread-model
+ * as `ki-coordination` names a work's coordinator run by its slug, or else the thread-model
  * `+/_THREADS/<run>/`. Two work ids sharing a slug leave the choice to `ki agent home`.
  */
 const newRunFolder = async (repository: string, run: string): Promise<string> => {
@@ -277,7 +277,7 @@ const recordThread = async (context: AgentContext, run: string, home: ThreadHome
   return home
 }
 
-/** The `ki-pmo` decision classes, which tell the `close` gate what home an entry needs. */
+/** The `ki-coordination` decision classes, which tell the `close` gate what home an entry needs. */
 export const decisionClasses = ['operational', 'rule', 'standalone', 'held'] as const
 
 export type DecisionClass = (typeof decisionClasses)[number]
