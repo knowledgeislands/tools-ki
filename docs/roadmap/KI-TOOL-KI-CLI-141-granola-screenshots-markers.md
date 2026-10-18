@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 14a8e39ce17e7c51b4f26d9b62c1db1a297ad002
 created_at: 2026-10-16T00:36:09Z
-updated_at: 2026-10-16T01:14:49Z
+updated_at: 2026-10-18T07:08:00Z
 ---
 
 # KI-TOOL-KI-CLI-141: Granola screenshots and markers
@@ -110,3 +110,12 @@ The owner-authorised Acquire run stopped after 27 of 52 selected notes when an i
 ### Preservation and marker semantics
 
 Acquired is a source-side progress marker. Stable UUIDs, source-account binding, hashes, manifests and committed locators remain preservation evidence. Explicit refresh detects later amendments; missing local proof is an exception, not permission to silently skip or reacquire handled material.
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record. The record has no Requirements section and its Verify is one paragraph of gates, so it was reviewed against its seven Steps and that paragraph. No code was changed, no Granola call was made and nothing was accepted.
+
+- **Verdict:** ready for acceptance.
+- **Steps:** the folder-marker writer `granolaFolderMarker` (`src/core/acquire/granola/source.ts`) is built only when `mark` is confirmed, calls only `add_note_to_folder`, and is never constructed by acquisition. `src/tests/cli/acquire/granola-marker.test.ts` covers, through synthetic providers, owned-note listing and pagination refusals, exact image bytes and the empty inventory, attachment failures, skip and refresh, amendments kept unmarked, committed-blob proof, uncommitted or interrupted state refused before marking, the oversized-frame split, and that marking adds only the marker membership.
+- **Verify:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc, biome, knip, mandoc and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1. The DEPS-1 failure the delivery recorded no longer appears.
+- **Observations, not blocking:** a later record would be easier to accept with Requirements and numbered, observable Verify steps. Live acquisition and marking stay with Acquire KB-ACQUIRE-004 and were not exercised here.
