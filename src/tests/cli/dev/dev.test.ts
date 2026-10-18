@@ -147,6 +147,51 @@ path = ${JSON.stringify(harnessPath)}
       expect((await box.run('ki diag')).output).not.toContain('unrecognised key')
     })
 
+    test('keeps configured harness releases when it rewrites the file', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      const releases = [
+        '[[harnesses.releases]]',
+        'id = "example/plain"',
+        'url = "https://example.com/plain.tar.gz"',
+        `sha256 = "${'a'.repeat(64)}"`,
+        '',
+        '[[harnesses.releases]]',
+        'id = "example/private"',
+        'url = "https://codeload.github.com/example/private/tar.gz/0123456789abcdef0123456789abcdef01234567"',
+        `sha256 = "${'b'.repeat(64)}"`,
+        'auth = "github-cli"',
+        ''
+      ].join('\n')
+      await box.config.write('ki/config.toml', `${await box.config.read('ki/config.toml')}\n${releases}`)
+
+      expect((await enableLocal(box, harnessPath)).exitCode).toBe(0)
+      expect((await box.run('ki bootstrap --refresh')).exitCode).toBe(0)
+
+      const config = await box.config.read('ki/config.toml')
+      expect(config).toContain(`[locals."knowledgeislands/ki-agentic-harness"]`)
+      expect(parse(config)['harnesses']).toMatchObject(parse(releases)['harnesses'] as object)
+      expect((await box.run('ki diag')).output).not.toContain('unrecognised key')
+    })
+
+    test('keeps a malformed release list for validation to report', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      const config = await box.config.read('ki/config.toml')
+      await box.config.write(
+        'ki/config.toml',
+        config.replace('[harnesses]\n', '[harnesses]\nreleases = ["not-a-table"]\n')
+      )
+
+      await enableLocal(box, harnessPath)
+
+      expect(parse(await box.config.read('ki/config.toml'))['harnesses']).toMatchObject({ releases: ['not-a-table'] })
+    })
+
     test('remembers a local source without activating it', async () => {
       const box = await sandbox()
       const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')

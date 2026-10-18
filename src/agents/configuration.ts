@@ -28,19 +28,35 @@ const OWNED_KEYS = ['schema', 'agents', 'harnesses', 'skills', 'locals', 'reposi
 /** Top-level tables other `ki` readers own, such as the territory ranking and the MCP inventory. */
 const DELEGATED_KEYS = ['territories', 'mcp']
 
-/**
- * The current file's tables the bootstrap writer does not own, kept so a rewrite never drops a
- * setting another reader validates. A missing or unparseable file has nothing to keep.
- */
-const preservedTables = async (configurationDirectory: string): Promise<Record<string, unknown>> => {
-  let parsed: Record<string, unknown>
+/** The current file's parsed tables; a missing or unparseable file has nothing to keep. */
+const currentConfiguration = async (configurationDirectory: string): Promise<Record<string, unknown>> => {
   try {
-    parsed = parse(await readFile(bootstrapConfigurationPath(configurationDirectory), 'utf8'))
+    return parse(await readFile(bootstrapConfigurationPath(configurationDirectory), 'utf8'))
   } catch {
     return {}
   }
-  return Object.fromEntries(Object.entries(parsed).filter(([key]) => !OWNED_KEYS.includes(key)))
 }
+
+/** The tables the bootstrap writer does not own, kept so a rewrite never drops a setting another reader validates. */
+const preservedTables = (current: Record<string, unknown>): Record<string, unknown> =>
+  Object.fromEntries(Object.entries(current).filter(([key]) => !OWNED_KEYS.includes(key)))
+
+/**
+ * The `harnesses.releases` entries as written, so a rewrite keeps every release location, digest
+ * and authentication setting the harness registry reads, neither dropping nor repairing them.
+ */
+const preservedReleases = (current: Record<string, unknown>): readonly unknown[] => {
+  const harnesses = current['harnesses']
+  return isRecord(harnesses) && Array.isArray(harnesses['releases']) ? harnesses['releases'] : []
+}
+
+/** Release entries as `[[harnesses.releases]]` tables, or inline when a malformed entry is no table. */
+const releaseLines = (releases: readonly unknown[]): string[] =>
+  !releases.length
+    ? []
+    : releases.every(isRecord)
+      ? ['', stringify({ harnesses: { releases } }).trimEnd()]
+      : [stringify({ releases }).trimEnd()]
 
 export const renderConfiguration = (
   agents: readonly InstalledAgent[],
@@ -48,7 +64,8 @@ export const renderConfiguration = (
   skills: readonly string[] = [],
   locals: readonly LocalDevelopmentConfiguration[] = [],
   repositories: readonly string[] = [],
-  preserved: Record<string, unknown> = {}
+  preserved: Record<string, unknown> = {},
+  releases: readonly unknown[] = []
 ): string =>
   [
     '[agents]',
@@ -60,6 +77,7 @@ export const renderConfiguration = (
     'ids = [',
     ...harnesses.map((harness) => `  ${JSON.stringify(harness)},`),
     ']',
+    ...releaseLines(releases),
     '',
     '[skills]',
     ...skills.flatMap((skill) => {
@@ -91,10 +109,18 @@ export const writeUserConfiguration = async (
   locals: readonly LocalDevelopmentConfiguration[],
   repositories: readonly string[]
 ): Promise<void> => {
-  const preserved = await preservedTables(configurationDirectory)
+  const current = await currentConfiguration(configurationDirectory)
   await writeFile(
     bootstrapConfigurationPath(configurationDirectory),
-    renderConfiguration(agents, harnesses, skills, locals, repositories, preserved),
+    renderConfiguration(
+      agents,
+      harnesses,
+      skills,
+      locals,
+      repositories,
+      preservedTables(current),
+      preservedReleases(current)
+    ),
     'utf8'
   )
 }
@@ -228,7 +254,8 @@ export const inspectUserConfiguration = async (
         continue
       }
       for (const key of Object.keys(harness)) {
-        if (!['id', 'url', 'sha256'].includes(key)) warnings.push(`harnesses[${index}] has unrecognised key ${key}`)
+        if (!['id', 'url', 'sha256', 'auth'].includes(key))
+          warnings.push(`harnesses[${index}] has unrecognised key ${key}`)
       }
       const release = harness as Record<string, unknown> & { id?: unknown; url?: unknown; sha256?: unknown }
       const id = release.id

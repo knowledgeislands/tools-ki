@@ -2,12 +2,16 @@
 id: KI-TOOL-KI-CLI-142
 area: CLI
 title: Preserve harness release settings
-status: triage
+project: tools-burndown
+component: bootstrap
+kind: deliver
+horizon: now
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 2777b4d6eabe12fb4c55bbcc427fb990ecece04c
 created_at: 2026-10-16T19:29:34Z
-updated_at: 2026-10-16T19:29:34Z
+updated_at: 2026-10-18T05:05:00Z
 ---
 
 # Preserve harness release settings
@@ -24,7 +28,79 @@ This writer is called by [bootstrap and user-configuration refresh](../../src/ag
 
 ## Boundary
 
-Capture only; no implementation, adoption, priority, release, provider call or live configuration rewrite is authorised. Do not change release selection, digest validation, authentication policy or the built-in canonical harness contract. Authentication settings mean strategy/configuration metadata, never credentials to copy into repository records or tests. Moving host-specific local harness paths has a separate outcome and must not be bundled into this repair.
+Adopted for delivery by the tools-burndown run on 18 October 2026 under Kris Brown's overnight instruction to burn down the tools roadmap; the adoption is provisional, for Kris to confirm. No release, provider call or live configuration rewrite is authorised. Do not change release selection, digest validation, authentication policy or the built-in canonical harness contract. Authentication settings mean strategy/configuration metadata, never credentials to copy into repository records or tests. Moving host-specific local harness paths has a separate outcome and must not be bundled into this repair.
+
+## Current state
+
+The single user-configuration writer, `writeUserConfiguration` in [configuration.ts](../../src/agents/configuration.ts), now reads the current file once, keeps its delegated tables and carries its `harnesses.releases` entries through `renderConfiguration`. Bootstrap, refresh, local-development and skill-selection commands all rewrite through it, so each keeps the releases. The configuration inspector also recognises the `auth` key, which it previously reported as unrecognised although the registry reader accepts it.
+
+## Steps
+
+- [x] Read the current configuration once in `writeUserConfiguration` and derive both the preserved delegated tables and the release entries from it.
+- [x] Render release entries after `harnesses.ids` as `[[harnesses.releases]]` tables; when any entry is not a table, render the list inline unchanged so validation still reports it.
+- [x] Add `auth` to the keys the inspector recognises in a release entry.
+- [x] Cover the round trip and the malformed list through the public CLI, and note the change in the changelog.
+
+## Files touched
+
+- [src/agents/configuration.ts](../../src/agents/configuration.ts)
+- [src/tests/cli/dev/dev.test.ts](../../src/tests/cli/dev/dev.test.ts)
+- [CHANGELOG.md](../../CHANGELOG.md)
+
+## Verify
+
+- `keeps configured harness releases when it rewrites the file`: two synthetic releases, one with `auth = "github-cli"`, survive `ki dev local set`, `ki dev local on` and `ki bootstrap --refresh` with identity, URL, digest and authentication setting intact, the local binding takes effect, and `ki diag` reports no unrecognised key.
+- `keeps a malformed release list for validation to report`: `releases = ["not-a-table"]` survives a rewrite unchanged.
+- The full coverage suite passes at the 100% thresholds; `tsc`, Biome and the repository audit pass.
+
+## Dependencies / blocks
+
+None. Moving host-specific local harness paths remains [KI-TOOL-KI-CLI-143](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-143-separate-local-harness-paths.md).
+
+## Documentation impact
+
+### Decision Records
+
+None.
+
+### Specifications
+
+None: the harness release keys are described by the registry reader and the changelog.
+
+### Guides
+
+None; the changelog's harness bullets gain the round-trip sentence.
+
+### Roadmap
+
+Adopted and delivered in one sitting under the overnight instruction; no acceptance or release.
+
+## Review
+
+### Delivered
+
+Release entries and their `auth` setting now survive every user-configuration rewrite, and diagnostics accept `auth`.
+
+### Change Summary
+
+`writeUserConfiguration` reads the file once and passes its release entries to `renderConfiguration`, which emits them after the harness ids; the inspector's release keys gain `auth`.
+
+### Verification
+
+Two new public-CLI tests in `dev.test.ts`; the full coverage suite, `tsc`, Biome and `ki repo audit` pass.
+
+### Outstanding concerns
+
+- Terra and Sol live verification is withheld: it needs a managed configuration rewrite under its normal approval and an installed build carrying this change.
+- Provisional choices, for Kris to confirm: release entries are carried as data, not re-validated, by the writer; a malformed list is kept inline so validation still fails rather than being dropped; the `auth` inspector fix is bundled because the round-trip test exposed it.
+
+### Post-change review
+
+The change is confined to the one writer and one inspector list; release selection, digest validation and authentication policy are untouched.
+
+### Mini recap
+
+Configured harness releases no longer vanish when KI rewrites the user configuration.
 
 ## Discussion
 
