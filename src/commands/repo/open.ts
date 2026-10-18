@@ -7,7 +7,12 @@ import {
 } from '../../core/configuration/index.ts'
 import { KiError } from '../../core/errors.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
-import { externalStoreRoles, inspectLocalRegistry, knowledgeBaseStoreAvailability } from '../../core/storage/index.ts'
+import {
+  externalStoreRoles,
+  inspectLocalRegistry,
+  invalidRegistryError,
+  knowledgeBaseStoreAvailability
+} from '../../core/storage/index.ts'
 import {
   type OpenTargetName,
   openLocalTarget,
@@ -62,14 +67,13 @@ export const createRepoOpenCommand = (
         const roles = externalStoreRoles(declaredKnowledgeBaseStoreRoles(declaration))
         if (!roles.length) continue
         const registry = await inspectLocalRegistry(context.paths.state)
-        if (registry.state === 'invalid')
-          throw new KiError(`local KI repository registry is invalid: ${registry.errors.join('; ')}`, 1)
+        if (registry.state === 'invalid') throw invalidRegistryError(context.paths.state, registry.errors)
         const identity = declaredRepositoryIdentity(declaration)
         const entry = registry.repositories.find(
           (candidate) => candidate.repository === identity && candidate.path === repository.root
         )
         // An unavailable store is skipped with its fix, an absent one silently; the repository still opens.
-        for (const store of await knowledgeBaseStoreAvailability(entry, roles))
+        for (const store of await knowledgeBaseStoreAvailability(entry, roles, context.platform))
           if ('root' in store) roots.push(store.root)
           else if ('unavailable' in store)
             context.stderr.write(

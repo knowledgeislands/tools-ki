@@ -130,12 +130,20 @@ const memberAt = async (entry: LocalRegistryEntry, kind: TerritoryMember['kind']
   )
   return { key: entry.key, repository: entry.repository, root: target.root, kind }
 }
+/** An empty selection, with where to compare the selectors. */
+export const noRepositoriesMatched = (): KiError =>
+  new KiError(
+    'repository selection matched no repositories',
+    2,
+    'compare --repo, --territory and --filter with the repositories ki registry list shows'
+  )
+
 const resolvePrincipals = async (
   ordered: readonly Capital[],
   filters: readonly string[]
 ): Promise<TerritoryProfile> => {
   const selected = ordered.filter((capital) => matchesDirectoryName(capital.entry.path, filters))
-  if (!selected.length) throw new KiError('repository selection matched no repositories', 2)
+  if (!selected.length) throw noRepositoriesMatched()
   const members: TerritoryMember[] = []
   for (const capital of selected) members.push(await memberAt(capital.entry, 'owner'))
   return { id: 'principals', title: 'Territory Capitals', members, roots: members, system: true }
@@ -170,7 +178,7 @@ export const resolveTerritory = async (
     return entry
   })
   const selected = scoped.filter((entry) => matchesDirectoryName(entry.path, filters))
-  if (!selected.length) throw new KiError('repository selection matched no repositories', 2)
+  if (!selected.length) throw noRepositoriesMatched()
   const members: TerritoryMember[] = []
   for (const entry of selected) {
     const member = await memberAt(entry, entry === capital?.entry ? 'owner' : 'member')

@@ -73,7 +73,7 @@ export const createRepairCommand = (
           } else if (!roles.length) entries.push(`${passedMark} Registry: already registered ${repository.root}`)
           // An unavailable store is a finding about this host, not a repair failure: registration,
           // projection and health still run, and only commands that need originals fail.
-          const stores = await knowledgeBaseStoreAvailability(entry, roles)
+          const stores = await knowledgeBaseStoreAvailability(entry, roles, context.platform)
           const unavailable = stores.filter((store) => 'unavailable' in store)
           for (const store of stores)
             if ('absent' in store)

@@ -60,7 +60,7 @@ ki repo --estate store scan
 
 The scan includes Projects as well as Knowledge Bases. It warns about undeclared directories and suggests a declaration, migration, or retirement decision; it never changes the directory or binding. Unsafe store paths and unreadable declarations return a non-zero diagnostic.
 
-`notes` is always the repository root and cannot be rebound. Bind an existing `sources` or `legacy` directory by previewing first, then writing the machine-local registry:
+The store commands take repository selection from `ki repo`, so the selector goes before `store`, as in `ki repo --repo <checkout> store list`. `notes` is always the repository root and cannot be rebound. Bind an existing `sources` or `legacy` directory by previewing first, then writing the machine-local registry:
 
 ```sh
 ki repo store bind sources /absolute/path/to/sources
@@ -69,7 +69,7 @@ ki repo store unbind sources
 ki repo store unbind sources --write
 ```
 
-Unbinding never deletes store content. For the established opt-in OneDrive source location, `ki repo store create sources` previews `sources-<repository-basename>` and `--write` creates and binds it. A territory Capital's store is instead named by its canonical territory handle, `territory_prefix` or else its registry key, so `-t ki` and `-t knowledge-islands` both create `sources-knowledge-islands`; a prefixless Capital must be registered first. `store scan` checks a Capital under both its handle and its old basename name. `legacy` has no automatic creation policy; bind its existing directory explicitly. Where the OneDrive root is missing, such as on a CI runner or a host without OneDrive, `create` refuses and names both routes. Do not use stores for credentials.
+The preview names the registry file it would write, and `bind --write` prints the `undo:` command that unbinds it again. Unbinding never deletes store content. For the established opt-in OneDrive source location, `ki repo store create sources` previews `sources-<repository-basename>` and `--write` creates and binds it. A territory Capital's store is instead named by its canonical territory handle, `territory_prefix` or else its registry key, so `-t ki` and `-t knowledge-islands` both create `sources-knowledge-islands`; a prefixless Capital must be registered first. `store scan` checks a Capital under both its handle and its old basename name. `legacy` has no automatic creation policy; bind its existing directory explicitly. Where the OneDrive root is missing, such as on a CI runner or a host without OneDrive, `create` refuses and names both routes. Do not use stores for credentials.
 
 `store list` reports each store's availability on this host. A bound store is `available` or `unavailable`, with the reason; an unbound one is `missing` or, once you have recorded that this host does without it, `absent`. The text form prints the fix command for an unavailable or missing store, filling in the path when exactly one conventional `sources-<name>` folder matches, and the JSON form adds `availability` and `reason` beside the existing `role`, `state` and `path` fields of `ki/repository-stores/v1`.
 
@@ -82,6 +82,8 @@ ki repo store absent sources --clear --write
 ```
 
 A bound store must be unbound before it can be marked absent, so its fix names `store unbind` before `store absent`. An absent store is reported once as information and never warned about. A missing or unavailable store only warns: `ki repo open` opens the repository without it, `ki repo repair` still passes, `ki vscode sync` leaves its folder out of the workspace, and `ki doctor` warns once per store without changing its exit status. Each warning names the fix.
+
+A folder the host refuses to read is reported as `access denied`, never as missing or empty. On macOS, privacy protection refuses a OneDrive folder to a process without Full Disk Access, which is common over SSH; the fix is to grant Full Disk Access to the terminal app, or to `sshd-keygen-wrapper` over SSH, in System Settings > Privacy & Security, or to run `ki` at the Mac's screen. Elsewhere the fix is the folder's permissions. A denied bound store is `unavailable` with that reason, `store create` and `store bind` refuse a denied folder, and a denied conventional folder is not offered as a fix. An error with a known remedy prints it on a `next:` line after the error.
 
 ## Run an audit
 

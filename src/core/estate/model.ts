@@ -5,6 +5,7 @@ import type { LocalRegistryEntry } from '../storage/local-registry.ts'
 export interface EstatePorts {
   readonly homeDirectory: string
   readonly stateDirectory: string
+  readonly platform: NodeJS.Platform
   readonly environment: NodeJS.ProcessEnv
   readonly runner: Runner
   readonly now: () => number

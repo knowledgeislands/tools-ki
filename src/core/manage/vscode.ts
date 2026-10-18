@@ -1,7 +1,7 @@
 import { lstat, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, isAbsolute, join } from 'node:path'
 import { parse } from 'smol-toml'
-import { KiError } from '../errors.ts'
+import { errorWithNext, KiError } from '../errors.ts'
 import type { Runner } from '../runtime/runner.ts'
 import { type LocalRegistryEntry, repositoryStoreDirectory, requiredLocalRegistry } from '../storage/index.ts'
 import { repositoryStoreFix } from '../territory/index.ts'
@@ -36,6 +36,7 @@ export interface VscodeManagePort {
   readonly environment: NodeJS.ProcessEnv
   readonly homeDirectory: string
   readonly stateDirectory: string
+  readonly platform: NodeJS.Platform
   readonly runner: Runner
   readonly stdout: { write: (text: string) => void }
   readonly stderr: { write: (text: string) => void }
@@ -65,10 +66,10 @@ const availableSources = async (
   const source = repository.stores?.sources
   if (!source) return undefined
   try {
-    return await repositoryStoreDirectory('sources', source)
+    return await repositoryStoreDirectory('sources', source, port.platform)
   } catch (error) {
     warnings.push(
-      `Knowledge Base ${repository.path} is synchronised without its sources folder, unavailable on this host (${(error as Error).message}); fix: ${await repositoryStoreFix(port.homeDirectory, repository.path, repository.key, 'sources', true)}`
+      `Knowledge Base ${repository.path} is synchronised without its sources folder, unavailable on this host (${errorWithNext(error as Error)}); fix: ${await repositoryStoreFix(port.homeDirectory, repository.path, repository.key, 'sources', true)}`
     )
     return undefined
   }

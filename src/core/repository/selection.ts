@@ -5,7 +5,7 @@ import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
 import { matchesDirectoryName, validateFilters } from '../territory/filters.ts'
-import { resolveTerritory } from '../territory/index.ts'
+import { noRepositoriesMatched, resolveTerritory } from '../territory/index.ts'
 import { inspectRepositoryDeclarationState, repositoryDeclarationError } from './declaration.ts'
 import { physicalDirectory, type RepositoryLocation, targetFromDirectory } from './location.ts'
 import { MGIT_MANIFEST_FILE, repositoriesFromMgitManifest } from './mgit.ts'
@@ -43,7 +43,11 @@ export const resolveRepository = async (options: {
   if (!options.repository) {
     const discovered = await discoverRepository(options.workingDirectory, options.homeDirectory)
     if (discovered) return discovered
-    throw new KiError('no KI repository found from the current working directory', 2)
+    throw new KiError(
+      'no KI repository found from the current working directory',
+      2,
+      'run from inside a KI repository, or pass --repo <checkout>'
+    )
   }
   return targetFromDirectory(
     options.repository,
@@ -168,7 +172,7 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
       for (const match of matches.filter((candidate) => matchesDirectoryName(candidate, filters)))
         targets.push(await targetFromDirectory(match, `--repo pattern ${value} matched a non-KI directory`))
     }
-    if (!targets.length) throw new KiError('repository selection matched no repositories', 2)
+    if (!targets.length) throw noRepositoriesMatched()
     return distinctTargets(targets, '--repo')
   }
   if (options.territory !== undefined || options.estate || options.principals) {
@@ -197,7 +201,7 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
     workingDirectory: options.workingDirectory,
     homeDirectory: options.homeDirectory
   })
-  if (!matchesDirectoryName(local.root, filters)) throw new KiError('repository selection matched no repositories', 2)
+  if (!matchesDirectoryName(local.root, filters)) throw noRepositoriesMatched()
   return [local]
 }
 

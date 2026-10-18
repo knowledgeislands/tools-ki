@@ -1091,6 +1091,11 @@ or unbound state and their availability on this host: a bound store is
 \fBabsent\fR by choice or \fBmissing\fR. Unavailable and missing stores name
 their fix: the bind command, with the path filled in when exactly one
 conventional \fBsources-<name>\fR folder exists, or the absent command.
+A folder the host refuses to read is \fBunavailable\fR with
+\fBaccess denied\fR and its fix, never missing: on macOS, grant Full Disk
+Access to the terminal app, or to \fBsshd-keygen-wrapper\fR over SSH, or run
+\fBki\fR at the Mac's screen. A denied conventional folder is not offered as a
+fix. Repository selection is given to \fBki repo\fR, before \fBstore\fR.
 JSON emits
 the versioned \fBki/repository-stores/v1\fR contract, whose \fBstate\fR stays
 \fBbound\fR or \fBunbound\fR and which adds \fBavailability\fR and \fBreason\fR.
@@ -1116,12 +1121,14 @@ territory_prefix, else its registry key. A Capital with neither fails. With
 \fB--write\fR, create and bind it. Automatic creation is unavailable for
 \fBlegacy\fR. Where the OneDrive root does not exist, as off macOS, it refuses
 and names the two remaining routes: bind an existing directory, or mark the
-store absent on this host.
+store absent on this host. A denied OneDrive root refuses with the denial.
 .TP
 .B ki repo [repo-options] store bind <sources|legacy> <absolute-path> [--write]
 Preview an explicit binding for one declared external store. The path must be
-an existing absolute direct directory. With \fB--write\fR, publish the binding
-to the machine-local registry, clearing any absence marker for the role.
+an existing absolute directory, not a symbolic link; a denied folder is
+refused. The preview names the registry file it would write. With
+\fB--write\fR, publish the binding to the machine-local registry, clearing any
+absence marker for the role, and print the \fBundo:\fR unbind command.
 .TP
 .B ki repo [repo-options] store unbind <sources|legacy> [--write]
 Preview removal of one declared external-store binding. With \fB--write\fR,
@@ -2044,8 +2051,9 @@ project keys without merging. Untracked symlinks under
 and OneDrive
 .I sources-*
 stores are rewritten; tracked symlinks and leftover former parents are only
-reported, and empty former parents are removed. Registered targets without a
-checkout are reported and cloned only with
+reported, and empty former parents are removed. A OneDrive folder the host
+refuses to read refuses the plan with the denial and its fix. Registered
+targets without a checkout are reported and cloned only with
 .BR --clone .
 Repeat
 .B --allow-busy
@@ -2197,6 +2205,9 @@ directly when comparing it with Homebrew's installed executable. The linked
 source mode requires Bun; a verified release executable does not.
 .SH EXIT STATUS
 \&
+.PP
+An error is printed as \fBki: error:\fR and its message on standard error;
+where it has a known remedy, a \fBnext:\fR line follows naming it.
 .TP
 .B 0
 The command completed successfully.

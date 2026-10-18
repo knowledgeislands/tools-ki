@@ -65,6 +65,14 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 export const localRegistryPath = (stateDirectory: string): string => join(stateDirectory, REGISTRY_FILE)
 
+/** The registry refusal, naming the file to correct and the command that confirms it reads again. */
+export const invalidRegistryError = (stateDirectory: string, errors: readonly string[]): KiError =>
+  new KiError(
+    `local KI repository registry is invalid: ${errors.join('; ')}`,
+    1,
+    `correct ${localRegistryPath(stateDirectory)}, then run ki registry list`
+  )
+
 const invalid = (path: string, errors: readonly string[]): LocalRegistryInspection => ({
   path,
   state: 'invalid',
@@ -182,8 +190,7 @@ export const inspectLocalRegistry = async (stateDirectory: string): Promise<Loca
 
 export const requiredLocalRegistry = async (stateDirectory: string): Promise<readonly LocalRegistryEntry[]> => {
   const inspection = await inspectLocalRegistry(stateDirectory)
-  if (inspection.state === 'invalid')
-    throw new KiError(`local KI repository registry is invalid: ${inspection.errors.join('; ')}`, 1)
+  if (inspection.state === 'invalid') throw invalidRegistryError(stateDirectory, inspection.errors)
   return inspection.repositories
 }
 
@@ -226,8 +233,7 @@ export const localRegistryRemoval = async (
   selector: LocalRegistryRemovalSelector
 ): Promise<LocalRegistryRemoval> => {
   const inspection = await inspectLocalRegistry(stateDirectory)
-  if (inspection.state === 'invalid')
-    throw new KiError(`local KI repository registry is invalid: ${inspection.errors.join('; ')}`, 1)
+  if (inspection.state === 'invalid') throw invalidRegistryError(stateDirectory, inspection.errors)
   if (selector.kind === 'key' && !validKey(selector.value))
     throw new KiError('registry key must be a stable local repository name', 2)
   const removed = inspection.repositories.find((repository) => repository[selector.kind] === selector.value)
@@ -268,8 +274,7 @@ export const localRegistryWriteMany = async (
   additions: readonly LocalRegistryEntry[]
 ): Promise<{ readonly path: string; readonly content: string; readonly create?: boolean } | undefined> => {
   const inspection = await inspectLocalRegistry(stateDirectory)
-  if (inspection.state === 'invalid')
-    throw new KiError(`local KI repository registry is invalid: ${inspection.errors.join('; ')}`, 1)
+  if (inspection.state === 'invalid') throw invalidRegistryError(stateDirectory, inspection.errors)
   let repositories = inspection.repositories
   for (const entry of additions) {
     const byIdentity = repositories.find((candidate) => candidate.repository === entry.repository)

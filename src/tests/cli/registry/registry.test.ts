@@ -620,7 +620,7 @@ test('requires exactly one key or path and rejects bulk or unknown registry remo
   await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
   expect(await box.run('ki registry remove registered')).toEqual({
     exitCode: 1,
-    output: 'ki: error: local KI repository registry is invalid: unrecognised key extra\n'
+    output: `ki: error: local KI repository registry is invalid: unrecognised key extra\nnext: correct ${box.state.path}/ki/registry.toml, then run ki registry list\n`
   })
 })
 
@@ -660,11 +660,11 @@ test('reports missing, invalid, and unsafe local registry configuration without 
   )
   expect(invalidConform).toEqual({
     exitCode: 1,
-    output: 'ki: error: local KI repository registry is invalid: repositories.relative path must be an absolute path\n'
+    output: `ki: error: local KI repository registry is invalid: repositories.relative path must be an absolute path\nnext: correct ${box.state.path}/ki/registry.toml, then run ki registry list\n`
   })
   expect(invalidRegister).toEqual({
     exitCode: 1,
-    output: 'ki: error: local KI repository registry is invalid: repositories.relative path must be an absolute path\n'
+    output: `ki: error: local KI repository registry is invalid: repositories.relative path must be an absolute path\nnext: correct ${box.state.path}/ki/registry.toml, then run ki registry list\n`
   })
   expect(invalidLocalConform).toEqual({
     exitCode: 1,
@@ -673,7 +673,7 @@ test('reports missing, invalid, and unsafe local registry configuration without 
   expect(invalidLocalAudit.output).toContain('local KI configuration is invalid: configuration must be valid TOML')
   expect(warnedRegister).toEqual({
     exitCode: 1,
-    output: 'ki: error: local KI repository registry is invalid: unrecognised key extra\n'
+    output: `ki: error: local KI repository registry is invalid: unrecognised key extra\nnext: correct ${box.state.path}/ki/registry.toml, then run ki registry list\n`
   })
 })
 
@@ -860,7 +860,7 @@ test('rejects relative repository registry paths in local state', async () => {
 
   expect(listed).toEqual({
     exitCode: 1,
-    output: 'ki: error: local KI repository registry is invalid: repositories.relative path must be an absolute path\n'
+    output: `ki: error: local KI repository registry is invalid: repositories.relative path must be an absolute path\nnext: correct ${box.state.path}/ki/registry.toml, then run ki registry list\n`
   })
 })
 
@@ -943,7 +943,7 @@ test('rejects a symbolic-link registry file without following it', async () => {
 
   expect(await box.run('ki registry list')).toEqual({
     exitCode: 1,
-    output: 'ki: error: local KI repository registry is invalid: registry must be a regular file\n'
+    output: `ki: error: local KI repository registry is invalid: registry must be a regular file\nnext: correct ${box.state.path}/ki/registry.toml, then run ki registry list\n`
   })
 })
 
@@ -1022,7 +1022,7 @@ test('conformance registers a Knowledge Base independently and preserves existin
   await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
   expect(await box.run('ki repo conform')).toEqual({
     exitCode: 1,
-    output: 'ki: error: local KI repository registry is invalid: unrecognised key extra\n'
+    output: `ki: error: local KI repository registry is invalid: unrecognised key extra\nnext: correct ${box.state.path}/ki/registry.toml, then run ki registry list\n`
   })
   const registered = `schema = 1
 

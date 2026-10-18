@@ -35,7 +35,8 @@ const registeredStores = async (context: KiContext): Promise<readonly ManageStor
     if (!declaration) continue
     for (const store of await knowledgeBaseStoreAvailability(
       entry,
-      externalStoreRoles(declaredKnowledgeBaseStoreRoles(declaration))
+      externalStoreRoles(declaredKnowledgeBaseStoreRoles(declaration)),
+      context.platform
     ))
       stores.push(
         'unavailable' in store

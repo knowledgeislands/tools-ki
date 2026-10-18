@@ -121,7 +121,7 @@ export const run = async (arguments_: readonly string[], context: KiContext): Pr
     if (error instanceof KiExit) return error.exitCode
 
     if (error instanceof KiError) {
-      context.stderr.write(`ki: error: ${error.message}\n`)
+      context.stderr.write(`ki: error: ${error.message}\n${error.next ? `next: ${error.next}\n` : ''}`)
       return error.exitCode
     }
     if (error instanceof CommanderError) {

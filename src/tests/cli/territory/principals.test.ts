@@ -66,7 +66,9 @@ describe('principals selection', () => {
     )
     const unmatched = await box.run('ki territory roots --principals -f member')
     expect(unmatched).toMatchObject({ exitCode: 2, stdout: '' })
-    expect(unmatched.stderr).toContain('matched no repositories')
+    expect(unmatched.stderr).toBe(
+      'ki: error: repository selection matched no repositories\nnext: compare --repo, --territory and --filter with the repositories ki registry list shows\n'
+    )
   })
 
   test('orders names alone when no Capital holds the canonical Harness and skips unavailable checkouts', async () => {

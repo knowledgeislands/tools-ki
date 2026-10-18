@@ -3,7 +3,7 @@ import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
-import { inspectLocalRegistry } from '../../core/storage/index.ts'
+import { inspectLocalRegistry, invalidRegistryError } from '../../core/storage/index.ts'
 import { renderTree } from '../presentation/index.ts'
 
 const treeEntries = (items: readonly string[]) =>
@@ -18,8 +18,7 @@ export const createListCommand = (context: KiContext): Command =>
     ])
     if (userConfiguration.state === 'invalid')
       throw new KiError(`ki configuration is invalid: ${userConfiguration.errors.join('; ')}`, 1)
-    if (registry.state === 'invalid')
-      throw new KiError(`local KI repository registry is invalid: ${registry.errors.join('; ')}`, 1)
+    if (registry.state === 'invalid') throw invalidRegistryError(context.paths.state, registry.errors)
     const skills = [...userConfiguration.skills].sort((left, right) => left.localeCompare(right))
     const capabilities = harnesses.reduce((total, harness) => total + harness.capabilities.length, 0)
     context.stdout.write(

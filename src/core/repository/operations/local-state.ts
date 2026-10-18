@@ -5,7 +5,7 @@ import type { ResolvedSkill } from '../../configuration/resolution.ts'
 import { KiError } from '../../errors.ts'
 import { prepareWrites } from '../../filesystem/publication.ts'
 import { discoverInstalledHarnesses } from '../../harness/inspection.ts'
-import { inspectLocalRegistry, localRegistryWrite } from '../../storage/local-registry.ts'
+import { inspectLocalRegistry, invalidRegistryError, localRegistryWrite } from '../../storage/local-registry.ts'
 import { registryEntryForRepository } from '../../storage/repository-stores.ts'
 import type { RepositoryLocation } from '../location.ts'
 import type { RepositoryOperationContext, RepositorySkillActivationHost } from './types.ts'
@@ -39,8 +39,7 @@ export const localRepositoryRegistryWrites = async (
   const declaration = await readRepositoryDeclaration(repository.declaration)
   const identity = declaredRepositoryIdentity(declaration)
   const registry = await inspectLocalRegistry(context.stateDirectory)
-  if (registry.state === 'invalid')
-    throw new KiError(`local KI repository registry is invalid: ${registry.errors.join('; ')}`, 1)
+  if (registry.state === 'invalid') throw invalidRegistryError(context.stateDirectory, registry.errors)
   const registryWrite = await localRegistryWrite(
     context.stateDirectory,
     registryEntryForRepository(repository.root, identity, registry.repositories)

@@ -80,7 +80,7 @@ describe('[ki inventory]', () => {
     expect(listed.output).toContain(`╰─ repository: ${repository}`)
     expect(invalid).toEqual({
       exitCode: 1,
-      output: 'ki: error: local KI repository registry is invalid: unrecognised key extra\n'
+      output: `ki: error: local KI repository registry is invalid: unrecognised key extra\nnext: correct ${box.state.path}/ki/registry.toml, then run ki registry list\n`
     })
   })
 

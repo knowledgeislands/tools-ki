@@ -1,6 +1,7 @@
 import { lstat, open, readdir, readFile, readlink } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
+import { accessDenialError, accessDenied } from '../storage/local-stores.ts'
 import { git } from './git.ts'
 import type { EstatePorts, WorktreeMove } from './model.ts'
 
@@ -110,14 +111,25 @@ export interface SymlinkChange {
   readonly tracked: boolean
 }
 
+/**
+ * A folder's entries, none when it is absent; a denied folder refuses the plan, which cannot tell
+ * whether a move breaks a link it cannot see.
+ */
+const entriesUnlessAbsent = async (path: string, platform: NodeJS.Platform): Promise<readonly string[]> =>
+  readdir(path).catch((error: unknown) => {
+    if (accessDenied(error)) throw accessDenialError(path, platform)
+    return []
+  })
+
 const symlinkRoots = async (
-  homeDirectory: string
+  homeDirectory: string,
+  platform: NodeJS.Platform
 ): Promise<readonly { readonly root: string; readonly depth?: number }[]> => {
   const storage = join(homeDirectory, 'Library/CloudStorage')
   const stores: { root: string; depth?: number }[] = []
-  for (const provider of await readdir(storage).catch(() => []))
+  for (const provider of await entriesUnlessAbsent(storage, platform))
     if (provider.startsWith('OneDrive'))
-      for (const store of await readdir(join(storage, provider)).catch(() => []))
+      for (const store of await entriesUnlessAbsent(join(storage, provider), platform))
         if (store.startsWith('sources-')) stores.push({ root: join(storage, provider, store), depth: 2 })
   return [{ root: join(homeDirectory, 'workspaces') }, ...stores]
 }
@@ -145,7 +157,7 @@ export const symlinkChanges = async (
   if (!moves.length) return []
   const relocate = pathMap(moves)
   const changes: SymlinkChange[] = []
-  for (const { root, depth } of await symlinkRoots(ports.homeDirectory)) {
+  for (const { root, depth } of await symlinkRoots(ports.homeDirectory, ports.platform)) {
     if (!(await exists(root))) continue
     const listing = await ports.runner(
       'find',

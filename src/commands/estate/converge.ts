@@ -106,6 +106,7 @@ export const createEstateConvergeCommand = (context: KiContext): Command =>
       const ports: EstatePorts = {
         homeDirectory: context.homeDirectory,
         stateDirectory: context.paths.state,
+        platform: context.platform,
         environment: context.environment,
         runner: context.runner,
         now: context.now

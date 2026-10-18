@@ -314,7 +314,8 @@ describe('[ki update and ki repo upgrade]', () => {
 
     expect(missingRepository).toEqual({
       exitCode: 2,
-      output: 'ki: error: no KI repository found from the current working directory\n'
+      output:
+        'ki: error: no KI repository found from the current working directory\nnext: run from inside a KI repository, or pass --repo <checkout>\n'
     })
     expect(declared.output).toContain('example/harness: unavailable (no configured immutable release)')
   })

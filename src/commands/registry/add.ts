@@ -9,6 +9,7 @@ import { KiError } from '../../core/errors.ts'
 import { resolveRepositoryTargets } from '../../core/repository/selection.ts'
 import {
   inspectLocalRegistry,
+  invalidRegistryError,
   localRegistryWrite,
   publishLocalRegistryProposal
 } from '../../core/storage/local-registry.ts'
@@ -43,8 +44,7 @@ export const createRegistryAddCommand = (context: KiContext, selectedRepositorie
       )
         throw new KiError('--search-boundary requires one KB and a safe explicit boundary ID', 2)
       const registry = await inspectLocalRegistry(context.paths.state)
-      if (registry.state === 'invalid')
-        throw new KiError(`local KI repository registry is invalid: ${registry.errors.join('; ')}`, 1)
+      if (registry.state === 'invalid') throw invalidRegistryError(context.paths.state, registry.errors)
       for (const { repository, declaration } of declarations) {
         const identity = declaredRepositoryIdentity(declaration)
         const registryWrite = await localRegistryWrite(context.paths.state, {

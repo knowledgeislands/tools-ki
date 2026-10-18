@@ -8,6 +8,7 @@ This standard records the repository-specific engineering goals that make `tools
 - **Action and domain separation.** Command modules own grammar, common option validation, selection, and output. Core modules own typed domain behaviour and repository effects. Presentation helpers do not become hidden domain coordinators, and core modules do not import command implementations.
 - **Cohesive domains.** A module has one domain concern and one intelligible reason to change. Split unrelated lifecycle stages or provider concerns behind a domain barrel when they begin to evolve independently; do not split a coherent flow to satisfy a file-length target.
 - **Injected capabilities.** Streams, filesystem roots, time, signals, and network access enter through `KiContext` or an explicit domain port. Deep defaults must not make supported failure paths impossible to exercise.
+- **Errors name the next step.** A user-facing error that has a step to put it right names it through `KiError`'s `next`, which the CLI prints on its own `next:` line; a warning or reason that carries on uses `errorWithNext`. A file-system denial reads as a denial with its platform's fix, never as missing or empty. Error families adopt the field when they are next touched.
 - **Current contract only.** Retired command grammars, wrappers, configuration spellings, and compatibility branches are removed after an authorised cutover unless a bounded transition is explicitly required.
 
 ## Test and coverage goals

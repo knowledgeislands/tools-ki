@@ -6,6 +6,7 @@ import { reconcileVscode, type VscodeManagePort } from '../../core/manage/vscode
 const vscodePort = (context: KiContext): VscodeManagePort => ({
   environment: context.environment,
   homeDirectory: context.homeDirectory,
+  platform: context.platform,
   stateDirectory: context.paths.state,
   runner: context.runner,
   stdout: context.stdout,

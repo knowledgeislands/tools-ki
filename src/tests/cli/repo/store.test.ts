@@ -55,9 +55,13 @@ describe('ki repo store', () => {
     const legacy = await box.root.mkdir('legacy')
     await box.project.write('.ki.toml', knowledgeBase('https://github.com/example/knowledge'))
 
-    expect((await box.run(['ki', 'repo', 'store', 'bind', 'sources', sources])).output).toContain('would bind')
+    expect((await box.run(['ki', 'repo', 'store', 'bind', 'sources', sources])).output).toBe(
+      `would write ${box.state.path}/ki/registry.toml\nki repo store bind sources: would bind ${sources}\n`
+    )
     await expect(box.state.read('ki/registry.toml')).rejects.toThrow()
-    expect((await box.run(['ki', 'repo', 'store', 'bind', 'sources', sources, '--write'])).output).toContain('bound')
+    expect((await box.run(['ki', 'repo', 'store', 'bind', 'sources', sources, '--write'])).output).toContain(
+      `bound ${sources}\nundo: ki repo --repo ${root} store unbind sources --write\n`
+    )
     expect((await box.run(['ki', 'repo', 'store', 'bind', 'legacy', legacy, '--write'])).exitCode).toBe(0)
     expect((await box.run(['ki', 'repo', 'store', 'bind', 'sources', replacement, '--write'])).exitCode).toBe(0)
 
@@ -111,7 +115,7 @@ describe('ki repo store', () => {
     expect(await box.state.read('ki/registry.toml')).not.toContain('absent_stores')
     expect(await box.run('ki repo store absent sources --write')).toEqual({
       exitCode: 2,
-      output: `ki: error: sources store is bound to ${sources}; unbind it first: ki repo --repo ${root} store unbind sources --write\n`
+      output: `ki: error: sources store is bound to ${sources}; unbind it first\nnext: ki repo --repo ${root} store unbind sources --write\n`
     })
   })
 
@@ -267,7 +271,9 @@ describe('ki repo store', () => {
     expect((await box.run('ki repo store create legacy')).output).toContain('does not declare legacy store')
     expect(
       (await box.run(['ki', 'repo', '--repo', root, '--repo', other, 'store', 'unbind', 'sources'])).output
-    ).toContain('requires exactly one repository')
+    ).toContain(
+      'requires exactly one repository\nnext: name it with --repo: ki repo --repo <checkout> store unbind ...\n'
+    )
 
     await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
     expect((await box.run('ki repo store list')).output).toContain('local KI repository registry is invalid')
@@ -280,7 +286,7 @@ describe('ki repo store', () => {
 
     const root = await realpath(box.project.path)
     expect((await box.run('ki repo store create sources')).output).toContain(
-      `OneDrive source-store root is unavailable: ${await realpath(box.home.path)}/Library/CloudStorage/OneDrive-Personal; fix: ki repo --repo ${root} store bind sources <absolute-path> --write, or ki repo --repo ${root} store absent sources --write`
+      `OneDrive source-store root is unavailable: ${await realpath(box.home.path)}/Library/CloudStorage/OneDrive-Personal\nnext: ki repo --repo ${root} store bind sources <absolute-path> --write, or ki repo --repo ${root} store absent sources --write`
     )
     await box.home.mkdir('Library/CloudStorage/OneDrive-Personal')
     expect((await box.run(['ki', 'repo', 'store', 'bind', 'sources', existing, '--write'])).exitCode).toBe(0)
@@ -309,5 +315,16 @@ describe('ki repo store', () => {
     )
 
     expect((await box.run('ki repo store list')).output).toContain('does not declare Knowledge Base store roles')
+    expect((await box.run('ki repo store list')).output).toContain(
+      '\nnext: select a Knowledge Base: ki repo --repo <knowledge-base-checkout> store list\n'
+    )
+  })
+
+  test('tells each store command where repository selection goes', async () => {
+    const box = await sandbox()
+    for (const command of ['ki repo store --help', 'ki repo store list --help', 'ki repo store bind --help'])
+      expect((await box.run(command)).output).toContain(
+        'Repository selection (--repo, --territory, --principals) is given to ki repo,\nbefore store, as in: ki repo --repo <checkout> store list\n'
+      )
   })
 })

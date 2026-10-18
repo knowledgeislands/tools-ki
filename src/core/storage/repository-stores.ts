@@ -8,11 +8,11 @@ import {
   REPOSITORY_DECLARATION_FILE,
   readRepositoryDeclaration
 } from '../configuration/declaration.ts'
-import { KiError } from '../errors.ts'
+import { errorWithNext, KiError } from '../errors.ts'
 import type { LocalRegistryEntry } from './local-registry.ts'
 import { registryEntry } from './local-registry.ts'
 import type { ExternalStoreRole } from './local-stores.ts'
-import { repositoryStoreDirectory } from './local-stores.ts'
+import { accessDenialError, accessDenied, lstatUnlessAbsent, repositoryStoreDirectory } from './local-stores.ts'
 
 /** Whether a store can be used on this host: a bound store is available or not, an unbound one absent by choice or missing. */
 export type RepositoryStoreAvailability = 'available' | 'unavailable' | 'absent' | 'missing'
@@ -38,7 +38,8 @@ export const repositoryStoreInventory = async (
   root: string,
   identity: string,
   roles: readonly KnowledgeBaseStoreRole[],
-  entries: readonly LocalRegistryEntry[]
+  entries: readonly LocalRegistryEntry[],
+  platform: NodeJS.Platform
 ): Promise<RepositoryStoreInventory> => {
   const entry = entries.find((candidate) => candidate.repository === identity && candidate.path === root)
   const stores: RepositoryStoreBinding[] = []
@@ -53,14 +54,14 @@ export const repositoryStoreInventory = async (
       continue
     }
     stores.push(
-      await repositoryStoreDirectory(role, path).then(
+      await repositoryStoreDirectory(role, path, platform).then(
         () => ({ role, path, state: 'bound' as const, availability: 'available' as const }),
         (error: Error) => ({
           role,
           path,
           state: 'bound' as const,
           availability: 'unavailable' as const,
-          reason: error.message
+          reason: errorWithNext(error)
         })
       )
     )
@@ -89,6 +90,7 @@ export const conventionalStoreCandidates = async (
 ): Promise<readonly string[]> => {
   if (role !== 'sources') return []
   const candidates: string[] = []
+  // A denied folder cannot be confirmed, so it is not offered; any bound store's own reason names the denial.
   for (const path of new Set(names.map((name) => conventionalSourcesStore(homeDirectory, name)))) {
     const state = await lstat(path).catch(() => undefined)
     if (state?.isDirectory() && !state.isSymbolicLink()) candidates.push(path)
@@ -185,7 +187,8 @@ export interface SourcesStoreTarget {
 /** Inspect conventional directories only; declaration and binding decisions remain with each repository. */
 export const inspectUndeclaredSourcesStores = async (
   entries: readonly SourcesStoreTarget[],
-  homeDirectory: string
+  homeDirectory: string,
+  platform: NodeJS.Platform
 ): Promise<SourcesStoreInspection> => {
   const undeclared: UndeclaredSourcesStore[] = []
   const diagnostics: SourcesStoreDiagnostic[] = []
@@ -202,7 +205,7 @@ export const inspectUndeclaredSourcesStores = async (
       continue
     }
     for (const name of names)
-      await inspectSourcesStore(entry, conventionalSourcesStore(homeDirectory, name), undeclared, diagnostics)
+      await inspectSourcesStore(entry, conventionalSourcesStore(homeDirectory, name), undeclared, diagnostics, platform)
   }
   return { undeclared, diagnostics }
 }
@@ -212,11 +215,13 @@ const inspectSourcesStore = async (
   entry: SourcesStoreTarget,
   path: string,
   undeclared: UndeclaredSourcesStore[],
-  diagnostics: SourcesStoreDiagnostic[]
+  diagnostics: SourcesStoreDiagnostic[],
+  platform: NodeJS.Platform
 ): Promise<void> => {
   try {
     const state = await lstat(path).catch((error: NodeJS.ErrnoException) => {
       if (error.code === 'ENOENT') return undefined
+      if (accessDenied(error)) throw accessDenialError(path, platform)
       throw error
     })
     if (!state) return
@@ -239,18 +244,23 @@ const inspectSourcesStore = async (
     if (declaredKnowledgeBaseStoreRoles(declaration).includes('sources')) return
     undeclared.push({ repository: identity, root: entry.path, path, kind })
   } catch (error) {
-    diagnostics.push({ repository: entry.repository ?? entry.path, path, message: (error as Error).message })
+    diagnostics.push({ repository: entry.repository ?? entry.path, path, message: errorWithNext(error as Error) })
   }
 }
 
 /** The managed store path; where the OneDrive root is missing the refusal names `fix`, the routes that remain. */
-export const managedSourcesStore = async (homeDirectory: string, name: string, fix: string): Promise<string> => {
+export const managedSourcesStore = async (
+  homeDirectory: string,
+  name: string,
+  fix: string,
+  platform: NodeJS.Platform
+): Promise<string> => {
   const root = sourcesStoreRoot(homeDirectory)
-  const state = await lstat(root).catch(() => undefined)
+  const state = await lstatUnlessAbsent(root, platform)
   if (!state?.isDirectory() || state.isSymbolicLink())
-    throw new KiError(`OneDrive source-store root is unavailable: ${root}; fix: ${fix}`, 1)
+    throw new KiError(`OneDrive source-store root is unavailable: ${root}`, 1, fix)
   const path = conventionalSourcesStore(homeDirectory, name)
-  const store = await lstat(path).catch(() => undefined)
+  const store = await lstatUnlessAbsent(path, platform)
   if (store && (!store.isDirectory() || store.isSymbolicLink()))
     throw new KiError('sources store path must be absent or an existing direct directory', 1)
   return path

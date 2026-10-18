@@ -15,6 +15,8 @@ import {
   type ExternalStoreRole,
   inspectLocalRegistry,
   inspectUndeclaredSourcesStores,
+  invalidRegistryError,
+  localRegistryPath,
   localRegistryWrite,
   managedSourcesStore,
   markRepositoryStoreAbsent,
@@ -56,7 +58,11 @@ const selected = async (
       const declaration = await readRepositoryDeclaration(repository.declaration)
       const roles = declaredKnowledgeBaseStoreRoles(declaration)
       if (!roles.length)
-        throw new KiError(`repository does not declare Knowledge Base store roles: ${repository.root}`, 1)
+        throw new KiError(
+          `repository does not declare Knowledge Base store roles: ${repository.root}`,
+          1,
+          'select a Knowledge Base: ki repo --repo <knowledge-base-checkout> store list'
+        )
       return {
         root: repository.root,
         identity: declaredRepositoryIdentity(declaration),
@@ -66,9 +72,18 @@ const selected = async (
   )
 }
 
-const selectedOne = async (context: KiContext, selection: SelectRepositories): Promise<SelectedStoreRepository> => {
+const selectedOne = async (
+  context: KiContext,
+  selection: SelectRepositories,
+  verb: string
+): Promise<SelectedStoreRepository> => {
   const repositories = await selected(context, selection)
-  if (repositories.length !== 1) throw new KiError('ki repo store mutation requires exactly one repository', 2)
+  if (repositories.length !== 1)
+    throw new KiError(
+      'ki repo store mutation requires exactly one repository',
+      2,
+      `name it with --repo: ki repo --repo <checkout> store ${verb} ...`
+    )
   return repositories[0] as SelectedStoreRepository
 }
 
@@ -81,8 +96,7 @@ const requiredExternalRole = (repository: SelectedStoreRepository, role: Knowled
 
 const registryEntries = async (context: KiContext) => {
   const inspection = await inspectLocalRegistry(context.paths.state)
-  if (inspection.state === 'invalid')
-    throw new KiError(`local KI repository registry is invalid: ${inspection.errors.join('; ')}`, 1)
+  if (inspection.state === 'invalid') throw invalidRegistryError(context.paths.state, inspection.errors)
   return inspection.repositories
 }
 
@@ -93,7 +107,7 @@ const publishRegistry = async (
 ): Promise<boolean> => {
   const proposal = await localRegistryWrite(context.paths.state, entry)
   if (!proposal) return false
-  context.stdout.write(`${write ? 'write' : 'would write'} ${proposal.path}\n`)
+  context.stdout.write(`${write ? 'write' : 'would write'} ${localRegistryPath(context.paths.state)}\n`)
   if (write) {
     await mkdir(context.paths.state, { recursive: true })
     const writes = await prepareWrites(await realpath(context.paths.state), [proposal])
@@ -121,7 +135,7 @@ const createStoreListCommand = (context: KiContext, selection: SelectRepositorie
       const [repositories, entries] = await Promise.all([selected(context, selection), registryEntries(context)])
       const inventory = await Promise.all(
         repositories.map((repository) =>
-          repositoryStoreInventory(repository.root, repository.identity, repository.roles, entries)
+          repositoryStoreInventory(repository.root, repository.identity, repository.roles, entries, context.platform)
         )
       )
       if (options.format === 'json') {
@@ -189,7 +203,8 @@ const createStoreScanCommand = (context: KiContext, selection: SelectRepositorie
             names: async () => scannedSourcesStoreNames(await sourcesStoreNames(root, entry?.key))
           }
         }),
-        context.homeDirectory
+        context.homeDirectory,
+        context.platform
       )
       context.stdout.write(
         `${renderTree({
@@ -237,7 +252,7 @@ const createStoreCreateCommand = (context: KiContext, selection: SelectRepositor
     .addOption(new Option('--write', 'create the store and publish its binding'))
     .action(async (rawRole: string, options: { write?: boolean }) => {
       const role = rawRole as KnowledgeBaseStoreRole
-      const repository = await selectedOne(context, selection)
+      const repository = await selectedOne(context, selection, 'create')
       const externalRole = requiredExternalRole(repository, role)
       if (externalRole !== 'sources')
         throw new KiError('legacy store has no managed creation location; bind an existing directory instead', 2)
@@ -255,7 +270,8 @@ const createStoreCreateCommand = (context: KiContext, selection: SelectRepositor
       const path = await managedSourcesStore(
         context.homeDirectory,
         names.canonical ?? names.historical,
-        storeFix(repository.root, externalRole, [], Boolean(current))
+        storeFix(repository.root, externalRole, [], Boolean(current)),
+        context.platform
       )
       if (current && current !== path)
         throw new KiError(`sources store is already bound to ${current}; use ki repo store bind to replace it`, 2)
@@ -277,18 +293,18 @@ const createStoreBindCommand = (context: KiContext, selection: SelectRepositorie
     .description('preview an external store binding; --write applies')
     .summary('bind an external store')
     .argument('<role>', 'declared external store role')
-    .argument('<absolute-path>', 'existing direct directory')
+    .argument('<absolute-path>', 'an existing directory, not a symbolic link')
     .option('--write', 'publish the local binding')
     .action(async (rawRole: string, path: string, options: { write?: boolean }) => {
       const role = rawRole as KnowledgeBaseStoreRole
-      const repository = await selectedOne(context, selection)
+      const repository = await selectedOne(context, selection, 'bind')
       const externalRole = requiredExternalRole(repository, role)
-      const validatedPath = await validateRepositoryStore(externalRole, path)
+      const validatedPath = await validateRepositoryStore(externalRole, path, context.platform)
       const entries = await registryEntries(context)
       const entry = bindRepositoryStore(repository.root, repository.identity, externalRole, validatedPath, entries)
       const changed = await publishRegistry(context, entry, Boolean(options.write))
       context.stdout.write(
-        `ki repo store bind ${role}: ${changed ? (options.write ? 'bound' : 'would bind') : 'already bound'} ${validatedPath}\n`
+        `ki repo store bind ${role}: ${changed ? (options.write ? 'bound' : 'would bind') : 'already bound'} ${validatedPath}\n${changed && options.write ? `undo: ki repo --repo ${repository.root} store unbind ${role} --write\n` : ''}`
       )
     })
 
@@ -300,7 +316,7 @@ const createStoreUnbindCommand = (context: KiContext, selection: SelectRepositor
     .option('--write', 'publish removal of the local binding')
     .action(async (rawRole: string, options: { write?: boolean }) => {
       const role = rawRole as KnowledgeBaseStoreRole
-      const repository = await selectedOne(context, selection)
+      const repository = await selectedOne(context, selection, 'unbind')
       const externalRole = requiredExternalRole(repository, role)
       const entries = await registryEntries(context)
       const current = registryEntryForRepository(repository.root, repository.identity, entries).stores?.[externalRole]
@@ -324,15 +340,16 @@ const createStoreAbsentCommand = (context: KiContext, selection: SelectRepositor
     .option('--write', 'publish the local marker')
     .action(async (rawRole: string, options: { clear?: boolean; write?: boolean }) => {
       const role = rawRole as KnowledgeBaseStoreRole
-      const repository = await selectedOne(context, selection)
+      const repository = await selectedOne(context, selection, 'absent')
       const externalRole = requiredExternalRole(repository, role)
       const entries = await registryEntries(context)
       const clear = Boolean(options.clear)
       const bound = registryEntryForRepository(repository.root, repository.identity, entries).stores?.[externalRole]
       if (bound && !clear)
         throw new KiError(
-          `${role} store is bound to ${bound}; unbind it first: ki repo --repo ${repository.root} store unbind ${role} --write`,
-          2
+          `${role} store is bound to ${bound}; unbind it first`,
+          2,
+          `ki repo --repo ${repository.root} store unbind ${role} --write`
         )
       const entry = markRepositoryStoreAbsent(repository.root, repository.identity, externalRole, clear, entries)
       const write = Boolean(options.write)
@@ -351,12 +368,23 @@ const createStoreAbsentCommand = (context: KiContext, selection: SelectRepositor
       context.stdout.write(`ki repo store absent ${role}: ${outcome} on this host\n`)
     })
 
-export const createRepoStoreCommand = (context: KiContext, selection: SelectRepositories): Command =>
-  new Command('store')
+/** Selection belongs to `ki repo`, so each store command's help says where it goes. */
+const selectionHelp =
+  '\nRepository selection (--repo, --territory, --principals) is given to ki repo,\n' +
+  'before store, as in: ki repo --repo <checkout> store list\n'
+
+export const createRepoStoreCommand = (context: KiContext, selection: SelectRepositories): Command => {
+  const command = new Command('store')
     .description('inspect and manage stores for selected KI repositories')
-    .addCommand(createStoreListCommand(context, selection))
-    .addCommand(createStoreScanCommand(context, selection))
-    .addCommand(createStoreCreateCommand(context, selection))
-    .addCommand(createStoreBindCommand(context, selection))
-    .addCommand(createStoreUnbindCommand(context, selection))
-    .addCommand(createStoreAbsentCommand(context, selection))
+    .addHelpText('after', selectionHelp)
+  for (const create of [
+    createStoreListCommand,
+    createStoreScanCommand,
+    createStoreCreateCommand,
+    createStoreBindCommand,
+    createStoreUnbindCommand,
+    createStoreAbsentCommand
+  ])
+    command.addCommand(create(context, selection).addHelpText('after', selectionHelp))
+  return command
+}

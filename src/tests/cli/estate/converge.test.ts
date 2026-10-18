@@ -1,7 +1,22 @@
 import { lstat, readdir, readFile, readlink, realpath, symlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { type Runner, runCommand, sandbox } from '../_cli_helper.ts'
+
+const denied = vi.hoisted(() => new Set<string>())
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const original = await importOriginal<typeof import('node:fs/promises')>()
+  return {
+    ...original,
+    readdir: ((...arguments_: Parameters<typeof original.readdir>) =>
+      denied.has(String(arguments_[0]))
+        ? Promise.reject(Object.assign(new Error('operation not permitted'), { code: 'EPERM' }))
+        : original.readdir(...arguments_)) as typeof original.readdir
+  }
+})
+
+afterEach(() => denied.clear())
 
 interface Target {
   readonly from: string
@@ -479,6 +494,22 @@ describe('[ki estate converge]', () => {
       `registry chezmoi -> dotfiles: https://github.com/acme/dotfiles at ${home}/dotfiles`
     )
     expect(await exists(join(home, 'dotfiles/.git'))).toBe(true)
+  })
+
+  test('refuses the plan when macOS denies a OneDrive folder it must scan for links', async () => {
+    const fixture = await estate()
+    const { box, home, repository, manifest, registry } = fixture
+    await repository('.local/share/chezmoi', 'git@github.com:acme/dotfiles.git')
+    await registry({ chezmoi: { repository: 'https://github.com/acme/dotfiles', path: '.local/share/chezmoi' } })
+    const oneDrive = await box.home.mkdir('Library/CloudStorage/OneDrive-Personal')
+    denied.add(oneDrive)
+    const path = await manifest([{ from: 'acme/dotfiles', path_to: '~/dotfiles' }])
+    const result = await box.run(['ki', 'estate', 'converge', path], { platform: 'darwin' })
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain(
+      `ki: error: access denied to ${oneDrive} by macOS privacy protection\nnext: grant Full Disk Access to the terminal app`
+    )
+    expect(await exists(join(home, 'dotfiles'))).toBe(false)
   })
 
   test('refuses a rollback whose recorded state has since changed', async () => {

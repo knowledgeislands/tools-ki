@@ -4,6 +4,7 @@ import { sandbox } from '../_cli_helper.ts'
 
 const statFailure = vi.hoisted(() => ({
   path: undefined as string | undefined,
+  failed: undefined as string | undefined,
   replacement: undefined as { trigger: string; target: string; substitute?: string } | undefined,
   activated: false
 }))
@@ -19,6 +20,8 @@ vi.mock('node:fs/promises', async (importOriginal) => {
         return statFailure.replacement.substitute
           ? original.lstat(statFailure.replacement.substitute)
           : Promise.reject(Object.assign(new Error('declaration disappeared'), { code: 'ENOENT' }))
+      if (path === statFailure.failed)
+        return Promise.reject(Object.assign(new Error('source-store stat failed'), { code: 'EIO' }))
       return path === statFailure.path
         ? Promise.reject(Object.assign(new Error('source-store stat denied'), { code: 'EACCES' }))
         : original.lstat(...arguments_)
@@ -28,6 +31,7 @@ vi.mock('node:fs/promises', async (importOriginal) => {
 
 afterEach(() => {
   statFailure.path = undefined
+  statFailure.failed = undefined
   statFailure.replacement = undefined
   statFailure.activated = false
 })
@@ -98,7 +102,7 @@ test('scans the current repository and explicit selection without requiring regi
 test('reports unsafe and unavailable conventional source-store evidence separately', async () => {
   const box = await sandbox()
   const entries = []
-  for (const name of ['file', 'symlink', 'stat-denied']) {
+  for (const name of ['file', 'symlink', 'stat-denied', 'stat-failed']) {
     const path = await box.project.mkdir(name)
     entries.push({ name, path })
     await box.project.write(`${name}/.ki.toml`, declaration(name, 'project'))
@@ -108,16 +112,22 @@ test('reports unsafe and unavailable conventional source-store evidence separate
   const target = await box.root.mkdir('linked-source-store')
   await symlink(target, `${box.home.path}/${parent}/sources-symlink`)
   await box.home.mkdir(`${parent}/sources-stat-denied`)
+  await box.home.mkdir(`${parent}/sources-stat-failed`)
   await box.state.write('ki/registry.toml', registry(entries))
   statFailure.path = await realpath(`${box.home.path}/${parent}/sources-stat-denied`)
+  statFailure.failed = await realpath(`${box.home.path}/${parent}/sources-stat-failed`)
 
-  const result = await box.run('ki repo --estate store scan')
+  const result = await box.run('ki repo --estate store scan', { platform: 'darwin' })
 
   expect(result.exitCode).toBe(1)
   expect(result.output).toContain('undeclared (0)')
-  expect(result.output).toContain('diagnostics (3)')
+  expect(result.output).toContain('diagnostics (4)')
   expect(result.output).toContain('conventional sources path is not a direct directory')
-  expect(result.output).toContain('source-store stat denied')
+  expect(result.output).toContain(
+    `access denied to ${statFailure.path} by macOS privacy protection; grant Full Disk Access to the terminal app`
+  )
+  expect(result.output).not.toContain('source-store stat denied')
+  expect(result.output).toContain('source-store stat failed')
 })
 
 test('diagnoses a selected repository whose declaration differs from its registry identity', async () => {
