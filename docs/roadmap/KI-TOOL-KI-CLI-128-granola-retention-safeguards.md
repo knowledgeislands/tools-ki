@@ -29,6 +29,10 @@ The owner permitted one defect carrier before coding on 14 October 2026, then in
 
 The [discovery simplification](/Users/krisbrown/workspaces/personal/acquire/+/_THREADS/acquire-intake/simplify-granola-discovery.report.md) retains account/UUID/package evidence and the existing canonical handled ledger/proof. An in-memory package lookup and on-demand window discovery need no second persistent index. Presence does not prove completeness or novelty; handled evidence must survive package removal. Original bytes, memberships and omissions remain protected.
 
+## Boundary
+
+Corrective reset retention only, confined to the five files named under Files touched. Independent `state_root`, a new discovery command or API, retry or amendment redesign, durable receipt redesign and migration are separate scope. No real reset or provider call is run.
+
 ## Current state
 
 Corrective delivery is isolated on `fix/granola-retention-20261014` at `/Users/krisbrown/.local/state/ki/worktrees/tools-ki/granola-retention-20261014`. On 18 October 2026 the owner approved rebasing it onto `main`, resolving it against `24a584a` and `c058981`, running the checks and landing it on `main` at Awaiting review, then retiring the branch and worktree ([Product management decisions](/Users/krisbrown/workspaces/humans-not-robots/hnr-principal/+/_THREADS/product-management/decisions.md), REPO-FOLLOWUPS). Landing on `main` makes the safeguard live in the installed `ki`. Acquire's settled `+/_ACQUIRE/` placement remains inactive.
