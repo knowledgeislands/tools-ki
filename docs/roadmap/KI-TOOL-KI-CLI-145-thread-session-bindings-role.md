@@ -18,11 +18,11 @@ updated_at: 2026-10-16T21:28:02Z
 
 ## Context
 
-Kris agreed the session-identity plan under SESSION-IDENTITY on 16 October 2026, in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_THREADS/ways-of-working/decisions.md):
+Kris agreed the session-identity plan under SESSION-IDENTITY on 16 October 2026, in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md):
 
 > Take the recommended option a) for PLAN-AGREE, THREAD-KEY, BINDING-HOME, SUPPLY-CHANNEL, NAME-AUTHORITY, RECORD-OWNERS, ROLE-FIELD and ROLE-STYLE (mechanism only); capture the three records and start Phase 1 after REPLY-FORMS lands.
 
-The plan is Phase 2 of the [session-identity report](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_THREADS/ways-of-working/session-identity.report.md), as narrowed by the [reporting-forms report](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_THREADS/ways-of-working/reporting-forms.report.md): ROLE-STYLE decides the mechanism only, so the repository keeps its `outputStyle` selection and this record does not pass a style per session.
+The plan is Phase 2 of the [session-identity report (deleted)](https://github.com/knowledgeislands/ki-principal/blob/ab526abed0d493bddd9c44ddb48c104d7fa2c846/+/_THREADS/ways-of-working/session-identity.report.md), as narrowed by the [reporting-forms report (deleted)](https://github.com/knowledgeislands/ki-principal/blob/528b53b1cddabb0bb4fb809a426a08baac75fa8b/+/_THREADS/ways-of-working/reporting-forms.report.md): ROLE-STYLE decides the mechanism only, so the repository keeps its `outputStyle` selection and this record does not pass a style per session.
 
 The agreed design this record implements:
 
