@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-16T00:29:07Z
-updated_at: 2026-10-16T01:15:23Z
+updated_at: 2026-10-18T04:15:00Z
 ---
 
 # Git Hygiene Estate Audit
@@ -44,8 +44,8 @@ A read-only `mgit --estate` survey on 16 October 2026 across 50 repositories, fr
 
 ## Boundary
 
-- In: read-only Git facts per selected repository (branches with upstream track, merged-into-default and patch-equivalence, age, remote branches including `automation/*`, `dependabot/*` and `renovate/*`, stashes, linked worktrees, untracked and staged paths, open PR count when a provider is available); mechanical audit findings for them under the ki-git rubric's criteria; `conform` proposals that never delete a remote branch or close a PR without explicit approval; fleet runs through the existing `ki repo` selectors; contract tests through `run(args, context)` with injected Git and no network.
-- Out: the ki-git rubric and standard wording, which KI Model: ways-of-working owns in ki-agentic-harness; any change to `mgit` (a read-only `mgit` report is an alternative for planning); deleting or pushing anything during audit; clean-down of today's branches, which runs as the tools-burndown queries.
+- In: reading `mgit overview --json` ([KI-TOOL-MGIT-CLI-021](/Users/krisbrown/workspaces/knowledge-islands/tools-mgit/docs/roadmap/KI-TOOL-MGIT-CLI-021-estate-overview.md)) for the read-only Git facts per selected repository (branches with upstream track, merged-into-default and patch-equivalence, age, remote branches including `automation/*`, `dependabot/*` and `renovate/*`, stashes, linked worktrees, untracked and staged paths, open PR count when a provider is available); mechanical audit findings for them under the ki-git rubric's criteria; `conform` proposals that never delete a remote branch or close a PR without explicit approval; fleet runs through the existing `ki repo` selectors; contract tests through `run(args, context)` with injected Git and no network.
+- Out: the ki-git rubric and standard wording, which KI Model: ways-of-working owns in ki-agentic-harness; collecting those Git facts a second time in `ki`, and any change to `mgit`, which KI-TOOL-MGIT-CLI-021 owns; deleting or pushing anything during audit; clean-down of today's branches, which runs as the tools-burndown queries.
 
 ## Current state
 
@@ -65,7 +65,7 @@ Not yet set. The plan names the exact gates; at minimum the repository test suit
 
 ## Dependencies / blocks
 
-Planning depends on the ki-git rubric gaining the clean-down criteria the audit evaluates, routed to KI Model: ways-of-working.
+Planning depends on the ki-git rubric gaining the clean-down criteria the audit evaluates ([KI-HARNESS-GOV-203](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-203-git-clean-down-criteria.md)), and on `mgit overview --json` from [KI-TOOL-MGIT-CLI-021](/Users/krisbrown/workspaces/knowledge-islands/tools-mgit/docs/roadmap/KI-TOOL-MGIT-CLI-021-estate-overview.md).
 
 ## Documentation impact
 
@@ -90,3 +90,5 @@ None.
 Capture only; adoption, priority and plan belong to this repository. Questions for planning: whether open-PR facts come from `gh` behind an injected provider or stay out of scope offline; whether the Git fact collection belongs in `ki` or as a read-only `mgit` report that `ki` consumes; and the stale-age threshold.
 
 Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-burndown Project, whose Scope lists this record as the one REPO-GIT-HYGIENE capture inside its burn-to-zero, under the tools-burndown thread's BURN-OVERNIGHT decision. Planning waits on the ki-git rubric dependency above.
+
+Reworded on 18 October 2026 by the tools-burndown run: the roadmap overview's ESTATE-HOME query recommended a), "mgit owns `mgit overview`, terminal table and `--json`, copying git-almanac's output conventions. KI-TOOL-KI-CLI-140 reworded to read mgit's JSON, and git-almanac stays single-repository". The run took a) under Kris's overnight instruction to take the recommended course on a judgement call; provisional, for Kris to confirm. That answers the planning question of where Git fact collection belongs.
