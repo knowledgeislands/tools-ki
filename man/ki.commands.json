@@ -565,15 +565,15 @@
       "commands": [
         {
           "invocation": "ki dev local set <harness-id> <local-harness-path>",
-          "description": "Validate the identity against the installed estate and remember it with the local checkout without changing the active payload or managed user-skill links. When the selected harness is the canonical harness, the checkout must contain the core bootstrap skill at skills/keystone/ki-bootstrap/SKILL.md and physical skills , subagents , and hooks payload directories."
+          "description": "Validate the identity against the installed estate and remember it with the local checkout in the host-local $XDG_STATE_HOME/ki/locals.toml without changing the active payload, managed user-skill links or the portable config.toml . Remembered entries still in config.toml below [locals] are moved to the host-local file once, by ki dev local set or ki bootstrap ; they are left in place and then ignored with a warning. When the selected harness is the canonical harness, the checkout must contain the core bootstrap skill at skills/keystone/ki-bootstrap/SKILL.md and physical skills , subagents , and hooks payload directories."
         },
         {
           "invocation": "ki dev local on [harness-id]",
-          "description": "Enable selected local checkouts for development. KI replaces each selected Harness's complete active root with its checkout, so its metadata and payloads always have one source, records each identity and path below [locals] , and reconciles its managed user-skill links to the local source on every run. An explicit Harness ID selects one source; omitting it selects all remembered sources."
+          "description": "Enable selected local checkouts for development. KI replaces each selected Harness's complete active root with its checkout, so its metadata and payloads always have one source, and reconciles its managed user-skill links to the local source on every run. An explicit Harness ID selects one source; omitting it selects all remembered sources. A remembered checkout missing on this host is refused rather than replaced by another source."
         },
         {
           "invocation": "ki dev local off [harness-id]",
-          "description": "Remove each selected recognised local Harness root, reinstall its verified archive, retain its entry below [locals] , and reconcile its managed user-skill links to the restored archive. An explicit Harness ID selects one source; omitting it selects all remembered sources."
+          "description": "Remove each selected recognised local Harness root, reinstall its verified archive, retain its remembered checkout, and reconcile its managed user-skill links to the restored archive. An explicit Harness ID selects one source; omitting it selects all remembered sources."
         },
         {
           "invocation": "ki dev skill generate <skill> [--write]",
