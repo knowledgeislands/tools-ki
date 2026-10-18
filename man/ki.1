@@ -1972,8 +1972,8 @@ or a state folder is touched.
 .PP
 Read the work model: each piece of work's file, its state and whose move
 it is, under the
-.B ki-checkpoint
-work-file standard. These commands change nothing.
+.B ki-work-folder
+work-folder standard. These commands change nothing.
 .TP
 .B ki work status [--repo <dir>] [--format text|json]
 Read every
@@ -2003,9 +2003,7 @@ counts as stuck after ten silent minutes.
 .I +/_WORK_REVIEW/
 is shown only as an awaiting-review count, and an unreadable work file is
 a warning that leaves the rest listed. Through the work model's tolerance
-window each
-.B ki-checkpoint
-in
+window each old checkpoint in
 .I +/_CHECKPOINTS/
 still reads as one work file, with a warning naming its new home: its
 .B Status
