@@ -25,7 +25,7 @@ import { DEFAULT_HARNESS } from '../../core/configuration/declaration.ts'
 import { grammarError, KiError } from '../../core/errors.ts'
 import { harnessDirectory } from '../../core/storage/harness-paths.ts'
 
-const agentContext = (context: KiContext): AgentContext => ({
+export const agentContext = (context: KiContext): AgentContext => ({
   stateDirectory: context.paths.state,
   harnessDirectory: harnessDirectory(context.paths.data, DEFAULT_HARNESS),
   workingDirectory: context.workingDirectory,

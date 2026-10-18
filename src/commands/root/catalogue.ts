@@ -11,7 +11,8 @@ export const rootCommandNames = [
   'link',
   'registry',
   'repo',
-  'skill'
+  'skill',
+  'work'
 ] as const
 
 export type RootCommandName = (typeof rootCommandNames)[number]

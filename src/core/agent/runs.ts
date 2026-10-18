@@ -2,6 +2,7 @@ import { appendFile, copyFile, mkdir, readdir, rename, stat, writeFile } from 'n
 import { join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { gitWorkingTreeRoot } from '../runtime/git.ts'
+import { statusSince, WORK_DIRECTORY, type WorkRun } from '../work/status.ts'
 import {
   type AgentContext,
   type AuthorityTier,
@@ -514,6 +515,26 @@ export const listRuns = async (context: AgentContext, all: boolean): Promise<Run
     if (all || overview.items.length) overviews.push(overview)
   }
   return overviews
+}
+
+/**
+ * The live runs homed in one repository's work folders, each with its running agents and the time its status
+ * file last changed, for `ki work status` to show as run items.
+ */
+export const workRuns = async (context: AgentContext, root: string): Promise<WorkRun[]> => {
+  const homed: WorkRun[] = []
+  for (const { run, items } of await listRuns(context, false)) {
+    const home = await readThread(context, run)
+    if (home?.repository !== root || !home.folder.startsWith(`${WORK_DIRECTORY}/`)) continue
+    const agents = []
+    for (const item of items) {
+      if (item.kind !== 'running') continue
+      const since = await statusSince(join(runDirectory(context, run), `${item.agent}.status`))
+      if (since) agents.push({ name: item.agent, since })
+    }
+    homed.push({ run, folder: home.folder, agents })
+  }
+  return homed
 }
 
 /** The sending run: the agent's marker, else `--from`, else the one run whose thread this repository owns. */

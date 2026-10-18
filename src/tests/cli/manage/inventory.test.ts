@@ -26,7 +26,8 @@ const rootHelpCommands = [
   'skill',
   'territory',
   'update',
-  'vscode'
+  'vscode',
+  'work'
 ]
 const territoryCommands = ['audit', 'inspect', 'list', 'open', 'roots', 'show']
 const territoryChangelogCommands = [
@@ -93,7 +94,8 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   dev: ['local', 'skill'],
   'dev local': ['off', 'on', 'set'],
   'dev skill': ['generate', 'rubric'],
-  estate: ['converge']
+  estate: ['converge'],
+  work: ['status']
 }
 
 describe('[ki command inventory]', () => {

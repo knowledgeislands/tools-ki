@@ -13,6 +13,7 @@ import { createRegistryCommand } from '../registry/index.ts'
 import { createRepoCommand } from '../repo/index.ts'
 import { createSkillCommand } from '../skill/index.ts'
 import { createTerritoryCommand } from '../territory/index.ts'
+import { createWorkCommand } from '../work/index.ts'
 import { type RootCommandName, rootCommandNames } from './catalogue.ts'
 
 type RootCommandFactory = (context: KiContext) => Command
@@ -29,7 +30,8 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   kb: (context) => createKbCommand(context),
   link: (context) => createLinkCommand(context),
   registry: (context) => createRegistryCommand(context),
-  skill: (context) => createSkillCommand(context)
+  skill: (context) => createSkillCommand(context),
+  work: (context) => createWorkCommand(context)
 }
 
 export const addRootCommands = (program: Command, context: KiContext): void => {

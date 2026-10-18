@@ -135,6 +135,15 @@ ki link KI-TOOL-KI-CLI-127 KI-TOOL-KI-CLI-124
 
 See [run detached background agents](docs/guides/user/background-agents.md).
 
+## Read the work model
+
+`ki work status` reads each `+/_WORK/<id>/work.md` in a repository and shows its work in five views: with you, stuck, blocked, moving and on hold. Whose move it is comes from each work file's state, and each detached run homed in a work folder adds its running agents as items, which count as stuck after ten silent minutes. `+/_WORK_REVIEW/` shows only as a count. Through the work model's tolerance window, `+/_CHECKPOINTS/` files still read, each with a warning naming its new home. `--format json` writes the versioned `ki/work-status/v1` report.
+
+```sh
+ki work status --repo ~/workspaces/knowledge-islands/ki-principal
+ki work status --format json
+```
+
 ## Automate canonical batch records
 
 `ki repo batch prepare`, `validate`, `run`, and `close` provide deterministic local file mechanics for an already-approved exact set of Ready work items. The commands protect the authority payload, bind a run, append explicit item evidence, and require every named item to match the approved completion target before recording closure. They do not select or implement work, infer approval, change work lifecycle, accept or prune items, push, or release.

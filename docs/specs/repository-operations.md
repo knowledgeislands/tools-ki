@@ -282,6 +282,16 @@ _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `commits exactly the pruned r
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### REPO-OPS-028 — Read-only work status
+
+`ki work status` MUST read each `+/_WORK/<id>/work.md` in the selected repository without changing anything and derive each entry's holder and role from its state, never from a stored field. It MUST place every unfinished entry and each running agent of a detached run homed in a `+/_WORK/<id>/` folder in the with-you, stuck, blocked, moving and on-hold views, MUST show `+/_WORK_REVIEW/` only as a count, and MUST report an unreadable work file as a warning while listing the rest. Through the work model's tolerance window it MUST read each `ki-checkpoint` in `+/_CHECKPOINTS/` as one work entry with a warning naming its new home. `--format json` MUST emit schema `ki/work-status/v1`, with the repository identity, generation time and one entry per work file, and MUST write its warnings to standard error.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/work/status.test.ts` — `reads every work file into ki/work-status/v1 with its live runs, and counts work awaiting review`, `warns of each unreadable work file and lists the rest`, `reads thread-model checkpoints through the tolerance window, warning of each new home`, `takes a legacy id's territory from a work file, else the Capital's handle, else the folder`, `shows empty views for a repository with no work, from the working directory by default`, and `rejects an unknown format and a directory that is not a KI repository`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

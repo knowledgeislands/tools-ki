@@ -423,6 +423,11 @@ Write or replace one decision's durable home.
 .TP
 .B ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]
 Retire a finished run's state folder once its reconcile gate passes.
+.SS Work model
+\&
+.TP
+.B ki work status [--repo <dir>] [--format text|json]
+Show a repository's work by view, read-only, from its work files.
 .SS Estate convergence
 \&
 .TP
@@ -1847,6 +1852,61 @@ and with
 .B --delete
 it is removed, each with the note at
 .IR _archive/<run>.close.md .
+.SS Work model
+\&
+.PP
+Read the work model: each piece of work's file, its state and whose move
+it is, under the
+.B ki-checkpoint
+work-file standard. These commands change nothing.
+.TP
+.B ki work status [--repo <dir>] [--format text|json]
+Read every
+.I +/_WORK/<id>/work.md
+in the repository, default the working directory's KI repository, and
+show it in five views:
+.B with you
+(held by
+.BR owner ,
+oldest first),
+.B stuck
+(with the worker and silent for more than ten minutes),
+.B blocked
+(marked
+.B blocking
+or in
+.BR handoff ),
+.B moving
+(the rest) and
+.B on hold
+(a paused hold older than 31 days flagged). Finished work is in no view.
+The holder, and whether it is the worker or the supervisor, is derived
+from the state, never stored. Each detached run whose thread home is a
+.I +/_WORK/<id>/
+folder adds one item per running agent, dated by its status file, which
+counts as stuck after ten silent minutes.
+.I +/_WORK_REVIEW/
+is shown only as an awaiting-review count, and an unreadable work file is
+a warning that leaves the rest listed. Through the work model's tolerance
+window each
+.B ki-checkpoint
+in
+.I +/_CHECKPOINTS/
+still reads as one work file, with a warning naming its new home: its
+.B Status
+word maps rest, busy and hold to with-supervisor, with-worker and a paused
+hold, and its id takes the territory alias from the first work file, else
+the Capital's
+.IR territory_aliases ,
+else its
+.IR territory_prefix ,
+else the folder name.
+.B --format json
+writes the versioned
+.I ki/work-status/v1
+report, one entry per work file with its id, level, title, theme, worker,
+supervisor, state, hold, holder, role, target, blocking, since, received,
+beat, path and items, and sends the warnings to standard error.
 .SS Estate convergence
 \&
 .PP
