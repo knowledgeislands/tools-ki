@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 5f1349e59cc72fc8afc946d789565ab2a1dba8c2
 created_at: 2026-10-14T13:55:48Z
-updated_at: 2026-10-16T02:11:09Z
+updated_at: 2026-10-18T03:28:29Z
 ---
 
 # Agent Thread Coordination Commands
@@ -27,6 +27,7 @@ updated_at: 2026-10-16T02:11:09Z
 4. `KI_AGENT_RUN` is set by the Codex launcher as it is by the Claude launcher, so the coordinator reminder hook stays silent in launched Codex agents.
 5. A link printer: a `ki` command that takes a roadmap record identifier and prints the ready Markdown link to its local file, resolving the repository from the identifier's scope through the registry, and for a pruned record the link `[<FULL-ID> (pruned)](https://github.com/<owner>/<repo>/blob/<last revision>/<path>)`.
 6. Bare-letter resolution on `ki agent decide`: when the decision text after a Needs tag is a bare option letter, such as `b`, the command resolves the letter against the lettered options of the query carrying that tag in the latest report under the thread folder, and logs both the letter and the option's full wording.
+7. The work model's readers: `ki work status --format json` under schema `ki/work-status/v1`, `ki agent` thread homes in `+/_WORK/<id>/`, and the roadmap registry reading `Streams/Themes/`, each still reading the thread-model shapes through the tolerance window.
 
 Item 5 is delivered first; the other groups of Steps follow in any order.
 
@@ -44,9 +45,11 @@ Bare-letter resolution comes from the lettered options the owner report gained o
 
 The retired state-of-play report that proposed the re-anchoring subsection is in the harness's run folder and is not a durable source.
 
+The seventh piece is phase 2 of the work migration. [GDR-KI-PRINCIPAL-009](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/Admin/Governance/Decisions/GDR-KI-PRINCIPAL-009-the-work-model.md) replaces the thread model with the work model: a work file at `+/_WORK/<id>/work.md`, a theme label from `Streams/Themes/`, and five views over whose move it is. Kris answered RUN-SHAPE on 18 October 2026 in the ways-of-working thread, giving that thread phases 2 to 4 and one tools-ki release once phase 2 passes its checks. The brief puts `ki work status` under this record, and the `ki-pmo` standard keeps the `thread.status` parser only "until `ki work status` reads the work file directly".
+
 ## Boundary
 
-- In scope: `ki agent status` without a run argument and its listing; a decision class on `ki agent decide` and `ki agent reconcile`, and what the `ki agent close` gate makes of it; `ki agent send`, its delivery file and how the receiving thread sees a line; verification that the Codex launcher sets `KI_AGENT_RUN`; the link printer command, its registry resolution and its pruned-record fallback; bare-letter resolution on `ki agent decide`, where it finds the options and what it logs; tests through `run(args, context)` and `sandbox()`; `README.md`, `man/ki.1`, the background-agents guide and the `CHANGELOG.md` command surface.
+- In scope: `ki agent status` without a run argument and its listing; a decision class on `ki agent decide` and `ki agent reconcile`, and what the `ki agent close` gate makes of it; `ki agent send`, its delivery file and how the receiving thread sees a line; verification that the Codex launcher sets `KI_AGENT_RUN`; the link printer command, its registry resolution and its pruned-record fallback; bare-letter resolution on `ki agent decide`, where it finds the options and what it logs; `ki work status`, its five views and `ki/work-status/v1`; thread homes in `+/_WORK/<id>/` and `ki agent home`; the roadmap registry's `Streams/Themes/` and `--by theme`; tests through `run(args, context)` and `sandbox()`; `README.md`, `man/ki.1`, the background-agents guide and the `CHANGELOG.md` command surface.
 - Out of scope: any change to the per-run `status` output, `watch` or `wait`; inspecting agent logs or reports; archived runs under `_archive/`; the `coordinator-reminder` hook, the `ki-pmo` and `ki-delegation` standards and the `ki-pmo` rubric, which the harness owns; a notification surface beyond a file the receiving thread reads; any network or Git push; consolidating decisions into their homes, which stays the coordinating thread's duty.
 
 ## Requirements
@@ -56,6 +59,9 @@ The retired state-of-play report that proposed the re-anchoring subsection is in
 - `ki agent send <run> <line>` appends one timestamped line, naming the sending run, to the receiving run's `inbox.md` in its state folder, and refuses when the receiving run is not live. The receiving thread sees new lines through `ki agent status` on its run.
 - Every agent the Codex launcher starts, through `launch` and `dispatch`, carries the run name in `KI_AGENT_RUN`, and a test asserts it for both runtimes.
 - The link printer prints `[<identifier>](<absolute path>)` for a record found under `docs/roadmap/` or `Streams/Roadmap/` in the repository the registry resolves from the identifier's scope. For a pruned record it prints `[<FULL-ID> (pruned)](https://github.com/<owner>/<repo>/blob/<last revision>/<path>)`, where the last revision is the last commit in which the file existed, usually the parent of the prune commit, and the owner and repository come from the verified canonical remote; the link text is always the full identifier followed by `(pruned)`. Kris set this form on 2026-10-14, as received: "LINK-FORM / clickable GitHub link to the file at its last revision; KI-HARNESS-GOV-188's check accepts it. Perhaps the link text can be `KI-HARNESS-GOV-188 (pruned)`". When the identifier resolves to nothing it prints why and exits non-zero, so a link is never invented. Several identifiers print one link per line.
+- `ki work status` reads each `+/_WORK/<id>/work.md` read-only, derives each holder and role from the state, and shows the with-you, stuck, blocked, moving and on-hold views; `+/_WORK_REVIEW/` is only a count; `--format json` emits `ki/work-status/v1`. Thread-model checkpoints still read, each with a warning naming its new home.
+- A new run whose name is a work's slug takes `+/_WORK/<id>/` as its thread home, and a live run can be re-homed there explicitly once the work file exists.
+- `ki repo roadmap list --by theme` groups by the theme a Project note or record names, reading `Streams/Themes/`, while `Streams/Initiatives/`, Project folder notes and `initiative:` still read with warnings.
 - When `ki agent decide <run> '<TAG> - <letter>'` receives a decision whose text after the tag is a single option letter, it resolves the letter to that option's full wording and writes an entry carrying both, the letter and the wording, so the log reads without the report. It finds the wording in the latest report under the run's thread folder that carries a query under that tag, by file modification time, reading the `<letter>)` line of that query's **Options**. If no report under the thread folder carries the tag, the latest report carrying it has no option with that letter, or the decision has no tag, the command refuses, changes nothing and says which of those it was. A decision whose text is more than a letter is logged as it is today.
 
 ## Current state
@@ -111,6 +117,10 @@ These settle the open questions below.
 - [x] **Bare-letter resolution.** Refuse with a one-line reason and a non-zero exit when the decision carries no tag, no report under the thread folder carries the tag, or the latest such report has no option with that letter; write nothing in any of those cases.
 - [x] **Bare-letter resolution.** Tests through `run(args, context)` and `sandbox()` with a thread folder holding two reports carrying the same tag: a letter resolved from the newer report, a letter the newer report lacks, a tag no report carries, a decision with no tag, and a plain decision logged unchanged.
 - [x] **Bare-letter resolution.** Document the letter form in the background-agents guide beside the reply block, `README.md`, `man/ki.1` and `CHANGELOG.md`.
+- [x] **Work model.** Teach the project registry `Streams/Themes/` and `theme:`, rename `--by initiative` to `--by theme`, and keep `Streams/Initiatives/`, folder notes, `initiative:` and the retired index readable with a warning each.
+- [x] **Work model.** Add `ki work status [--repo <dir>] [--format text|json]` over `+/_WORK/<id>/work.md`, with the holder derived from the state, live runs homed in a work folder as items, the `+/_WORK_REVIEW/` count, and `+/_CHECKPOINTS/` read through the tolerance window.
+- [x] **Work model.** Home a new run in the work folder whose slug is its name, and add `ki agent home <run> [--work <id>]` to print the home or record a work folder as it.
+- [x] **Work model.** Tests through `run(args, context)` and `sandbox()`, and `README.md`, `man/ki.1`, `docs/specs/repository-operations.md`, the background-agents guide and the `CHANGELOG.md` command surface.
 
 ## Files touched
 
@@ -120,8 +130,10 @@ These settle the open questions below.
 - `src/core/agent/thread.ts`
 - `src/core/agent/close.ts`
 - `src/core/agent/runtimes.ts`
-- `src/core/work/` (identifier scope resolution shared with the printer)
-- `src/tests/cli/agent.test.ts` and a test file for the printer
+- `src/core/work/` (identifier scope resolution shared with the printer; `status.ts` and the theme registry)
+- `src/commands/work/` and `src/commands/repo/roadmap.ts`
+- `src/tests/cli/agent.test.ts`, a test file for the printer, `src/tests/cli/work/status.test.ts` and the roadmap model tests
+- `docs/specs/repository-operations.md`
 - `README.md`
 - `man/ki.1` and `man/ki.commands.json`
 - `docs/guides/user/background-agents.md`
@@ -159,6 +171,11 @@ These settle the open questions below.
 - `bun run test:coverage` passes with the letter cases.
 - Against a live run whose latest report carries a query `PROBE` with options a) and b), `ki agent decide <run> 'PROBE - b'` appends an entry whose text is `b) <option b's wording>` and names the report in `source:`; `ki agent decide <run> 'PROBE - c'` is refused naming the missing letter and the log is unchanged; `ki agent decide <run> 'NOWHERE - b'` is refused naming the missing tag.
 
+### Work model
+
+- `bun run test:coverage` passes with the work-status, home and theme cases.
+- `ki work status --repo <ki-principal>` lists its legacy checkpoints with a warning each, and `ki agent home ways-of-working` prints its current home without writing.
+
 ## Dependencies / blocks
 
 - Follows [KI-TOOL-KI-CLI-124 (pruned)](https://github.com/knowledgeislands/tools-ki/blob/9c4c0c0ef55feac893e869b886e87639ece9d791/docs/roadmap/KI-TOOL-KI-CLI-124-agent-run-close.md), accepted, which fixed the thread home the listing reads and the `home:` line the class sits beside.
@@ -173,11 +190,11 @@ None.
 
 ### Specifications
 
-None.
+`REPO-OPS-028`, read-only work status, in `docs/specs/repository-operations.md`.
 
 ### Guides
 
-The background-agents guide gains the no-argument `status` form, `--class` and the gate's reading of it, `send` and the inbox, the statement that both runtimes carry the marker, and a line naming the link printer beside the owner-report linking rule.
+The background-agents guide gains the work-folder home and `ki agent home`, and the no-argument `status` form, `--class` and the gate's reading of it, `send` and the inbox, the statement that both runtimes carry the marker, and a line naming the link printer beside the owner-report linking rule.
 
 ### Roadmap
 
@@ -188,6 +205,8 @@ No follow-on record. Harness follow-ons are named under Dependencies / blocks fo
 ### Delivered
 
 All six pieces are in place. `ki link <identifier>...` prints a roadmap record's Markdown link, or its pruned form. `ki agent status` with no run lists every live thread in the `ki-pmo` banner form. `decide` and `reconcile` carry a decision class, and the `close` gate reads it. `ki agent send` leaves a line in a live run's inbox, and that run's next `status` shows it. A test now pins `KI_AGENT_RUN` on a Codex agent the dispatcher starts. `decide <run> '<TAG> - <letter>'` logs an owner's bare option letter with its wording and the report it came from.
+
+The seventh piece, phase 2 of the work migration, followed on 18 October 2026. `ki repo roadmap list --by theme` reads `Streams/Themes/`. `ki work status` shows a repository's work files in the five views, and `--format json` emits `ki/work-status/v1`. A run named for a work's slug is homed in its `+/_WORK/<id>/` folder, and `ki agent home` prints or records a home. Each thread-model shape still reads, with a warning naming its new home.
 
 ### Change Summary
 
@@ -200,11 +219,22 @@ All six pieces are in place. `ki link <identifier>...` prints a roadmap record's
 - `dfcbfcb8`: the Codex dispatch marker assertion, and the guide sentence saying both runtimes carry the marker.
 - `20c1cfb6`, bare letters: `resolveLetter` and `queryOptions` in `src/core/agent/thread.ts`.
 - Docs: each group updated `README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`.
+- `85a6d539`, themes: `src/core/work/registry.ts` reads `Streams/Themes/` and the thread-model registry, `theme:` replaces `initiative:` in `src/core/work/items.ts`, and `--by theme` replaces `--by initiative`, a breaking change.
+- `722522f2`, `ki work status`: `src/core/work/status.ts`, `src/commands/work/`, and `workRuns` in `src/core/agent/runs.ts`, with `REPO-OPS-028`.
+- `6d82b144`, work-folder homes: `newRunFolder` and `rehomeThread` in `src/core/agent/thread.ts`, and `ki agent home` in `src/commands/agent/index.ts`.
 
 Two choices went beyond the Steps:
 
 - With neither `KI_AGENT_RUN` nor `--from`, the sender is the one run whose `thread.json` names the working directory's repository. Several such runs, or none, are refused with a request for `--from`.
 - A held entry passes on an untracked checkpoint only when its home has a `_CHECKPOINTS` path segment. Any other held home keeps the tracked-path test.
+
+The work-model piece made five choices of its own:
+
+- Each entry's `identity` is the repository identity, as `ki/roadmap/v1` gives it, following the Work Process note rather than settle-model's `<territory alias>:<id>`.
+- Role is null when work is handed to a third holder, as the note says.
+- Moving is every unfinished entry that is not with you, stuck, blocked or on hold, as the note says, rather than settle-model's "with the worker and not stuck".
+- A legacy checkpoint's id takes the territory alias from the first work file, else the Capital's `territory_aliases`, else its `territory_prefix`, else the folder name.
+- `ki agent home --work` records the home and moves no file, so the work folder's owner moves the thread folder's contents under Git.
 
 ### Verification
 
@@ -225,6 +255,13 @@ Each Verify heading is covered through `run(args, context)` and `sandbox()`:
   - the inbox shown once by `status`;
   - refusals for a finished run, an archived run, a bad line, a bad sender, an ambiguous repository and no owning run.
 - **Codex marker:** asserted on the dispatch path.
+- **Work model:**
+  - every state and view, an overdue paused hold, a more-expected hold and finished work;
+  - fresh, silent and stale run items, and a run homed elsewhere;
+  - the review count and each validation warning;
+  - each legacy checkpoint mapping and each alias source;
+  - the slug home, a shared slug, re-homing and its refusals;
+  - the theme registry and each thread-model warning.
 - **Bare letters:**
   - a letter resolved from the newer of two reports carrying the tag;
   - a letter the newer report lacks;
@@ -246,6 +283,8 @@ Live checks ran in a temporary state root and repository:
 - **Bare letters:** `decide w 'PROBE - b'` logged `b) Second way.` with its `source:`. `PROBE - c` and `NOWHERE - b` were refused, and the log was unchanged.
 - **`ki agent status`:** listed the tools-burndown thread on this machine, as recorded at `7160ff99`.
 
+On 18 October 2026 `bun run test:coverage` passed 1291 tests at 100% statements, branches, functions and lines, and `bunx tsc --noEmit -p .`, biome on the changed files, `bunx knip`, the dependency-cruiser boundary test, `mandoc -T lint man/ki.1`, rumdl and `ki repo audit --repo .` were clean or had only earlier warnings. Read-only against ki-principal, `ki work status` listed 11 legacy checkpoints, each with its warning, and `ki agent home ways-of-working` printed its `+/_THREADS/ways-of-working` home.
+
 Two Verify items were not run:
 
 - The Codex launch, because it would contact the Codex service.
@@ -256,6 +295,7 @@ Two Verify items were not run:
 - The live Codex launch and the send to a real run are left for the owner.
 - The harness still has to retire the `--log` inbox idiom in `ki-delegation` and the Codex terminal check in `coordinator-reminder.sh`, as Dependencies / blocks names.
 - DEPS-1 predates this record and needs a network install.
+- ki-principal declares no `territory_aliases`, so its legacy checkpoint ids read as `knowledge-islands.*` until its first work file exists or the Capital declares `territory_aliases = ["ki"]`.
 
 ### Post-change review
 
@@ -271,6 +311,8 @@ Every refusal checks before writing: a bare-letter refusal leaves the log unchan
 ### Mini recap
 
 A coordinating thread can now list live threads, classify each decision so `close` accepts operational and held entries, message another live thread, rely on the run marker for both runtimes, and log an owner's bare letter with the option's wording.
+
+The seventh piece lets the tools read the work model: work by view from the work files, runs homed in work folders, and themes in place of Initiatives, with the thread-model shapes still read until phase 5 retires them.
 
 ## Discussion
 
