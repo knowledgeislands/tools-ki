@@ -7,10 +7,11 @@ import { type AgentContext, git, instant, read, runDirectory } from './context.t
 
 /**
  * Where a run's knowledge files live: the owning repository's tracked work folder
- * `+/_WORK/<id>/`, or the thread-model `+/_THREADS/<run>/` through the tolerance window, so
- * that losing the state folder loses no knowledge. Kris settled the split on 2026-10-14:
- * "tracked +/_THREADS/<thread>/ for the decisions log and agent reports; state folder keeps
- * runtime only."
+ * `+/_WORK/<id>/`, so that losing the state folder loses no knowledge. Kris settled the split
+ * on 2026-10-14: "tracked +/_THREADS/<thread>/ for the decisions log and agent reports; state
+ * folder keeps runtime only." The work model retired `+/_THREADS/` and `+/_CHECKPOINTS/`, and
+ * Kris named a run report written there THREADS-REGRESSION on 2026-10-18, so a home outside
+ * `+/_WORK/` is only ever followed into its work folder, never written.
  */
 export interface ThreadHome {
   /** Physical root of the Git working tree that owns the thread. */
@@ -19,31 +20,53 @@ export interface ThreadHome {
   readonly folder: string
 }
 
-export const threadFolder = (run: string): string => `+/_THREADS/${run}`
-
 /** The work folder of the dotted work id, relative to the repository. */
 export const workFolder = (id: string): string => `${WORK_DIRECTORY}/${id}`
+
+/** Whether the home is a work folder, rather than a retired `+/_THREADS/` or `+/_CHECKPOINTS/` one. */
+export const isWorkHome = (home: ThreadHome): boolean => home.folder.startsWith(`${WORK_DIRECTORY}/`)
 
 /** Whether the repository holds the work's `work.md`. */
 const holdsWork = async (repository: string, id: string): Promise<boolean> =>
   (await stat(join(repository, workFolder(id), 'work.md')).catch(() => undefined))?.isFile() === true
 
 /**
- * The folder a new run takes as its home: the one work folder whose slug is the run's name,
- * as `ki-coordination` names a work's coordinator run by its slug, or else the thread-model
- * `+/_THREADS/<run>/`. Two work ids sharing a slug leave the choice to `ki agent home`.
+ * Whether the run's name names the work: its slug, as `ki-coordination` names a work's
+ * coordinator run, or, for a run named before the slug, the id after its territory, as the
+ * `chezmoi` run of `ki.chezmoi`.
  */
-const newRunFolder = async (repository: string, run: string): Promise<string> => {
+const namesWork = (id: string, run: string): boolean =>
+  workSlug(id) === run || workSlug(id.slice(id.indexOf('.') + 1)) === run
+
+/**
+ * The one work folder the run's name names, which a new run takes as its home and a run homed
+ * in a retired folder follows. None, or two, leave the choice to `ki agent home --work`.
+ */
+const runWorkFolder = async (repository: string, run: string): Promise<string> => {
   const candidates = (await readdir(join(repository, WORK_DIRECTORY)).catch(() => [])).filter(
-    (id) => workSlug(id) === run
+    (id) => isWorkId(id) && namesWork(id, run)
   )
   const ids = (await Promise.all(candidates.map(async (id) => ((await holdsWork(repository, id)) ? [id] : [])))).flat()
   if (ids.length > 1)
+    throw new KiError(`${run} names ${ids.sort().join(' and ')}; choose one with ki agent home ${run} --work <id>`, 2)
+  if (ids.length === 0)
     throw new KiError(
-      `${run} is the slug of ${ids.sort().join(' and ')}; choose one with ki agent home ${run} --work <id>`,
+      `${run} names no work folder in ${repository}; write +/_WORK/<id>/work.md, then ki agent home ${run} --work <id>`,
       2
     )
-  return ids.length ? workFolder(ids[0] as string) : threadFolder(run)
+  return workFolder(ids[0] as string)
+}
+
+/**
+ * The run's recorded home, followed into its work folder when it is a retired one, recording
+ * the work folder so that the move happens once. A retired home with no one work folder to
+ * follow is undefined, so that nothing is written into it.
+ */
+export const followThread = async (context: AgentContext, run: string): Promise<ThreadHome | undefined> => {
+  const recorded = await readThread(context, run)
+  if (recorded === undefined || isWorkHome(recorded)) return recorded
+  const folder = await runWorkFolder(recorded.repository, run).catch(() => undefined)
+  return folder === undefined ? undefined : recordThread(context, run, { repository: recorded.repository, folder })
 }
 
 /** The absolute thread folder. */
@@ -114,6 +137,11 @@ export const adoptStateFiles = async (
   const files = (await readdir(directory))
     .filter((file) => file === 'decisions.md' || file.endsWith('.report.md'))
     .sort()
+  if (files.length && !isWorkHome(home))
+    throw new KiError(
+      `${run} is homed in the retired ${home.folder}; record its work folder with ki agent home ${run} --work <id>`,
+      2
+    )
   const moved: string[] = []
   for (const file of files) {
     const target = join(threadPath(home), file)
@@ -193,7 +221,7 @@ const launchRoot = async (context: AgentContext, run: string, launch: string | u
   if (launches.length === 0) return current
   if (launches.some((directory) => directory === undefined))
     throw new KiError(
-      `${run} has no thread home yet and a launch of it has no recorded working directory; pass --repo <dir>`,
+      `${run} has no work folder yet and a launch of it has no recorded working directory; pass --repo <dir>`,
       2
     )
   const roots = [
@@ -206,11 +234,11 @@ const launchRoot = async (context: AgentContext, run: string, launch: string | u
     )
   ]
   if (roots.length > 1)
-    throw new KiError(`${run} has no thread home yet and its launches ran in ${roots.join(', ')}; pass --repo <dir>`, 2)
+    throw new KiError(`${run} has no work folder yet and its launches ran in ${roots.join(', ')}; pass --repo <dir>`, 2)
   const [root] = roots as [string]
   if (root !== current)
     throw new KiError(
-      `${run} has no thread home yet; the current directory is in ${current}, not the launch's working directory ${root}; run from there or pass --repo <dir>`,
+      `${run} has no work folder yet; the current directory is in ${current}, not the launch's working directory ${root}; run from there or pass --repo <dir>`,
       2
     )
   return current
@@ -232,8 +260,14 @@ export const threadHome = async (
   launch?: string | undefined
 ): Promise<ThreadHome> => {
   const { existing, repository } = await homeRepository(context, run, repo, launch)
-  if (existing) return existing
-  const home: ThreadHome = { repository, folder: await newRunFolder(repository, run) }
+  if (existing && isWorkHome(existing)) return existing
+  // A retired home is followed into its work folder; read alone, one with none stays readable.
+  const folder = await runWorkFolder(repository, run).catch((error: unknown) => {
+    if (existing && !write) return undefined
+    throw error
+  })
+  if (folder === undefined) return existing as ThreadHome
+  const home: ThreadHome = { repository, folder }
   return write ? recordThread(context, run, home) : home
 }
 
@@ -426,8 +460,8 @@ export const reconcileDecision = async (
 ): Promise<string> => {
   if (change.home === undefined && change.class === undefined) throw new KiError('give a home, --class or both', 2)
   if (change.home !== undefined && !change.home.trim()) throw new KiError('a home needs a path or identifier', 2)
-  const existing = await readThread(context, run)
-  if (existing === undefined) throw new KiError(`${run} has no thread home yet; record a decision first`, 1)
+  const existing = await followThread(context, run)
+  if (existing === undefined) throw new KiError(`${run} has no work folder yet; record a decision first`, 1)
   const path = decisionsLog(existing)
   const text = await read(path)
   if (text === undefined) throw new KiError(`no decisions log at ${path}`, 1)

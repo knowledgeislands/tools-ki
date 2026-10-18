@@ -10,6 +10,9 @@ const setupRun = async (box: Sandbox) => {
   box.setEnv({ TZ: 'UTC' })
   await box.project.git(['init', '-q'])
   box.setRunner(runCommand)
+  await box.project.write('+/_WORK/ki.r/work.md', '---\nid: ki.r\n---\n')
+  await box.project.git(['add', '--', '+/_WORK/ki.r/work.md'])
+  await box.project.git(['commit', '-q', '-m', 'work'])
   await box.data.write(`${assets}/rules-none.md`, '# Footer\n\n## Rules\n\n- Rule.\n')
   await box.data.write(`${assets}/run-prompt.md`, '# Task\n')
   await box.project.write('task.md', '# Task\n')
@@ -99,7 +102,7 @@ describe('ki agent run events', () => {
     await setupRun(box)
     await box.run('ki agent launch r one . task.md', { now })
     await box.project.write(
-      '+/_THREADS/r/one.report.md',
+      '+/_WORK/ki.r/one.report.md',
       '# Report\n\n## Done\n\n### PUSH-1 - not a query\n\n## Queries\n\n### HOOK-FIX - Fix the hook\n\n**Context** text.\n\n### TMP-HOME - Choose the root\n\n### Untagged heading\n'
     )
     await box.state.write('ki/agents/r/one.status', '19:40 UTC - reported\nDONE\n')
@@ -112,11 +115,11 @@ describe('ki agent run events', () => {
     await box.run('ki agent status r', { now })
     expect(await events(box)).toHaveLength(4)
 
-    await box.project.write('+/_THREADS/r/one.report.md', '## Queries\n\n### HOOK-FIX - Fix the hook today\n')
+    await box.project.write('+/_WORK/ki.r/one.report.md', '## Queries\n\n### HOOK-FIX - Fix the hook today\n')
     expect(await wait(box)).toBe('one needs-owner: HOOK-FIX - Fix the hook today\n')
 
     await box.state.write('ki/agents/r/old.pid', '7\n')
-    await box.project.write('+/_THREADS/r/old.report.md', '## Outstanding queries\n\n#### HOOK-FIX — Fix the hook\n')
+    await box.project.write('+/_WORK/ki.r/old.report.md', '## Outstanding queries\n\n#### HOOK-FIX — Fix the hook\n')
     await box.state.write('ki/agents/r/old.status', 'DONE\n')
     expect([await wait(box), await wait(box), await wait(box)]).toEqual([
       'old done: DONE\n',
@@ -137,20 +140,20 @@ describe('ki agent run events', () => {
       'one done: 19:40 UTC - reported\n',
       'one needs-owner: HOOK-FIX - Fix the hook\n'
     ])
-    expect(await box.project.read('+/_THREADS/r/one.report.md')).toBe(report)
+    expect(await box.project.read('+/_WORK/ki.r/one.report.md')).toBe(report)
 
     // A thread-folder copy with uncommitted changes stays; one Git holds unchanged is replaced.
-    await box.project.write('+/_THREADS/r/edited.report.md', '# Edited by hand\n')
-    await box.project.write('+/_THREADS/r/again.report.md', '# Earlier attempt\n')
-    await box.project.git(['add', '--', '+/_THREADS/r/again.report.md'])
+    await box.project.write('+/_WORK/ki.r/edited.report.md', '# Edited by hand\n')
+    await box.project.write('+/_WORK/ki.r/again.report.md', '# Earlier attempt\n')
+    await box.project.git(['add', '--', '+/_WORK/ki.r/again.report.md'])
     await box.project.git(['commit', '-q', '-m', 'earlier'])
     for (const name of ['edited', 'again']) {
       await box.state.write(`ki/agents/r/${name}.report.md`, `# ${name}\n`)
       await box.state.write(`ki/agents/r/${name}.status`, 'DONE\n')
     }
     await box.run('ki agent status r', { now })
-    expect(await box.project.read('+/_THREADS/r/edited.report.md')).toBe('# Edited by hand\n')
-    expect(await box.project.read('+/_THREADS/r/again.report.md')).toBe('# again\n')
+    expect(await box.project.read('+/_WORK/ki.r/edited.report.md')).toBe('# Edited by hand\n')
+    expect(await box.project.read('+/_WORK/ki.r/again.report.md')).toBe('# again\n')
   })
 
   test('leaves a report the thread retired when a lost snapshot replays its agent, homing a fresh one', async () => {
@@ -160,16 +163,16 @@ describe('ki agent run events', () => {
     await box.state.write('ki/agents/r/one.report.md', '# One\n')
     await box.state.write('ki/agents/r/one.status', 'DONE\n')
     await box.run('ki agent status r', { now })
-    await box.project.git(['add', '--', '+/_THREADS/r/one.report.md'])
+    await box.project.git(['add', '--', '+/_WORK/ki.r/one.report.md'])
     await box.project.git(['commit', '-q', '-m', 'thread'])
-    await box.project.git(['rm', '-q', '+/_THREADS/r/one.report.md'])
+    await box.project.git(['rm', '-q', '+/_WORK/ki.r/one.report.md'])
     await box.project.git(['commit', '-q', '-m', 'retire'])
 
     // The events log survives the snapshot, so derivation starts from empty and sees one end again.
     const replay = async () => {
       await rm(`${box.state.path}/ki/agents/r/events.state.json`)
       await box.run('ki agent status r', { now })
-      return box.project.read('+/_THREADS/r/one.report.md').catch(() => 'absent')
+      return box.project.read('+/_WORK/ki.r/one.report.md').catch(() => 'absent')
     }
     expect(await replay()).toBe('absent')
     expect(await box.state.read('ki/agents/r/one.report.md')).toBe('# One\n')
@@ -179,8 +182,8 @@ describe('ki agent run events', () => {
     expect(await replay()).toBe('# One again\n')
 
     // Staged, then deleted from the working tree: the index alone holds it.
-    await box.project.git(['add', '--', '+/_THREADS/r/one.report.md'])
-    await rm(`${box.project.path}/+/_THREADS/r/one.report.md`)
+    await box.project.git(['add', '--', '+/_WORK/ki.r/one.report.md'])
+    await rm(`${box.project.path}/+/_WORK/ki.r/one.report.md`)
     expect(await replay()).toBe('absent')
   })
 
@@ -317,7 +320,7 @@ describe('ki agent run events', () => {
     const box = await sandbox()
     const processes = await setupRun(box)
     await box.run('ki agent launch r fix . task.md', { now })
-    await box.project.write('+/_THREADS/r/fix.report.md', '# First\n')
+    await box.project.write('+/_WORK/ki.r/fix.report.md', '# First\n')
     await box.project.git(['add', '--all'])
     await box.project.git(['commit', '-q', '-m', 'report'])
     await box.state.write('ki/agents/r/fix.status', '19:31 UTC - milestone: built\nDONE\n')

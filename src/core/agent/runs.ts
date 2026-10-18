@@ -676,7 +676,7 @@ export const watchRun = async (
 
 /**
  * Writes a prompt skeleton from the ki-delegation contract for the owner to complete, naming
- * the run's tracked decisions log and the agent's report path in the thread folder.
+ * the run's tracked decisions log and the agent's report path in its work folder.
  */
 export const newPrompt = async (
   context: AgentContext,
@@ -693,6 +693,7 @@ export const newPrompt = async (
     path,
     skeleton
       .replaceAll('<decisions log path>', `${thread.folder}/decisions.md`)
+      .replaceAll('+/_WORK/<id>', thread.folder)
       .replaceAll('<report path>', `${thread.folder}/${name}.report.md`)
       .replaceAll('<run>', run)
   )

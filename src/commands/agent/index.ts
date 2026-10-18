@@ -202,7 +202,7 @@ export const createAgentCommand = (context: KiContext): Command => {
           runs
             .map((overview) =>
               [
-                `${overview.run} (${overview.home ?? 'no thread home'})`,
+                `${overview.run} (${overview.home ?? 'no work folder'})`,
                 ...(overview.items.length
                   ? overview.items.map((item) => `- [${item.kind}] ${item.agent} - ${item.what}`)
                   : ['- [at rest]'])
@@ -269,7 +269,7 @@ export const createAgentCommand = (context: KiContext): Command => {
         if (options.work === undefined)
           return write(threadPath(await threadHome(agentContext(context), run, options.repo, false)))
         write(
-          `Thread home of ${run} is now ${threadPath(await rehomeThread(agentContext(context), run, options.work, options.repo))}`
+          `Work folder of ${run} is now ${threadPath(await rehomeThread(agentContext(context), run, options.work, options.repo))}`
         )
       })
   )

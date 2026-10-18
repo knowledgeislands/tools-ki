@@ -40,15 +40,15 @@ describe('ki agent status with no run', () => {
         '- [running] a - 21:05 CEST - building',
         '- [running] h - 21:06 CEST - held until a finish',
         '',
-        'queued (no thread home)',
+        'queued (no work folder)',
         '- [queued] x - position 1',
         '- [queued] y - position 2, waiting for x, w',
         ''
       ].join('\n')
     )
     const all = await box.run('ki agent status --all', { now })
-    expect(all.stdout).toContain('\n\nrest (no thread home)\n- [at rest]\n')
-    expect(all.stdout).not.toContain('old')
+    expect(all.stdout).toContain('\n\nrest (no work folder)\n- [at rest]\n')
+    expect(all.stdout).not.toMatch(/^old /m)
     expect(await box.state.read('ki/agents/live/a.status')).toBe('21:05 CEST - building\n')
   })
 
@@ -147,15 +147,16 @@ describe('ki agent send', () => {
 
 describe('ki agent decide with a bare option letter', () => {
   const report = async (box: Sandbox, name: string, body: string, day: number): Promise<void> => {
-    await box.project.write(`+/_THREADS/r/${name}`, body)
+    await box.project.write(`+/_WORK/ki.r/${name}`, body)
     const at = new Date(`2026-10-0${day}T12:00:00Z`)
-    await utimes(`${box.project.path}/+/_THREADS/r/${name}`, at, at)
+    await utimes(`${box.project.path}/+/_WORK/ki.r/${name}`, at, at)
   }
 
   test('logs the option wording from the newest report carrying the tag, naming it in source:', async () => {
     const box = await sandbox()
     await box.project.git(['init', '-q'])
     box.setRunner(runCommand)
+    await box.project.write('+/_WORK/ki.r/work.md', '---\nid: ki.r\n---\n')
     await box.run('ki agent decide r PROBE - ship it as planned', { now })
     await report(
       box,
@@ -188,13 +189,13 @@ describe('ki agent decide with a bare option letter', () => {
       2
     )
     await report(box, 'none.report.md', '## Queries\n\n### ELSE - Nothing\n', 3)
-    await box.project.write('+/_THREADS/r/notes.md', '## Queries\n\n### PROBE - Pick\n')
+    await box.project.write('+/_WORK/ki.r/notes.md', '## Queries\n\n### PROBE - Pick\n')
 
     expect((await box.run('ki agent decide r PROBE - a', { now })).exitCode).toBe(0)
     await box.run(['ki', 'agent', 'decide', 'r', 'PROBE — b)', '--home', 'docs/x.md', '--class', 'operational'], {
       now
     })
-    const log = await box.project.read('+/_THREADS/r/decisions.md')
+    const log = await box.project.read('+/_WORK/ki.r/decisions.md')
     expect(log).toBe(
       [
         '# Decisions',
@@ -205,7 +206,7 @@ describe('ki agent decide with a bare option letter', () => {
         '',
         '## Decision 2 (2026-10-07T19:30:00Z)',
         '',
-        'source: +/_THREADS/r/newer.report.md',
+        'source: +/_WORK/ki.r/newer.report.md',
         '',
         '- a) Ship it now.',
         '',
@@ -213,7 +214,7 @@ describe('ki agent decide with a bare option letter', () => {
         '',
         'home: docs/x.md',
         'class: operational',
-        'source: +/_THREADS/r/newer.report.md',
+        'source: +/_WORK/ki.r/newer.report.md',
         '',
         '- b) Hold it.',
         ''
@@ -222,7 +223,7 @@ describe('ki agent decide with a bare option letter', () => {
 
     const missing = await box.run('ki agent decide r PROBE - c', { now })
     expect(missing.exitCode).toBe(1)
-    expect(missing.stderr).toBe('ki: error: +/_THREADS/r/newer.report.md has no option c) under PROBE\n')
+    expect(missing.stderr).toBe('ki: error: +/_WORK/ki.r/newer.report.md has no option c) under PROBE\n')
     const untagged = await box.run('ki agent decide r NOWHERE - b', { now })
     expect(untagged.exitCode).toBe(1)
     expect(untagged.stderr).toBe('ki: error: no report in the thread folder of r carries a NOWHERE query\n')
@@ -236,7 +237,7 @@ describe('ki agent decide with a bare option letter', () => {
     expect((await box.run('ki agent decide moved PROBE - a', { now })).stderr).toBe(
       'ki: error: no report in the thread folder of moved carries a PROBE query\n'
     )
-    expect(await box.project.read('+/_THREADS/r/decisions.md')).toBe(log)
+    expect(await box.project.read('+/_WORK/ki.r/decisions.md')).toBe(log)
     expect(await box.project.read('elsewhere.md').catch(() => 'absent')).toBe('absent')
   })
 })
