@@ -1,7 +1,7 @@
-import { appendFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import { appendFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { basename, dirname, join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
-import { type AgentContext, instant, read } from './context.ts'
+import { type AgentContext, git, instant, read } from './context.ts'
 import { readThread, reportPath } from './thread.ts'
 
 export type EventKind = 'launch' | 'held' | 'progress' | 'done' | 'failed' | 'blocked' | 'needs-owner'
@@ -149,6 +149,25 @@ const reportOf = async (context: AgentContext, directory: string, name: string):
   return (thread && (await read(reportPath(thread, name)))) ?? (await read(join(directory, `${name}.report.md`)))
 }
 
+/**
+ * Copies the report the agent wrote in the state folder into the thread folder, where the
+ * coordinator reads and commits it, so that the launcher stays its only writer. A thread-folder
+ * copy with changes Git does not hold is left alone; one Git holds unchanged, as after a
+ * relaunch, is replaced.
+ */
+const homeReport = async (context: AgentContext, directory: string, name: string): Promise<void> => {
+  const report = await read(join(directory, `${name}.report.md`))
+  const thread = await readThread(context, basename(directory))
+  if (report === undefined || thread === undefined) return
+  const target = reportPath(thread, name)
+  if ((await read(target)) !== undefined) {
+    const status = await git(context, thread.repository, ['status', '--porcelain', '--', target])
+    if (status.output.trim()) return
+  }
+  await mkdir(dirname(target), { recursive: true })
+  await writeFile(target, report)
+}
+
 /** The agent's last status line before any `DONE`, and whether it wrote `DONE`. */
 const statusOf = async (
   directory: string,
@@ -203,6 +222,7 @@ const agentChanges = async (
     await modified(join(directory, `${name}.status`)),
     await modified(join(directory, `${name}.pid`))
   )
+  if (!seen.ended && done) await homeReport(context, directory, name)
   const report = done ? await reportOf(context, directory, name) : undefined
   if (!seen.ended && done) {
     events.push(

@@ -101,6 +101,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
     'reconcile',
     'send',
     'status',
+    'sweep',
     'wait',
     'watch'
   ],

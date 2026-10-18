@@ -7,7 +7,7 @@ purpose: corrective
 kind: deliver
 component: agent
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: aa185bf7f56c97ba0e0bb4d61ecbbe978d29bb88
@@ -58,13 +58,13 @@ All four answers are provisional, for Kris to confirm.
 
 ## Steps
 
-- [ ] Core: `stateReportPath(context, run, name)` in `src/core/agent/thread.ts`; the progress protocol in `launchAgent` names it; `reportConflicts` accepts both the state and the tracked report paths.
-- [ ] Core: on an attempt's first observed `DONE` in `agentChanges` (`src/core/agent/events.ts`), copy the state-folder report into the tracked folder when it has none or Git holds its copy unchanged.
-- [ ] Core: `launchAgent` removes the `.queued.md` or `.draft.md` it launched from after a successful start.
-- [ ] Core: `sweepAgents` in a new `src/core/agent/sweep.ts`, returning the files it would remove or removed.
-- [ ] Command: `ki agent sweep [--keep <n>] [--write]` in `src/commands/agent/index.ts`.
-- [ ] Contract tests through `run(args, context)` and `sandbox()` (see Verify).
-- [ ] Documentation: `man/ki.1` and regenerated `man/ki.commands.json`, `README.md`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`.
+- [x] Core: `stateReportPath(context, run, name)` in `src/core/agent/thread.ts`; the progress protocol in `launchAgent` names it; `reportConflicts` accepts both the state and the tracked report paths.
+- [x] Core: on an attempt's first observed `DONE` in `agentChanges` (`src/core/agent/events.ts`), copy the state-folder report into the tracked folder when it has none or Git holds its copy unchanged.
+- [x] Core: `launchAgent` removes the `.queued.md` or `.draft.md` it launched from after a successful start.
+- [x] Core: `sweepAgents` in a new `src/core/agent/sweep.ts`, returning the files it would remove or removed.
+- [x] Command: `ki agent sweep [--keep <n>] [--write]` in `src/commands/agent/index.ts`.
+- [x] Contract tests through `run(args, context)` and `sandbox()` (see Verify).
+- [x] Documentation: `man/ki.1` and regenerated `man/ki.commands.json`, `README.md`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`.
 
 ## Files touched
 
@@ -103,6 +103,47 @@ None. The harness's `ki-delegation` standard already says the report is written 
 
 None.
 
+## Review
+
+### Delivered
+
+The launcher now keeps the run state folder tidy without hand work. The progress protocol names `<state>/<name>.report.md`, and the first `status`, `watch` or `wait` that sees the agent's `DONE` copies the report into the tracked work or thread folder, leaving a tracked copy with changes Git does not hold. A launch from the run's `<name>.queued.md` or `<name>.draft.md` removes that copy once started, because `<name>.prompt.md` holds the brief. `ki agent sweep [--keep <n>] [--write]` previews, and with `--write` removes, closed runs in `_archive/` beyond the newest ten and leftover briefs beside a newer prompt.
+
+### Change Summary
+
+- `src/core/agent/runs.ts`: `stateReport`; the progress protocol names it; `reportConflicts` accepts the state report and the tracked copy; `launchAgent` removes its spent queued or draft brief after a successful start, in both the open and the held branch.
+- `src/core/agent/events.ts`: `homeReport`, called on an attempt's first observed `DONE` before the report is read.
+- `src/core/agent/sweep.ts` (new): `sweepAgents`, `expiredArchives`, `spentBriefs` and `archiveKept`.
+- `src/commands/agent/index.ts`: the `sweep` verb.
+- Tests: `src/tests/cli/agent.test.ts`, `agent-events.test.ts`, new `agent-sweep.test.ts`, and `src/tests/cli/manage/inventory.test.ts`.
+- `man/ki.1`, `man/ki.commands.json`, `README.md`, `docs/guides/user/background-agents.md`, `CHANGELOG.md`.
+
+### Verification
+
+Verify 1 to 4 are covered through `run(args, context)` and `sandbox()`:
+
+- the prompt names the state report; a brief naming the state report, the tracked copy by absolute or relative path draws no warning, and `docs/one.report.md` does, in launch and queue (`agent.test.ts`);
+- a state-folder report reaches the tracked folder on the first `wait`, with its `done` and `needs-owner` events; an uncommitted hand-edited tracked copy stays; a committed earlier copy is replaced; the existing old-protocol tests, with reports written straight into the thread folder, pass unchanged (`agent-events.test.ts`);
+- launches from a draft, from the queue and held from a draft leave no `.draft.md` or `.queued.md`; a queued launch the dispatcher cannot start keeps its `.queued.md` (`agent.test.ts`);
+- the sweep on an empty agents directory, `_archive/` with folder, tarball-and-note, note-only, note-less and stray entries under `--keep 3` and `--keep 1 --write`, spent and kept briefs (newer draft, queued again, no prompt) in two runs, and `--keep 0` refused with exit 2 (`agent-sweep.test.ts`).
+
+On 18 October 2026, `bun run test:coverage` passed 1321 tests at 100% statements, branches, functions and lines; `bunx tsc --noEmit`, `bunx biome check .` (no errors; its warnings predate this record), `bunx knip`, `mandoc -T lint man/ki.1`, the command-inventory check and rumdl were clean; and `ki repo audit --repo .` passed with FAIL=0 and two warnings, as at the baseline.
+
+### Outstanding concerns
+
+- All four Decision answers are provisional, for Kris to confirm: the copy on first observed `DONE` rather than at close only, removing the queued or draft copy at launch, a retention of ten closed runs, and a separate `sweep` verb.
+- The copy happens only when a `status`, `watch` or `wait` runs after the agent's `DONE`; a run nobody observes gets its reports moved at `decide` or `close`, as before.
+- The sweep was exercised only on sandbox fixtures. It has not been run against this host's real `~/.local/state/ki/agents/`, whose ways-of-working folder holds about sixty spent `.queued.md` files; running it there with `--write` is the owner's call.
+- The live `ki` runs from this checkout, so agents launched after this commit write their reports in the state folder. Agents already running keep the thread-folder path their prompt names, which every reader still checks first.
+
+### Post-change review
+
+The change is additive for readers: `reportOf`, the relaunch check, the taken-name check and `adoptStateFiles` already looked in both places, so no reader needed changing. The harness standard's run packet and this launcher now agree on where a report is written.
+
+### Mini recap
+
+Agents now report into the state folder and `ki` files the copy for the coordinator; briefs are kept once; and `ki agent sweep` clears out old archived runs and spent briefs on request.
+
 ## Discussion
 
 Open questions for planning:
@@ -112,4 +153,4 @@ Open questions for planning:
 - The retention limit for `_archive/`.
 - Whether the sweep is a separate verb or part of `close`.
 
-ki-burndown-3 adopted and planned this on 18 October 2026, answering the four questions in Decision provisionally, for Kris to confirm.
+ki-burndown-3 adopted and planned this on 18 October 2026, answering the four questions in Decision provisionally, for Kris to confirm, and built it to Awaiting review the same day.

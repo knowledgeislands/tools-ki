@@ -20,6 +20,7 @@ import {
   watchRun
 } from '../../core/agent/runs.ts'
 import { type AgentEffort, type AgentRuntime, agentEfforts, agentRuntimes } from '../../core/agent/runtimes.ts'
+import { archiveKept, sweepAgents } from '../../core/agent/sweep.ts'
 import {
   appendDecision,
   type DecisionClass,
@@ -350,6 +351,19 @@ export const createAgentCommand = (context: KiContext): Command => {
           write(result.outcome)
         }
       )
+  )
+
+  command.addCommand(
+    new Command('sweep')
+      .description('remove closed runs beyond the newest kept in _archive/ and briefs a launch has superseded')
+      .option('--keep <n>', 'closed runs _archive/ keeps', seconds, archiveKept)
+      .option('--write', 'remove what the sweep finds; without it, only report')
+      .action(async (options: { keep: number; write?: boolean }) => {
+        const paths = await sweepAgents(agentContext(context), { keep: options.keep, write: options.write === true })
+        if (!paths.length) return write('Nothing to sweep')
+        for (const path of paths) write(`${options.write ? 'removed' : 'would remove'} ${path}`)
+        if (!options.write) write('Pass --write to remove them')
+      })
   )
 
   return command

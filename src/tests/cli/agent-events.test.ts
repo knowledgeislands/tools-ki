@@ -125,6 +125,34 @@ describe('ki agent run events', () => {
     ])
   })
 
+  test('copies a state-folder report into the thread folder on DONE, leaving a copy Git does not hold', async () => {
+    const box = await sandbox()
+    await setupRun(box)
+    for (const name of ['one', 'edited', 'again']) await box.run(`ki agent launch r ${name} . task.md`, { now })
+    const report = '# Report\n\n## Queries\n\n### HOOK-FIX - Fix the hook\n'
+    await box.state.write('ki/agents/r/one.report.md', report)
+    await box.state.write('ki/agents/r/one.status', '19:40 UTC - reported\nDONE\n')
+
+    expect([await wait(box), await wait(box)]).toEqual([
+      'one done: 19:40 UTC - reported\n',
+      'one needs-owner: HOOK-FIX - Fix the hook\n'
+    ])
+    expect(await box.project.read('+/_THREADS/r/one.report.md')).toBe(report)
+
+    // A thread-folder copy with uncommitted changes stays; one Git holds unchanged is replaced.
+    await box.project.write('+/_THREADS/r/edited.report.md', '# Edited by hand\n')
+    await box.project.write('+/_THREADS/r/again.report.md', '# Earlier attempt\n')
+    await box.project.git(['add', '--', '+/_THREADS/r/again.report.md'])
+    await box.project.git(['commit', '-q', '-m', 'earlier'])
+    for (const name of ['edited', 'again']) {
+      await box.state.write(`ki/agents/r/${name}.report.md`, `# ${name}\n`)
+      await box.state.write(`ki/agents/r/${name}.status`, 'DONE\n')
+    }
+    await box.run('ki agent status r', { now })
+    expect(await box.project.read('+/_THREADS/r/edited.report.md')).toBe('# Edited by hand\n')
+    expect(await box.project.read('+/_THREADS/r/again.report.md')).toBe('# again\n')
+  })
+
   test('turns milestone, blocked and failed status lines into events, never re-emitting one', async () => {
     const box = await sandbox()
     await setupRun(box)

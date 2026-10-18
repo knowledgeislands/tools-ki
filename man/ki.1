@@ -429,6 +429,9 @@ Write or replace one decision's durable home.
 .TP
 .B ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]
 Retire a finished run's state folder once its reconcile gate passes.
+.TP
+.B ki agent sweep [--keep <n>] [--write]
+Remove closed runs beyond the newest kept and briefs a launch has superseded.
 .SS Work model
 \&
 .TP
@@ -1567,7 +1570,13 @@ live in the owning repository's tracked work folder
 .IR +/_WORK/<id>/ ,
 or through the work model's tolerance window its thread folder
 .IR +/_THREADS/<run>/ ,
-so the state folder can go without losing them.
+so the state folder can go without losing them. An agent writes its report
+to
+.I <name>.report.md
+in the state folder, and the first command that sees its
+.B DONE
+copies the report into the tracked folder, unless the folder holds a copy
+with changes Git does not hold.
 .B ki
 is their only writer, so no thread copies them by hand, and never commits
 them; the thread commits them with its other work. The first
@@ -1626,7 +1635,7 @@ and
 Omitted, each uses the runtime's own default.
 .I <name>.launch.json
 records the runtime, model, and effort. The progress protocol names the
-agent's report path in the thread folder and its temporary folder
+agent's report path in the state folder and its temporary folder
 .IR $TMPDIR/ki-agents/<run>/<name>/ ,
 which launch creates outside every repository, falling back to
 .I /tmp
@@ -1638,7 +1647,14 @@ The protocol's report path governs: launch and
 .B ki agent queue
 warn on standard error, and still proceed, when the brief names the agent's
 .I <name>.report.md
-in another folder. The authority footer is the tier's asset from its
+in a folder other than the state folder or the thread folder. A launch from
+the run's
+.I <name>.queued.md
+or
+.I <name>.draft.md
+removes that file once the agent or its hold process has started, since
+.I <name>.prompt.md
+then holds the brief. The authority footer is the tier's asset from its
 .B ## Rules
 heading line, with relative link targets made absolute.
 Names are unique within a run: a name that has already run, shown by its
@@ -1926,6 +1942,24 @@ and with
 .B --delete
 it is removed, each with the note at
 .IR _archive/<run>.close.md .
+.TP
+.B ki agent sweep [--keep <n>] [--write]
+Report what the agents directory has outlived: the closed runs in
+.I _archive/
+beyond the newest
+.I n
+(default 10), each run's folder, tarball and close note together, aged by
+its close note; and each run's
+.I <name>.queued.md
+or
+.I <name>.draft.md
+beside a
+.I <name>.prompt.md
+at least as new, unless the name is queued again.
+.B --write
+removes them. Nothing else in
+.I _archive/
+or a state folder is touched.
 .SS Work model
 \&
 .PP

@@ -1,4 +1,4 @@
-import { appendFile, copyFile, mkdir, readdir, rename, stat, writeFile } from 'node:fs/promises'
+import { appendFile, copyFile, mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { gitWorkingTreeRoot } from '../runtime/git.ts'
@@ -100,11 +100,17 @@ const footer = async (context: AgentContext, tier: AuthorityTier): Promise<strin
 }
 
 /**
- * Each path in the brief to this agent's `<name>.report.md` in a folder other than the
- * thread folder, as a warning naming the report path the progress protocol uses instead.
+ * Where the agent writes its report: the run's state folder. The launcher copies it into the
+ * thread folder once it sees the agent's `DONE`.
  */
-const reportConflicts = (body: string, thread: ThreadHome, name: string): readonly string[] => {
-  const report = reportPath(thread, name)
+const stateReport = (directory: string, name: string): string => join(directory, `${name}.report.md`)
+
+/**
+ * Each path in the brief to this agent's `<name>.report.md` other than the state-folder report
+ * and its thread-folder copy, as a warning naming the report path the progress protocol uses.
+ */
+const reportConflicts = (body: string, directory: string, thread: ThreadHome, name: string): readonly string[] => {
+  const report = stateReport(directory, name)
   const pattern = new RegExp(`(?<![^\\s(\`'"<\\[])([^\\s()\`'"<>\\[\\]]*/${name}\\.report\\.md)`, 'g')
   const paths = new Set([...body.matchAll(pattern)].map((match) => match[1] as string))
   return [...paths]
@@ -374,15 +380,20 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
   if (state.kind === 'closed') throw new KiError(`${request.run}/${request.name} gate cannot open: ${state.reason}`, 1)
   if (request.relaunch) await setAside(context, directory, thread, request)
 
-  // The agent writes its report into the tracked thread folder, so the folder must exist.
+  // The launcher copies the agent's report into the tracked thread folder, so the folder must exist.
   await mkdir(threadPath(thread), { recursive: true })
   await mkdir(temporary, { recursive: true })
-  const warnings = reportConflicts(body, thread, request.name)
-  const prompt = await composePrompt(context, directory, request, reportPath(thread, request.name), temporary, body)
+  const warnings = reportConflicts(body, directory, thread, request.name)
+  const prompt = await composePrompt(context, directory, request, stateReport(directory, request.name), temporary, body)
   await writeFile(`${base}.prompt.md`, prompt)
   await writeFile(`${base}.launch.json`, launchDetails(request))
+  // Once started, `<name>.prompt.md` holds the brief, so the run's queued or draft copy goes.
+  const spent = [`${base}.queued.md`, `${base}.draft.md`].find(
+    (path) => path === resolve(context.workingDirectory, request.prompt)
+  )
   if (state.kind === 'open') {
     const pid = await startRuntime(context, directory, request, prompt)
+    if (spent) await rm(spent, { force: true })
     await recordEvent(
       context,
       directory,
@@ -396,6 +407,7 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
   await writeFile(`${base}.status`, heldLine(context, state.names))
   const pid = await startHold(context, directory, request)
   await writeFile(`${base}.pid`, `${pid}\n`)
+  if (spent) await rm(spent, { force: true })
   await recordEvent(
     context,
     directory,
@@ -479,7 +491,7 @@ export const queueAgent = async (context: AgentContext, candidate: LaunchRequest
   await copyFile(resolve(context.workingDirectory, request.prompt), prompt)
   // The thread home is on record now, so the dispatcher's launch needs no repository.
   await writeQueue(directory, [...queue, { ...request, prompt, repo: undefined }])
-  return { position: queue.length + 1, warnings: reportConflicts(body, thread, request.name) }
+  return { position: queue.length + 1, warnings: reportConflicts(body, directory, thread, request.name) }
 }
 
 export interface AgentSummary {

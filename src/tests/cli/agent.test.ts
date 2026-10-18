@@ -85,7 +85,7 @@ describe('ki agent launch', () => {
     expect(result.stderr).toBe('')
     expect(prompt).toContain("(time from: TZ=Europe/Paris date '+%H:%M %Z')")
     expect(prompt).toContain('Do not use background subagents. Never end your session while waiting.\n')
-    expect(prompt).toContain(`write your report to ${await threadPath(box, 'one.report.md')} as the owner report`)
+    expect(prompt).toContain(`write your report to ${runPath(box, 'one.report.md')} as the owner report`)
     expect(prompt).toContain(`Temporary output goes in ${temporaryPath(box, 'one')}/, outside every repository;`)
     expect(await readdir(temporaryPath(box, 'one'))).toEqual([])
     expect(await box.state.read('ki/agents/r/thread.json')).toBe(
@@ -128,20 +128,20 @@ describe('ki agent launch', () => {
     const report = await threadPath(box, 'one.report.md')
     await box.project.write(
       'task.md',
-      `# Task\n\nReport to ${runPath(box, 'one.report.md')} and \`+/_THREADS/r/one.report.md\`, not (${report}), +/_THREADS/r/other.report.md or x/bone.report.md; again ${runPath(box, 'one.report.md')}.\n`
+      `# Task\n\nReport to ${runPath(box, 'one.report.md')} and \`+/_THREADS/r/one.report.md\`, (${report}), not docs/one.report.md, +/_THREADS/r/other.report.md or x/bone.report.md; again docs/one.report.md.\n`
     )
 
     const result = await box.run('ki agent launch r one . task.md', { now })
 
     expect(result.exitCode).toBe(0)
     expect(result.stderr).toBe(
-      `ki: warning: the brief names ${runPath(box, 'one.report.md')}; the report goes to ${report}, which governs\n`
+      `ki: warning: the brief names docs/one.report.md; the report goes to ${runPath(box, 'one.report.md')}, which governs\n`
     )
     await box.project.write('two.md', '# Task\n\nReport to docs/two.report.md.\n')
     const queued = await box.run('ki agent queue r two two.md', { now })
     expect(queued.exitCode).toBe(0)
     expect(queued.stderr).toBe(
-      `ki: warning: the brief names docs/two.report.md; the report goes to ${await threadPath(box, 'two.report.md')}, which governs\n`
+      `ki: warning: the brief names docs/two.report.md; the report goes to ${runPath(box, 'two.report.md')}, which governs\n`
     )
   })
 
@@ -332,17 +332,39 @@ describe('ki agent launch of a name that has already run', () => {
     expect((await box.run('ki agent launch r stray . task.md', { now })).stderr).toContain('(stray.report.md)')
   })
 
-  test('launches from a draft or the queue without counting those files as a run', async () => {
+  test('launches from a draft or the queue without counting those files as a run, keeping one copy of the brief', async () => {
     const box = await sandbox()
     await setupDelegation(box)
     const processes = fakeProcesses(box, async () => processes.finish())
+    const absent = (file: string) => box.state.read(`ki/agents/r/${file}`).catch(() => 'absent')
     expect((await box.run('ki agent new r fresh', { now })).exitCode).toBe(0)
     const launched = await box.run(`ki agent launch r fresh . ${runPath(box, 'fresh.draft.md')}`, { now })
     expect(launched.exitCode).toBe(0)
+    expect(await absent('fresh.draft.md')).toBe('absent')
+    expect(await box.state.read('ki/agents/r/fresh.prompt.md')).toContain('# Task: <one-line outcome>')
     await box.project.write('task.md', '# Task\n')
     expect((await box.run('ki agent queue r later task.md', { now })).exitCode).toBe(0)
+    expect(await box.state.read('ki/agents/r/later.queued.md')).toBe('# Task\n')
     expect((await box.run('ki agent dispatch r --max 1 --interval 1 --foreground', { now })).exitCode).toBe(0)
     expect(await box.state.read('ki/agents/r/later.pid')).toBe('1002\n')
+    expect(await absent('later.queued.md')).toBe('absent')
+    expect(await box.project.read('task.md')).toBe('# Task\n')
+
+    // A held launch hands the prompt to its hold process, so its draft goes too.
+    expect((await box.run('ki agent new r gated', { now })).exitCode).toBe(0)
+    processes.alive.add(8)
+    await box.state.write('ki/agents/r/slow.pid', '8\n')
+    const held = await box.run(`ki agent launch r gated . ${runPath(box, 'gated.draft.md')} --wait-for slow`, { now })
+    expect(held.stdout).toContain('held r/gated until slow finish')
+    expect(await absent('gated.draft.md')).toBe('absent')
+
+    // A queued launch that fails keeps its brief.
+    expect((await box.run('ki agent queue r stuck task.md', { now })).exitCode).toBe(0)
+    await box.state.write('ki/agents/r/stuck.pid', '9\n')
+    expect((await box.run('ki agent dispatch r --max 3 --interval 1 --foreground', { now })).stdout).toContain(
+      'could not launch stuck: r/stuck has already run (stuck.pid)'
+    )
+    expect(await box.state.read('ki/agents/r/stuck.queued.md')).toBe('# Task\n')
   })
 
   test('--relaunch sets the earlier packet aside and starts the agent, keeping the committed report', async () => {
@@ -770,7 +792,7 @@ describe('ki agent thread home', () => {
     const launched = await box.run(`ki agent launch r one . ${owner}/task.md`, { now })
     expect(launched.exitCode).toBe(0)
     expect(await box.state.read('ki/agents/r/one.prompt.md')).toContain(
-      `write your report to ${owner}/+/_THREADS/r/one.report.md as the owner report`
+      `write your report to ${runPath(box, 'one.report.md')} as the owner report`
     )
     const [launch] = processes.launches as [AgentLaunch]
     expect(launch.arguments.slice(-4)).toEqual(['--add-dir', owner, '--add-dir', temporaryPath(box, 'one')])
