@@ -11,7 +11,7 @@ blocks: []
 blocked_by: []
 baseline_ref: f0f2192251cad452fb0f4cb3b47c35ce79e32aaa
 created_at: 2026-10-14T23:40:00Z
-updated_at: 2026-10-16T01:13:06Z
+updated_at: 2026-10-18T06:48:00Z
 ---
 
 # Retired Reports Come Back
@@ -150,3 +150,13 @@ Candidate rules considered, with the choice under Decision:
 - stop adopting reports at all once a run's thread home is recorded, keeping adoption for the pre-tracked migration that `0fcc593` was written for.
 
 The "changed since" part of the first candidate is dropped from this record: the agent writes into the thread folder, so a state copy that changes after delivery is not an expected case.
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record, against its Decision and Verify 1 to 7. No code was changed and nothing was accepted.
+
+- **Verdict:** ready for acceptance.
+- **Decision:** `held` in `src/core/agent/thread.ts:62` asks `git ls-files` and then `git log -1 --all` in the thread's repository, and `adoptStateFiles` skips a held file after the presence check, leaving its state copy, exactly as decided. `decide` and `close` reach the thread folder only through `adoptStateFiles`.
+- **Verify 1 to 5:** the two contract tests at `src/tests/cli/agent.test.ts:1358` and `:1412` cover `decide`, `close`, `launch`, `queue` and `new`, the surviving state copy, a new report delivered beside a retired one, and the index check; the legacy migration test passes.
+- **Verify 6:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc, biome, knip, mandoc and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1, neither from this record. Verify 7's throwaway reproduction was not repeated; the contract tests reproduce it.
+- **Observation for a later record, not this one:** `homeReport` in `src/core/agent/events.ts:158`, added afterwards by [KI-TOOL-KI-CLI-147](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-147-agent-state-folder-tooling.md), is a second path that copies a state-folder report into the thread folder, and it does not ask `held`. It is recorded in that record's review.
