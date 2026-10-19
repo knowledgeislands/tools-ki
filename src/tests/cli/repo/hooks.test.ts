@@ -639,6 +639,47 @@ test('knip.json on one line, empty or already configured, is edited in place', a
   )
 })
 
+test('the root workspace loses its redundant ignores too, and other workspaces keep theirs', async () => {
+  const oneLine = await setup(
+    {
+      ...converted,
+      'knip.json':
+        '{"workspaces":{"packages/*":{"ignoreDependencies":["tailwindcss"]},".":{"ignoreDependencies":["@commitlint/cli","lint-staged","syncpack"]}},"ignore":[".agents/skills"]}'
+    },
+    '.githooks'
+  )
+  expect((await conform(oneLine)).exitCode).toBe(0)
+  expect(await oneLine.project.read('knip.json')).toBe(
+    `{"workspaces":{"packages/*":{"ignoreDependencies":["tailwindcss"]},".":{}},"ignore":[".agents/skills"], ${huskyJson} }`
+  )
+
+  const knip = `{
+  "ignoreDependencies": ["tailwindcss"],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.ts"],
+      "ignoreDependencies": [
+        "@commitlint/cli",
+        "lint-staged"
+      ]
+    }
+  }
+}
+`
+  const pretty = await setup({ ...converted, 'knip.json': knip }, '.githooks')
+  expect((await conform(pretty)).exitCode).toBe(0)
+  expect(await pretty.project.read('knip.json')).toBe(`{
+  "ignoreDependencies": ["tailwindcss"],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.ts"]
+    }
+  },
+  ${huskyJson}
+}
+`)
+})
+
 test('knip.ts gains husky as its first member and loses the redundant ignores', async () => {
   const box = await setup({ ...converted, 'knip.ts': kiPrincipalKnip }, '.githooks')
 
@@ -686,7 +727,7 @@ const knipRefusals: readonly (readonly [string, string, string, string])[] = [
   [
     'a knip.json edit that would not round-trip',
     'knip.json',
-    '{"workspaces":{".":{"ignoreDependencies":["lint-staged"]}},"ignoreDependencies":["lint-staged"]}',
+    '{"workspaces":{"packages/*":{"ignoreDependencies":["lint-staged"]}},"ignoreDependencies":["lint-staged"]}',
     'knip.json is laid out in a way the conversion cannot edit'
   ],
   [

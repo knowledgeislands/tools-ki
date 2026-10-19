@@ -937,7 +937,8 @@ any command after \fBhusky\fR; \fBhusky\fR leaves the manifest and
 kept and reported. Where committed hooks exist, \fIknip.json\fR or
 \fIknip.ts\fR gains a \fBhusky\fR entry whose \fBconfig\fR names them, so
 Knip sees the tools they call, and loses the \fBignoreDependencies\fR entries
-for those tools; an already-converted repository gains it too. A line, file,
+for those tools, at the top level and in the root workspace; an
+already-converted repository gains it too. A line, file,
 lockfile or Knip configuration it cannot place refuses the whole conversion
 before any change. A dry run reports each step and changes nothing.
 .TP

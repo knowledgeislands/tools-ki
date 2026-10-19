@@ -14,7 +14,8 @@ blocks: []
 blocked_by: []
 baseline_ref: b7e64c0e850129dee48f1401993b50820c8bfcfa
 created_at: 2026-10-19T23:05:00Z
-updated_at: 2026-10-19T23:17:15Z
+updated_at: 2026-10-19T23:34:44Z
+
 transferred_from: ki-principal ki.tools-burndown KNIP-HUSKY a), Kris, 19 October 2026 23:42 BST
 ---
 
@@ -41,7 +42,7 @@ Kris took KNIP-HUSKY a) on 19 October at 23:42 BST, quoted in the ki.tools-burnd
 
 - The hooks are those of `.githooks/pre-commit` and `.githooks/commit-msg` that exist or are being written, in that order. With none, or with neither `knip.json` nor `knip.ts`, there is no Knip step; `knip.json` wins when both exist, as in Knip's own lookup.
 - The wanted `husky` value is `{ "config": [<hooks>] }`. An existing equal value is kept; any other `husky` value refuses the conversion, naming the file.
-- An `ignoreDependencies` entry is redundant when the hooks call its tool as a command: the package name, or `commitlint` for `@commitlint/cli`. The frame's `for tool in` lines do not count. An array left empty loses its key.
+- An `ignoreDependencies` entry is redundant when the hooks call its tool as a command: the package name, or `commitlint` for `@commitlint/cli`. The frame's `for tool in` lines do not count. The plugin is root-only, so entries are dropped at the top level and in `workspaces["."]` of `knip.json`, and in no other workspace. An array left empty loses its key.
 - `knip.json` is edited as text: the array keeps its one-line or one-per-line layout, and `husky` is appended as the last key on one line in the file's indentation. The result must parse to exactly the intended object, or the conversion refuses.
 - `knip.ts` is edited only in the shape of an object literal opened on its own line by `export default {` or `const <name>[: <type>] = {`, with at most one one-line `ignoreDependencies` array of string literals. `husky` becomes the object's first member, in the file's quote style. Anything else refuses, naming the file.
 - The write is one more `hook-write` event, so a dry run reports `would write knip.json` and changes nothing; a second run changes nothing.
@@ -50,7 +51,7 @@ Kris took KNIP-HUSKY a) on 19 October at 23:42 BST, quoted in the ki.tools-burnd
 
 1. Adds the `husky` configuration to `knip.json`, keeping every other byte's meaning and layout.
 2. Adds it to a `knip.ts` of the recognised shape.
-3. Removes only the hook-tool `ignoreDependencies` entries the hooks call, and the key when it empties.
+3. Removes only the hook-tool `ignoreDependencies` entries the hooks call, at the top level and in the root workspace, and the key when it empties.
 4. Runs on an already-converted repository as well as during conversion.
 5. Refuses, writing nothing, on a conflicting `husky` value, an unparseable `knip.json`, an edit that does not round-trip, or an unrecognised `knip.ts`.
 6. Is idempotent, and a dry run changes nothing.
@@ -106,11 +107,12 @@ The whole record, from baseline `b7e64c0e` on 20 October 2026, by the `knipfix` 
 
 ### Change Summary
 
-- `src/core/repository/hooks.ts`: after composing the hooks, the plan reads `knip.json`, or else `knip.ts`, and adds one more write: `husky.config` naming the committed hooks, and the hook-tool `ignoreDependencies` entries removed. Both edits are text edits; `knip.json` must parse back to exactly the intended object, and `knip.ts` must be a plain object literal. `refuse` takes an optional remedy, so Knip refusals point at the Knip file rather than at the hooks.
-- `src/tests/cli/repo/hooks.test.ts`: 17 cases through `run(args, context)`: conversion and already-converted repositories, dry run, idempotence, one-line, empty and already-configured `knip.json`, ki-principal's `knip.ts` and three other `knip.ts` shapes, and ten refusals.
+- `src/core/repository/hooks.ts`: after composing the hooks, the plan reads `knip.json`, or else `knip.ts`, and adds one more write: `husky.config` naming the committed hooks, and the hook-tool `ignoreDependencies` entries removed at the top level and, in `knip.json`, the root workspace. Both edits are text edits; `knip.json` must parse back to exactly the intended object, and `knip.ts` must be a plain object literal. `refuse` takes an optional remedy, so Knip refusals point at the Knip file rather than at the hooks.
+- `src/tests/cli/repo/hooks.test.ts`: 18 cases through `run(args, context)`: conversion and already-converted repositories, dry run, idempotence, one-line, empty and already-configured `knip.json`, root-workspace ignores in one-line and indented files, ki-principal's `knip.ts` and three other `knip.ts` shapes, and ten refusals.
 - `knip.json`: tools-ki's own configuration, converted by `bin/ki repo conform --skill ki-repo` from this source.
 - Documentation: the manual, the regenerated command inventory, the changelog and the repository-operations guide.
 - Deviations:
+  - Root-workspace ignores were added after the plan: ten estate repositories keep the hook tools under `workspaces["."]`.
   - README is unchanged: its conform line names the hook move only in outline.
   - The conform run on tools-ki also rewrote `.rumdl.toml`, the known `ki-authoring` rewrite that the wave runs also met; it was restored and is not part of this change.
 
@@ -120,17 +122,18 @@ The whole record, from baseline `b7e64c0e` on 20 October 2026, by the `knipfix` 
 | --- | --- |
 | 1 | `a conversion points knip.json at the committed hooks…` asserts the whole file, every other line byte for byte |
 | 2 | `knip.ts gains husky as its first member…` on ki-principal's `knip.ts`, and the three `knip.ts:` cases |
-| 3 | The `googleapis` entry kept in `a converted repository gains the Knip configuration…` and the last-member `knip.ts` cases; empty arrays lose their key |
+| 3 | The `googleapis` entry kept in `a converted repository gains the Knip configuration…`, `the root workspace loses its redundant ignores too…` and the last-member `knip.ts` cases; empty arrays lose their key |
 | 4 | `a converted repository gains the Knip configuration…` runs with no `.husky/` |
 | 5 | The ten `refuses …` Knip cases, each asserting the Knip file, `.githooks/` and the binding unchanged |
 | 6 | Repeated runs in the `knip.json` and `knip.ts` cases write nothing; the dry run leaves `knip.json` unchanged |
 | 7 | tools-ki's `knip.json` converted; `bunx knip` passes and a second dry run proposes no Knip write |
 
 - Gate:
-  - `bun run test:coverage` passed: 82 files and 1,423 tests, all at 100%.
+  - `bun run test:coverage` passed: 82 files and 1,424 tests, all at 100%.
   - `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and the command-inventory check all passed.
   - `ki repo audit --repo .` reports no failure; its warnings predate this change.
-- ki-principal's `knip.ts`, edited as the step edits it in a temporary copy and run with `knip -c`, reports no unused dependency. ki-principal was not changed.
+- ki-principal's `knip.ts`, edited as the step edits it in a temporary copy and run with `knip -c`, reports no unused dependency. In infoschematics, a top-level `husky` entry with the root-workspace ignores removed also leaves Knip clean, so a top-level entry serves a workspaces layout. Neither repository was changed.
+- The plan, run on temporary copies of the hooks, manifest and Knip configuration of all 28 converted estate repositories, writes the Knip configuration in 27 with no hook-tool name left; ki-design refuses because its hook still delegates to a missing `.husky/pre-commit`, which is unrelated to Knip. tools-ki needs no write.
 
 ### Outstanding concerns
 

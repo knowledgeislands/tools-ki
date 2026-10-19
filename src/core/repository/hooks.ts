@@ -50,8 +50,9 @@ const FRAME_AFTER_CONTENT = /\bmissing=|node_modules\/\.bin\/\$tool|^for tool in
 const KNIP_FILES = ['knip.json', 'knip.ts'] as const
 const TOOL_PACKAGES: Readonly<Record<string, string>> = { '@commitlint/cli': 'commitlint' }
 const KNIP_REMEDY = "point Knip's `husky.config` at the committed hooks by hand, then run `ki repo conform` again"
-const JSON_IGNORES = /("ignoreDependencies"\s*:\s*\[)([^\]]*)\]/
-const JSON_IGNORES_MEMBER = /,\s*"ignoreDependencies"\s*:\s*\[[^\]]*\]|"ignoreDependencies"\s*:\s*\[[^\]]*\]\s*,\s*/
+const JSON_IGNORES = /("ignoreDependencies"\s*:\s*\[)([^\]]*)\]/g
+const JSON_EMPTY_IGNORES =
+  /,\s*"ignoreDependencies"\s*:\s*\[\s*\]|"ignoreDependencies"\s*:\s*\[\s*\]\s*,\s*|"ignoreDependencies"\s*:\s*\[\s*\]/g
 const TS_OPEN = /^(?:export\s+default|const\s+\w+(?:\s*:\s*\w+)?\s*=)\s*\{[ \t]*$/m
 const TS_IGNORES = /^([ \t]*)ignoreDependencies:\s*\[([^\]\n]*)\](,?)[ \t]*\r?\n/gm
 const TS_HUSKY = /^[ \t]*husky\s*:.*$/m
@@ -366,20 +367,25 @@ const knipJsonWrite = (
   const husky = parsed['husky']
   if (husky !== undefined && JSON.stringify(husky) !== JSON.stringify(wanted))
     refuse('knip.json configures husky otherwise', KNIP_REMEDY)
-  const ignores: unknown[] = Array.isArray(parsed['ignoreDependencies']) ? parsed['ignoreDependencies'] : []
-  const redundant = ignores.filter((entry): entry is string => typeof entry === 'string' && hooksCall(hooks, entry))
+  // The plugin is root-only, so the root workspace's ignores are redundant too, and no other workspace's.
+  const expected = structuredClone(parsed)
+  const workspaces = expected['workspaces']
+  const rootWorkspace = isRecord(workspaces) ? workspaces['.'] : undefined
+  const redundant: string[] = []
+  for (const scope of isRecord(rootWorkspace) ? [expected, rootWorkspace] : [expected]) {
+    const ignores: unknown[] = Array.isArray(scope['ignoreDependencies']) ? scope['ignoreDependencies'] : []
+    const kept = ignores.filter((entry) => typeof entry !== 'string' || !hooksCall(hooks, entry))
+    if (kept.length === ignores.length) continue
+    redundant.push(...(ignores.filter((entry) => !kept.includes(entry)) as string[]))
+    if (kept.length) scope['ignoreDependencies'] = kept
+    else delete scope['ignoreDependencies']
+  }
   if (husky !== undefined && !redundant.length) return undefined
-  const expected: Record<string, unknown> = { ...parsed }
-  const kept = ignores.filter((entry) => !redundant.includes(entry as string))
-  if (kept.length) expected['ignoreDependencies'] = kept
-  else delete expected['ignoreDependencies']
   expected['husky'] = wanted
-  const literals = redundant.map((entry) => JSON.stringify(entry))
-  let content = source.replace(
-    JSON_IGNORES,
-    (_, open: string, items: string) => `${open}${withoutItems(items, literals)}]`
-  )
-  if (!kept.length) content = content.replace(JSON_IGNORES_MEMBER, '')
+  const literals = unique(redundant).map((entry) => JSON.stringify(entry))
+  let content = source
+    .replace(JSON_IGNORES, (_, open: string, items: string) => `${open}${withoutItems(items, literals)}]`)
+    .replace(JSON_EMPTY_IGNORES, '')
   if (husky === undefined) {
     const close = content.lastIndexOf('}')
     const before = content.slice(0, close).trimEnd()
