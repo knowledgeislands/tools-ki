@@ -2,12 +2,17 @@
 id: KI-TOOL-KI-CLI-155
 area: CLI
 title: Priority and size fields
-status: triage
+kind: deliver
+purpose: capability
+project: ways-of-working
+component: repo
+horizon: now
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T07:45:00Z
-updated_at: 2026-10-19T07:45:00Z
+updated_at: 2026-10-19T18:04:49Z
 transferred_from: ki-agentic-harness work-item format and ki-principal GDR-KI-PRINCIPAL-016, 2026-10-19
 ---
 
