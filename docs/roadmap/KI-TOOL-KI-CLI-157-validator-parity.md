@@ -4,10 +4,10 @@ area: CLI
 title: Validator parity
 status: triage
 blocks: []
-blocked_by: [KI-TOOL-KI-CLI-155]
+blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T18:21:00Z
-updated_at: 2026-10-19T18:21:00Z
+updated_at: 2026-10-19T22:35:51Z
 ---
 
 # KI-TOOL-KI-CLI-157: Validator Parity
@@ -18,7 +18,7 @@ updated_at: 2026-10-19T18:21:00Z
 
 ## Context
 
-[KI-TOOL-KI-CLI-155](KI-TOOL-KI-CLI-155-priority-and-size-fields.md) brought `ki` level with the harness on `priority`, `size` and the migration-window gaps by copying the checker's vocabularies and wording into `src/core/work/items.ts`. Until then `ki` had rejected the two fields the harness already accepted, and dropped 18 records across three repositories. Copied rules drift again whenever the harness changes first.
+[KI-TOOL-KI-CLI-155 (pruned)](https://github.com/knowledgeislands/tools-ki/blob/a9d46d49/docs/roadmap/KI-TOOL-KI-CLI-155-priority-and-size-fields.md) brought `ki` level with the harness on `priority`, `size` and the migration-window gaps by copying the checker's vocabularies and wording into `src/core/work/items.ts`. Until then `ki` had rejected the two fields the harness already accepted, and dropped 18 records across three repositories. Copied rules drift again whenever the harness changes first.
 
 Kris asked on 2026-10-19, in the cli155 brief, for one triage record: one shared field rule table, with conformance cases proving tools-ki and the harness checker agree. The harness stays the source of the wording.
 
