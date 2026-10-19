@@ -139,6 +139,9 @@ describe('ki work status', () => {
       since: '2026-10-18T02:00:00Z',
       received: '2026-10-18T01:00:00Z',
       beat: '2026-10-18T02:58:00Z',
+      description: null,
+      method_read: null,
+      messages: 0,
       path: '+/_WORK/ex.alpha/work.md',
       items: [
         {
@@ -197,6 +200,135 @@ describe('ki work status', () => {
     )
   })
 
+  test('reads a package from state.md and work.md beside a single-file folder, counting each pending message', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', declaration())
+    await box.project.write(
+      'repo/+/_WORK/ex.pack/work.md',
+      [
+        '---',
+        'id: ex.pack',
+        'level: project',
+        "title: 'EX > Pack'",
+        'project: pack',
+        'theme: model',
+        'description: >-',
+        '  Packs things. Takes packing. Not for unpacking (ex.unpack).',
+        'worker: agent',
+        'supervisor: owner',
+        '---',
+        '',
+        '# ex.pack',
+        '',
+        '## Goals',
+        '',
+        '## Scope',
+        ''
+      ].join('\n')
+    )
+    await box.project.write(
+      'repo/+/_WORK/ex.pack/state.md',
+      [
+        '---',
+        'id: ex.pack',
+        'state: handoff',
+        'target: work/ex',
+        'blocking: true',
+        "since: '2026-10-18T02:10:00Z'",
+        'received: 2026-10-18T01:10:00Z',
+        'beat: null',
+        'mark: 2026-10-18T01:00:00Z',
+        'method_read: eff6163b',
+        '---',
+        '',
+        '# ex.pack state',
+        ''
+      ].join('\n')
+    )
+    await box.project.write(
+      'repo/+/_WORK/ex.pack/messages.md',
+      '# ex.pack messages\n\n- IMPORTANT · 2026-10-18 · REFRESH · EX: re-read.\n- 2026-10-18 · ROUTE · EX: take this.\n'
+    )
+    await box.project.write(
+      'repo/+/_WORK/ex.held/work.md',
+      "---\nid: ex.held\nlevel: regular\ntitle: 'EX > Held'\nworker: agent\nsupervisor: owner\n---\n"
+    )
+    await box.project.write(
+      'repo/+/_WORK/ex.held/state.md',
+      '---\nid: ex.held\nstate: on-hold\nhold:\n  reason: more-expected\nsince: 2026-10-18T02:00:00Z\nmethod_read: 2026-10-18T01:00:00+01:00\n---\n'
+    )
+    await box.project.write('repo/+/_WORK/ex.held/messages.md', '# ex.held messages\n\nNone.\n')
+    await box.project.write(
+      'repo/+/_WORK/ex.single/work.md',
+      `${workFile('ex.single').replace(
+        '## Messages\n',
+        '## Messages\n\n- 2026-10-18 · ASK · EX: one.\n  continued, not a new line\n- 2026-10-18 · ASK · EX: two.\n'
+      )}\n- a parked line, not a message\n`
+    )
+    await box.project.write(
+      'repo/+/_WORK/ex.last/work.md',
+      `${workFile('ex.last').replace('## Parked\n', '')}\n- 2026-10-18 · ASK · EX: last.\n`
+    )
+    await box.project.write('repo/+/_WORK/ex.plain/work.md', workFile('ex.plain').replace('## Messages\n', ''))
+    await box.project.write('repo/+/_WORK/ex.number/work.md', workFile('ex.number').replace('## Messages\n', ''))
+    await box.project.write(
+      'repo/+/_WORK/ex.number/state.md',
+      '---\nid: ex.number\nstate: with-supervisor\nsince: 2026-10-18T02:00:00Z\nmethod_read: 1234567\n---\n'
+    )
+
+    const json = await box.run('ki work status --repo repo --format json', { now })
+    const text = await box.run('ki work status --repo repo', { now })
+
+    expect(json.exitCode).toBe(0)
+    const byId = Object.fromEntries(JSON.parse(json.stdout).work.map((entry: { id: string }) => [entry.id, entry]))
+    expect(byId['ex.pack']).toEqual({
+      identity: 'example/principal',
+      id: 'ex.pack',
+      level: 'project',
+      title: 'EX > Pack',
+      theme: 'model',
+      worker: 'agent',
+      supervisor: 'owner',
+      description: 'Packs things. Takes packing. Not for unpacking (ex.unpack).',
+      state: 'handoff',
+      hold: null,
+      holder: 'work/ex',
+      role: null,
+      target: 'work/ex',
+      blocking: true,
+      since: '2026-10-18T02:10:00Z',
+      received: '2026-10-18T01:10:00Z',
+      beat: null,
+      method_read: 'eff6163b',
+      messages: 2,
+      path: '+/_WORK/ex.pack/state.md',
+      items: []
+    })
+    expect(byId['ex.held']).toMatchObject({
+      state: 'on-hold',
+      hold: { reason: 'more-expected', release: null },
+      description: null,
+      method_read: '2026-10-18T01:00:00+01:00',
+      messages: 0,
+      path: '+/_WORK/ex.held/state.md'
+    })
+    expect(byId['ex.single']).toMatchObject({
+      state: 'with-supervisor',
+      method_read: null,
+      messages: 2,
+      path: '+/_WORK/ex.single/work.md'
+    })
+    expect(byId['ex.last'].messages).toBe(1)
+    expect(byId['ex.plain'].messages).toBe(0)
+    expect(byId['ex.number']).toMatchObject({ method_read: '1234567', messages: 0 })
+    expect(json.stderr).toBe(
+      'ki: warning: +/_WORK/ex.number/work.md: carries state fields beside state.md; state.md governs\n'
+    )
+    expect(text.stdout).toContain('│  ╰─ ⛔ ex.pack · work/ex · since 2026-10-18T02:10:00Z · 2 pending\n')
+    expect(text.stdout).toContain('│  ├─ 👤 ex.number · owner · since 2026-10-18T02:00:00Z\n')
+    expect(text.stdout).toContain('👤 ex.single · owner · since 2026-10-18T02:00:00Z · 2 pending\n')
+  })
+
   test('warns of each unreadable work file and lists the rest', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki.toml', declaration())
@@ -217,6 +349,24 @@ describe('ki work status', () => {
     ]
     for (const [folder, contents] of cases) await box.project.write(`repo/+/_WORK/${folder}/work.md`, contents)
     await mkdir(`${box.project.path}/repo/+/_WORK/ex.n`, { recursive: true })
+    const states: readonly (readonly [string, string, string])[] = [
+      ['ex.s1', '# no front matter\n', 'has no YAML front matter'],
+      [
+        'ex.s2',
+        '---\nid: ex.other\nstate: with-worker\nsince: 2026-10-18T02:00:00Z\n---\n',
+        'id ex.other must name its folder'
+      ],
+      ['ex.s3', '---\nstate: with-worker\nsince: 2026-10-18T02:00:00Z\n---\n', 'id undefined must name its folder'],
+      ['ex.s4', '---\nid: ex.s4\nstate: busy\nsince: 2026-10-18T02:00:00Z\n---\n', 'state must be one of with-worker'],
+      ['ex.s5', '---\nid: ex.s5\nstate: on-hold\nsince: 2026-10-18T02:00:00Z\n---\n', 'hold.reason must be paused']
+    ]
+    for (const [folder, contents] of states) {
+      await box.project.write(
+        `repo/+/_WORK/${folder}/work.md`,
+        workFile(folder).replace(/^state: .*\nsince: .*\n/m, '')
+      )
+      await box.project.write(`repo/+/_WORK/${folder}/state.md`, contents)
+    }
     await writeWork(box, 'ex.ok', { worker: 'person/kris', supervisor: 'work/ex', since: '2026-10-18T02:00:00+01:00' })
 
     const json = await box.run('ki work status --repo repo --format json', { now })
@@ -227,8 +377,11 @@ describe('ki work status', () => {
     expect(JSON.parse(json.stdout).work[0].since).toBe('2026-10-18T01:00:00Z')
     for (const [folder, , message] of cases)
       expect(json.stderr).toContain(`ki: warning: +/_WORK/${folder}/work.md: ${message}`)
+    for (const [folder, , message] of states)
+      expect(json.stderr).toContain(`ki: warning: +/_WORK/${folder}/state.md: ${message}`)
+    expect(json.stderr).not.toContain('carries state fields')
     expect(json.stderr).toContain('ki: warning: +/_WORK/ex.n/ has no work.md\n')
-    expect(text.stdout).toContain(`├─ warnings (${cases.length + 1})`)
+    expect(text.stdout).toContain(`├─ warnings (${cases.length + states.length + 1})`)
     expect(text.stdout).toContain('│  ├─ ! +/_WORK/ex.a/work.md: has no YAML front matter')
   })
 
@@ -269,6 +422,9 @@ describe('ki work status', () => {
       state: 'with-supervisor',
       holder: 'owner',
       since: '2026-10-17T12:58:00Z',
+      description: null,
+      method_read: null,
+      messages: 0,
       path: '+/_CHECKPOINTS/_state-of-play.md',
       items: []
     })

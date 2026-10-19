@@ -2002,14 +2002,14 @@ or a state folder is touched.
 .PP
 Read the work model: each piece of work's file, its state and whose move
 it is, under the
-.B ki-work-folder
-work-folder standard. These commands change nothing.
+.B ki-work-package
+work-package standard. These commands change nothing.
 .TP
 .B ki work status [--repo <dir>] [--format text|json]
 Read every
-.I +/_WORK/<id>/work.md
-in the repository, default the working directory's KI repository, and
-show it in five views:
+.I +/_WORK/<id>/
+work folder in the repository, default the working directory's KI
+repository, and show it in five views:
 .B with you
 (held by
 .BR owner ,
@@ -2025,6 +2025,20 @@ or in
 (the rest) and
 .B on hold
 (a paused hold older than 31 days flagged). Finished work is in no view.
+A work package, a folder holding
+.IR state.md ,
+takes its state from that file, which must name the folder's id, and its
+identity and routing description from
+.IR work.md ,
+with a warning when
+.I work.md
+still carries a state field; a single-file work folder takes both from
+.IR work.md .
+A work with lines waiting in its
+.I messages.md
+queue, or a single-file work file's
+.B Messages
+section, ends its view line with the pending count.
 The holder, and whether it is the worker or the supervisor, is derived
 from the state, never stored. Each detached run whose home is a
 .I +/_WORK/<id>/
@@ -2047,9 +2061,11 @@ else the folder name.
 .B --format json
 writes the versioned
 .I ki/work-status/v1
-report, one entry per work file with its id, level, title, theme, worker,
-supervisor, state, hold, holder, role, target, blocking, since, received,
-beat, path and items, and sends the warnings to standard error.
+report, one entry per work with its id, level, title, theme, worker,
+supervisor, description, state, hold, holder, role, target, blocking,
+since, received, beat, method_read, messages (the pending count), path
+(the file its state came from) and items, and sends the warnings to
+standard error.
 .SS Estate convergence
 \&
 .PP

@@ -25,7 +25,7 @@ const viewLabels: Readonly<Record<WorkView, { readonly glyph: string; readonly l
   }
 
 const viewLine = (view: WorkView, line: WorkViewLine): TreeEntry => ({
-  label: `${viewLabels[view].glyph} ${line.id} · ${line.holder ?? 'nobody'} · since ${line.since}${line.overdue ? ' · paused over 31 days' : ''}`
+  label: `${viewLabels[view].glyph} ${line.id} · ${line.holder ?? 'nobody'} · since ${line.since}${line.overdue ? ' · paused over 31 days' : ''}${line.pending ? ` · ${line.pending} pending` : ''}`
 })
 
 /** The five views, one line per work or item, then the review count, any warnings and a summary line. */
@@ -47,11 +47,11 @@ const renderWorkStatus = (status: WorkStatus, now: Date): string => {
 }
 
 export const createWorkCommand = (context: KiContext): Command => {
-  const command = new Command('work').description('read the work model: work files, their state and views')
+  const command = new Command('work').description('read the work model: work packages, their state and views')
   command.addCommand(
     new Command('status')
-      .description("show a repository's work by view, read-only, from +/_WORK/<id>/work.md")
-      .option('--repo <dir>', "repository holding the work files; default, the working directory's KI repository")
+      .description("show a repository's work by view, read-only, from each +/_WORK/<id>/ state.md or work.md")
+      .option('--repo <dir>', "repository holding the work folders; default, the working directory's KI repository")
       .addOption(
         new Option('--format <format>', 'text views or the versioned ki/work-status/v1 JSON')
           .choices(['text', 'json'])

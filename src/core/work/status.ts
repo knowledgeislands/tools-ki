@@ -59,6 +59,12 @@ export interface WorkStatusEntry {
   readonly since: string
   readonly received: string | null
   readonly beat: string | null
+  /** The work file's routing description, or null when it declares none. */
+  readonly description: string | null
+  /** The harness revision whose guidance the worker last read, from the state file, or null. */
+  readonly method_read: string | null
+  /** Lines waiting in the work's message queue. */
+  readonly messages: number
   readonly path: string
   readonly items: readonly WorkStatusItem[]
 }
@@ -143,22 +149,48 @@ const directories = async (path: string): Promise<readonly string[]> =>
 
 const isFile = async (path: string): Promise<boolean> => (await lstat(path).catch(() => undefined))?.isFile() === true
 
-/** Reads one work file into an entry, or the reason it cannot. */
-const workEntry = (
-  folder: string,
-  text: string,
-  identity: string,
-  items: readonly WorkStatusItem[]
-): WorkStatusEntry | string => {
-  const values = frontmatter(text)
-  if (!values) return 'has no YAML front matter'
-  const { id, level, title, worker, supervisor, state } = values
+/** The fields a package keeps in `state.md`; any of them left in its `work.md` is stale. */
+const STATE_FIELDS = ['state', 'target', 'hold', 'blocking', 'since', 'received', 'beat', 'mark', 'method_read']
+
+/** A revision as written, a bare number such as an all-digit short hash read back as its digits. */
+const revision = (value: unknown): string | null =>
+  typeof value === 'string' ? value : typeof value === 'number' ? String(value) : null
+
+/** The top-level list lines of a message queue, each one pending message; `None.` and prose count nothing. */
+const pending = (text: string): number => text.split(/\r?\n/).filter((line) => line.startsWith('- ')).length
+
+/** The lines beneath one heading of a work file, up to the next heading of the same or a higher level. */
+const section = (text: string, heading: string): string => {
+  const lines = text.split(/\r?\n/)
+  const start = lines.indexOf(heading)
+  if (start < 0) return ''
+  const end = lines.findIndex((line, index) => index > start && /^#{1,2} /.test(line))
+  return lines.slice(start + 1, end < 0 ? undefined : end).join('\n')
+}
+
+/** The work file's identity and supervision, or the reason it cannot be read. */
+const workDefinition = (folder: string, values: Record<string, unknown>) => {
+  const { id, level, title, worker, supervisor } = values
   if (typeof id !== 'string' || !WORK_ID.test(id)) return 'id must be a dotted work id'
   if (id !== folder) return `id ${id} must name its folder`
   if (!workLevels.includes(level as WorkLevel)) return `level must be one of ${workLevels.join(', ')}`
   if (typeof title !== 'string' || !title.trim()) return 'title must be a non-empty string'
   if (typeof worker !== 'string' || !HOLDER.test(worker)) return 'worker must name a holder'
   if (typeof supervisor !== 'string' || !HOLDER.test(supervisor)) return 'supervisor must name a holder'
+  return {
+    id,
+    level: level as WorkLevel,
+    title,
+    theme: typeof values['theme'] === 'string' ? values['theme'] : null,
+    worker,
+    supervisor,
+    description: typeof values['description'] === 'string' ? values['description'] : null
+  }
+}
+
+/** Reads the state fields, from `state.md` in a package and the work file otherwise, or the reason it cannot. */
+const workState = (values: Record<string, unknown>, worker: string, supervisor: string) => {
+  const { state } = values
   if (!workStates.includes(state as WorkState)) return `state must be one of ${workStates.join(', ')}`
   const since = utc(values['since'])
   if (!since) return 'since must be a UTC time'
@@ -175,15 +207,7 @@ const workEntry = (
           release: typeof declaredHold?.['release'] === 'string' ? declaredHold['release'] : null
         }
       : null
-  const theme = typeof values['theme'] === 'string' ? values['theme'] : null
   return {
-    identity,
-    id,
-    level: level as WorkLevel,
-    title,
-    theme,
-    worker,
-    supervisor,
     state: state as WorkState,
     hold,
     ...workHolder(state as WorkState, worker, supervisor, target),
@@ -192,8 +216,41 @@ const workEntry = (
     since,
     received: utc(values['received']) ?? null,
     beat: utc(values['beat']) ?? null,
-    path: `${WORK_DIRECTORY}/${folder}/work.md`,
-    items
+    method_read: revision(values['method_read'])
+  }
+}
+
+/**
+ * Reads one work folder in either shape the work-package standard allows: a package, told by its `state.md`, takes
+ * its state fields from that file and its queue from `messages.md`; a single-file folder takes both from `work.md`.
+ * Returns the entry, if any, and the warnings that name each file it could not read.
+ */
+const workEntry = async (
+  root: string,
+  folder: string,
+  identity: string,
+  items: readonly WorkStatusItem[]
+): Promise<{ readonly entry?: WorkStatusEntry; readonly warnings: readonly string[] }> => {
+  const relative = (name: string): string => `${WORK_DIRECTORY}/${folder}/${name}`
+  const read = (name: string): Promise<string> => readFile(join(root, WORK_DIRECTORY, folder, name), 'utf8')
+  const text = await read('work.md')
+  const values = frontmatter(text)
+  if (!values) return { warnings: [`${relative('work.md')}: has no YAML front matter`] }
+  const definition = workDefinition(folder, values)
+  if (typeof definition === 'string') return { warnings: [`${relative('work.md')}: ${definition}`] }
+  const packaged = await isFile(join(root, WORK_DIRECTORY, folder, 'state.md'))
+  const source = relative(packaged ? 'state.md' : 'work.md')
+  const stateValues = packaged ? frontmatter(await read('state.md')) : values
+  if (!stateValues) return { warnings: [`${source}: has no YAML front matter`] }
+  if (packaged && stateValues['id'] !== folder)
+    return { warnings: [`${source}: id ${String(stateValues['id'])} must name its folder`] }
+  const state = workState(stateValues, definition.worker, definition.supervisor)
+  if (typeof state === 'string') return { warnings: [`${source}: ${state}`] }
+  const queue = packaged ? await read('messages.md').catch(() => '') : section(text, '## Messages')
+  const stale = packaged && STATE_FIELDS.some((field) => field in values)
+  return {
+    entry: { identity, ...definition, ...state, messages: pending(queue), path: source, items },
+    warnings: stale ? [`${relative('work.md')}: carries state fields beside state.md; state.md governs`] : []
   }
 }
 
@@ -251,14 +308,17 @@ const checkpointEntry = (
     since,
     received: null,
     beat: null,
+    description: null,
+    method_read: null,
+    messages: 0,
     path: `${CHECKPOINTS_DIRECTORY}/${stem}.md`,
     items: []
   }
 }
 
 /**
- * Reads every `+/_WORK/<id>/work.md` in one repository into the `ki/work-status/v1` report, with the live runs
- * homed in each work folder as its run items, and counts `+/_WORK_REVIEW/`. Through the work model's tolerance
+ * Reads every `+/_WORK/<id>/` work folder in one repository, package or single-file, into the `ki/work-status/v1`
+ * report, with the live runs homed in each work folder as its run items, and counts `+/_WORK_REVIEW/`. Through the work model's tolerance
  * window each `+/_CHECKPOINTS/*.md` maps to an entry whose path is the checkpoint, with a warning naming its new home.
  * It writes nothing; an unreadable work file is a warning, never a failure.
  */
@@ -266,9 +326,7 @@ export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkSt
   const warnings: string[] = []
   const work: WorkStatusEntry[] = []
   for (const folder of await directories(join(request.root, WORK_DIRECTORY))) {
-    const path = join(request.root, WORK_DIRECTORY, folder, 'work.md')
-    const relative = `${WORK_DIRECTORY}/${folder}/work.md`
-    if (!(await isFile(path))) {
+    if (!(await isFile(join(request.root, WORK_DIRECTORY, folder, 'work.md')))) {
       warnings.push(`${WORK_DIRECTORY}/${folder}/ has no work.md`)
       continue
     }
@@ -288,9 +346,9 @@ export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkSt
           })
         )
       )
-    const entry = workEntry(folder, await readFile(path, 'utf8'), request.identity, items)
-    if (typeof entry === 'string') warnings.push(`${relative}: ${entry}`)
-    else work.push(entry)
+    const read = await workEntry(request.root, folder, request.identity, items)
+    warnings.push(...read.warnings)
+    if (read.entry) work.push(read.entry)
   }
   const checkpoints = (await readdir(join(request.root, CHECKPOINTS_DIRECTORY)).catch(() => []))
     .filter((name) => name.endsWith('.md') && name !== 'README.md')
@@ -343,6 +401,8 @@ export interface WorkViewLine {
   readonly holder: string | null
   readonly since: string
   readonly overdue?: true
+  /** Lines waiting in the work's message queue, when there are any. */
+  readonly pending?: number
 }
 
 const STUCK_AFTER = 10 * 60 * 1000
@@ -362,7 +422,12 @@ export const deriveWorkViews = (
   const views: Record<WorkView, WorkViewLine[]> = { 'with-you': [], stuck: [], blocked: [], moving: [], 'on-hold': [] }
   for (const entry of work) {
     if (entry.state === 'finished') continue
-    const line = { id: entry.id, holder: entry.holder, since: entry.since }
+    const line = {
+      id: entry.id,
+      holder: entry.holder,
+      since: entry.since,
+      ...(entry.messages ? { pending: entry.messages } : {})
+    }
     const placed: WorkView[] = []
     if (entry.holder === 'owner') placed.push('with-you')
     if (entry.role === 'worker' && entry.state === 'with-worker' && age(entry.since, entry.beat) > STUCK_AFTER)
