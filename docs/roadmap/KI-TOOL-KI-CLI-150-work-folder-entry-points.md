@@ -6,13 +6,12 @@ project: ways-of-working
 purpose: corrective
 kind: deliver
 component: agent
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: b263ca455dff26555583317e5123104ae46a0f39
 created_at: 2026-10-18T10:26:00Z
-updated_at: 2026-10-19T06:58:02Z
+updated_at: 2026-10-19T07:18:00Z
 ---
 
 # KI-TOOL-KI-CLI-150: Work Folder Entry Points
@@ -148,6 +147,16 @@ The goal holds: the skeleton names the state-folder path, and a brief sending th
 ### Mini recap
 
 Harness wording pushed, the ways-of-working common rules and queued briefs moved, and the tools-ki refusal and skeleton fill built with tests and docs. Not released. Learning route for review: the Biome schema drift could go to a small tools-ki chore record through `ki-next`.
+
+## Done
+
+Accepted 2026-10-19 as delivered (tools-ki `949ff512`, ki-agentic-harness `1fe52516`) by Kris Brown's CLI-150-ACCEPT a), recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) under "owner answers, mark recap" (19 October, 08:14 BST): "do all recommendations including any pushes needed", on the clean independent review by the `review-cli150` run. Re-checked on 19 October at `c2a9a062`, after the Biome drift was cleared: `bun run test:coverage` passed 1350 tests with thresholds met, and `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip` and `mandoc -T lint man/ki.1` passed, which closes the first Outstanding concern; the review confirmed the work file records Step 2, which closes the second.
+
+Known limits, accepted as they stand rather than carried as follow-up records:
+
+- Only a report placed directly in a work folder is refused; a brief naming `+/_WORK/<id>/design/<name>.report.md`, `+/_WORK_REVIEW/...` or `$D/<name>.report.md` draws the warning, not a refusal, as Decision 1 allows.
+- When the dispatcher refuses a queued brief, its `<name>.queued.md` copy stays in the state folder, as it does after every other dispatcher launch failure; it does not take the name.
+- For a run whose recorded home is a retired `+/_THREADS/<run>/` with no work folder to follow, the refusal says the launcher homes the report there, rather than that the run names no work folder; nothing is written and the brief is still refused.
 
 ## Discussion
 
