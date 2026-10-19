@@ -2,15 +2,19 @@
 id: KI-TOOL-KI-CLI-162
 area: CLI
 title: GFM link converter
+kind: deliver
+purpose: capability
 project: tools-burndown
+component: markdown
 priority: high
 size: m
-status: triage
+horizon: now
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T21:22:30Z
-updated_at: 2026-10-19T21:22:30Z
+updated_at: 2026-10-19T21:30:00Z
 transferred_from: ki-principal ki.tools-burndown GFM-CONVERTER, routed from ki.ways-of-working GFM-ORDER a and GFM-LINK-FORM a, 2026-10-19
 ---
 
@@ -47,7 +51,93 @@ The requirements, in short:
 - In: the converter command, its preview, decisions and manifest files, the resolver, help, manual, command inventory, changelog, README and a user guide, and fixture tests through `run(args, context)`.
 - Out: converting any island, which each island owns (ki-principal under its own conversion record); the harness linking-standard and link-audit changes, which ki-agentic-harness owns; the Obsidian configuration change; formatting with rumdl, which runs as a separate commit; machine-local absolute `/Users/` links; a release, which is ask-first.
 
+## Current state
+
+tools-ki has no Markdown conversion. `ki repo conform` runs harness catalogues over whole repositories. ki-principal holds about 1,070 wikilinks in 201 of 364 tracked Markdown files, 21 escaped table aliases, 10 heading links, 16 embeds (5 sized to width 800), two custom `[!todo]` callouts, one Dataview note and 20 Obsidian templates with placeholder destinations.
+
+## Design
+
+### Command
+
+`ki markdown gfm <path...> [--root <dir>] [--decisions <file>] [--dry-run] [--preview <file>] [--manifest <file>]`
+
+- A path is a Markdown file or a directory whose Markdown files are taken, skipping dot-entries and `node_modules`; at least one is required, and each must sit inside the root.
+- The root is `--root` or the nearest enclosing directory holding `.obsidian` or `.git`.
+- `--dry-run` prints a zero-context unified diff per changed file, then the report; with `--preview <file>` it also writes the preview.
+- Without `--dry-run` the command applies, and requires both `--preview <file>` from a dry run and a new `--manifest <file>`.
+
+### Resolver
+
+The candidate universe is every regular file under the root, skipping dot-entries (`.git`, `.obsidian`, `.trash`) and `node_modules`; symbolic links are not followed. A target without a Markdown or file extension is tried with `.md` and as written. Precedence: beside the note, then full path from the root, then a path suffix or unique leaf name. Each step takes an exact-case match first, then a unique case-insensitive match; several matches in the deciding step make the link ambiguous, none in every step unresolved. The emitted destination is the on-disk spelling.
+
+### Conversion
+
+- `[[T]]`, `[[T|A]]` and `[[T\|A]]` become `[label](<dest>)`: the label is the alias, or the target as written; `[`, `]`, `\` and other link-text metacharacters are escaped.
+- `![[img.ext]]` and `![[img.ext|alt]]` for an image extension become `![alt](<dest>)`, the alt text being the alias or the file name.
+- Destinations are document-relative POSIX paths, in angle brackets when they hold a space or parenthesis; `%`, `#` and `?` in file names are percent-encoded.
+- A relative Markdown link whose path uses `%20` is respelt with a literal space in angle brackets when the decoded path resolves; other escapes and the fragment are kept.
+- Heading links convert only when the decisions file sets `heading_fragments = "github"`, using the target heading's GitHub slug; otherwise they are listed.
+- Front matter, fenced and inline code, Obsidian `%%` and HTML comments and `{{ }}` and `<% %>` template expressions are never rewritten.
+
+### Items and decisions
+
+Listed kinds: `ambiguous`, `unresolved`, `heading-link`, `missing-heading`, `block-reference`, `sized-embed`, `transclusion`, `front-matter-link`, `template-destination`, `comment-link`, `callout`, `dataview`, `protected` and `generated`. Protected material is any path inside a `_Voice Notes` directory or a `protected` path the decisions file names; generated material is a file opening with `<!-- GENERATED`. A TOML decisions file approves each item by `path` and exact `text`, with `action = "keep"` for an approved exception or `action = "convert"` with a `target` for an ambiguous or unresolved link. An undecided item is reported in a dry run and refuses the batch at apply.
+
+### Preview, guard and manifest
+
+The preview is JSON naming the root, the decisions file hash and, per file, its input and output SHA-256 and conversions. Apply rebuilds the plan, then aborts the whole batch before any write unless the path set, decisions hash and every input and output hash match and no item is undecided. It writes the manifest (paths, pre-images and hashes) before the first file. Each conversion is re-parsed and its target, fragment, label and image flag compared with the source link, and the text outside converted spans is compared byte for byte; either mismatch aborts the batch.
+
+## Steps
+
+- [ ] Add the `markdown` component and command group with `gfm`, its option validation and rendering.
+- [ ] Build the core: vault index and resolver, scanner of protected regions and constructs, converter, verification, decisions, preview and manifest.
+- [ ] Write fixture tests through `run(args, context)` on ki-principal shapes: table aliases, headings, embeds with and without size, spaces, case mismatches, templates, code examples, reference definitions, callouts, Dataview, front matter, protected and generated files, guard failures, idempotence and containment.
+- [ ] Update the manual, command inventory, inventory test, changelog, README and a user guide.
+- [ ] Dry-run against ki-principal by batch, writing previews only to temporary storage.
+- [ ] Run the gate and move the record to Awaiting review.
+
+## Files touched
+
+- `.ki.toml`
+- `src/commands/markdown/index.ts`, `src/commands/root/catalogue.ts`, `src/commands/root/index.ts`
+- `src/core/markdown/`
+- `src/tests/cli/markdown/`, `src/tests/cli/manage/inventory.test.ts`
+- `man/ki.1`, `man/ki.commands.json`, `CHANGELOG.md`, `README.md`, `docs/guides/user/markdown-conversion.md`, `docs/guides/user/README.md`
+- this record
+
+## Verify
+
+- `bun run test:coverage` passes at 100%.
+- `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bun scripts/generate-command-inventory.ts` and `ki repo audit` pass.
+- `ki markdown gfm <ki-principal paths> --dry-run` runs read-only and its summary is reported.
+
+## Dependencies / blocks
+
+None to build. It blocks the ki-principal GFM conversion, which ki-principal carries as its own work and cannot start until this converter is released. The harness linking-standard change in ki-agentic-harness is independent.
+
+## Documentation impact
+
+### Decision Records
+
+None: the host choice is recorded under Discussion and is local to this command; the GFM preference itself is ki-principal's decision.
+
+### Specifications
+
+None: no portable contract changes; the manual and command inventory carry the command grammar.
+
+### Guides
+
+A new user guide, `docs/guides/user/markdown-conversion.md`, explains the preview, decide and apply cycle and the decisions file.
+
+### Roadmap
+
+None in tools-ki. ki.tools-burndown tells ki.ways-of-working when a release carries it.
+
 ## Discussion
+
+### Authority
+
+Kris's GFM-CONVERTER approval routed the build with these requirements; this run plans and implements under it, with local commits only and no release.
 
 ### Host
 

@@ -91,6 +91,7 @@ components = [
   "harness",
   "kb",
   "manage",
+  "markdown",
   "registry",
   "repo",
   "skill",
