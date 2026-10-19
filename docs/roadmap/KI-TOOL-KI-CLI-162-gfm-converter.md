@@ -8,13 +8,12 @@ project: tools-burndown
 component: markdown
 priority: high
 size: m
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: cdfae6e3a9deaf81b7b0f91bc6f2edaaf1fcaee1
 created_at: 2026-10-19T21:22:30Z
-updated_at: 2026-10-19T21:48:57Z
+updated_at: 2026-10-19T22:17:32Z
 transferred_from: ki-principal ki.tools-burndown GFM-CONVERTER, routed from ki.ways-of-working GFM-ORDER a and GFM-LINK-FORM a, 2026-10-19
 ---
 
@@ -197,6 +196,10 @@ The resolver now lists what Obsidian itself would settle only by path order, so 
 ### Mini recap
 
 `ki markdown gfm` converts Obsidian links in explicit paths to GFM through a previewed, decided and guarded batch with a rollback manifest; ki-principal previews cleanly in every batch.
+
+## Done
+
+Accepted 2026-10-19 by Kris Brown on the review packet above. Kris said, on 19 October, "I think we should accept all the awaiting reviews."
 
 ## Discussion
 

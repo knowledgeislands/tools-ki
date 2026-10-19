@@ -6,13 +6,12 @@ kind: deliver
 purpose: capability
 project: ways-of-working
 component: repo
-horizon: now
-status: awaiting-review
+status: done
 blocks: [KI-TOOL-KI-CLI-157]
 blocked_by: []
 baseline_ref: 171549e8c4b6305d415b5899d73a9507dda6a158
 created_at: 2026-10-19T07:45:00Z
-updated_at: 2026-10-19T18:28:00Z
+updated_at: 2026-10-19T22:17:32Z
 transferred_from: ki-agentic-harness work-item format and ki-principal GDR-KI-PRINCIPAL-016, 2026-10-19
 ---
 
@@ -136,6 +135,10 @@ Keying the order by repository first keeps REPO-OPS-012's promise that an aggreg
 ### Mini recap
 
 `ki` now reads `priority` and `size`, orders each lane by holds, priority and size, and names every field-migration gap in the harness wording without failing on it.
+
+## Done
+
+Accepted 2026-10-19 by Kris Brown on the review packet above. Kris said, on 19 October, "I think we should accept all the awaiting reviews."
 
 ## Discussion
 

@@ -6,15 +6,14 @@ kind: deliver
 purpose: capability
 project: ways-of-working
 component: agent
-horizon: now
 priority: high
 size: m
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 29687ff47bf14229b1c554aab1d8bb882ba60eac
 created_at: 2026-10-19T18:27:00Z
-updated_at: 2026-10-19T18:39:00Z
+updated_at: 2026-10-19T22:17:32Z
 transferred_from: ki-principal ki.ways-of-working work-package design, points 35 and 39, 2026-10-19
 ---
 
@@ -126,6 +125,10 @@ Reading state from `state.md` alone in a package, rather than merging both files
 ### Mini recap
 
 `ki work status` now reads work packages and single-file folders alike and adds each work's description, method revision and pending-message count.
+
+## Done
+
+Accepted 2026-10-19 by Kris Brown on the review packet above. Kris said, on 19 October, "I think we should accept all the awaiting reviews."
 
 ## Discussion
 
