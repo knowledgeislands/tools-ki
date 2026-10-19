@@ -1,4 +1,11 @@
-import { type TaskLinks, type WorkItemHold, type WorkItemLane, workItemLane } from './items.ts'
+import {
+  type TaskLinks,
+  type WorkItemHold,
+  type WorkItemLane,
+  type WorkItemPriority,
+  type WorkItemSize,
+  workItemLane
+} from './items.ts'
 import type { RoadmapListResult } from './operations.ts'
 
 const ROADMAP_REPORT_SCHEMA = 'ki/roadmap/v1' as const
@@ -28,10 +35,13 @@ interface RoadmapReport {
     readonly project: string | null
     readonly initiative: string | null
     readonly component: string | null
+    readonly priority: WorkItemPriority
+    readonly size: WorkItemSize | null
     readonly hold?: WorkItemHold
     readonly resolution?: string
     readonly resolutionTarget?: string
     readonly legacy: readonly string[]
+    readonly gaps: readonly string[]
     readonly blocks: readonly string[]
     readonly blockedBy: readonly string[]
     readonly createdAt: string
@@ -74,10 +84,13 @@ export const roadmapReport = (results: readonly RoadmapListResult[]): RoadmapRep
       project: item.project ?? null,
       initiative: item.initiative ?? null,
       component: item.component ?? null,
+      priority: item.priority ?? 'medium',
+      size: item.size ?? null,
       ...(item.hold ? { hold: item.hold } : {}),
       ...(item.resolution ? { resolution: item.resolution } : {}),
       ...(item.resolutionTarget ? { resolutionTarget: item.resolutionTarget } : {}),
       legacy: item.legacy ?? [],
+      gaps: item.gaps ?? [],
       blocks: item.blocks,
       blockedBy: item.blockedBy,
       createdAt: item.createdAt,

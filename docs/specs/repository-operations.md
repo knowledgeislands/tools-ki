@@ -122,7 +122,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REPO-OPS-012 — Aggregate roadmap inventory
 
-With `--aggregate`, `ki repo roadmap list` MUST render one selected-set inventory grouped by local horizon, using each item’s canonical identifier as its identity. It MUST identify selected repositories that contribute no roadmap and MUST NOT imply a shared cross-repository priority order.
+With `--aggregate`, `ki repo roadmap list` MUST render one selected-set inventory grouped by local horizon, using each item’s canonical identifier as its identity. It MUST identify selected repositories that contribute no roadmap and MUST NOT imply a shared cross-repository priority order: it MUST keep each repository's records together within a lane, so `priority` orders records only inside one repository.
 
 _Conformance:_ conforming
 
@@ -289,6 +289,16 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/work/status.test.ts` — `reads every work file into ki/work-status/v1 with its live runs, and counts work awaiting review`, `warns of each unreadable work file and lists the rest`, `reads thread-model checkpoints through the tolerance window, warning of each new home`, `takes a legacy id's territory from a work file, else the Capital's handle, else the folder`, `shows empty views for a repository with no work, from the working directory by default`, and `rejects an unknown format and a directory that is not a KI repository`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### REPO-OPS-029 — Priority and size fields
+
+`ki repo roadmap list` MUST accept the optional `priority` (`high`, `medium` or `low`) and `size` (`s`, `m`, `l` or `xl`) record fields in both local adapters, MUST reject any other value and a `ready` record of size `xl` as unreadable, and MUST NOT warn of either as an unknown KB Streams field. Within each lane, text output MUST order open records unblocked first, then by priority with unset as `medium`, then by size smallest first with unsized last; priority MUST NOT cross lanes. Through the field migration window it MUST list each open record's field gaps in the Harness roadmap checker's wording, MUST exempt done and cancelled records from the `size` and `kind` gaps, MUST count them in `GAPS=`, and MUST NOT change the exit status for a gap. The JSON projection MUST add `priority`, `size` and `gaps` to every item.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `accepts priority and size and orders each lane by holds, priority, then size`, `rejects invalid priority and size values and an extra-large ready record`, `lists each migration-window gap and exempts closed records`, and `warns on each unknown KB Streams record field without changing the exit status`.
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

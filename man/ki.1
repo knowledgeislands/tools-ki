@@ -936,11 +936,21 @@ reads without titles, and JSON output adds \fBareaTitle\fR.
 The roadmap folder's \fBREADME.md\fR index is not read as a work item.
 A KB Streams record field outside the shared record model and the
 \fBki-repo-kb\fR note fields is a warning naming the file and field, such as
-\fBKBS-001-x.md: unknown field owner\fR; for \fBpriority\fR it adds that
-horizon is the only priority signal.
+\fBKBS-001-x.md: unknown field owner\fR.
 The warning never changes the exit status, and JSON output lists it under the
 repository's \fBwarnings\fR.
 The roadmap adapter still rejects such a field.
+Both adapters read the optional \fBpriority\fR (\fBhigh\fR, \fBmedium\fR or
+\fBlow\fR) and \fBsize\fR (\fBs\fR, \fBm\fR, \fBl\fR or \fBxl\fR) fields; any
+other value, or a \fBready\fR record of size \fBxl\fR, makes the record
+unreadable. Within each lane, open records run unblocked first, then by
+priority with unset as \fBmedium\fR, then by size smallest first; priority
+never crosses lanes, and an aggregate view keeps each repository's records
+together. Through the field migration window a \fBgaps\fR section names each
+open record's missing \fBsize\fR or \fBkind\fR, retired \fBinitiative\fR,
+theme beside its project, \fBpurpose: adoption\fR or retired horizon, in the
+Harness checker's wording, counted in \fBGAPS=\fR without changing the exit
+status. JSON items add \fBpriority\fR, \fBsize\fR and \fBgaps\fR.
 A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other
 selected repositories still report, and any roadmap or trade diagnostic makes

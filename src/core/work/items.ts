@@ -30,6 +30,8 @@ const optionalFields = [
   'project',
   'initiative',
   'component',
+  'priority',
+  'size',
   'resolution',
   'resolution_target',
   'waiting_on_trades',
@@ -76,6 +78,12 @@ export const workItemPurposes = [
   'adoption',
   'upkeep'
 ] as const
+/** How important a record is among those at its horizon, most important first; an absent priority reads as medium. */
+export const workItemPriorities = ['high', 'medium', 'low'] as const
+export type WorkItemPriority = (typeof workItemPriorities)[number]
+/** Relative end-to-end effort, smallest first; `xl` is not one record and is split before Ready. */
+export const workItemSizes = ['s', 'm', 'l', 'xl'] as const
+export type WorkItemSize = (typeof workItemSizes)[number]
 export const holdReasons = ['waiting-for', 'parked'] as const
 export type HoldReason = (typeof holdReasons)[number]
 export const workItemResolutions = ['obsolete', 'rejected', 'duplicate', 'merged', 'superseded'] as const
@@ -143,6 +151,9 @@ export interface WorkItem {
   /** The thread-model classification, read as the theme during the work model's tolerance window. */
   readonly initiative?: string
   readonly component?: string
+  /** As written; an absent priority reads as `medium`. */
+  readonly priority?: WorkItemPriority
+  readonly size?: WorkItemSize
   readonly hold?: WorkItemHold
   readonly resolution?: (typeof workItemResolutions)[number]
   readonly resolutionTarget?: string
@@ -155,6 +166,8 @@ export interface WorkItem {
   readonly taskLinks?: TaskLinks
   /** Deprecated shapes this record still carries, in a stable order; absent when it has none. */
   readonly legacy?: readonly string[]
+  /** The field migration window's gaps, in the harness roadmap checker's words; absent when it has none. */
+  readonly gaps?: readonly string[]
 }
 
 export interface WorkItemRecord {
@@ -397,6 +410,39 @@ const legacyShapes = (fields: Readonly<WorkItemFields>, status: WorkItemStatus):
     : [])
 ]
 
+const retiredHorizonUse: Readonly<Record<LegacyWorkItemHorizon, string>> = {
+  triage: 'status triage without a horizon',
+  'waiting-for': 'horizon hold with a hold mapping',
+  parked: 'horizon hold with a hold mapping'
+}
+
+/**
+ * The shapes the field migration window set on 2026-10-19 tolerates, worded as the harness roadmap checker warns on
+ * them: they warn until the window closes and then fail. A closed record needs no retrospective size or kind.
+ */
+const migrationGaps = (fields: Readonly<WorkItemFields>, status: WorkItemStatus): readonly string[] => {
+  const retired = legacyWorkItemHorizons.includes(fields.horizon as LegacyWorkItemHorizon)
+  const closed = status === 'done' || status === 'cancelled'
+  const window = [
+    ...(fields.purpose === 'adoption' ? ['purpose adoption is retired; use capability or upkeep'] : []),
+    ...(fields.size === undefined && !closed ? ['a record should declare size: s, m, l or xl'] : []),
+    ...(fields.kind === undefined && adoptedOpenStatuses.has(status) && !retired
+      ? ['an adopted record should declare kind']
+      : []),
+    ...(fields.initiative ? ['initiative is retired; name the theme in theme'] : []),
+    ...(fields.project && (fields.theme || fields.initiative)
+      ? ['the theme comes from the project; do not name it beside the project']
+      : [])
+  ]
+  return [
+    // The harness checker already fails a retired horizon; ki lists it as a gap until the window closes.
+    ...(retired
+      ? [`retired: horizon '${fields.horizon}'; use ${retiredHorizonUse[fields.horizon as LegacyWorkItemHorizon]}`]
+      : []),
+    ...window.map((gap) => `migration window: ${gap}`)
+  ]
+}
+
 export const parseWorkItem = (
   contents: string,
   file: string,
@@ -439,6 +485,14 @@ export const parseWorkItem = (
   if (Date.parse(createdAt) > Date.parse(updatedAt))
     throw itemError(file, 'created_at must not be later than updated_at')
   const kind = enumField(fields, 'kind', workItemKinds, file)
+  if (fields.priority !== undefined && !workItemPriorities.includes(fields.priority as WorkItemPriority))
+    throw itemError(file, 'priority must be high, medium or low')
+  const priority = fields.priority as WorkItemPriority | undefined
+  if (fields.size !== undefined && !workItemSizes.includes(fields.size as WorkItemSize))
+    throw itemError(file, 'size must be s, m, l or xl')
+  const size = fields.size as WorkItemSize | undefined
+  if (size === 'xl' && status === 'ready')
+    throw itemError(file, 'a ready record must not be size xl; split it before Ready')
   const purpose = enumField(fields, 'purpose', workItemPurposes, file)
   const project = referenceField(fields, 'project', file)
   const theme = referenceField(fields, 'theme', file)
@@ -448,6 +502,7 @@ export const parseWorkItem = (
   if (component !== undefined && !planning.components.has(component))
     throw itemError(file, `component ${component} must be declared in [skills.ki-work-roadmap].components`)
   const legacy = legacyShapes(fields, status)
+  const gaps = migrationGaps(fields, status)
   return {
     id,
     ...(fields.area ? { area: fields.area } : {}),
@@ -460,6 +515,8 @@ export const parseWorkItem = (
     ...(project ? { project } : {}),
     ...(initiative ? { initiative } : {}),
     ...(component ? { component } : {}),
+    ...(priority ? { priority } : {}),
+    ...(size ? { size } : {}),
     ...(fields.hold ? { hold: fields.hold } : {}),
     ...(resolution ? { resolution } : {}),
     ...(target ? { resolutionTarget: target } : {}),
@@ -470,7 +527,8 @@ export const parseWorkItem = (
     updatedAt,
     ...(fields.transferred_from ? { transferredFrom: fields.transferred_from } : {}),
     ...(fields.task_links ? { taskLinks: fields.task_links } : {}),
-    ...(legacy.length ? { legacy } : {})
+    ...(legacy.length ? { legacy } : {}),
+    ...(gaps.length ? { gaps } : {})
   }
 }
 
@@ -485,6 +543,18 @@ export const workItemLane = (item: WorkItem): WorkItemLane => {
 /** Open records carry neither terminal status. */
 export const isOpenWorkItem = (item: WorkItem): boolean => item.status !== 'done' && item.status !== 'cancelled'
 
+/**
+ * Orders records within one lane, once adoption, holds and horizon have placed them: dependency-ready records before
+ * those blocked by a record in `open`, then priority, then size smallest first with no size last. Priority never
+ * crosses a lane, so callers order by lane first.
+ */
+export const compareSelection = (open: ReadonlySet<string>): ((left: WorkItem, right: WorkItem) => number) => {
+  const blocked = (item: WorkItem): number => Number(item.blockedBy.some((id) => open.has(id)))
+  const priority = (item: WorkItem): number => workItemPriorities.indexOf(item.priority ?? 'medium')
+  const size = (item: WorkItem): number => (item.size ? workItemSizes.indexOf(item.size) : workItemSizes.length)
+  return (left, right) => blocked(left) - blocked(right) || priority(left) - priority(right) || size(left) - size(right)
+}
+
 const readItem = async (
   directory: string,
   file: string,
@@ -498,9 +568,8 @@ const readItem = async (
   return { item: parseWorkItem(contents, file, planning, unknownFields), file, path, contents, unknownFields }
 }
 
-/** The warning line for one unknown field; `priority` names horizon as the only priority signal. */
-const unknownFieldWarning = (file: string, field: string): string =>
-  `${file}: unknown field ${field}${field === 'priority' ? '; horizon is the only priority signal' : ''}`
+/** The warning line for one unknown field. */
+const unknownFieldWarning = (file: string, field: string): string => `${file}: unknown field ${field}`
 
 export interface WorkItemRecordInventory {
   readonly records: readonly WorkItemRecord[]

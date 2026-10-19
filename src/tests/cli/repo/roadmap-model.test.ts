@@ -598,8 +598,8 @@ describe('[ki repo roadmap list --by]', () => {
     expect(theme).toContain('theme bare/rig (1)')
     expect(theme).toContain('KI-TOOL-KI-CLI-007: theme rig contradicts project other/host in other/rig')
     expect(theme).toContain('KI-TOOL-KI-CLI-008: theme other/ghost is not in the registry')
-    expect(theme).not.toContain('KI-TOOL-KI-CLI-009:')
-    expect(theme).not.toContain('KI-TOOL-KI-CLI-011:')
+    expect(theme).not.toMatch(/KI-TOOL-KI-CLI-009: (theme|project)/)
+    expect(theme).not.toMatch(/KI-TOOL-KI-CLI-011: (theme|project)/)
 
     await box.state.write('ki/registry.toml', 'schema = [\n')
     const invalid = await box.run('ki repo --repo member roadmap list --by project')

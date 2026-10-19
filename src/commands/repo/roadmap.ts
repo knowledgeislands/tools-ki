@@ -4,7 +4,9 @@ import type { KiContext } from '../../context.ts'
 import { grammarError, KiExit } from '../../core/errors.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade/index.ts'
 import {
+  compareSelection,
   holdReasons,
+  isOpenWorkItem,
   listRoadmap,
   listRoadmapItems,
   migrateRoadmap,
@@ -65,18 +67,38 @@ const operationContext = (context: KiContext): RoadmapOperationContext => ({
   locateTrades: () => locateTrades(context)
 })
 
-const orderItemsForText = (items: readonly WorkItem[]): readonly WorkItem[] =>
+type ItemOrder = (left: WorkItem, right: WorkItem) => number
+
+/**
+ * The selection order within a lane, keeping each repository's records together so that a multi-repository view
+ * implies no cross-repository priority order.
+ */
+const selectionOrder = (results: readonly Pick<RoadmapItemResult, 'items'>[]): ItemOrder => {
+  const repository = new Map<WorkItem, number>()
+  results.forEach((result, index) => {
+    for (const item of result.items ?? []) repository.set(item, index)
+  })
+  const items = [...repository.keys()]
+  const selection = compareSelection(new Set(items.filter(isOpenWorkItem).map((item) => item.id)))
+  return (left, right) => (repository.get(left) as number) - (repository.get(right) as number) || selection(left, right)
+}
+
+const orderItemsForText = (items: readonly WorkItem[], order: ItemOrder): readonly WorkItem[] =>
   [...items].sort(
     (left, right) =>
       workItemLanes.indexOf(workItemLane(left)) - workItemLanes.indexOf(workItemLane(right)) ||
+      order(left, right) ||
       statusOrder.indexOf(left.status) - statusOrder.indexOf(right.status) ||
       left.id.localeCompare(right.id)
   )
 
 /** Lane groups in report order: now, next, soon, future, hold, triage, then done and cancelled. */
-const laneEntries = (items: readonly WorkItem[], options: RoadmapTextOptions): readonly TreeEntry[] =>
+const laneEntries = (items: readonly WorkItem[], options: RoadmapTextOptions, order: ItemOrder): readonly TreeEntry[] =>
   workItemLanes.flatMap((lane) => {
-    const group = orderItemsForText(items.filter((item) => workItemLane(item) === lane))
+    const group = orderItemsForText(
+      items.filter((item) => workItemLane(item) === lane),
+      order
+    )
     return group.length
       ? [{ label: `${lane} (${group.length})`, children: group.map((item) => renderRoadmapItem(item, options)) }]
       : []
@@ -138,11 +160,13 @@ const groupedEntries = (
   results: readonly RoadmapListResult[],
   by: RoadmapGrouping,
   options: RoadmapTextOptions
-): readonly TreeEntry[] =>
-  mergedGroups(results).map((group) => ({
+): readonly TreeEntry[] => {
+  const order = selectionOrder(results)
+  return mergedGroups(results).map((group) => ({
     label: `${group.name === UNASSIGNED_GROUP ? group.name : `${by} ${groupName(group)}`} (${group.items.length})`,
-    children: orderItemsForText(group.items).map((item) => renderRoadmapItem(item, { ...options, lane: true }))
+    children: orderItemsForText(group.items, order).map((item) => renderRoadmapItem(item, { ...options, lane: true }))
   }))
+}
 
 /** Registry warnings for grouped output, then unknown record fields; they never change the exit status. */
 const groupingWarningLines = (results: readonly GroupedResult[]): readonly string[] => [
@@ -169,17 +193,34 @@ const groupingWarnings = (results: readonly GroupedResult[]): readonly TreeEntry
     : []
 }
 
+/** One line per field migration window gap in the listed records, for owners to backfill by judgement. */
+const gapEntries = (items: readonly WorkItem[]): readonly TreeEntry[] => {
+  const gaps = items.flatMap((item) => (item.gaps ?? []).map((gap) => `${item.id}: ${gap}`))
+  return gaps.length
+    ? [
+        {
+          label: `gaps (${gaps.length})`,
+          children: gaps.map((gap) => ({ label: `${presentation('status.warn').terminal} ${gap}` }))
+        }
+      ]
+    : []
+}
+
+const gapCount = (items: readonly WorkItem[]): number => items.filter((item) => item.gaps).length
+
 /** Counts shared by every list summary; the Now count is a signal, never a cap. */
 const itemSummary = (items: readonly WorkItem[]): string => {
   const count = (predicate: (item: WorkItem) => boolean) => items.filter(predicate).length
   const done = count((item) => item.status === 'done')
   const cancelled = count((item) => item.status === 'cancelled')
   const legacy = count((item) => Boolean(item.legacy))
+  const gaps = gapCount(items)
   return (
     `ITEMS=${items.length} NOW=${count((item) => workItemLane(item) === 'now')} ` +
     `NOT_DONE=${items.length - done - cancelled} DONE=${done}` +
     (cancelled ? ` CANCELLED=${cancelled}` : '') +
-    (legacy ? ` LEGACY=${legacy}` : '')
+    (legacy ? ` LEGACY=${legacy}` : '') +
+    (gaps ? ` GAPS=${gaps}` : '')
   )
 }
 
@@ -236,7 +277,7 @@ const renderTextResult = (
     : result.roadmap === 'absent'
       ? [{ label: `${presentation('status.skip').terminal} no roadmap` }]
       : [
-          ...laneEntries(items, options),
+          ...laneEntries(items, options, selectionOrder([result])),
           ...faults.map((fault) => ({
             label: `${presentation('status.unavailable').terminal} ${fault.message}`
           }))
@@ -250,6 +291,7 @@ const renderTextResult = (
     context,
     entries: [
       { label: `roadmap (${items.length})`, children: roadmap },
+      ...gapEntries(items),
       ...groupingWarnings([result]),
       ...roadmapLinkLegend(items, options),
       {
@@ -278,8 +320,9 @@ const renderAggregateResult = (
   const by = results.find((result) => result.grouping)?.grouping?.by
   entries.push({
     label: `roadmap (${items.length})`,
-    children: by ? groupedEntries(results, by, options) : laneEntries(items, options)
+    children: by ? groupedEntries(results, by, options) : laneEntries(items, options, selectionOrder(results))
   })
+  entries.push(...gapEntries(items))
   entries.push(...groupingWarnings(results))
   entries.push(...roadmapLinkLegend(items, options))
   if (absent.length)
@@ -381,11 +424,13 @@ const renderSummaryResult = (results: readonly RoadmapItemResult[], by?: Roadmap
     ...(result.faults ?? []).map((fault) => `  ${labels[index]}: ${fault.message}`)
   ])
   const absent = results.flatMap((result, index) => (result.roadmap === 'absent' ? [labels[index]] : []))
+  const gaps = gapCount(items)
   return [
     ...table,
     't=triage d=draft r=ready ip=in-progress ar=awaiting-review x=done c=cancelled; Σ=total',
     '— no items; ? unavailable',
     ...(absent.length ? [`No roadmap: ${absent.join(', ')}`] : []),
+    ...(gaps ? [`Gaps: ${gaps} record(s) in the field migration window; ki repo roadmap list names each`] : []),
     ...(diagnostics.length ? ['Diagnostics (counts include valid items only)', ...diagnostics] : []),
     ...(warnings.length ? ['Warnings', ...warnings.map((warning) => `  ${warning}`)] : [])
   ].join('\n')

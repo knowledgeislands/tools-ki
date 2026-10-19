@@ -109,7 +109,7 @@ ${extra}`
 
 const knowledgeBaseMetadata = {
   note_type: 'roadmap',
-  priority: '1',
+  priority: 'low',
   tags: '\n  - roadmap\n  - delivery',
   aliases: '\n  - Native proposal',
   author: 'Knowledge Islands',
@@ -259,7 +259,7 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('├─ roadmap (2)')
     expect(result.output).toContain('KBS-001 [awaiting-review] Native proposal')
     expect(result.output).toContain('KBS-002 [draft] Later proposal')
-    expect(result.output).toContain('╰─ summary: ITEMS=2 NOW=1 NOT_DONE=2 DONE=0 TRADES=0 IMPORTS=0 EXPORTS=0')
+    expect(result.output).toContain('╰─ summary: ITEMS=2 NOW=1 NOT_DONE=2 DONE=0 GAPS=2 TRADES=0 IMPORTS=0 EXPORTS=0')
     expect(result.output).not.toContain('_ISSUES')
     expect(result.output).not.toContain('_IDEAS')
     expect(result.output).not.toContain('Roadmap.md')
@@ -297,7 +297,7 @@ describe('[ki repo roadmap]', () => {
     await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())
     await box.project.write(
       'knowledge/Streams/Roadmap/KBS-001-prioritised.md',
-      item({ id: 'KBS-001', priority: 'high', note_type: 'roadmap', tags: '\n  - roadmap\n  - delivery' })
+      item({ id: 'KBS-001', priority: 'high', size: 's', note_type: 'roadmap', tags: '\n  - roadmap\n  - delivery' })
     )
     await box.project.write(
       'knowledge/Streams/Roadmap/KBS-002-owned.md',
@@ -318,10 +318,8 @@ describe('[ki repo roadmap]', () => {
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('├─ roadmap (3)')
-    expect(result.output).toContain('├─ warnings (4)')
-    expect(result.output).toContain(
-      'KBS-001-prioritised.md: unknown field priority; horizon is the only priority signal'
-    )
+    expect(result.output).toContain('├─ warnings (3)')
+    expect(result.output).not.toContain('KBS-001-prioritised.md')
     expect(result.output).toContain('KBS-002-owned.md: unknown field owner\n')
     expect(result.output).toContain('KBS-002-owned.md: unknown field aliases\n')
     expect(result.output).toContain('KBS-002-owned.md: unknown field audience\n')
@@ -330,12 +328,11 @@ describe('[ki repo roadmap]', () => {
 
     const summary = await box.run('ki repo --repo knowledge roadmap summary')
     expect(summary.exitCode).toBe(0)
-    expect(summary.output).toContain('Warnings\n  KBS-001-prioritised.md: unknown field priority')
+    expect(summary.output).toContain('Warnings\n  KBS-002-owned.md: unknown field owner')
 
     const json = await box.run('ki repo --repo knowledge roadmap list --format json')
     expect(json.exitCode).toBe(0)
     expect(JSON.parse(json.output).repositories[0].warnings).toEqual([
-      'KBS-001-prioritised.md: unknown field priority; horizon is the only priority signal',
       'KBS-002-owned.md: unknown field owner',
       'KBS-002-owned.md: unknown field aliases',
       'KBS-002-owned.md: unknown field audience'
@@ -609,7 +606,7 @@ describe('[ki repo roadmap]', () => {
 
     expect(text).toEqual({
       exitCode: 0,
-      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-KI-CLI-003 [draft] Inspect governed work\n├─ trades (0)\n│  ├─ import (0)\n│  ╰─ export (0)\n╰─ summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0 TRADES=0 IMPORTS=0 EXPORTS=0\n`
+      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-KI-CLI-003 [draft] Inspect governed work\n├─ gaps (1)\n│  ╰─ ! KI-TOOL-KI-CLI-003: migration window: a record should declare size: s, m, l or xl\n├─ trades (0)\n│  ├─ import (0)\n│  ╰─ export (0)\n╰─ summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0 GAPS=1 TRADES=0 IMPORTS=0 EXPORTS=0\n`
     })
     expect(accepted.output).toContain('KI-TOOL-KI-CLI-010 [awaiting-review] Cleanup')
     expect(accepted.output).toContain('summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0')
@@ -647,7 +644,10 @@ describe('[ki repo roadmap]', () => {
           project: null,
           initiative: null,
           component: null,
+          priority: 'medium',
+          size: null,
           legacy: [],
+          gaps: ['migration window: a record should declare size: s, m, l or xl'],
           blocks: [],
           blockedBy: ['KI-OTHER-999'],
           createdAt: '2026-09-01T00:00:00Z',
@@ -715,7 +715,7 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('no roadmap (1)')
     expect(result.output).toContain('📁 absent')
     expect(result.output).toContain(
-      'summary: REPOSITORIES=3 ROADMAPS=2 NO_ROADMAP=1 ITEMS=2 NOW=1 NOT_DONE=2 DONE=0 TRADES=0'
+      'summary: REPOSITORIES=3 ROADMAPS=2 NO_ROADMAP=1 ITEMS=2 NOW=1 NOT_DONE=2 DONE=0 GAPS=2 TRADES=0'
     )
     expect(json.exitCode).toBe(0)
     expect(JSON.parse(json.output)).toEqual({
@@ -1008,6 +1008,141 @@ describe('[ki repo roadmap]', () => {
       previous = index
     }
     expect(result.output).toContain('summary: ITEMS=13 NOW=2 NOT_DONE=11 DONE=1 CANCELLED=1 LEGACY=2 ')
+  })
+
+  test('accepts priority and size and orders each lane by holds, priority, then size', async () => {
+    const box = await sandbox()
+    await box.project.write(
+      'repo/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/repo"\n'
+    )
+    const items: readonly Record<string, string | undefined>[] = [
+      { id: 'KI-TOOL-KI-CLI-003', title: 'Now low', horizon: 'now', priority: 'low', size: 's' },
+      {
+        id: 'KI-TOOL-KI-CLI-004',
+        title: 'Next blocked high',
+        priority: 'high',
+        size: 's',
+        blocked_by: '[KI-TOOL-KI-CLI-007]'
+      },
+      { id: 'KI-TOOL-KI-CLI-005', title: 'Next medium large', size: 'l' },
+      { id: 'KI-TOOL-KI-CLI-006', title: 'Next medium small', priority: 'medium', size: 's' },
+      { id: 'KI-TOOL-KI-CLI-007', title: 'Next high', priority: 'high', size: 'xl' },
+      { id: 'KI-TOOL-KI-CLI-008', title: 'Next unsized', priority: 'high' }
+    ]
+    for (const fields of items) await box.project.write(`repo/docs/roadmap/${fields['id']}-item.md`, item(fields))
+
+    const result = await box.run('ki repo --repo repo roadmap list --no-icons')
+    const json = await box.run('ki repo --repo repo roadmap list --format json')
+
+    expect(result.exitCode).toBe(0)
+    const expectedOrder = [
+      'now (1)',
+      'KI-TOOL-KI-CLI-003 [draft] Now low · low · size s',
+      'next (5)',
+      'KI-TOOL-KI-CLI-007 [draft] Next high · high · size xl',
+      'KI-TOOL-KI-CLI-008 [draft] Next unsized · high',
+      'KI-TOOL-KI-CLI-006 [draft] Next medium small · size s',
+      'KI-TOOL-KI-CLI-005 [draft] Next medium large · size l',
+      'KI-TOOL-KI-CLI-004 [draft] Next blocked high · high · size s',
+      'gaps (1)',
+      '! KI-TOOL-KI-CLI-008: migration window: a record should declare size: s, m, l or xl'
+    ]
+    let previous = -1
+    for (const line of expectedOrder) {
+      const index = result.output.indexOf(line)
+      expect(index, line).toBeGreaterThan(previous)
+      previous = index
+    }
+    expect(result.output).not.toContain('unknown field')
+    expect(result.output).toContain('summary: ITEMS=6 NOW=1 NOT_DONE=6 DONE=0 GAPS=1 ')
+    const parsed = JSON.parse(json.output)
+    expect(parsed.items.map((entry: { id: string }) => entry.id)).toEqual(items.map((fields) => fields['id']))
+    expect(parsed.items[0]).toMatchObject({ priority: 'low', size: 's', gaps: [] })
+    expect(parsed.items[2]).toMatchObject({ priority: 'medium', size: 'l' })
+    expect(parsed.items[5]).toMatchObject({
+      priority: 'high',
+      size: null,
+      gaps: ['migration window: a record should declare size: s, m, l or xl']
+    })
+  })
+
+  test('rejects invalid priority and size values and an extra-large ready record', async () => {
+    const box = await sandbox()
+    await box.project.write(
+      'repo/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
+    )
+    await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-item.md', item({ priority: '1', size: 's' }))
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-004-item.md',
+      item({ id: 'KI-TOOL-KI-CLI-004', size: 'huge' })
+    )
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-005-item.md',
+      item({ id: 'KI-TOOL-KI-CLI-005', status: 'ready', size: 'xl' })
+    )
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-006-item.md',
+      item({ id: 'KI-TOOL-KI-CLI-006', status: 'in-progress', size: 'xl' })
+    )
+
+    const result = await box.run('ki repo --repo repo roadmap list --no-icons')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('roadmap (1)')
+    expect(result.output).toContain('KI-TOOL-KI-CLI-006 [in-progress] Inspect governed work · size xl · legacy')
+    expect(result.output).toContain('work item KI-TOOL-KI-CLI-003-item.md priority must be high, medium or low')
+    expect(result.output).toContain('work item KI-TOOL-KI-CLI-004-item.md size must be s, m, l or xl')
+    expect(result.output).toContain(
+      'work item KI-TOOL-KI-CLI-005-item.md a ready record must not be size xl; split it before Ready'
+    )
+  })
+
+  test('lists each migration-window gap and exempts closed records', async () => {
+    const box = await sandbox()
+    await box.project.write(
+      'repo/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/repo"\n'
+    )
+    const items: readonly Record<string, string | undefined>[] = [
+      { id: 'KI-TOOL-KI-CLI-003', kind: undefined, size: 's' },
+      { id: 'KI-TOOL-KI-CLI-004', size: 's', initiative: 'foundations' },
+      { id: 'KI-TOOL-KI-CLI-005', size: 's', project: 'ways-of-working', theme: 'foundations' },
+      { id: 'KI-TOOL-KI-CLI-006', size: 's', purpose: 'adoption' },
+      { id: 'KI-TOOL-KI-CLI-007', size: 's', horizon: 'waiting-for' },
+      { id: 'KI-TOOL-KI-CLI-008', horizon: undefined, status: 'triage', kind: undefined },
+      { id: 'KI-TOOL-KI-CLI-009', horizon: undefined, status: 'done', kind: undefined },
+      { id: 'KI-TOOL-KI-CLI-010', horizon: undefined, status: 'cancelled', resolution: 'obsolete' }
+    ]
+    for (const fields of items) await box.project.write(`repo/docs/roadmap/${fields['id']}-item.md`, item(fields))
+
+    const result = await box.run('ki repo --repo repo roadmap list --no-icons')
+    const summary = await box.run('ki repo --repo repo roadmap summary')
+    const json = await box.run('ki repo --repo repo roadmap list --format json')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('gaps (6)')
+    expect(result.output).toContain('! KI-TOOL-KI-CLI-003: migration window: an adopted record should declare kind')
+    expect(result.output).toContain(
+      '! KI-TOOL-KI-CLI-004: migration window: initiative is retired; name the theme in theme'
+    )
+    expect(result.output).toContain(
+      '! KI-TOOL-KI-CLI-005: migration window: the theme comes from the project; do not name it beside the project'
+    )
+    expect(result.output).toContain(
+      '! KI-TOOL-KI-CLI-006: migration window: purpose adoption is retired; use capability or upkeep'
+    )
+    expect(result.output).toContain(
+      "! KI-TOOL-KI-CLI-007: retired: horizon 'waiting-for'; use horizon hold with a hold mapping"
+    )
+    expect(result.output).toContain(
+      '! KI-TOOL-KI-CLI-008: migration window: a record should declare size: s, m, l or xl'
+    )
+    expect(result.output).not.toMatch(/! KI-TOOL-KI-CLI-00(8: .*kind|9)|! KI-TOOL-KI-CLI-010/)
+    expect(result.output).toContain(' GAPS=6 ')
+    expect(summary.output).toContain('Gaps: 6 record(s) in the field migration window; ki repo roadmap list names each')
+    expect(JSON.parse(json.output).items.at(-1).gaps).toEqual([])
   })
 
   test('includes registered inbound and outbound trade context for each selected repository', async () => {

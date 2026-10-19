@@ -41,7 +41,9 @@ const linkedTasks = (item: WorkItem): readonly LinkedTask[] =>
 export const renderRoadmapItem = (item: WorkItem, options: RoadmapTextOptions): TreeEntry => {
   const lane = workItemLane(item)
   const placement = options.lane && lane !== item.status ? ` @ ${lane}` : ''
-  const label = `${item.id} [${item.status}${placement}] ${item.title}${item.legacy ? ' · legacy' : ''}`
+  const priority = item.priority && item.priority !== 'medium' ? ` · ${item.priority}` : ''
+  const size = item.size ? ` · size ${item.size}` : ''
+  const label = `${item.id} [${item.status}${placement}] ${item.title}${priority}${size}${item.legacy ? ' · legacy' : ''}`
   const links = linkedTasks(item)
   const first = links[0]
   if (!first) return { label }
