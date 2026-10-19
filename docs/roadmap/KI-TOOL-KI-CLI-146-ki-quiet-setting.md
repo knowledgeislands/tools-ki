@@ -6,13 +6,12 @@ project: tools-burndown
 purpose: capability
 kind: deliver
 component: repo
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 7df8187f2011040725f9d07bf747db8e92a0c161
 created_at: 2026-10-18T04:25:00Z
-updated_at: 2026-10-18T08:23:05Z
+updated_at: 2026-10-19T07:24:30Z
 ---
 
 # KI_QUIET Setting
@@ -131,6 +130,15 @@ On 18 October 2026, `bun run test:coverage` passed 1326 tests at 100% statements
 ### Mini recap
 
 `KI_QUIET=1` now quietens audit and conform in one setting, while a failure still shows what failed.
+
+## Done
+
+Accepted 2026-10-19 as delivered (`2393f6c6`) by Kris Brown's QUIET-146-DATE b), recorded in the [tools-burndown decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.tools-burndown/decisions.md) under "Answers to the 08:18 Summary" (19 October): "QUIET-146-DATE - accept now please", on the ready-for-acceptance independent review by the ways-of-working `ki-review` run. The acceptance lifts the QUIET-146 hold of 18 October; [KI-HARNESS-GOV-204](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-204-pretooluse-quietening-hook.md) is decided on its own. It confirms the four Decision answers as built, which closes the first Outstanding concern and settles the review's Goal-wording observation in favour of Decision 1. Re-checked on 19 October at `116de313`: coverage passed 80 files and 1350 tests with thresholds met, and `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip` and `mandoc -T lint man/ki.1` passed.
+
+Known limits, accepted as they stand rather than carried as follow-up records:
+
+- Nothing sets `KI_QUIET` yet; KI-HARNESS-GOV-204 or a person would.
+- Under the quiet shape a failing repository's WARN findings are counted in its summary but not listed.
 
 ## Discussion
 
