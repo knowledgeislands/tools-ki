@@ -11,7 +11,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 35ba8ec1944ec7c5167c8d6b050e62c34f2eeb83
 created_at: 2026-10-19T07:05:55Z
-updated_at: 2026-10-19T07:11:17Z
+updated_at: 2026-10-19T08:00:24Z
 ---
 
 # KI-TOOL-KI-CLI-153: Biome Schema Drift
@@ -112,6 +112,14 @@ The whole record, from baseline `35ba8ec1` on 19 October 2026 by the `biome-fix`
 ### Post-change review
 
 The type assertions keep the same trust in the preceding checks that the non-null assertions expressed, so no runtime guard was added or removed. Excluding the vendored helper leaves its own findings unlinted here; its upstream copy is where they belong.
+
+Independent review, 19 October 2026, by the `review153` run of the tools-burndown Project, which did not write this change. Read at `cc930b04` against Goal, Boundary and Verify; no code changed and nothing accepted. Verdict: ready for acceptance, with two observations that do not block.
+
+- **Assertions:** at baseline `35ba8ec1`, Biome reports 25 `noNonNullAssertion` findings: six in the excluded `source-mirrors.ts` and 19 in the edited files. Eighteen of the 19 became type assertions. Each rests on a check that runs first: a length or `Object.hasOwn` guard, a capture group the regex must match, the non-empty array that `split` returns, `canonical` mapped from `ZONES`, `currentSources` holding every mapping key, `declaredRepositoryKind` requiring a declared `ki-repo-kb` skill for a KB, or a test fixture's injected `INDEX_PATH`. Each type is the one `!` produced, so none of them hides a type error. The 19th, in `contract.test.ts`, destructures the first result and reads it through `?.`. An absent result still fails `toBe('Note')`, so the test is no weaker. The other rewrites are Biome's `useTemplate` and `useOptionalChain` fixes on string or registry-entry operands, and each is equivalent.
+- **Exclusion:** `biome.json` excludes exactly one path. `source-mirrors.ts` and its test are byte-unchanged from baseline, and the frozen-hash test still passes, so the vendor drift check still covers the file. Its upstream is the ki-agentic-harness classifier that `d794bc9f` and `2f37fb0e` vendored.
+- **Gates:** re-run at `cc930b04`, with the same source as `c2a9a062`. `bunx biome check .` (2.5.15) is silent. `bun run test:coverage` passes 80 files and 1,350 tests at 100% statements, branches, functions and lines. `bunx tsc --noEmit`, `bunx knip`, `mandoc -T lint man/ki.1`, `rumdl check .` and `bunx syncpack format --check` are clean. `ki repo audit --repo .` reports FAIL=0, with this record's only warning being the migration-window `size` field.
+- **Observation 1:** the Decision and Verify 3 describe every non-null assertion becoming a type assertion. In fact six stay in the excluded file and one test assertion becomes `?.`. Change Summary already describes the delivered change correctly.
+- **Observation 2:** `contract.ts` is the canonical source that mcp-ki-kb-fs vendors under `src/generated/kb-search/receipt.json`, which pins tools-ki `2f37fb0e`. After this change, the canonical file and that pinned copy differ, but only in syntax. The downstream receipt test pins the commit, so nothing breaks. The next re-vendor picks up a new digest.
 
 ### Mini recap
 
