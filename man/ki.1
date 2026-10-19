@@ -1655,11 +1655,23 @@ when
 .B TMPDIR
 is unset. The temporary folder, and the owning repository when the working
 directory lies outside it, are added to the agent's writable directories.
-The protocol's report path governs: launch and
+The protocol's report path governs. An agent reports only to its state
+folder, and the launcher alone homes the report in the work folder, so launch
+and
 .B ki agent queue
-warn on standard error, and still proceed, when the brief names the agent's
+refuse with exit 1, before anything is written, a brief that names the
+agent's own
 .I <name>.report.md
-in a folder other than the state folder or the thread folder. A launch from
+in the run's work folder or any
+.IR +/_WORK/<id>/ ;
+a relaunch is refused the same way, and the dispatcher records a queued brief
+it refuses as
+.BR failed .
+A brief may still cite other agents' reports there. When the brief names the
+agent's
+.I <name>.report.md
+in any other folder than the state folder, they warn on standard error and
+still proceed. A launch from
 the run's
 .I <name>.queued.md
 or
@@ -1852,7 +1864,10 @@ Write a prompt skeleton from the
 .B ki-delegation
 run contract to
 .IR <name>.draft.md ,
-with the work's decisions log and report paths filled in.
+with the work's decisions log filled in and the report path set to the
+agent's
+.I <name>.report.md
+in the run's state folder.
 .TP
 .B ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--class <class>] [--repo <dir>]
 Append a numbered owner decision, timestamped in UTC, to the work's tracked

@@ -7,12 +7,12 @@ purpose: corrective
 kind: deliver
 component: agent
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: b263ca455dff26555583317e5123104ae46a0f39
 created_at: 2026-10-18T10:26:00Z
-updated_at: 2026-10-18T19:41:00Z
+updated_at: 2026-10-19T06:58:02Z
 ---
 
 # KI-TOOL-KI-CLI-150: Work Folder Entry Points
@@ -61,12 +61,12 @@ Read at `06caa2ab` on 18 October 2026.
 
 ## Steps
 
-- [ ] **Harness wording (ki-agentic-harness).** In the `run-report` source of `skills/change-management/ki-coordination/references/standards-coordination.md`, change "**Report** to `<report path>` as an owner report" to "**Report** to `<report path>`, in the run's state folder and nowhere else, as an owner report"; regenerate with `ki dev skill generate ki-coordination --write`, so `skills/governance/ki-delegation/assets/run-prompt.md` follows. In `standards-background-runs.md` Prompt shape, item 4 becomes "the report path, in the run's state folder; the launcher homes the report in the work folder". Commit through the harness gate under `docs(ki-delegation): name the state-folder report path in the run prompt`, and push.
-- [ ] **Coordinators move (before the refusal ships).** The ways-of-working coordinator changes its common rules' report line to "Write your run report to `~/.local/state/ki/agents/<run>/<your name>.report.md`; the launcher homes it in `$D`", and rewrites `roadmap-next.queued.md`'s report path the same way. Each other live work whose coordinator keeps common rules or queued briefs gets a Messages line asking for the same move. Recorded in the ways-of-working work file before the release.
-- [ ] **Skeleton fill.** `newPrompt` fills `<report path>` with `stateReport(runDirectory(context, run), name)`.
-- [ ] **Refusal.** Split `reportConflicts` into a refusal check and the existing warning: `refusedReport(body, thread, name)` returns the first work-folder path to this agent's report, under Decision 1; `launchAgent`, before `mkdir` or any write, and `queueAgent`, before `copyFile`, throw under Decision 2. The warning keeps every other differing path and drops the work-folder exemption it no longer needs.
-- [ ] **Tests** through `run(args, context)` in `src/tests/cli/agent.test.ts`: the cases in Verify 1 to 5, with the fixture skeleton carrying the new report-line wording.
-- [ ] **Docs.** `man/ki.1` (`agent launch`, `agent queue`, `agent new`), `docs/guides/user/background-agents.md` and `CHANGELOG.md` (Unreleased) describe the state-folder path and the refusal; regenerate `man/ki.commands.json` if any help text changes.
+- [x] **Harness wording (ki-agentic-harness).** In the `run-report` source of `skills/change-management/ki-coordination/references/standards-coordination.md`, change "**Report** to `<report path>` as an owner report" to "**Report** to `<report path>`, in the run's state folder and nowhere else, as an owner report"; regenerate with `ki dev skill generate ki-coordination --write`, so `skills/governance/ki-delegation/assets/run-prompt.md` follows. In `standards-background-runs.md` Prompt shape, item 4 becomes "the report path, in the run's state folder; the launcher homes the report in the work folder". Commit through the harness gate under `docs(ki-delegation): name the state-folder report path in the run prompt`, and push.
+- [x] **Coordinators move (before the refusal ships).** The ways-of-working coordinator changes its common rules' report line to "Write your run report to `~/.local/state/ki/agents/<run>/<your name>.report.md`; the launcher homes it in `$D`", and rewrites `roadmap-next.queued.md`'s report path the same way. Each other live work whose coordinator keeps common rules or queued briefs gets a Messages line asking for the same move. Recorded in the ways-of-working work file before the release.
+- [x] **Skeleton fill.** `newPrompt` fills `<report path>` with `stateReport(runDirectory(context, run), name)`.
+- [x] **Refusal.** Split `reportConflicts` into a refusal check and the existing warning: `refusedReport(body, thread, name)` returns the first work-folder path to this agent's report, under Decision 1; `launchAgent`, before `mkdir` or any write, and `queueAgent`, before `copyFile`, throw under Decision 2. The warning keeps every other differing path and drops the work-folder exemption it no longer needs.
+- [x] **Tests** through `run(args, context)` in `src/tests/cli/agent.test.ts`: the cases in Verify 1 to 5, with the fixture skeleton carrying the new report-line wording.
+- [x] **Docs.** `man/ki.1` (`agent launch`, `agent queue`, `agent new`), `docs/guides/user/background-agents.md` and `CHANGELOG.md` (Unreleased) describe the state-folder path and the refusal; regenerate `man/ki.commands.json` if any help text changes.
 
 ## Files touched
 
@@ -109,6 +109,45 @@ None.
 ### Roadmap
 
 KI-TOOL-KI-CLI-152 carries the split-out parts.
+
+## Review
+
+### Delivered
+
+The launch part, within the boundary above, from baseline `b263ca45` on 19 October 2026 by the `cli150-deliver` run, under the HARNESS-DIRECT a) answer in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, Summary queries", 19 October, 07:48 BST). Excluded as planned: KI-TOOL-KI-CLI-152's parts, the GOV-200 rubric checks, refusing paths a brief reaches only through a file it points to, and the release.
+
+### Change Summary
+
+- ki-agentic-harness `1fe52516`, pushed: the `run-report` source in `standards-coordination.md` and the regenerated `run-prompt.md` say "in the run's state folder and nowhere else"; Prompt shape item 4 in `standards-background-runs.md` names the state folder and the launcher's homing.
+- Coordinator state, outside Git: in `~/.local/state/ki/agents/ways-of-working/`, the report lines of `_common-1016.md`, `_common-1018.md` and `_common-1018b.md`, and of the queued `roadmap-next.queued.md` and `migrate-apply.queued.md`, now name `~/.local/state/ki/agents/ways-of-working/<name>.report.md`, the launcher homing it, and no longer ask the agent to commit it. `work-folder-design.queued.md` named no report path. No other coordinator's state folder keeps common rules, and its queued briefs already named state-folder paths, so no Messages line was needed.
+- `src/core/agent/runs.ts`: `reportPaths` collects the brief's paths to the agent's report; `refuseWorkReport` throws under Decision 2 for one in the run's work folder, absolute or as written, or any `+/_WORK/<id>/`; `launchAgent` and `queueAgent` call it before the thread home is recorded or anything else is written, so a relaunch and a dispatcher launch refuse too; `reportConflicts` drops the work-folder exemption; `newPrompt` fills `<report path>` with `stateReport`.
+- `src/tests/cli/agent.test.ts`: the fixture skeleton carries the new wording; new tests for the refusal (absolute, as written, another work folder; launch, queue and relaunch; nothing written) and for a dispatcher refusal recorded as `failed`; the warning test covers a cited other report and a bare name.
+- `man/ki.1`, regenerated `man/ki.commands.json`, `docs/guides/user/background-agents.md` and the `CHANGELOG.md` baseline bullet describe the state-folder path and the refusal.
+- Deviation: the refusal resolves the thread home without recording it, so a refused first launch leaves no `thread.json`; Decision 2's "before anything is written" needed it.
+
+### Verification
+
+1. `ki agent new` draft names the state-folder report path: passed (`writes a prompt skeleton once`).
+2. Work-folder report path refused by launch, queue and relaunch with exit 1, nothing written: passed.
+3. Cited other report, warned `docs/` path, bare name: passed.
+4. Queued brief refused at dispatch as `failed`, next agent launched: passed.
+5. `ki dev skill generate ki-coordination`: 7 generated surfaces in sync; the skeleton carries the wording; harness commit gate and skill audit passed.
+6. No `_common-*.md` or `*.queued.md` under `~/.local/state/ki/agents/` names its own agent's report inside `+/_WORK/<id>/`: passed by search.
+7. `bun run test:coverage`: 1,350 tests passed, coverage thresholds met; `bunx tsc --noEmit`, `bunx knip`, `mandoc -T lint man/ki.1`, rumdl and `ki repo audit --repo .` (FAIL=0, WARN=3) clean; command inventory in sync. `biome check .` fails on files this change does not touch (see below); the changed files pass Biome.
+
+### Outstanding concerns
+
+- `biome check .` fails at baseline: the installed and declared Biome is 2.5.15 while `biome.json` pins the 2.5.12 schema, and lint findings stand in untouched files such as `src/core/kb/contract.ts` and `src/commands/acquire/index.ts`. CI does not run it; outside this record's scope.
+- Step 2's note in the ways-of-working work file is the coordinator's to make; this run did not write the work file.
+- The refusal must not ship before the coordinators' move is confirmed (Verify 6), which the next release checks again.
+
+### Post-change review
+
+The goal holds: the skeleton names the state-folder path, and a brief sending the agent's own report into a work folder is refused at every launch entry point before any write. Scope held, with one deviation recorded above. Regression risk is low: the warning path is unchanged apart from the exemption, and other agents' reports in a work folder stay citable. Ready for review.
+
+### Mini recap
+
+Harness wording pushed, the ways-of-working common rules and queued briefs moved, and the tools-ki refusal and skeleton fill built with tests and docs. Not released. Learning route for review: the Biome schema drift could go to a small tools-ki chore record through `ki-next`.
 
 ## Discussion
 

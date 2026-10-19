@@ -25,7 +25,7 @@ const setupRepository = async (box: Sandbox): Promise<string> => {
 }
 
 const skeleton =
-  '# Task: <one-line outcome>\n\n<Owner> approved this; see Decision <N> in `+/_WORK/<id>/decisions.md`. Report to <report path>.\n'
+  "# Task: <one-line outcome>\n\n<Owner> approved this; see Decision <N> in `+/_WORK/<id>/decisions.md`. Report to <report path>, in the run's state folder and nowhere else.\n"
 
 const setupDelegation = async (box: Sandbox): Promise<void> => {
   await setupRepository(box)
@@ -130,14 +130,47 @@ describe('ki agent launch', () => {
     expect(again.stderr).toBe('ki: error: r/one is already running (pid 1001)\n')
   })
 
+  test('refuses a brief that sends the report into a work folder and writes nothing', async () => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    const processes = fakeProcesses(box)
+    const refusal = async (path: string): Promise<string> =>
+      `ki: error: the brief sends the report to ${path}; an agent reports only to ${runPath(box, 'one.report.md')}, and the launcher homes it in ${dirname(await threadPath(box, 'one.report.md'))}\n`
+    const briefs = {
+      'absolute.md': await threadPath(box, 'one.report.md'),
+      'written.md': '+/_WORK/ki.r/one.report.md',
+      'other.md': '/elsewhere/+/_WORK/ki.other/one.report.md'
+    }
+    for (const [file, path] of Object.entries(briefs)) {
+      await box.project.write(file, `# Task\n\nCite +/_WORK/ki.r/other.report.md. Report to \`${path}\`.\n`)
+      for (const command of [`ki agent launch r one . ${file}`, `ki agent queue r one ${file}`]) {
+        const result = await box.run(command, { now })
+        expect(result.exitCode).toBe(1)
+        expect(result.stderr).toBe(await refusal(path))
+      }
+    }
+    expect(processes.launches).toEqual([])
+    expect(await readdir(runDir(box)).catch(() => [])).toEqual([])
+    expect(await readdir(`${box.root.path}/tmp`).catch(() => [])).toEqual([])
+
+    // A relaunch is refused the same way, leaving the earlier packet in place.
+    await box.project.write('task.md', '# Task\n')
+    await box.run('ki agent launch r one . task.md', { now })
+    processes.finish()
+    const relaunch = await box.run('ki agent launch r one . written.md --relaunch', { now })
+    expect(relaunch.exitCode).toBe(1)
+    expect(relaunch.stderr).toBe(await refusal('+/_WORK/ki.r/one.report.md'))
+    expect(await box.state.read('ki/agents/r/one.pid')).toBe('1001\n')
+    expect(await readdir(runDir(box))).not.toContain('one.prev-1')
+  })
+
   test('warns when the brief names another report path for the agent, and still launches or queues', async () => {
     const box = await sandbox()
     await setupDelegation(box)
     fakeProcesses(box)
-    const report = await threadPath(box, 'one.report.md')
     await box.project.write(
       'task.md',
-      `# Task\n\nReport to ${runPath(box, 'one.report.md')} and \`+/_WORK/ki.r/one.report.md\`, (${report}), not docs/one.report.md, +/_WORK/ki.r/other.report.md or x/bone.report.md; again docs/one.report.md.\n`
+      `# Task\n\nReport to ${runPath(box, 'one.report.md')}, not docs/one.report.md, one.report.md, +/_WORK/ki.r/other.report.md or x/bone.report.md; again docs/one.report.md.\n`
     )
 
     const result = await box.run('ki agent launch r one . task.md', { now })
@@ -146,6 +179,10 @@ describe('ki agent launch', () => {
     expect(result.stderr).toBe(
       `ki: warning: the brief names docs/one.report.md; the report goes to ${runPath(box, 'one.report.md')}, which governs\n`
     )
+    await box.project.write('cite.md', '# Task\n\nRead +/_WORK/ki.r/other.report.md; report to one.report.md.\n')
+    const cited = await box.run('ki agent launch r cite . cite.md', { now })
+    expect(cited.exitCode).toBe(0)
+    expect(cited.stderr).toBe('')
     await box.project.write('two.md', '# Task\n\nReport to docs/two.report.md.\n')
     const queued = await box.run('ki agent queue r two two.md', { now })
     expect(queued.exitCode).toBe(0)
@@ -651,7 +688,7 @@ describe('ki agent new and decide', () => {
     const result = await box.run('ki agent new r one', { now })
     expect(result.stdout).toBe(`${runPath(box, 'one.draft.md')}\n`)
     expect(await box.state.read('ki/agents/r/one.draft.md')).toBe(
-      '# Task: <one-line outcome>\n\n<Owner> approved this; see Decision <N> in `+/_WORK/ki.r/decisions.md`. Report to +/_WORK/ki.r/one.report.md.\n'
+      `# Task: <one-line outcome>\n\n<Owner> approved this; see Decision <N> in \`+/_WORK/ki.r/decisions.md\`. Report to ${runPath(box, 'one.report.md')}, in the run's state folder and nowhere else.\n`
     )
     expect(await box.state.read('ki/agents/r/thread.json')).toContain(await realpath(box.project.path))
 
@@ -799,7 +836,9 @@ describe('ki agent thread home', () => {
     )
     expect(await box.state.read('ki/agents/r/one.draft.md').catch(() => 'absent')).toBe('absent')
     await box.run('ki agent new r one', { now })
-    expect(await box.state.read('ki/agents/r/one.draft.md')).toContain('Report to +/_WORK/ki.r/one.report.md.')
+    expect(await box.state.read('ki/agents/r/one.draft.md')).toContain(
+      `Report to ${runPath(box, 'one.report.md')}, in the run's state folder`
+    )
     const launched = await box.run(`ki agent launch r one . ${owner}/task.md`, { now })
     expect(launched.exitCode).toBe(0)
     expect(await box.state.read('ki/agents/r/one.prompt.md')).toContain(
@@ -1653,6 +1692,31 @@ describe('ki agent queue, dispatch and wait', () => {
     )
     expect(processes.sleeps()).toBe(2)
     expect(await box.state.read('ki/agents/r/queue.jsonl')).toBe('')
+  })
+
+  test('records a queued brief that sends its report into the work folder as failed and moves on', async () => {
+    const box = await sandbox()
+    box.setEnv({ TZ: 'UTC' })
+    await setupDelegation(box)
+    const processes = fakeProcesses(box, async () => processes.finish())
+    await box.project.write('task.md', '# Task\n')
+    for (const name of ['a', 'b']) await box.run(`ki agent queue r ${name} task.md`, { now })
+    // Queued before the refusal shipped: the queued copy still names the work folder.
+    await box.state.write('ki/agents/r/a.queued.md', '# Task\n\nReport to +/_WORK/ki.r/a.report.md.\n')
+
+    const result = await box.run('ki agent dispatch r --max 1 --interval 1 --foreground', { now })
+
+    const refusal = `the brief sends the report to +/_WORK/ki.r/a.report.md; an agent reports only to ${runPath(box, 'a.report.md')}, and the launcher homes it in ${dirname(await threadPath(box, 'a.report.md'))}`
+    expect(result.stdout).toBe(
+      [
+        `19:30 UTC could not launch a: ${refusal}`,
+        '19:30 UTC launched b',
+        '19:30 UTC queue empty, all finished',
+        ''
+      ].join('\n')
+    )
+    expect(processes.launches.map((launch) => launch.log)).toEqual([runPath(box, 'b.log')])
+    expect(await box.state.read('ki/agents/r/events.jsonl')).toContain(`"failed","text":"could not launch: ${refusal}"`)
   })
 
   test('launches each queued agent once its gate opens and drops gates that cannot open', async () => {

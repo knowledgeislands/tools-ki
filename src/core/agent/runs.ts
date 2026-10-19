@@ -105,16 +105,39 @@ const footer = async (context: AgentContext, tier: AuthorityTier): Promise<strin
  */
 const stateReport = (directory: string, name: string): string => join(directory, `${name}.report.md`)
 
-/**
- * Each path in the brief to this agent's `<name>.report.md` other than the state-folder report
- * and its thread-folder copy, as a warning naming the report path the progress protocol uses.
- */
-const reportConflicts = (body: string, directory: string, thread: ThreadHome, name: string): readonly string[] => {
-  const report = stateReport(directory, name)
+/** Each distinct path in the brief to this agent's `<name>.report.md`, in order of first mention. */
+const reportPaths = (body: string, name: string): readonly string[] => {
   const pattern = new RegExp(`(?<![^\\s(\`'"<\\[])([^\\s()\`'"<>\\[\\]]*/${name}\\.report\\.md)`, 'g')
-  const paths = new Set([...body.matchAll(pattern)].map((match) => match[1] as string))
-  return [...paths]
-    .filter((path) => path !== report && !path.endsWith(`${thread.folder}/${name}.report.md`))
+  return [...new Set([...body.matchAll(pattern)].map((match) => match[1] as string))]
+}
+
+/** Whether a report path's folder is the run's work folder, absolute or as written, or any `+/_WORK/<id>/`. */
+const inWorkFolder = (path: string, thread: ThreadHome): boolean => {
+  const folder = path.slice(0, path.lastIndexOf('/'))
+  return folder === thread.folder || folder === threadPath(thread) || /(?:^|\/)\+\/_WORK\/[^/]+$/.test(folder)
+}
+
+/**
+ * Refuses a brief that sends this agent's report into a work folder: an agent reports only to
+ * its state folder, and the launcher alone homes the report in the work folder.
+ */
+const refuseWorkReport = (body: string, directory: string, thread: ThreadHome, name: string): void => {
+  const path = reportPaths(body, name).find((candidate) => inWorkFolder(candidate, thread))
+  if (path)
+    throw new KiError(
+      `the brief sends the report to ${path}; an agent reports only to ${stateReport(directory, name)}, and the launcher homes it in ${threadPath(thread)}`,
+      1
+    )
+}
+
+/**
+ * Each path in the brief to this agent's `<name>.report.md` other than the state-folder report,
+ * as a warning naming the report path the progress protocol uses.
+ */
+const reportConflicts = (body: string, directory: string, name: string): readonly string[] => {
+  const report = stateReport(directory, name)
+  return reportPaths(body, name)
+    .filter((path) => path !== report)
     .map((path) => `the brief names ${path}; the report goes to ${report}, which governs`)
 }
 
@@ -368,6 +391,13 @@ export interface LaunchResult {
 export const launchAgent = async (context: AgentContext, candidate: LaunchRequest): Promise<LaunchResult> => {
   const accepted = await validated(context, candidate)
   const body = await promptText(context, accepted.prompt)
+  // Refused before the first launch records the home, so a refused brief writes nothing.
+  refuseWorkReport(
+    body,
+    runDirectory(context, accepted.run),
+    await threadHome(context, accepted.run, accepted.repo, false, accepted.workdir),
+    accepted.name
+  )
   const thread = await threadHome(context, accepted.run, accepted.repo, true, accepted.workdir)
   const temporary = temporaryDirectory(context, accepted.run, accepted.name)
   const request = withDirectory(withDirectory(accepted, thread.repository), temporary)
@@ -383,7 +413,7 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
   // The launcher copies the agent's report into the tracked thread folder, so the folder must exist.
   await mkdir(threadPath(thread), { recursive: true })
   await mkdir(temporary, { recursive: true })
-  const warnings = reportConflicts(body, directory, thread, request.name)
+  const warnings = reportConflicts(body, directory, request.name)
   const prompt = await composePrompt(context, directory, request, stateReport(directory, request.name), temporary, body)
   await writeFile(`${base}.prompt.md`, prompt)
   await writeFile(`${base}.launch.json`, launchDetails(request))
@@ -481,8 +511,14 @@ export const queueAgent = async (context: AgentContext, candidate: LaunchRequest
   const request = await validated(context, candidate)
   const body = await promptText(context, request.prompt)
   await delegationAssets(context)
-  const thread = await threadHome(context, request.run, request.repo, true, request.workdir)
   const directory = runDirectory(context, request.run)
+  refuseWorkReport(
+    body,
+    directory,
+    await threadHome(context, request.run, request.repo, false, request.workdir),
+    request.name
+  )
+  const thread = await threadHome(context, request.run, request.repo, true, request.workdir)
   const queue = await readQueue(directory)
   if (queue.some((queued) => queued.name === request.name))
     throw new KiError(`${request.run}/${request.name} is already queued`, 1)
@@ -491,7 +527,7 @@ export const queueAgent = async (context: AgentContext, candidate: LaunchRequest
   await copyFile(resolve(context.workingDirectory, request.prompt), prompt)
   // The thread home is on record now, so the dispatcher's launch needs no repository.
   await writeQueue(directory, [...queue, { ...request, prompt, repo: undefined }])
-  return { position: queue.length + 1, warnings: reportConflicts(body, directory, thread, request.name) }
+  return { position: queue.length + 1, warnings: reportConflicts(body, directory, request.name) }
 }
 
 export interface AgentSummary {
@@ -676,7 +712,7 @@ export const watchRun = async (
 
 /**
  * Writes a prompt skeleton from the ki-delegation contract for the owner to complete, naming
- * the run's tracked decisions log and the agent's report path in its work folder.
+ * the run's tracked decisions log and the agent's report path in the run's state folder.
  */
 export const newPrompt = async (
   context: AgentContext,
@@ -694,7 +730,7 @@ export const newPrompt = async (
     skeleton
       .replaceAll('<decisions log path>', `${thread.folder}/decisions.md`)
       .replaceAll('+/_WORK/<id>', thread.folder)
-      .replaceAll('<report path>', `${thread.folder}/${name}.report.md`)
+      .replaceAll('<report path>', stateReport(directory, name))
       .replaceAll('<run>', run)
   )
   return path
