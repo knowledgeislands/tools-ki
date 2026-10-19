@@ -146,6 +146,14 @@ ki work status --repo ~/workspaces/knowledge-islands/ki-principal
 ki work status --format json
 ```
 
+## Check commit messages
+
+`ki git check-message <file>` checks a commit message against the deterministic `ki-git` rules, so that a repository's committed `.githooks/commit-msg` needs no package. A pass is silent; a failure exits 1 naming the rule and the remedy.
+
+```sh
+ki git check-message "$1"
+```
+
 ## Convert Obsidian links to GitHub Markdown
 
 `ki markdown gfm` converts the wikilinks and unsized image embeds in explicit paths to document-relative GitHub-flavoured Markdown links, in each target's exact on-disk case. Anything that needs judgement is left untouched and listed. A dry run prints each diff and writes the preview the owner reviews; the apply then writes nothing unless the batch still matches that preview and every listed item is decided. It writes a rollback manifest before the first changed file.

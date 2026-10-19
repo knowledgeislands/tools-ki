@@ -6,6 +6,7 @@ export const rootCommandNames = [
   'bootstrap',
   'dev',
   'estate',
+  'git',
   'harness',
   'kb',
   'link',

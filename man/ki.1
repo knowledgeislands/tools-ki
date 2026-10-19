@@ -67,6 +67,9 @@ Print canonical KI documentation locations.
 List verified installed harnesses and capabilities with declared user skills and
 local registered repositories.
 .TP
+.B ki git check-message <file>
+Check a commit message file against the ki-git message rules.
+.TP
 .B ki link <identifier...>
 Print the Markdown link to each roadmap work record.
 .TP
@@ -646,6 +649,41 @@ Any other topic is invalid command grammar.
 List verified installed harnesses and their capabilities with declared user
 skills and local registered repositories. The command does not fetch, discover a
 repository, or change state.
+.TP
+.B ki git check-message <file>
+Check the commit message file Git passes to
+.B commit-msg
+against the deterministic
+.B ki-git
+rules, so that a committed
+.B .githooks/commit-msg
+needs no package. Lines from the scissors line onward and every line starting
+with
+.B #
+are ignored, and the first remaining non-blank line is the header. A header
+Git generates for a merge, revert, reapply or autosquash commit passes.
+Otherwise the
+header must read
+.BR type(scope)!:\ subject ,
+with the scope and
+.B !
+optional; the type must be one of
+.BR chore ,
+.BR docs ,
+.BR feat ,
+.BR fix ,
+.B refactor
+and
+.BR test ;
+each scope segment, split on
+.B /
+and
+.BR , ,
+must be lowercase kebab-case; and the subject must be non-empty with no terminal
+full stop. A pass prints nothing. A failure exits 1, naming the rule and its
+reason with a
+.B next:
+line naming the remedy. The command reads no configuration and changes nothing.
 .TP
 .B ki link <identifier...>
 Print one Markdown link per roadmap work-record identifier, such as

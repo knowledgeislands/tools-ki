@@ -14,6 +14,7 @@ const rootHelpCommands = [
   'docs',
   'doctor',
   'estate',
+  'git',
   'harness',
   'help',
   'inventory',
@@ -73,6 +74,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   registry: registryCommands,
   kb: ['index', 'search', 'status'],
   markdown: ['gfm'],
+  git: ['check-message'],
   harness: ['info', 'install', 'list', 'missing', 'outdated', 'reinstall', 'search', 'uninstall'],
   'repo trade': [
     'abandon',

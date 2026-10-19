@@ -9,12 +9,12 @@ project: tools-burndown
 priority: high
 size: s
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: b32a5e5a6f752c5686bbf3e27ff4b77d16b3a968
 created_at: 2026-10-19T21:30:00Z
-updated_at: 2026-10-19T23:55:00Z
+updated_at: 2026-10-19T23:53:17Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design, COMMIT-MSG a), 2026-10-19
 ---
 
@@ -55,7 +55,7 @@ Behaviour:
 - Lines from a scissors line (`# ------------------------ >8 ------------------------`) onward are dropped, then every line starting with `#`; leading blank lines are skipped and the first remaining line is the header.
 - A header Git generates passes untouched, as Commitlint's default ignores do: `Merge branch|tag|remote-tracking branch|pull request …`, `Merge … into …`, `Revert …`, `Reapply …`, and `fixup!`, `squash!` and `amend!` prefixes.
 - Otherwise the header must read `type(scope)!: subject` with optional scope and `!`. Checks, in order: an empty message; a header not in that form; a type outside `chore`, `docs`, `feat`, `fix`, `refactor`, `test`; a scope segment, split on `/` and `,`, that is not lowercase kebab-case; an empty subject; a subject ending in a full stop.
-- A pass exits 0 silently. A failure writes one line to standard error, `ki git check-message: <rule>: <reason>; <remedy>`, and exits 1. A missing or unreadable file exits 1 naming the path; usage errors exit 2.
+- A pass exits 0 silently. A failure writes `ki: error: <rule>: <reason>` and a `next: <remedy>` line to standard error, as every `ki` error does, and exits 1. A missing or unreadable file exits 1 naming the path; usage errors exit 2.
 
 ## Requirements
 
@@ -68,12 +68,12 @@ Behaviour:
 
 ## Steps
 
-- [ ] Add `src/core/git/message.ts` with the rule set and checker.
-- [ ] Add `src/commands/git/index.ts` and register `git` in the root catalogue.
-- [ ] Add `src/tests/cli/git/check-message.test.ts` through `run(args, context)`, and the inventory test lines.
-- [ ] Add `git` to the `.ki.toml` components.
-- [ ] Update the manual, regenerated command inventory, README, changelog and a new repository-operations requirement.
-- [ ] Run the gate and move the record to Awaiting review.
+- [x] Add `src/core/git/message.ts` with the rule set and checker.
+- [x] Add `src/commands/git/index.ts` and register `git` in the root catalogue.
+- [x] Add `src/tests/cli/git/check-message.test.ts` through `run(args, context)`, and the inventory test lines.
+- [x] Add `git` to the `.ki.toml` components.
+- [x] Update the manual, regenerated command inventory, README, changelog and a new repository-operations requirement.
+- [x] Run the gate and move the record to Awaiting review.
 
 ## Files touched
 
@@ -109,6 +109,48 @@ None beyond the README and manual.
 ### Roadmap
 
 None.
+
+## Review
+
+### Delivered
+
+The whole record, from baseline `b32a5e5a` on 20 October 2026, by the `burnki` run in the tools-burndown Project.
+
+### Change Summary
+
+- `src/core/git/message.ts`: the six types and the checker, returning the first broken rule with its reason and remedy.
+- `src/commands/git/index.ts`, `src/commands/root/*`: the new `ki git` group and `check-message <file>`.
+- `src/cli.ts`: `ki git` skips MCP inventory adoption, like help and the recovery diagnostics, so a malformed MCP configuration cannot block a commit.
+- `src/tests/cli/git/check-message.test.ts`: 26 cases through `run(args, context)`; `src/tests/cli/manage/inventory.test.ts` gains the group.
+- `.ki.toml` (in the planning commit), the manual, the regenerated command inventory, README, changelog and REPO-OPS-030.
+- Deviation: the failure renders as the house `ki: error:` line with a `next:` remedy line rather than one combined line.
+
+### Verification
+
+| Requirement | Evidence |
+| --- | --- |
+| 1 | `passes %j silently`, six headers across types, scopes and `!` |
+| 2 | `rejects %j naming the rule and remedy`, eight cases covering every rule |
+| 3 | `ignores comment lines, leading blank lines and everything from the scissors line` |
+| 4 | `passes the Git-generated header %j`, ten headers |
+| 5 | `refuses a missing message file, naming its path` |
+| 6 | Inventory tests pass; REPO-OPS-030, manual, README and changelog name the command |
+
+- Gate: `bun run test:coverage` passed, 83 files and 1,450 tests at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and the command-inventory check passed; `ki repo audit --repo .` FAIL=0.
+- The source-built command passed a recent commit message of this repository and a valid header, and rejected `Fix things.` with exit 1.
+
+### Outstanding concerns
+
+- A repository with `core.commentChar` other than `#` would have its comment lines read as message text; no KI repository sets it.
+- The rule set is a copy of `ki-git`'s, as the Commitlint configuration is; a harness data file could replace it later.
+
+### Post-change review
+
+Package-less repositories can now bind `.githooks/commit-msg` to `ki git check-message "$1"`, which the hooks rollout's package-less wave waits on; the command ships with the next release.
+
+### Mini recap
+
+`ki git check-message <file>` checks a commit message against the deterministic `ki-git` rules with no package.
 
 ## Discussion
 

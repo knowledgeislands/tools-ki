@@ -88,6 +88,10 @@
           "description": "List verified installed harnesses and their capabilities with declared user skills and local registered repositories. The command does not fetch, discover a repository, or change state."
         },
         {
+          "invocation": "ki git check-message <file>",
+          "description": "Check the commit message file Git passes to commit-msg against the deterministic ki-git rules, so that a committed .githooks/commit-msg needs no package. Lines from the scissors line onward and every line starting with # are ignored, and the first remaining non-blank line is the header. A header Git generates for a merge, revert, reapply or autosquash commit passes. Otherwise the header must read type(scope)!: subject , with the scope and ! optional; the type must be one of chore , docs , feat , fix , refactor and test ; each scope segment, split on / and , , must be lowercase kebab-case; and the subject must be non-empty with no terminal full stop. A pass prints nothing. A failure exits 1, naming the rule and its reason with a next: line naming the remedy. The command reads no configuration and changes nothing."
+        },
+        {
           "invocation": "ki link <identifier...>",
           "description": "Print one Markdown link per roadmap work-record identifier, such as KI-TOOL-KI-CLI-127 , so an owner report or checkpoint links a record in one call. The registered repository whose declared repo_code scopes the identifier is searched first, under docs/roadmap/ or Streams/Roadmap/ ; with no scope match every registered repository is walked. A live record prints [<identifier>](<absolute path>) . A record no longer on disk whose number is within its area's high-water mark in _ISSUES.md prints [<identifier> (pruned)](<repository>/blob/<last revision>/<path>) on the registered canonical repository, where the last revision is the first parent of the newest commit that deleted it. An identifier that resolves to nothing is never given an invented link: the command prints every link it can, then exits 1 naming each reason. It does not fetch or change state."
         },

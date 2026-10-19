@@ -302,6 +302,16 @@ _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `accepts priority and size an
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### REPO-OPS-030 — Commit message check
+
+`ki git check-message <file>` MUST check the commit message file Git passes to `commit-msg` against the deterministic `ki-git` rules without reading configuration or changing state. It MUST ignore every line from the scissors line onward and every line starting with `#`, and take the first remaining non-blank line as the header. It MUST pass a Git-generated merge, revert, reapply or autosquash header. Otherwise it MUST require a `type(scope)!: subject` header with optional scope and `!`, a type of `chore`, `docs`, `feat`, `fix`, `refactor` or `test`, lowercase kebab-case scope segments, and a non-empty subject with no terminal full stop. A pass MUST print nothing and exit 0; a failure, including an unreadable file, MUST exit 1 naming the rule and reason, with the remedy on a `next:` line where one exists.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/git/check-message.test.ts` — `passes %j silently`, `rejects %j naming the rule and remedy`, `ignores comment lines, leading blank lines and everything from the scissors line`, `passes the Git-generated header %j`, and `refuses a missing message file, naming its path`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

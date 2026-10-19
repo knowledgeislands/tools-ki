@@ -111,7 +111,7 @@ export const createProgram = (context: KiContext): Command => {
 
 const needsMcpInventory = (arguments_: readonly string[]): boolean => {
   if (arguments_.some((argument) => ['--help', '-h', '--version', '-V'].includes(argument))) return false
-  return !['help', 'doctor', 'diag', 'repair'].includes(arguments_[0] as string)
+  return !['help', 'doctor', 'diag', 'repair', 'git'].includes(arguments_[0] as string)
 }
 
 export const run = async (arguments_: readonly string[], context: KiContext): Promise<number> => {
@@ -122,7 +122,7 @@ export const run = async (arguments_: readonly string[], context: KiContext): Pr
     return 0
   }
   try {
-    // Help, version, and recovery diagnostics must remain reachable with malformed MCP binding
+    // Help, version, recovery diagnostics, and the commit-msg check must remain reachable with malformed MCP binding
     // configuration. Other commands still adopt before dispatch and share one environment.
     if (needsMcpInventory(arguments_)) await adoptMcpInventory(context.environment, context.paths.config)
     await program.parseAsync([...arguments_], { from: 'user' })
