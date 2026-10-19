@@ -4,16 +4,17 @@ area: CLI
 title: Git message check
 kind: deliver
 purpose: capability
+component: git
 project: tools-burndown
 priority: high
 size: s
-horizon: soon
-status: draft
+horizon: now
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T21:30:00Z
-updated_at: 2026-10-19T22:49:04Z
+updated_at: 2026-10-19T23:55:00Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design, COMMIT-MSG a), 2026-10-19
 ---
 
@@ -36,20 +37,79 @@ The deterministic rules are those `ki-git`'s standard binds through Commitlint t
 - In: the command, reading the message file Git passes to `commit-msg` and ignoring comment lines and a scissors cut as `git commit` does; the rule set above taken from one source that `ki-git` owns, ideally read from the installed harness rather than copied; exit codes and a concise failure message naming the rule and the remedy; help text, manual, command inventory, README and REPO-OPS-028 lines; tests through `run(args, context)`.
 - Out: writing or binding hooks, which the hooks-standard composition and binding work owns; any change to `ki-git`'s vocabulary; trailer checks; replacing Commitlint inside this record, which the Husky retirement in the hooks rollout decides.
 
-## Shaping
+## Current state
 
-**Approach:** one command that reads the message file, skips comments and the scissors cut, and applies the deterministic `ki-git` rules read from one source `ki-git` owns, exiting non-zero with the rule and remedy.
+No `ki git` command group exists. tools-ki's own `.githooks/commit-msg` runs Commitlint against `commitlint.config.ts`, which carries the four rules above over `@commitlint/config-conventional`. The `ki-git` standard already names `ki git check-message` as the package-less binding once this record ships.
 
-**Dependencies:** none to build. The estate-wide hooks migration Kris ordered at 23:24 BST leaves package-less repositories without `commit-msg` until this ships, and the hook checks cannot move to FAIL before then, which is why it is `high`.
+## Design
 
-**Decisions still needed:** the four open planning questions in Discussion, chiefly the command group, which may need a `git` component in `.ki.toml`, and where the rule set is read from.
+Decided under HIGH-APPLY, 20 October:
 
-**Promotion to Next:** at once under `ki-plan`, settling those questions with Kris.
+- **Command group:** a new root group `ki git` with one subcommand, `check-message <file>`, as COMMIT-MSG a) names it; `git` joins the `ki-work-roadmap` components in `.ki.toml`.
+- **Rule source:** the rule set lives in one tools-ki core module, `src/core/git/message.ts`, as the published canonical Commitlint configuration does. Reading `ki-git`'s prose at run time would be fragile, and a harness data file is a ki-agentic-harness change outside this record; a later harness data file can replace the constants without changing the command.
+- **Input:** the message file only, as Git passes it to `commit-msg`; no standard-input form.
+- **Commitlint:** the Bun repositories keep Commitlint; dropping it is the hooks rollout's decision, outside this record.
+
+Behaviour:
+
+- Lines from a scissors line (`# ------------------------ >8 ------------------------`) onward are dropped, then every line starting with `#`; leading blank lines are skipped and the first remaining line is the header.
+- A header Git generates passes untouched, as Commitlint's default ignores do: `Merge branch|tag|remote-tracking branch|pull request …`, `Merge … into …`, `Revert …`, `Reapply …`, and `fixup!`, `squash!` and `amend!` prefixes.
+- Otherwise the header must read `type(scope)!: subject` with optional scope and `!`. Checks, in order: an empty message; a header not in that form; a type outside `chore`, `docs`, `feat`, `fix`, `refactor`, `test`; a scope segment, split on `/` and `,`, that is not lowercase kebab-case; an empty subject; a subject ending in a full stop.
+- A pass exits 0 silently. A failure writes one line to standard error, `ki git check-message: <rule>: <reason>; <remedy>`, and exits 1. A missing or unreadable file exits 1 naming the path; usage errors exit 2.
+
+## Requirements
+
+1. A conventional header with each permitted type, with and without kebab-case scope and `!`, passes silently.
+2. Each rule fails with exit 1 and a one-line reason naming the rule and the remedy.
+3. Comment lines and everything from the scissors line are ignored.
+4. Git-generated merge, revert, reapply and autosquash messages pass.
+5. A missing file fails naming the path.
+6. Help, manual, command inventory, README, changelog, the repository-operations specification and `.ki.toml` components name the command.
+
+## Steps
+
+- [ ] Add `src/core/git/message.ts` with the rule set and checker.
+- [ ] Add `src/commands/git/index.ts` and register `git` in the root catalogue.
+- [ ] Add `src/tests/cli/git/check-message.test.ts` through `run(args, context)`, and the inventory test lines.
+- [ ] Add `git` to the `.ki.toml` components.
+- [ ] Update the manual, regenerated command inventory, README, changelog and a new repository-operations requirement.
+- [ ] Run the gate and move the record to Awaiting review.
+
+## Files touched
+
+- `src/core/git/message.ts`, `src/commands/git/index.ts`, `src/commands/root/catalogue.ts`, `src/commands/root/index.ts`
+- `src/tests/cli/git/check-message.test.ts`, `src/tests/cli/manage/inventory.test.ts`
+- `.ki.toml`, `man/ki.1`, `man/ki.commands.json`, `README.md`, `CHANGELOG.md`, `docs/specs/repository-operations.md`
+- this record
+
+## Verify
+
+- `bun run test:coverage` passes at 100%.
+- `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and `ki repo audit` pass.
+- The source-built command accepts this repository's recent commit messages and rejects a bad one.
 
 ## Dependencies / blocks
 
 None to build. The hooks rollout's package-less wave adds `.githooks/commit-msg` only after this ships, and the Bun wave may switch from Commitlint to it once it does.
 
+## Documentation impact
+
+### Decision Records
+
+None: COMMIT-MSG a) and the HIGH-APPLY choices in Design are the decisions.
+
+### Specifications
+
+A new repository-operations requirement for `ki git check-message`.
+
+### Guides
+
+None beyond the README and manual.
+
+### Roadmap
+
+None.
+
 ## Discussion
 
-Open for planning: whether `ki git` becomes a new command group, which needs a `git` component in `.ki.toml`, or the command sits under an existing group; whether the rule set is read from the harness's `ki-git` references or a small published data file; whether a message on standard input is also accepted; and whether the Bun repositories drop Commitlint for this command, which would remove two devDependencies from `PKG-5`. tools-ki owns priority and design.
+The four planning questions are settled in Design. Header length and subject case, which `@commitlint/config-conventional` also checks, are left out because `ki-git` does not bind them; tools-ki owns priority and design.
