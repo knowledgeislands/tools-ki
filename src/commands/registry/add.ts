@@ -38,7 +38,7 @@ export const createRegistryAddCommand = (context: KiContext, selectedRepositorie
       if (
         options.searchBoundary !== undefined &&
         (declarations.length !== 1 ||
-          declaredRepositoryKind(declarations[0]!.declaration) !== 'kb' ||
+          declaredRepositoryKind((declarations[0] as (typeof declarations)[number]).declaration) !== 'kb' ||
           !/^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/.test(options.searchBoundary) ||
           options.searchBoundary.length > 128)
       )

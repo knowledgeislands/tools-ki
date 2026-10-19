@@ -45,7 +45,7 @@ vi.mock('node:child_process', async () => {
           child.stderr.emit('data', Buffer.from('progress'))
           child.stdout.emit('data', Buffer.from('qmd 2.8.3\n'))
         } else {
-          await writeFile(options.env['INDEX_PATH']!, 'synthetic database')
+          await writeFile(options.env['INDEX_PATH'] as string, 'synthetic database')
         }
         close()
       })

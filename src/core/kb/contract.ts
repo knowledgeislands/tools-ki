@@ -251,9 +251,9 @@ const provenance = (source: string) => {
       body: source,
       malformed: source.startsWith('---\n') || source.startsWith('---\r\n')
     })
-  if (ambiguousMirrorFrontmatter(front[1]!))
+  if (ambiguousMirrorFrontmatter(front[1] as string))
     return classifySourceMirror({ fields: null, body: source.slice(front[0].length), malformed: true })
-  const parsed = parseDocument(front[1]!, { uniqueKeys: true })
+  const parsed = parseDocument(front[1] as string, { uniqueKeys: true })
   const fields: unknown = parsed.toJS()
   return classifySourceMirror({
     fields: record(fields) ? fields : null,
@@ -268,7 +268,7 @@ const safeMirror = (path: string | null): string | null =>
   !/[\\:]/.test(path) &&
   !hasControl(path) &&
   path.split('/').length > 1 &&
-  path.split('/')[0]!.endsWith('-sources') &&
+  (path.split('/')[0] as string).endsWith('-sources') &&
   path.split('/').every((part) => Boolean(part) && part !== '.' && part !== '..')
     ? path
     : null
@@ -307,9 +307,9 @@ export const authenticateResults = (
       )
         return fail('candidate is outside the assigned collection')
       seen.add(key)
-      const doc = mapping.documents[key]!
+      const doc = mapping.documents[key] as (typeof mapping.documents)[string]
       if (candidate['docid'] !== `#${doc.sha256.slice(0, 6)}`) return fail('candidate content fingerprint mismatch')
-      const source = sources.get(key)!
+      const source = sources.get(key) as string
       const lines = source.split(/\r?\n/)
       const front = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/.exec(source)
       const incompleteFrontmatter = !front && /^---\r?\n/.test(source)
@@ -334,7 +334,7 @@ export const authenticateResults = (
             .slice(bodyStart)
             .find((line) => /^# /.test(line))
             ?.slice(2)
-            .trim() || doc.path.split('/').at(-1)!.slice(0, -3)
+            .trim() || (doc.path.split('/').at(-1) as string).slice(0, -3)
         ).slice(0, 256),
         snippet: window.join('\n'),
         score: candidate['score'],

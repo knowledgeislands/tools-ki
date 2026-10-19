@@ -286,7 +286,7 @@ const runMark = async (context: KiContext, options: MarkOptions): Promise<void> 
     granolaOperationContext(context)
   )
   context.stdout.write(
-    [
+    `${[
       `Granola marker ${options.confirm ? 'result' : 'plan'}: ${result.repository}`,
       `Acquired folder: ${result.folder}`,
       `Captures: ${result.ready} verified, ${result.marked} marked, ${result.already} already acquired, ${result.exceptions.length} exceptions`,
@@ -294,7 +294,7 @@ const runMark = async (context: KiContext, options: MarkOptions): Promise<void> 
       options.confirm
         ? 'Original folder memberships retained; no source deletion.'
         : 'No Granola changes; repeat with --confirm to add verified notes to Acquired.'
-    ].join('\n') + '\n'
+    ].join('\n')}\n`
   )
   if (result.exceptions.length)
     throw new KiError('Some Granola notes lack current, complete committed preservation evidence')

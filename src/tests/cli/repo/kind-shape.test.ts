@@ -83,7 +83,7 @@ test.each(['repo_type = "project"', 'primary_shape = "ki-repo-project"'])(
     const box = await sandbox()
     await box.project.write(
       '.ki.toml',
-      declaration('repo_type = "project"\nprimary_shape = "ki-repo-project"', ['ki-repo-project']) + field + '\n'
+      `${declaration('repo_type = "project"\nprimary_shape = "ki-repo-project"', ['ki-repo-project']) + field}\n`
     )
     const result = await box.run('ki registry add')
     expect(result.exitCode).toBe(1)

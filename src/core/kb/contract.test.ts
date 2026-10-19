@@ -173,20 +173,21 @@ test('published result bounds select canonical complete lines and conservative i
     '---\n\n---\nbody',
     '---\nmirrors: /private/INVALID\n',
     '---\nmirrors: "unterminated\n---\nbody',
-    'Plain note\n' + 'x'.repeat(1700),
+    `Plain note\n${'x'.repeat(1700)}`,
     '---\nmirrors: kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: invalid\n---\nbody'
   ]) {
-    base.documents[key]!.sha256 = sha256(source)
+    const document = base.documents[key] as (typeof base.documents)[string]
+    document.sha256 = sha256(source)
     const hit = { ...candidate, docid: `#${sha256(source).slice(0, 6)}` }
-    const result = authenticateResults(
+    const [result] = authenticateResults(
       base,
       new Map([[key, source]]),
       [hit],
       { query: 'body', mode: 'search', limit: 1 },
       'http'
-    ).results[0]!
-    expect(result.title).toBe('Note')
-    expect(result.snippet.length).toBeLessThanOrEqual(1600)
+    ).results
+    expect(result?.title).toBe('Note')
+    expect(result?.snippet.length).toBeLessThanOrEqual(1600)
     expect(JSON.stringify(result)).not.toContain('/private')
   }
   expect(

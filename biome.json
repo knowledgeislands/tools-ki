@@ -1,12 +1,20 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["src/**", "tests/**", "*.ts", "*.json", "!.claude/skills", "!.agents/skills"],
+    "includes": [
+      "src/**",
+      "tests/**",
+      "*.ts",
+      "*.json",
+      "!.claude/skills",
+      "!.agents/skills",
+      "!src/core/kb/source-mirrors.ts"
+    ],
     "ignoreUnknown": true
   },
   "formatter": {

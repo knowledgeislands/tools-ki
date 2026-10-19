@@ -104,7 +104,7 @@ const fixture = async () => {
   box.setEnv({ KI_CACHE_HOME: cache, KI_STATE_HOME: await box.state.mkdir('ki') })
   box.setRunner(async (_cmd, args, env) => {
     if (args.includes('--version')) return { exitCode: 0, output: 'qmd 2.8.3\n' }
-    await writeFile(env['INDEX_PATH']!, 'synthetic db')
+    await writeFile(env['INDEX_PATH'] as string, 'synthetic db')
     return { exitCode: 0, output: '' }
   })
   return box
@@ -162,11 +162,11 @@ test('a forged oversized manifest is rejected before retrieval even when each au
     const key = `documents/${createHash('sha256').update(path).digest('hex')}.md`
     docs[key] = { path, sha256: checksum }
     await box.project.write(path, 'A')
-    await writeFile(mapping.projection + '/' + key, 'A')
+    await writeFile(`${mapping.projection}/${key}`, 'A')
   }
-  const original = Object.keys(mapping.documents)[0]!
+  const original = Object.keys(mapping.documents)[0] as string
   const { rm } = await import('node:fs/promises')
-  await rm(mapping.projection + '/' + original)
+  await rm(`${mapping.projection}/${original}`)
   mapping.documents = docs
   await box.state.write('ki/search/alpha/mapping.json', JSON.stringify(mapping))
   fault.mode = 'manifest'
@@ -184,5 +184,5 @@ test('initial and refreshed mappings are private before atomic publication', asy
     { operation: 'replace', mode: 0o600 }
   ])
   const { lstat } = await import('node:fs/promises')
-  expect((await lstat(box.state.path + '/ki/search/alpha/mapping.json')).mode & 0o777).toBe(0o600)
+  expect((await lstat(`${box.state.path}/ki/search/alpha/mapping.json`)).mode & 0o777).toBe(0o600)
 })

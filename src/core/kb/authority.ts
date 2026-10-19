@@ -14,7 +14,7 @@ export const kbAuthority = async (state: string, id: string | undefined, cwd: st
   if (id !== undefined && !safeId(id)) return fail('invalid registry ID')
   const entries = await requiredLocalRegistry(state)
   const entry = entries.find((candidate) => (id ? candidate.key === id : candidate.path === cwd))
-  if (!entry || !entry.searchBoundary) return fail('explicit registered KB boundary required')
+  if (!entry?.searchBoundary) return fail('explicit registered KB boundary required')
   if ((await realpath(entry.path)) !== entry.path) return fail('registry physical root mismatch')
   const file = join(entry.path, '.ki.toml')
   const stat = await lstat(file)
@@ -25,7 +25,8 @@ export const kbAuthority = async (state: string, id: string | undefined, cwd: st
   const metadata = declaredRepositoryMetadata(declaration)
   if (metadata.repository !== entry.repository) return fail('registry repository identity mismatch')
   const parsed = parse(bytes.toString('utf8'))
-  const kb = declaration.skills.find((skill) => skill.name === 'ki-repo-kb')!.configuration
+  const kb = (declaration.skills.find((skill) => skill.name === 'ki-repo-kb') as (typeof declaration.skills)[number])
+    .configuration
   const retired = parsed['knowledgeislands-kb']
   if (record(retired) && retired['zones'] !== undefined)
     return fail('migrate retired zone authority to skills.ki-repo-kb.zones')
@@ -37,7 +38,9 @@ export const kbAuthority = async (state: string, id: string | undefined, cwd: st
   const zones = Object.fromEntries(
     ZONES.map((name, i) => [
       name,
-      record(configured) && configured[canonical[i]!] !== undefined ? configured[canonical[i]!] : canonical[i]
+      record(configured) && configured[canonical[i] as string] !== undefined
+        ? configured[canonical[i] as string]
+        : canonical[i]
     ])
   ) as Record<string, string>
   return {

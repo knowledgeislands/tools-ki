@@ -29,10 +29,10 @@ const fixture = async () => {
     if (failure) throw new Error('SIBLING_PRIVATE_DO_NOT_LEAK')
     if (args.includes('--version')) return { exitCode: 0, output: version }
     if (args.includes('update') || args.includes('embed')) {
-      await writeFile(env['INDEX_PATH']!, 'synthetic db')
+      await writeFile(env['INDEX_PATH'] as string, 'synthetic db')
       if (args.includes('embed') && corruptOwner)
-        await writeFile(join(env['INDEX_PATH']!, '../../..', '.owner'), 'different-owner')
-      if (args.includes('embed') && publicState) await chmod(join(env['INDEX_PATH']!, '../../..'), 0o755)
+        await writeFile(join(env['INDEX_PATH'] as string, '../../..', '.owner'), 'different-owner')
+      if (args.includes('embed') && publicState) await chmod(join(env['INDEX_PATH'] as string, '../../..'), 0o755)
       return { exitCode: 0, output: '' }
     }
     const mapping = JSON.parse(await box.state.read('ki/search/alpha/mapping.json'))
@@ -176,7 +176,7 @@ test('makes wrong engine, runtime failure, missing model, stale source and chang
   expect((await f.box.run('ki kb search budget --kb alpha --mode search')).output).toContain('source changed')
   await f.box.project.write('Resources/Note.md', '# Local title\n\nBudget approval lives here.\n')
   const m = JSON.parse(await f.box.state.read('ki/search/alpha/mapping.json'))
-  await writeFile(join(m.projection, Object.keys(m.documents)[0]!), 'PRIVATE')
+  await writeFile(join(m.projection, Object.keys(m.documents)[0] as string), 'PRIVATE')
   expect((await f.box.run('ki kb search budget --kb alpha --mode search')).output).toContain(
     'projection content changed'
   )
@@ -266,11 +266,11 @@ test('mirror labels remain local, conservative and free of unsafe private declar
   const body = `# Mirror\n\n${'canonical fact '.repeat(40)}\n`
   for (const [header, label, path] of [
     [
-      'mirrors: kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: ' + 'a'.repeat(64),
+      `mirrors: kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: ${'a'.repeat(64)}`,
       'extract',
       'kit-alpha-sources/Records/Example.pdf'
     ],
-    ['mirrors: /private/CANARY.pdf\nmirror_type: summarised\nmirror_sha256: ' + 'a'.repeat(64), 'unknown', null],
+    [`mirrors: /private/CANARY.pdf\nmirror_type: summarised\nmirror_sha256: ${'a'.repeat(64)}`, 'unknown', null],
     [
       'mirrors: /private/CANARY.pdf\nmirrors: kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: ' +
         'a'.repeat(64),
@@ -278,11 +278,11 @@ test('mirror labels remain local, conservative and free of unsafe private declar
       null
     ],
     [
-      '"mirrors": kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: ' + 'a'.repeat(64),
+      `"mirrors": kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: ${'a'.repeat(64)}`,
       'unknown',
       null
     ],
-    ['source_path: kit-alpha-sources/Records/Export.txt\nsource_sha256: ' + 'a'.repeat(64), null, null],
+    [`source_path: kit-alpha-sources/Records/Export.txt\nsource_sha256: ${'a'.repeat(64)}`, null, null],
     ['note_type: ordinary', null, null]
   ] as const) {
     await box.project.write('Resources/Note.md', `---\n${header}\n---\n${body}`)
@@ -311,7 +311,7 @@ test('scope revocation, symlink replacement and generation tampering fail before
   const initialCalls = f.calls.length
   const operations = [
     async () => {
-      await f.box.project.write('.ki.toml', declaration + '\n# scope changed\n')
+      await f.box.project.write('.ki.toml', `${declaration}\n# scope changed\n`)
     },
     async () => {
       await f.box.project.write('.ki.toml', declaration)
@@ -366,7 +366,7 @@ test('canonical declared zone aliases select sources before engine indexing', as
   const { box } = await fixture()
   await box.project.write(
     '.ki.toml',
-    declaration + '\n[skills.ki-repo-kb.zones]\nResources = "Library"\n"+" = "Incoming"\n'
+    `${declaration}\n[skills.ki-repo-kb.zones]\nResources = "Library"\n"+" = "Incoming"\n`
   )
   await box.project.write('Library/Authorized.md', '# Library\nbudget authorization\n')
   await box.project.write('Incoming/Packet.md', '# Packet\nexplicit input\n')
@@ -393,7 +393,7 @@ test('nested configured alias through an outside symlink never traverses or inge
   const { box, calls } = await fixture()
   await box.root.write('outside/Hidden/Canary.md', 'EXTERNAL_PRIVATE_CANARY')
   await symlink(join(box.root.path, 'outside'), join(box.project.path, 'Link'))
-  await box.project.write('.ki.toml', declaration + '\n[skills.ki-repo-kb.zones]\nResources = "Link/Hidden"\n')
+  await box.project.write('.ki.toml', `${declaration}\n[skills.ki-repo-kb.zones]\nResources = "Link/Hidden"\n`)
   const result = await box.run('ki kb index --kb alpha')
   expect(result.exitCode).toBe(1)
   expect(result.output).toContain('configured zone ancestry contains a symlink')
@@ -429,7 +429,7 @@ test('malformed registry authority fails before engine and source bindings remai
   expect(f.calls).toHaveLength(0)
   await f.box.state.write(
     'ki/registry.toml',
-    original + '\n[repositories.alpha.stores]\nsources = "/synthetic/unavailable-private-store"\n'
+    `${original}\n[repositories.alpha.stores]\nsources = "/synthetic/unavailable-private-store"\n`
   )
   expect((await f.box.run('ki registry add --search-boundary revised-owner')).exitCode).toBe(0)
   expect(await f.box.state.read('ki/registry.toml')).toContain('/synthetic/unavailable-private-store')
