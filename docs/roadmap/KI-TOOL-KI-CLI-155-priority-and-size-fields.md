@@ -7,12 +7,12 @@ purpose: capability
 project: ways-of-working
 component: repo
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 171549e8c4b6305d415b5899d73a9507dda6a158
 created_at: 2026-10-19T07:45:00Z
-updated_at: 2026-10-19T18:05:39Z
+updated_at: 2026-10-19T19:40:00Z
 transferred_from: ki-agentic-harness work-item format and ki-principal GDR-KI-PRINCIPAL-016, 2026-10-19
 ---
 
@@ -62,15 +62,15 @@ This record changes `ki`'s work-record reader, validator, capture and `ki work` 
 
 ## Steps
 
-- [ ] **Reader.** In `items.ts` add `priority` and `size` to the optional fields with exported `workItemPriorities` and `workItemSizes`, validate them under Decision 1, carry them on `WorkItem`, compute `gaps` under Decision 2, and drop the `priority` note from the unknown-field warning.
-- [ ] **Order.** A core comparator for the within-lane selection order under Decision 4, used by the text renderers in `src/commands/repo/roadmap.ts` with repositories kept apart in aggregate views.
-- [ ] **Listing and JSON.** Gap section, `GAPS=` summary count, summary-table line and item label in `roadmap.ts` and `roadmap-links.ts`; `priority`, `size` and `gaps` in `roadmap-report.ts`.
-- [ ] **Tests** through `run(args, context)` in `src/tests/cli/repo/roadmap.test.ts` and `roadmap-model.test.ts`: the cases in Verify 1 to 5.
-- [ ] **Documentation.** `README.md` roadmap paragraphs, `docs/specs/repository-operations.md`, `CHANGELOG.md`; regenerate `man/` if the help text changes.
+- [x] **Reader.** In `items.ts` add `priority` and `size` to the optional fields with exported `workItemPriorities` and `workItemSizes`, validate them under Decision 1, carry them on `WorkItem`, compute `gaps` under Decision 2, and drop the `priority` note from the unknown-field warning.
+- [x] **Order.** A core comparator for the within-lane selection order under Decision 4, used by the text renderers in `src/commands/repo/roadmap.ts` with repositories kept apart in aggregate views.
+- [x] **Listing and JSON.** Gap section, `GAPS=` summary count, summary-table line and item label in `roadmap.ts` and `roadmap-links.ts`; `priority`, `size` and `gaps` in `roadmap-report.ts`.
+- [x] **Tests** through `run(args, context)` in `src/tests/cli/repo/roadmap.test.ts` and `roadmap-model.test.ts`: the cases in Verify 1 to 5.
+- [x] **Documentation.** `README.md` roadmap paragraphs, `docs/specs/repository-operations.md`, `CHANGELOG.md`; regenerate `man/` if the help text changes.
 
 ## Files touched
 
-`src/core/work/items.ts`, `src/core/work/index.ts`, `src/core/work/roadmap-report.ts`, `src/commands/repo/roadmap.ts`, `src/commands/repo/roadmap-links.ts`, `src/tests/cli/repo/roadmap.test.ts`, `src/tests/cli/repo/roadmap-model.test.ts`, `README.md`, `docs/specs/repository-operations.md`, `CHANGELOG.md`.
+`src/core/work/items.ts`, `src/core/work/index.ts`, `src/core/work/roadmap-report.ts`, `src/commands/repo/roadmap.ts`, `src/commands/repo/roadmap-links.ts`, `src/tests/cli/repo/roadmap.test.ts`, `src/tests/cli/repo/roadmap-model.test.ts`, `README.md`, `docs/specs/repository-operations.md`, `CHANGELOG.md`, `man/ki.1`, `man/ki.commands.json`.
 
 ## Verify
 
@@ -84,6 +84,58 @@ This record changes `ki`'s work-record reader, validator, capture and `ki work` 
 ## Dependencies / blocks
 
 None in this repository. The harness work-item format and roadmap checker already carry the contract this record matches.
+
+## Documentation impact
+
+### Decision Records
+
+None; GDR-KI-PRINCIPAL-016 already records the decision.
+
+### Specifications
+
+`docs/specs/repository-operations.md`: REPO-OPS-012 keeps each repository's records together within a lane, and the new REPO-OPS-029 sets the priority and size fields, the selection order and the migration-window gaps.
+
+### Guides
+
+`README.md` roadmap paragraphs, `man/ki.1` and its generated `man/ki.commands.json` inventory, and `CHANGELOG.md`.
+
+### Roadmap
+
+None.
+
+## Review
+
+### Delivered
+
+The whole record, from baseline `171549e8` on 19 October 2026 by the `cli155` run, in the tools-burndown Project, apart from the capture rule: `ki` has no capture command, so the harness checker remains the only enforcement of size at capture, as Current state notes.
+
+### Change Summary
+
+- `src/core/work/items.ts`: `priority` and `size` are optional fields with exported vocabularies; invalid values and a `ready` record of size `xl` are unreadable in the harness wording; each record carries its migration-window `gaps`; `compareSelection` orders unblocked first, then priority, then size; the KB unknown-field warning loses its priority note.
+- `src/commands/repo/roadmap.ts`: text lanes use the selection order, keyed first by repository so aggregate and grouped views keep repositories apart; a `gaps (<n>)` section, `GAPS=` in every summary line and a gap line under the summary table.
+- `src/commands/repo/roadmap-links.ts`: labels show a non-medium priority and any size.
+- `src/core/work/roadmap-report.ts`: JSON items add `priority` (effective), `size` and `gaps`; item order is unchanged.
+- Tests: three new cases in `roadmap.test.ts` for Verify 1 to 4, the KB warning case extended for Verify 5, and existing expectations updated for the gap section and the removed priority warning.
+- Documentation as listed under Documentation impact.
+- Deviation: a retired horizon lists as a gap in the harness's `retired:` wording rather than failing, since Decision 2 holds every gap at warn level in this release; the harness checker already fails it.
+
+### Verification
+
+- Verify 1 to 5: covered by `accepts priority and size and orders each lane by holds, priority, then size`, `rejects invalid priority and size values and an extra-large ready record`, `lists each migration-window gap and exempts closed records` and `warns on each unknown KB Streams record field without changing the exit status`: passed.
+- Verify 6: `bun run test:coverage`: 80 files and 1,353 tests passed at the coverage thresholds; `bunx tsc --noEmit`, `bunx biome check .`, `mandoc -T lint man/ki.1` and the command-inventory check clean. Working-tree `ki repo roadmap list` lists every record in apps-observatory.local (34, after another session pruned one), ki-design (24) and tools-mgit (4) with no diagnostic, including all 18 that carry `priority` or `size`; it shows 28, 9 and 3 records with gaps. `ki repo audit --repo .` passes with FAIL=0, its warnings the migration-window size gaps on open records.
+
+### Outstanding concerns
+
+- Released `ki` still drops the 18 records until a release carries this change; the patch release is prepared separately and gated on KI-RELEASE-GO.
+- tools-ki's own records omit `size` until that release, so its audit keeps the migration-window size warnings.
+
+### Post-change review
+
+Keying the order by repository first keeps REPO-OPS-012's promise that an aggregate view implies no cross-repository priority, at the cost of interleaving lanes by repository rather than by priority; that is the intended trade. JSON keeps identifier order, so integrations see an additive change only.
+
+### Mini recap
+
+`ki` now reads `priority` and `size`, orders each lane by holds, priority and size, and names every field-migration gap in the harness wording without failing on it.
 
 ## Discussion
 
