@@ -15,7 +15,6 @@ blocked_by: []
 baseline_ref: b7e64c0e850129dee48f1401993b50820c8bfcfa
 created_at: 2026-10-19T23:05:00Z
 updated_at: 2026-10-19T23:34:44Z
-
 transferred_from: ki-principal ki.tools-burndown KNIP-HUSKY a), Kris, 19 October 2026 23:42 BST
 ---
 
