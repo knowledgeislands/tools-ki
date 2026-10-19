@@ -8,13 +8,12 @@ project: tools-burndown
 component: repo
 priority: high
 size: m
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 0629726466b3cb085c4ec3c1bb2f2e5da8a01390
 created_at: 2026-10-19T22:10:00Z
-updated_at: 2026-10-19T22:15:00Z
+updated_at: 2026-10-19T22:37:37Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design section 4.2, GIT-HOOKS a), 2026-10-19
 ---
 
@@ -180,6 +179,10 @@ The conversion composes from what each repository already runs rather than from 
 ### Mini recap
 
 `ki repo conform` with `ki-repo` selected now moves a Husky commit gate into a committed, bound, frame-first `.githooks/` and removes Husky; the three Husky repositories compose cleanly.
+
+## Done
+
+Accepted 2026-10-19 by Kris Brown on the review packet above. Kris said, on 19 October at 23:21 BST, under HOOK-RELEASE b) in the ki.tools-burndown [decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.tools-burndown/decisions.md): "Happy for you to do it now, straight off the back of this." The wave 1 pilot converted tools-ki, ki-principal and va-principal before release.
 
 ## Discussion
 
