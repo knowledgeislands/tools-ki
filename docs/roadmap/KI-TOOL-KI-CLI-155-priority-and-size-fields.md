@@ -7,12 +7,12 @@ purpose: capability
 project: ways-of-working
 component: repo
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 171549e8c4b6305d415b5899d73a9507dda6a158
 created_at: 2026-10-19T07:45:00Z
-updated_at: 2026-10-19T18:05:27Z
+updated_at: 2026-10-19T18:05:39Z
 transferred_from: ki-agentic-harness work-item format and ki-principal GDR-KI-PRINCIPAL-016, 2026-10-19
 ---
 
