@@ -95,7 +95,7 @@ repository = "https://github.com/knowledgeislands/ki-agentic-harness"
 path = "/Users/example/workspaces/knowledgeislands/ki-agentic-harness"
 ```
 
-For each selected repository, `ki repo conform` collects safe write proposals and completes every initial audit before publishing any of those proposals. A failing initial audit aborts that repository's conform publication: no proposed conform write is applied. On a terminal, audit and conform use a compact receipt stream with one mutable activity row that signals activity without estimating completion.
+For each selected repository, `ki repo conform` collects safe write proposals and completes every initial audit before publishing any of those proposals. A failing initial audit aborts that repository's conform publication: no proposed conform write is applied. With `ki-repo` selected, conform first moves a Husky commit gate into a committed, bound `.githooks/` and removes Husky. On a terminal, audit and conform use a compact receipt stream with one mutable activity row that signals activity without estimating completion.
 
 [Audit and conform repositories](docs/guides/user/repository-operations.md) covers target selection, reading an audit result, the exact meaning of conform's `proposed write`, `applied write`, and `would apply write` verbs, what the publication boundary does not cover, the output and progress controls, and repair.
 

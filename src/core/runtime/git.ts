@@ -8,6 +8,13 @@ import type { Runner } from './runner.ts'
 // both answers onto whatever it names and make any comparison hold vacuously.
 const discoveryVariables = ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_CEILING_DIRECTORIES'] as const
 
+/** The environment without Git's discovery variables, so `git -C <directory>` answers for that directory. */
+export const scrubbedGitEnvironment = (environment: Environment): Environment => {
+  const scrubbed: Environment = { ...environment }
+  for (const variable of discoveryVariables) delete scrubbed[variable]
+  return scrubbed
+}
+
 /**
  * The physical root of the Git working tree containing `directory`, or undefined when the
  * directory is not inside one.
@@ -22,9 +29,11 @@ export const gitWorkingTreeRoot = async (
   runner: Runner,
   environment: Environment
 ): Promise<string | undefined> => {
-  const scrubbed: Environment = { ...environment }
-  for (const variable of discoveryVariables) delete scrubbed[variable]
-  const reported = await runner('git', ['-C', directory, 'rev-parse', '--show-toplevel'], scrubbed)
+  const reported = await runner(
+    'git',
+    ['-C', directory, 'rev-parse', '--show-toplevel'],
+    scrubbedGitEnvironment(environment)
+  )
   if (reported.exitCode !== 0) return undefined
   // Resolve git's output, never the inputs: `--show-toplevel` already reports a physical path,
   // so this only keeps the comparison independent of that normalisation being total. Comparing

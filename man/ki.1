@@ -926,6 +926,16 @@ For a local invocation it records each selected canonical root in the
 machine-local registry before evaluating findings. Registration is
 an inventory action, not evidence of conformance, so a failing repository
 remains available for later repair and bulk maintenance.
+With \fBki-repo\fR selected, a repository holding \fI.githooks/\fR or
+\fI.husky/\fR first has its commit gate moved into a committed
+\fI.githooks/\fR: \fIpre-commit\fR and \fIcommit-msg\fR are written whole at
+mode 0755, the common refusal frame first and any Husky hook inlined where the
+committed hook called it; \fBprepare\fR binds \fBcore.hooksPath\fR, keeping
+any command after \fBhusky\fR; \fBhusky\fR leaves the manifest and
+\fIbun.lock\fR; \fI.husky/\fR is removed; and an unset or \fI.husky/_\fR
+\fBcore.hooksPath\fR is bound to \fI.githooks\fR, while any other value is
+kept and reported. A line, file or lockfile it cannot place refuses the whole
+conversion before any change. A dry run reports each step and changes nothing.
 .TP
 .B ki repo [repo-options] roadmap list [--horizon <horizons>] [--status <status>] [--by <grouping>] [--format <text|json>] [--links <compact|all>]
 List canonical governed work items from every selected repository without

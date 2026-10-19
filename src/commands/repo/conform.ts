@@ -51,6 +51,14 @@ const renderConformEvent = (event: RepositoryConformEvent): string => {
       return `${treeProgressPrefix(`${presentationText('status.skip')}: nothing staged; no re-audit required`, 'root').trimEnd()}\n`
     case 'independent-publication':
       return event.text
+    case 'hook-write':
+      return `${event.dryRun ? 'would write' : 'write'} ${event.path}\n`
+    case 'hook-remove':
+      return `${event.dryRun ? 'would remove' : 'remove'} ${event.path}/\n`
+    case 'hook-bind':
+      return `${event.dryRun ? 'would bind' : 'bind'} core.hooksPath .githooks${event.from ? ` (was ${event.from})` : ''}\n`
+    case 'hook-binding-kept':
+      return `keep core.hooksPath ${JSON.stringify(event.value)}\n`
   }
 }
 

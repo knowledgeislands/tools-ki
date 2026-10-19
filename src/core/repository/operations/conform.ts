@@ -6,6 +6,7 @@ import { runSkillAudit } from '../../runtime/audit.ts'
 import { detectFixed, runSkillConform } from '../../runtime/conform.ts'
 import { publishIndependentConformGroups } from '../../runtime/publication.ts'
 import type { Finding, FixedItem, PreparedSkill, SkillConformResult } from '../../runtime/types.ts'
+import { applyHookConversion, type HookConversionEvent, planHookConversion } from '../hooks.ts'
 import { runPreparedWithProgress, runWithProgress } from '../progress/run.ts'
 import { resolveRepositoryTargets } from '../selection.ts'
 import { type RepositoryConformCommand, runRepositoryConformCommands } from '../subprocess.ts'
@@ -37,6 +38,7 @@ export type RepositoryConformEvent =
   | { readonly kind: 'run'; readonly command: RepositoryConformCommand }
   | { readonly kind: 'nothing-staged' }
   | { readonly kind: 'independent-publication'; readonly text: string }
+  | HookConversionEvent
 
 export interface RepositoryConformObserver {
   readonly event: (event: RepositoryConformEvent) => void
@@ -87,6 +89,20 @@ export const conformRepositories = async (
     let packageScriptClaims: readonly PackageScriptClaim[] = []
     const repositorySkills = await repositorySkillActivation(context, repository, skills)
     observer.repositoryStarted(repository.root, skills)
+    // The commit gate moves into `.githooks/` before the rubric pass, so ki-repo and
+    // ki-engineering audit and repair the converted tree rather than the Husky one.
+    if (skills.some((skill) => skill.declaration.name === 'ki-repo')) {
+      const conversion = await planHookConversion(repository.root, context.runner, context.environment)
+      if (conversion)
+        await applyHookConversion(
+          repository.root,
+          conversion,
+          context.runner,
+          context.environment,
+          options.dryRun,
+          observer.event
+        )
+    }
     const conformed: readonly ConformedRepositorySkill[] = await runWithProgress(
       skills,
       async (skill, itemProgress, claims) => {
