@@ -14,7 +14,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 0629726466b3cb085c4ec3c1bb2f2e5da8a01390
 created_at: 2026-10-19T22:10:00Z
-updated_at: 2026-10-19T23:40:00Z
+updated_at: 2026-10-19T22:15:00Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design section 4.2, GIT-HOOKS a), 2026-10-19
 ---
 
