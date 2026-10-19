@@ -25,6 +25,7 @@ If `ki` is not yet on this machine, or you have never run it, read these three i
 
 - [Select territories and the estate](territory-selection.md) - discover Capital handles, narrow literal directory basenames and consume atomic roots.
 - [Run detached background agents](background-agents.md) - record owner decisions, launch, queue and dispatch detached Claude Code or Codex agents, and wake on each finish.
+- [Convert Obsidian links to GitHub Markdown](markdown-conversion.md) - preview, decide and apply a batch of link conversions with a rollback manifest.
 - [Canonical batch records](batch-records.md) — prepare, bind, record, and close exact-set batch authority envelopes over already-approved work.
 - [Repository-local governance](repository-local-governance.md) — declare and run a repository-owned `ki-self` capability.
 

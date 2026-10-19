@@ -9,12 +9,12 @@ component: markdown
 priority: high
 size: m
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: cdfae6e3a9deaf81b7b0f91bc6f2edaaf1fcaee1
 created_at: 2026-10-19T21:22:30Z
-updated_at: 2026-10-19T21:30:00Z
+updated_at: 2026-10-19T21:52:00Z
 transferred_from: ki-principal ki.tools-burndown GFM-CONVERTER, routed from ki.ways-of-working GFM-ORDER a and GFM-LINK-FORM a, 2026-10-19
 ---
 
@@ -68,7 +68,7 @@ tools-ki has no Markdown conversion. `ki repo conform` runs harness catalogues o
 
 ### Resolver
 
-The candidate universe is every regular file under the root, skipping dot-entries (`.git`, `.obsidian`, `.trash`) and `node_modules`; symbolic links are not followed. A target without a Markdown or file extension is tried with `.md` and as written. Precedence: beside the note, then full path from the root, then a path suffix or unique leaf name. Each step takes an exact-case match first, then a unique case-insensitive match; several matches in the deciding step make the link ambiguous, none in every step unresolved. The emitted destination is the on-disk spelling.
+The candidate universe is every regular file under the root, skipping dot-entries (`.git`, `.obsidian`, `.trash`) and `node_modules`; symbolic links are not followed. A target without a Markdown or file extension is tried with `.md` and as written. Precedence: beside the note, then full path from the root, then a path suffix or unique leaf name. The two path steps take the exact spelling first, then a unique case-insensitive match; the leaf step is case-insensitive only, so two notes whose names differ only in case or folder stay ambiguous. Several matches in the deciding step make the link ambiguous, none in every step unresolved. The emitted destination is the on-disk spelling.
 
 ### Conversion
 
@@ -77,11 +77,11 @@ The candidate universe is every regular file under the root, skipping dot-entrie
 - Destinations are document-relative POSIX paths, in angle brackets when they hold a space or parenthesis; `%`, `#` and `?` in file names are percent-encoded.
 - A relative Markdown link whose path uses `%20` is respelt with a literal space in angle brackets when the decoded path resolves; other escapes and the fragment are kept.
 - Heading links convert only when the decisions file sets `heading_fragments = "github"`, using the target heading's GitHub slug; otherwise they are listed.
-- Front matter, fenced and inline code, Obsidian `%%` and HTML comments and `{{ }}` and `<% %>` template expressions are never rewritten.
+- Front matter, fenced and inline code, Obsidian `%%` and HTML comments and `{{ }}` and `<% %>` template expressions are never rewritten; an unclosed comment runs to the end of the text, as Obsidian and CommonMark read it.
 
 ### Items and decisions
 
-Listed kinds: `ambiguous`, `unresolved`, `heading-link`, `missing-heading`, `block-reference`, `sized-embed`, `transclusion`, `front-matter-link`, `template-destination`, `comment-link`, `callout`, `dataview`, `protected` and `generated`. Protected material is any path inside a `_Voice Notes` directory or a `protected` path the decisions file names; generated material is a file opening with `<!-- GENERATED`. A TOML decisions file approves each item by `path` and exact `text`, with `action = "keep"` for an approved exception or `action = "convert"` with a `target` for an ambiguous or unresolved link. An undecided item is reported in a dry run and refuses the batch at apply.
+Listed kinds: `ambiguous`, `unresolved`, `heading-link`, `missing-heading`, `block-reference`, `sized-embed`, `transclusion`, `front-matter-link`, `template-destination`, `comment-link`, `callout`, `dataview`, `protected`, `generated` and `encoding`. Protected material is any path inside a `_Voice Notes` directory or a `protected` path the decisions file names; generated material is a file opening with a `<!-- generated` comment, in any case; a file that is not valid UTF-8 is listed as `encoding`. A TOML decisions file approves each item by `path` and exact `text`, with `action = "keep"` for an approved exception or `action = "convert"` with a `target` for an ambiguous or unresolved link. An undecided item is reported in a dry run and refuses the batch at apply.
 
 ### Preview, guard and manifest
 
@@ -89,10 +89,10 @@ The preview is JSON naming the root, the decisions file hash and, per file, its 
 
 ## Steps
 
-- [ ] Add the `markdown` component and command group with `gfm`, its option validation and rendering.
-- [ ] Build the core: vault index and resolver, scanner of protected regions and constructs, converter, verification, decisions, preview and manifest.
-- [ ] Write fixture tests through `run(args, context)` on ki-principal shapes: table aliases, headings, embeds with and without size, spaces, case mismatches, templates, code examples, reference definitions, callouts, Dataview, front matter, protected and generated files, guard failures, idempotence and containment.
-- [ ] Update the manual, command inventory, inventory test, changelog, README and a user guide.
+- [x] Add the `markdown` component and command group with `gfm`, its option validation and rendering.
+- [x] Build the core: vault index and resolver, scanner of protected regions and constructs, converter, verification, decisions, preview and manifest.
+- [x] Write fixture tests through `run(args, context)` on ki-principal shapes: table aliases, headings, embeds with and without size, spaces, case mismatches, templates, code examples, reference definitions, callouts, Dataview, front matter, protected and generated files, guard failures, idempotence and containment.
+- [x] Update the manual, command inventory, inventory test, changelog, README and a user guide.
 - [ ] Dry-run against ki-principal by batch, writing previews only to temporary storage.
 - [ ] Run the gate and move the record to Awaiting review.
 

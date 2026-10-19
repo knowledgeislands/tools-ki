@@ -19,6 +19,7 @@ const rootHelpCommands = [
   'inventory',
   'kb',
   'link',
+  'markdown',
   'mcp',
   'registry',
   'repair',
@@ -71,6 +72,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   'repo batch': batchCommands,
   registry: registryCommands,
   kb: ['index', 'search', 'status'],
+  markdown: ['gfm'],
   harness: ['info', 'install', 'list', 'missing', 'outdated', 'reinstall', 'search', 'uninstall'],
   'repo trade': [
     'abandon',

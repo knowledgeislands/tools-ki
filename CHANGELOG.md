@@ -38,6 +38,7 @@ This baseline describes the `v0.11.5` release. Domain imports and extracted type
 - `ki docs`
 - `ki inventory`
 - `ki link <identifier...>`
+- `ki markdown gfm [--root <dir>] [--decisions <file>] (--dry-run [--preview <file>] | --preview <file> --manifest <file>) <path...>`
 - `ki mcp install <owner/repository> [version] [--auth github-cli]`
 - `ki mcp update <owner/repository> [version] [--auth github-cli]`
 - `ki mcp rollback <owner/repository> <version>`
@@ -180,6 +181,7 @@ This baseline describes the `v0.11.5` release. Domain imports and extracted type
 
 ### Behaviours
 
+- `ki markdown gfm` converts plain and aliased wikilinks, unsized image embeds and Obsidian `%20` destinations in explicit paths to document-relative GitHub-flavoured Markdown, resolving each target in Obsidian's order to its exact on-disk spelling and listing, untouched, every ambiguous or unresolved target, undecided heading link, block reference, sized embed, transclusion, link in front matter, comment or template, custom callout, Dataview block and protected, generated or non-UTF-8 file. `--dry-run` prints each diff, the items and a summary and writes the reviewed `ki/markdown-gfm-preview/v1` preview; an apply aborts the whole batch, writing nothing, unless it matches that preview and every item is decided, and writes the `ki/markdown-gfm-manifest/v1` rollback manifest of pre-images before it changes any file.
 - `ki agent` writes the progress protocol's report path in the run's state folder and copies the report into the tracked work or thread folder when `status`, `watch` or `wait` first sees the agent's `DONE`, leaving a tracked copy with changes Git does not hold, and a retired report Git holds with the same contents, as when a lost `events.state.json` replays an ended agent. An agent reports only to that state-folder path: `ki agent new` fills the skeleton's report path with it, and `launch` and `queue`, a relaunch and a dispatcher launch included, refuse with exit 1 and write nothing for a brief that names the agent's own `<name>.report.md` in the run's work folder or any `+/_WORK/<id>/`, the dispatcher recording the refusal as `failed`; a brief naming it anywhere else draws a warning. A launch from the run's `<name>.queued.md` or `<name>.draft.md` removes that copy once started, and `ki agent sweep` previews, and with `--write` removes, closed runs in `_archive/` beyond the newest ten or `--keep <n>` and each such brief left beside a newer prompt.
 - `--filter <prefix>` has no short form: `-f` on `ki repo`, `ki registry` and the `ki territory` selectors is a usage error that names `--filter` and runs nothing, leaving `-f` free for force or file.
 - `KI_QUIET`, set to any value but an empty one or `0`, gives `ki repo audit` and `ki repo conform` the output of `--concise --progress never`, while a failing repository still renders its FAIL findings; any explicit `--concise`, `--progress`, `--progress-style` or `--reporter-levels` restores that call's ordinary output.

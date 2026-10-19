@@ -9,6 +9,7 @@ import { createHarnessCommand } from '../harness/index.ts'
 import { createKbCommand } from '../kb/index.ts'
 import { createLinkCommand } from '../link/index.ts'
 import { createHarnessStatusCommands, createSupportCommands } from '../manage/index.ts'
+import { createMarkdownCommand } from '../markdown/index.ts'
 import { createRegistryCommand } from '../registry/index.ts'
 import { createRepoCommand } from '../repo/index.ts'
 import { createSkillCommand } from '../skill/index.ts'
@@ -29,6 +30,7 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   repo: (context) => createRepoCommand(context),
   kb: (context) => createKbCommand(context),
   link: (context) => createLinkCommand(context),
+  markdown: (context) => createMarkdownCommand(context),
   registry: (context) => createRegistryCommand(context),
   skill: (context) => createSkillCommand(context),
   work: (context) => createWorkCommand(context)

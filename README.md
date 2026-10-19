@@ -146,6 +146,18 @@ ki work status --repo ~/workspaces/knowledge-islands/ki-principal
 ki work status --format json
 ```
 
+## Convert Obsidian links to GitHub Markdown
+
+`ki markdown gfm` converts the wikilinks and unsized image embeds in explicit paths to document-relative GitHub-flavoured Markdown links, in each target's exact on-disk case. Anything that needs judgement is left untouched and listed. A dry run prints each diff and writes the preview the owner reviews; the apply then writes nothing unless the batch still matches that preview and every listed item is decided. It writes a rollback manifest before the first changed file.
+
+```sh
+ki markdown gfm --dry-run --preview /tmp/streams.preview.json Streams
+ki markdown gfm --decisions streams.toml --dry-run --preview /tmp/streams.preview.json Streams
+ki markdown gfm --decisions streams.toml --preview /tmp/streams.preview.json --manifest /tmp/streams.manifest.json Streams
+```
+
+See [convert Obsidian links to GitHub Markdown](docs/guides/user/markdown-conversion.md).
+
 ## Automate canonical batch records
 
 `ki repo batch prepare`, `validate`, `run`, and `close` provide deterministic local file mechanics for an already-approved exact set of Ready work items. The commands protect the authority payload, bind a run, append explicit item evidence, and require every named item to match the approved completion target before recording closure. They do not select or implement work, infer approval, change work lifecycle, accept or prune items, push, or release.

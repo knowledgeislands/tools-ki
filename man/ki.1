@@ -70,6 +70,9 @@ local registered repositories.
 .B ki link <identifier...>
 Print the Markdown link to each roadmap work record.
 .TP
+.B ki markdown gfm [--root <dir>] [--decisions <file>] (--dry-run [--preview <file>] | --preview <file> --manifest <file>) <path...>
+Convert wikilinks and unsized image embeds in explicit paths to GFM links.
+.TP
 .B ki mcp install <owner/repository> [version] [--auth github-cli]
 Install and activate one verified MCP source release.
 .TP
@@ -664,6 +667,51 @@ on the registered canonical repository, where the last revision is the first
 parent of the newest commit that deleted it. An identifier that resolves to
 nothing is never given an invented link: the command prints every link it can,
 then exits 1 naming each reason. It does not fetch or change state.
+.TP
+.B ki markdown gfm [--root <dir>] [--decisions <file>] (--dry-run [--preview <file>] | --preview <file> --manifest <file>) <path...>
+Convert the Obsidian links in the named Markdown files, and the Markdown files
+under each named directory, to GitHub-flavoured Markdown. Plain and aliased
+wikilinks, including an alias escaped as
+.B \e|
+in a table cell, become document-relative links; an unsized image embed becomes
+a GFM image; and an Obsidian
+.B %20
+destination is respelled with a space inside angle brackets. A destination
+holding a space or parenthesis is bracketed, and
+.BR % ,
+.BR # ,
+.B ?
+and angle brackets in a path are percent-encoded. Targets resolve in Obsidian's
+order against every regular file under the vault root, skipping dot-entries and
+.BR node_modules :
+beside the note, then the full path from the root, then a unique path suffix or
+leaf name, case-insensitively, and the link takes the target's exact on-disk
+spelling. The root is the nearest directory holding
+.B .obsidian
+or
+.BR .git ,
+or
+.BR --root .
+.IP
+Everything else is left byte for byte and listed as an item with its line:
+ambiguous and unresolved targets, heading links unless the decisions file sets
+.BR "heading_fragments = \(dqgithub\(dq" ,
+missing headings, block references, sized embeds, transclusions, links in
+front matter, comments or template expressions, custom or folded callouts,
+Dataview, and whole files that are protected, generated or not valid UTF-8.
+Fenced and inline code is never read for links. The decisions file may also
+list protected paths and, per item, keep it or convert an ambiguous or
+unresolved link to a named target.
+.IP
+.B --dry-run
+prints each file's diff, the item list and a summary, and with
+.B --preview
+writes the reviewed preview. An apply re-plans the batch and aborts, writing
+nothing, unless every file, decision and conversion matches that preview and
+every item is decided; it then writes the new
+.B --manifest
+holding each changed file's pre-image before it changes any file. The command
+never formats, and a converted batch converts to itself.
 .TP
 .B ki mcp install <owner/repository> [version] [--auth github-cli]
 Install and activate one governed MCP server source release from GitHub. An
