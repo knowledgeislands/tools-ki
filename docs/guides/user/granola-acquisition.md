@@ -120,7 +120,7 @@ The command rejects missing, extra, duplicate, non-image, and conflicting files.
 
 The optional `acquired_folder_id` selects an owner-controlled private folder with audience `only you`. Keep it separate from `folder_ids` and territory mappings. It adds a progress marker while retaining every existing folder membership.
 
-Routine import builds the marker membership set before reading content. It skips only notes with valid committed local preservation receipts and verified document/image evidence; a marker without proof remains a visible exception. Skipping does not claim that mutable source content is unchanged. Use `--refresh-acquired --refresh-transcripts` for an explicit full re-read.
+Routine import builds the marker membership set before reading content and skips every member on that membership alone, without consulting the ledger or rechecking local evidence; marking is the step that verifies the capture. A skipped note's existing ledger entry stays as it was, and a note with none gains none. Skipping does not claim that mutable source content is unchanged. Use `--refresh-acquired --refresh-transcripts` for an explicit full re-read.
 
 After capture verification and a local Git commit, preview and explicitly apply a bounded marker operation:
 

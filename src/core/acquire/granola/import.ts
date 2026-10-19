@@ -5,7 +5,7 @@ import { KiError } from '../../errors.ts'
 import { storeGranolaMcpImages, verifyGranolaImages, verifyGranolaMcpImages } from './images.ts'
 import { centralGranolaPath, copyGranolaPackage, granolaLayout, verifyGranolaParents } from './layout.ts'
 import { renderGranolaMeeting } from './markdown.ts'
-import { privateGranolaMarker, verifyGranolaPreservation } from './marker.ts'
+import { privateGranolaMarker } from './marker.ts'
 import { type GranolaAttachmentImage, granolaAttachmentInventory, granolaScreenshotCount } from './projection.ts'
 import {
   type FlaggedGranolaMeeting,
@@ -400,34 +400,12 @@ export const importGranola = async (
   if (target.acquiredFolderId) {
     privateGranolaMarker(target.acquiredFolderId, folders)
     if (!options.refreshAcquired) {
+      // Acquired membership alone skips a meeting; marking was the proof-gated step.
       // The validated private marker is one of the exhaustively enumerated folders.
       const marked = folderMeetings.get(target.acquiredFolderId) as ReadonlyMap<string, unknown>
-      const selected: RoutedGranolaMeeting[] = []
-      const flagged = [...routing.flagged]
-      for (const meeting of routing.selected) {
-        if (!marked.has(meeting.id)) {
-          selected.push(meeting)
-          continue
-        }
-        try {
-          const entry = previous?.meetings[meeting.id]
-          if (!entry) throw new KiError('No local preservation receipt')
-          await verifyGranolaPreservation({
-            repository: target.root,
-            root,
-            ledger: checkpointPath(target),
-            id: meeting.id,
-            entry,
-            expectedImages: granolaScreenshotCount(meeting.projection),
-            runner: context.runner,
-            environment: context.environment
-          })
-          skipped += 1
-        } catch {
-          flagged.push({ id: meeting.id, folderIds: meeting.folderIds, reason: 'acquired-without-proof' })
-        }
-      }
-      routing = { ...routing, selected, flagged }
+      const selected = routing.selected.filter((meeting) => !marked.has(meeting.id))
+      skipped = routing.selected.length - selected.length
+      routing = { ...routing, selected }
     }
   }
   const selectedIds = routing.selected

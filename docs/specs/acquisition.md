@@ -162,11 +162,11 @@ _Evidence:_ Public in-process CLI fixtures establish the returned-byte boundary;
 
 ### ACQUIRE-018 — Explicit progress markers
 
-Routine Granola import MAY skip Acquired members only after validating committed preservation receipts and document/image bytes. An unproved marker MUST be flagged without content reads. Explicit `--refresh-acquired` MUST bypass that skip. Marking MUST remain a separate preview/`--confirm` action, require an owner-controlled private selector distinct from routing, and verify committed local evidence, fresh source hashes and screenshot bytes before invoking only `add_note_to_folder`. Readback MUST preserve all original memberships. No marker confers reconciliation or retirement authority.
+Routine Granola import MUST skip Acquired members on that membership alone, without content reads, a ledger lookup or a preservation check, and MUST NOT flag them; the ledger carries any existing entry for a skipped member forward unchanged and gains none. Explicit `--refresh-acquired` MUST bypass that skip. Marking MUST remain a separate preview/`--confirm` action, require an owner-controlled private selector distinct from routing, and verify committed local evidence, fresh source hashes and screenshot bytes before invoking only `add_note_to_folder`. Readback MUST preserve all original memberships. No marker confers reconciliation or retirement authority.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/acquire/granola-marker.test.ts` preview, committed evidence, private folder, mutation allowlist, idempotence, skip, refresh, amendment and failed-marker cases.
+_Verify:_ `src/tests/cli/acquire/granola-marker.test.ts` preview, committed evidence, private folder, mutation allowlist, idempotence, membership-only skip, carried-forward entry, refresh, amendment and failed-marker cases.
 
 _Evidence:_ Synthetic public CLI tests exercise both read and explicitly confirmed write paths without live network access.
 

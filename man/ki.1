@@ -1623,8 +1623,8 @@ staged for renewed review.
 MCP screenshots are decoded, identity-checked and retained as exact returned
 bytes with checksum manifests, including verified zero-image inventories.
 A configured acquired_folder_id is progress metadata distinct from routing.
-Routine imports skip marked notes only after committed preservation proof;
---refresh-acquired deliberately reads them again for amendment checks.
+Routine imports skip marked notes on membership alone, without a ledger
+check; --refresh-acquired deliberately reads them again for amendment checks.
 Conflicting receiver mappings fail closed. Only the separate confirmed mark
 action adds membership; import never mutates Granola. No action edits notes,
 removes folders, archives, deletes, or switches accounts or workspaces.

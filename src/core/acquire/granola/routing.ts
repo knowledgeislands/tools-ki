@@ -34,7 +34,7 @@ export interface FlaggedGranolaMeeting {
   readonly title?: string
   readonly date?: string
   readonly folderIds: readonly string[]
-  readonly reason: 'unfoldered' | 'unmatched' | 'acquired-without-proof'
+  readonly reason: 'unfoldered' | 'unmatched'
 }
 
 export interface RoutedGranolaMeeting extends GranolaMeeting {

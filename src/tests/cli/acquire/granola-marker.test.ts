@@ -101,6 +101,7 @@ const fixture = async (settings: Settings = {}) => {
   box.setRunner(async (command, arguments_) => {
     if (command === 'git') {
       const verb = arguments_[2]
+      calls.push({ tool: `git:${verb}`, args: {} })
       const response = responses.get(`git:${verb}`)
       if (response) return response
       if (verb === 'show') {
@@ -388,13 +389,34 @@ describe('[Granola screenshots and Acquired markers]', () => {
     }
   )
 
-  test('flags an Acquired marker without local evidence instead of silently dropping or importing it', async () => {
+  test('skips an Acquired marker on membership alone, without a receipt, a Git check or a flag', async () => {
     const f = await fixture({ captured: true })
     const result = await f.box.run(f.command)
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('acquired-without-proof')
-    expect(f.calls.some((call) => call.tool === 'get_meetings')).toBe(false)
+    expect(result.stdout).toContain('1 skipped')
+    expect(result.stdout).not.toContain('acquired-without-proof')
+    expect(f.calls.some((call) => call.tool === 'get_meetings' || call.tool.startsWith('git:'))).toBe(false)
+    expect((await f.ledger()).meetings).toEqual({})
     expect((await f.box.run([...f.command, '--refresh-acquired'])).exitCode).toBe(0)
+    expect(Object.keys((await f.ledger()).meetings)).toEqual([id])
+  })
+
+  test('carries an uncommitted marked entry forward unchanged instead of re-proving it', async () => {
+    const f = await fixture()
+    expect((await f.box.run(f.command)).exitCode).toBe(0)
+    const entry = (await f.ledger()).meetings[id]
+    f.note.folders.push('acquired')
+    const before = f.calls.length
+    const result = await f.box.run(f.command)
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain('1 skipped')
+    expect(result.stdout).toContain('0 flagged')
+    expect(
+      f.calls
+        .slice(before)
+        .some((call) => ['get_meetings', 'get_meeting_transcript'].includes(call.tool) || call.tool.startsWith('git:'))
+    ).toBe(false)
+    expect((await f.ledger()).meetings[id]).toEqual(entry)
   })
 
   test.each(['failure', 'ignored'])(
