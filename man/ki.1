@@ -934,8 +934,12 @@ committed hook called it; \fBprepare\fR binds \fBcore.hooksPath\fR, keeping
 any command after \fBhusky\fR; \fBhusky\fR leaves the manifest and
 \fIbun.lock\fR; \fI.husky/\fR is removed; and an unset or \fI.husky/_\fR
 \fBcore.hooksPath\fR is bound to \fI.githooks\fR, while any other value is
-kept and reported. A line, file or lockfile it cannot place refuses the whole
-conversion before any change. A dry run reports each step and changes nothing.
+kept and reported. Where committed hooks exist, \fIknip.json\fR or
+\fIknip.ts\fR gains a \fBhusky\fR entry whose \fBconfig\fR names them, so
+Knip sees the tools they call, and loses the \fBignoreDependencies\fR entries
+for those tools; an already-converted repository gains it too. A line, file,
+lockfile or Knip configuration it cannot place refuses the whole conversion
+before any change. A dry run reports each step and changes nothing.
 .TP
 .B ki repo [repo-options] roadmap list [--horizon <horizons>] [--status <status>] [--by <grouping>] [--format <text|json>] [--links <compact|all>]
 List canonical governed work items from every selected repository without

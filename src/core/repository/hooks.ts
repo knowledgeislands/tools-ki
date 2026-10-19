@@ -45,6 +45,18 @@ const FRAME = [
 ]
 const FRAME_AFTER_CONTENT = /\bmissing=|node_modules\/\.bin\/\$tool|^for tool in /
 
+// Knip's Husky plugin reads `.husky/` only while `husky` is a dependency; pointed at the committed
+// hooks it sees the tools they call, so their `ignoreDependencies` entries become redundant.
+const KNIP_FILES = ['knip.json', 'knip.ts'] as const
+const TOOL_PACKAGES: Readonly<Record<string, string>> = { '@commitlint/cli': 'commitlint' }
+const KNIP_REMEDY = "point Knip's `husky.config` at the committed hooks by hand, then run `ki repo conform` again"
+const JSON_IGNORES = /("ignoreDependencies"\s*:\s*\[)([^\]]*)\]/
+const JSON_IGNORES_MEMBER = /,\s*"ignoreDependencies"\s*:\s*\[[^\]]*\]|"ignoreDependencies"\s*:\s*\[[^\]]*\]\s*,\s*/
+const TS_OPEN = /^(?:export\s+default|const\s+\w+(?:\s*:\s*\w+)?\s*=)\s*\{[ \t]*$/m
+const TS_IGNORES = /^([ \t]*)ignoreDependencies:\s*\[([^\]\n]*)\](,?)[ \t]*\r?\n/gm
+const TS_HUSKY = /^[ \t]*husky\s*:.*$/m
+const STRING_LITERAL = /(['"])((?:(?!\1)[^\\])*)\1/g
+
 export type HookConversionEvent =
   | { readonly kind: 'hook-write'; readonly path: string; readonly dryRun: boolean }
   | { readonly kind: 'hook-remove'; readonly path: string; readonly dryRun: boolean }
@@ -64,18 +76,27 @@ interface HuskyHook {
   readonly tools: readonly string[]
 }
 
-const refuse = (reason: string): never => {
-  throw new KiError(
-    `hook conversion refused: ${reason}; nothing was changed`,
-    1,
-    'move the hook content into .githooks/ by hand, then run `ki repo conform` again'
-  )
+const refuse = (
+  reason: string,
+  remedy = 'move the hook content into .githooks/ by hand, then run `ki repo conform` again'
+): never => {
+  throw new KiError(`hook conversion refused: ${reason}; nothing was changed`, 1, remedy)
 }
 
 const unique = (values: readonly string[]): string[] => [...new Set(values)]
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+
+const parseJson = (source: string): unknown => {
+  try {
+    return JSON.parse(source)
+  } catch {
+    return undefined
+  }
+}
+
+const literal = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 const commandLines = (lines: readonly string[]): string[] =>
   lines.filter((line) => line.trim() && !line.trim().startsWith('#'))
@@ -275,13 +296,7 @@ const manifestWrite = (
   inUse: boolean,
   bound: boolean
 ): { readonly write?: NativeWrite; readonly declared: boolean } => {
-  const parsed = ((): unknown => {
-    try {
-      return JSON.parse(source)
-    } catch {
-      return undefined
-    }
-  })()
+  const parsed = parseJson(source)
   if (!isRecord(parsed)) return refuse('package.json is not a JSON object')
   let declared = false
   for (const block of ['dependencies', 'devDependencies']) {
@@ -324,6 +339,111 @@ const lockfileWrite = async (root: string): Promise<NativeWrite | undefined> => 
   return kept.length === lines.length ? undefined : { path: 'bun.lock', content: kept.join('\n') }
 }
 
+/** Whether a hook runs the package's tool as a command; the frame's `for tool in` tests do not count. */
+const hooksCall = (hooks: readonly string[], dependency: string): boolean => {
+  const call = new RegExp(`(?:^|[\\s;&|(])${literal(TOOL_PACKAGES[dependency] ?? dependency)}(?=$|[\\s;&|)])`)
+  return hooks.some((hook) =>
+    commandLines(hook.split(/\r?\n/)).some((line) => !FOR_TOOLS.test(line.trim()) && call.test(line))
+  )
+}
+
+/** Removes each named literal from an array's text, with its separator, keeping the array's layout. */
+const withoutItems = (items: string, removed: readonly string[]): string =>
+  removed.reduce(
+    (text, item) => text.replace(new RegExp(`,\\s*${literal(item)}|${literal(item)}\\s*,?\\s*`), ''),
+    items
+  )
+
+/** Appends `husky` and drops redundant ignores as text, so unrelated bytes keep their layout. */
+const knipJsonWrite = (
+  source: string,
+  hookPaths: readonly string[],
+  hooks: readonly string[]
+): NativeWrite | undefined => {
+  const parsed = parseJson(source)
+  if (!isRecord(parsed)) return refuse('knip.json is not a JSON object', KNIP_REMEDY)
+  const wanted = { config: hookPaths }
+  const husky = parsed['husky']
+  if (husky !== undefined && JSON.stringify(husky) !== JSON.stringify(wanted))
+    refuse('knip.json configures husky otherwise', KNIP_REMEDY)
+  const ignores: unknown[] = Array.isArray(parsed['ignoreDependencies']) ? parsed['ignoreDependencies'] : []
+  const redundant = ignores.filter((entry): entry is string => typeof entry === 'string' && hooksCall(hooks, entry))
+  if (husky !== undefined && !redundant.length) return undefined
+  const expected: Record<string, unknown> = { ...parsed }
+  const kept = ignores.filter((entry) => !redundant.includes(entry as string))
+  if (kept.length) expected['ignoreDependencies'] = kept
+  else delete expected['ignoreDependencies']
+  expected['husky'] = wanted
+  const literals = redundant.map((entry) => JSON.stringify(entry))
+  let content = source.replace(
+    JSON_IGNORES,
+    (_, open: string, items: string) => `${open}${withoutItems(items, literals)}]`
+  )
+  if (!kept.length) content = content.replace(JSON_IGNORES_MEMBER, '')
+  if (husky === undefined) {
+    const close = content.lastIndexOf('}')
+    const before = content.slice(0, close).trimEnd()
+    const indent = /^\{\r?\n([ \t]+)"/.exec(content)?.[1]
+    const member = `"husky": { "config": [${hookPaths.map((path) => JSON.stringify(path)).join(', ')}] }`
+    content = `${before}${before.endsWith('{') ? '' : ','}${indent ? `\n${indent}` : ' '}${member}${indent ? '\n' : ' '}${content.slice(close)}`
+  }
+  if (JSON.stringify(parseJson(content)) !== JSON.stringify(expected))
+    refuse('knip.json is laid out in a way the conversion cannot edit', KNIP_REMEDY)
+  return { path: 'knip.json', content }
+}
+
+/** Puts `husky` first in a recognised `knip.ts` object literal and drops redundant ignores from its one-line array. */
+const knipTsWrite = (
+  source: string,
+  hookPaths: readonly string[],
+  hooks: readonly string[]
+): NativeWrite | undefined => {
+  const unrecognised = (): never => refuse('knip.ts is not an object literal the conversion can edit', KNIP_REMEDY)
+  const open = TS_OPEN.exec(source)
+  const openEnd = open ? open.index + open[0].length : -1
+  const indent = /^\r?\n([ \t]+)\S/.exec(source.slice(openEnd))?.[1]
+  if (!open || !indent) return unrecognised()
+  const arrays = [...source.matchAll(TS_IGNORES)]
+  const mentions = source.match(/\bignoreDependencies\b/g)?.length ?? 0
+  if (arrays.length !== mentions || mentions > 1) unrecognised()
+  const array = arrays[0]
+  if (array && (array[2] as string).replace(STRING_LITERAL, '').replace(/[\s,]/g, '')) unrecognised()
+  const items = array ? [...(array[2] as string).matchAll(STRING_LITERAL)] : []
+  const kept = items.filter((item) => !hooksCall(hooks, item[2] as string)).map((item) => item[0])
+  const quote = /['"]/.exec(source.slice(openEnd))?.[0] ?? "'"
+  const member = `husky: { config: [${hookPaths.map((path) => `${quote}${path}${quote}`).join(', ')}] }`
+  const husky = TS_HUSKY.exec(source)
+  if (husky && husky[0].trim().replace(/,$/, '') !== member) refuse('knip.ts configures husky otherwise', KNIP_REMEDY)
+  if (husky && kept.length === items.length) return undefined
+  let content = source
+  if (array && kept.length !== items.length) {
+    const at = array.index
+    const before = content.slice(0, at)
+    const after = content.slice(at + array[0].length)
+    content = kept.length
+      ? `${before}${array[1]}ignoreDependencies: [${kept.join(', ')}]${array[3]}\n${after}`
+      : // A last member leaves its predecessor's comma behind.
+        `${array[3] ? before : before.replace(/,(\s*)$/, '$1')}${after}`
+  }
+  if (!husky) content = `${content.slice(0, openEnd)}\n${indent}${member},${content.slice(openEnd)}`
+  return { path: 'knip.ts', content }
+}
+
+/** The Knip configuration that reads the committed hooks, for the first of `knip.json` and `knip.ts`. */
+const knipWrite = async (
+  root: string,
+  hookPaths: readonly string[],
+  hooks: readonly string[]
+): Promise<NativeWrite | undefined> => {
+  if (!hookPaths.length) return undefined
+  for (const name of KNIP_FILES) {
+    const source = await readRegular(root, name)
+    if (source === undefined) continue
+    return name === 'knip.json' ? knipJsonWrite(source, hookPaths, hooks) : knipTsWrite(source, hookPaths, hooks)
+  }
+  return undefined
+}
+
 const currentBinding = async (
   root: string,
   runner: Runner,
@@ -338,7 +458,8 @@ const currentBinding = async (
 
 /**
  * Plans the move of a repository's commit gate into `.githooks/`: both hooks composed behind the
- * refusal frame, `prepare` binding the hooks, `husky` and `.husky/` gone and the clone bound.
+ * refusal frame, `prepare` binding the hooks, `husky` and `.husky/` gone, Knip reading the
+ * committed hooks and the clone bound.
  * Refuses, before any change, whatever it cannot attribute. Undefined when there is nothing to do.
  */
 export const planHookConversion = async (
@@ -363,6 +484,23 @@ export const planHookConversion = async (
     const lockfile = declared ? await lockfileWrite(root) : undefined
     if (lockfile) writes.push(lockfile)
   }
+  const committed = (
+    await Promise.all(
+      HOOKS.map(async (hook) => {
+        const path = `${HOOK_DIRECTORY}/${hook}`
+        return {
+          path,
+          content: writes.find((write) => write.path === path)?.content ?? (await readRegular(root, path))
+        }
+      })
+    )
+  ).filter((hook): hook is { path: string; content: string } => hook.content !== undefined)
+  const knip = await knipWrite(
+    root,
+    committed.map((hook) => hook.path),
+    committed.map((hook) => hook.content)
+  )
+  if (knip) writes.push(knip)
   const binding = bound ? await currentBinding(root, runner, scrubbedGitEnvironment(environment)) : undefined
   const removals = entries ? [HUSKY_DIRECTORY] : []
   if (!writes.length && !removals.length && !binding) return undefined

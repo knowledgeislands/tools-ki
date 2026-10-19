@@ -532,3 +532,212 @@ test('a failed binding is reported', async () => {
   expect(result.exitCode).toBe(1)
   expect(result.output).toContain('could not bind core.hooksPath: could not lock config file')
 })
+
+// Knip's Husky plugin reads the committed hooks once Husky has gone (KI-TOOL-KI-CLI-167).
+const huskyJson = '"husky": { "config": [".githooks/pre-commit", ".githooks/commit-msg"] }'
+const huskyTs = (quote: string) =>
+  `husky: { config: [${quote}.githooks/pre-commit${quote}, ${quote}.githooks/commit-msg${quote}] },`
+
+const converted: Readonly<Record<string, string>> = {
+  'package.json': '{"devDependencies":{"lint-staged":"16"}}\n',
+  '.githooks/pre-commit': lines(header('pre-commit'), nodeRefusal('pre-commit', 'lint-staged syncpack'), onPath, [
+    'lint-staged || exit 1',
+    'syncpack format --check || exit 1'
+  ]),
+  '.githooks/commit-msg': lines(header('commit-msg'), nodeRefusal('commit-msg', 'commitlint'), onPath, [
+    'commitlint --edit "$1" || exit 1'
+  ])
+}
+
+const toolsKiKnip = `{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["bin/ki", "src/cli.ts"],
+  "ignoreBinaries": ["mandoc", "mkfifo"],
+  "ignoreDependencies": ["@commitlint/cli", "lint-staged", "syncpack"],
+  "ignoreExportsUsedInFile": true
+}
+`
+
+const kiPrincipalKnip = `import type { KnipConfig } from 'knip'
+
+// ki-principal is a Markdown knowledge base — no application source of its own.
+const config: KnipConfig = {
+  ignore: ['.obsidian/**', '.claude/skills/**', '.agents/skills/**'],
+  ignoreDependencies: ['@commitlint/cli', 'lint-staged', 'syncpack'],
+  ignoreExportsUsedInFile: true
+}
+
+export default config
+`
+
+test('a conversion points knip.json at the committed hooks and drops the ignores they make redundant', async () => {
+  const box = await setup({ ...toolsKi, 'knip.json': toolsKiKnip }, '.husky/_')
+
+  const result = await conform(box)
+
+  expect(result.exitCode).toBe(0)
+  expect(result.output).toContain('write knip.json\n')
+  expect(await box.project.read('knip.json')).toBe(`{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["bin/ki", "src/cli.ts"],
+  "ignoreBinaries": ["mandoc", "mkfifo"],
+  "ignoreExportsUsedInFile": true,
+  ${huskyJson}
+}
+`)
+
+  const repeated = await conform(box)
+  expect(repeated.exitCode).toBe(0)
+  expect(repeated.output).not.toContain('write knip.json')
+})
+
+test('a converted repository gains the Knip configuration, keeping other ignores and their layout', async () => {
+  const knip = `{
+  "ignoreDependencies": [
+    "googleapis",
+    "lint-staged"
+  ],
+  "entry": ["src/index.ts"]
+}
+`
+  const unread = 'export default defineConfig({})\n'
+  const box = await setup({ ...converted, 'knip.json': knip, 'knip.ts': unread }, '.githooks')
+
+  const dry = await conform(box, ' --dry-run')
+  expect(dry.exitCode).toBe(0)
+  expect(dry.output).toContain('would write knip.json\n')
+  expect(await box.project.read('knip.json')).toBe(knip)
+
+  expect((await conform(box)).exitCode).toBe(0)
+  expect(await box.project.read('knip.json')).toBe(`{
+  "ignoreDependencies": [
+    "googleapis"
+  ],
+  "entry": ["src/index.ts"],
+  ${huskyJson}
+}
+`)
+  expect(await box.project.read('knip.ts')).toBe(unread)
+})
+
+test('knip.json on one line, empty or already configured, is edited in place', async () => {
+  const empty = await setup({ ...converted, 'knip.json': '{}\n' }, '.githooks')
+  expect((await conform(empty)).exitCode).toBe(0)
+  expect(await empty.project.read('knip.json')).toBe(`{ ${huskyJson} }\n`)
+
+  const configured = await setup(
+    {
+      ...converted,
+      'knip.json':
+        '{"husky":{"config":[".githooks/pre-commit",".githooks/commit-msg"]},"ignoreDependencies":["syncpack"]}'
+    },
+    '.githooks'
+  )
+  expect((await conform(configured)).exitCode).toBe(0)
+  expect(await configured.project.read('knip.json')).toBe(
+    '{"husky":{"config":[".githooks/pre-commit",".githooks/commit-msg"]}}'
+  )
+})
+
+test('knip.ts gains husky as its first member and loses the redundant ignores', async () => {
+  const box = await setup({ ...converted, 'knip.ts': kiPrincipalKnip }, '.githooks')
+
+  expect((await conform(box)).exitCode).toBe(0)
+  expect(await box.project.read('knip.ts')).toBe(
+    kiPrincipalKnip
+      .replace('const config: KnipConfig = {\n', `const config: KnipConfig = {\n  ${huskyTs("'")}\n`)
+      .replace("  ignoreDependencies: ['@commitlint/cli', 'lint-staged', 'syncpack'],\n", '')
+  )
+
+  const repeated = await conform(box)
+  expect(repeated.exitCode).toBe(0)
+  expect(repeated.output).not.toContain('write knip.ts')
+})
+
+const knipTsEdits: readonly (readonly [string, string, string])[] = [
+  [
+    'an object with no strings or ignores',
+    'export default {\n  ignoreExportsUsedInFile: true\n}\n',
+    `export default {\n  ${huskyTs("'")}\n  ignoreExportsUsedInFile: true\n}\n`
+  ],
+  [
+    'an existing husky and a last-member array that keeps an entry',
+    `export default {\n  ${huskyTs('"')}\n  ignoreDependencies: ["googleapis", "syncpack"]\n}\n`,
+    `export default {\n  ${huskyTs('"')}\n  ignoreDependencies: ["googleapis"]\n}\n`
+  ],
+  [
+    'a last-member array that empties',
+    "export default {\n  ignore: ['x'],\n  ignoreDependencies: ['lint-staged']\n}\n",
+    `export default {\n  ${huskyTs("'")}\n  ignore: ['x']\n}\n`
+  ]
+]
+
+test.each(knipTsEdits)('knip.ts: %s', async (_, source, expected) => {
+  const box = await setup({ ...converted, 'knip.ts': source }, '.githooks')
+
+  expect((await conform(box)).exitCode).toBe(0)
+  expect(await box.project.read('knip.ts')).toBe(expected)
+})
+
+const knipRefusals: readonly (readonly [string, string, string, string])[] = [
+  ['a conflicting husky in knip.json', 'knip.json', '{"husky":false}', 'knip.json configures husky otherwise'],
+  ['a knip.json that is not an object', 'knip.json', '[]', 'knip.json is not a JSON object'],
+  ['a knip.json that is not JSON', 'knip.json', '{', 'knip.json is not a JSON object'],
+  [
+    'a knip.json edit that would not round-trip',
+    'knip.json',
+    '{"workspaces":{".":{"ignoreDependencies":["lint-staged"]}},"ignoreDependencies":["lint-staged"]}',
+    'knip.json is laid out in a way the conversion cannot edit'
+  ],
+  [
+    'a conflicting husky in knip.ts',
+    'knip.ts',
+    'const config = {\n  husky: false,\n  ignoreExportsUsedInFile: true\n}\n',
+    'knip.ts configures husky otherwise'
+  ],
+  [
+    'a knip.ts without an object literal',
+    'knip.ts',
+    'export default defineConfig({\n  entry: []\n})\n',
+    'knip.ts is not an object literal the conversion can edit'
+  ],
+  [
+    'an empty knip.ts object',
+    'knip.ts',
+    'export default {\n}\n',
+    'knip.ts is not an object literal the conversion can edit'
+  ],
+  [
+    'a multi-line knip.ts array',
+    'knip.ts',
+    "export default {\n  ignoreDependencies: [\n    'lint-staged'\n  ]\n}\n",
+    'knip.ts is not an object literal the conversion can edit'
+  ],
+  [
+    'two knip.ts arrays',
+    'knip.ts',
+    "export default {\n  ignoreDependencies: ['a'],\n  workspaces: { '.': {\n    ignoreDependencies: ['b'],\n  } }\n}\n",
+    'knip.ts is not an object literal the conversion can edit'
+  ],
+  [
+    'a knip.ts array that is not all literals',
+    'knip.ts',
+    "export default {\n  ignoreDependencies: [...base, 'lint-staged']\n}\n",
+    'knip.ts is not an object literal the conversion can edit'
+  ]
+]
+
+test.each(knipRefusals)('refuses %s and changes nothing', async (_, path, source, reason) => {
+  const box = await setup({ ...toolsKi, [path]: source }, '.husky/_')
+
+  const result = await conform(box)
+
+  expect(result).toEqual({
+    exitCode: 1,
+    output: expect.stringContaining(`hook conversion refused: ${reason}; nothing was changed`)
+  })
+  expect(result.output).toContain("point Knip's `husky.config` at the committed hooks by hand")
+  expect(await box.project.read(path)).toBe(source)
+  expect(await exists(box, '.githooks')).toBe(false)
+  expect(await binding(box)).toBe('.husky/_')
+})

@@ -1,7 +1,7 @@
 ---
 id: KI-TOOL-KI-CLI-167
 area: CLI
-title: Knip reads the committed hooks
+title: Knip reads committed hooks
 kind: deliver
 purpose: capability
 project: tools-burndown
@@ -9,16 +9,16 @@ component: repo
 priority: high
 size: s
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: b7e64c0e
-created_at: 2026-10-20T00:05:00Z
-updated_at: 2026-10-20T00:05:00Z
+baseline_ref: b7e64c0e850129dee48f1401993b50820c8bfcfa
+created_at: 2026-10-19T23:05:00Z
+updated_at: 2026-10-19T23:17:15Z
 transferred_from: ki-principal ki.tools-burndown KNIP-HUSKY a), Kris, 19 October 2026 23:42 BST
 ---
 
-# KI-TOOL-KI-CLI-167: Knip Reads the Committed Hooks
+# KI-TOOL-KI-CLI-167: Knip Reads Committed Hooks
 
 ## Goal
 
@@ -58,17 +58,17 @@ Kris took KNIP-HUSKY a) on 19 October at 23:42 BST, quoted in the ki.tools-burnd
 
 ## Steps
 
-- [ ] Add the Knip planning to `src/core/repository/hooks.ts`.
-- [ ] Add fixture tests through `run(args, context)` in `src/tests/cli/repo/hooks.test.ts`.
-- [ ] Apply the step to tools-ki's own `knip.json` with the source build.
-- [ ] Update the manual, the repository-operations guide, README if it names the step, and the changelog.
-- [ ] Run the gate and move the record to Awaiting review.
+- [x] Add the Knip planning to `src/core/repository/hooks.ts`.
+- [x] Add fixture tests through `run(args, context)` in `src/tests/cli/repo/hooks.test.ts`.
+- [x] Apply the step to tools-ki's own `knip.json` with the source build.
+- [x] Update the manual, the regenerated command inventory, the repository-operations guide and the changelog.
+- [x] Run the gate and move the record to Awaiting review.
 
 ## Files touched
 
 - `src/core/repository/hooks.ts`, `src/tests/cli/repo/hooks.test.ts`
 - `knip.json`
-- `man/ki.1`, `docs/guides/user/repository-operations.md`, `CHANGELOG.md`
+- `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/repository-operations.md`, `CHANGELOG.md`
 - this record
 
 ## Verify
@@ -97,3 +97,54 @@ The repository-operations guide and the manual's `repo conform` entry name the K
 ### Roadmap
 
 None.
+
+## Review
+
+### Delivered
+
+The whole record, from baseline `b7e64c0e` on 20 October 2026, by the `knipfix` run in the tools-burndown Project.
+
+### Change Summary
+
+- `src/core/repository/hooks.ts`: after composing the hooks, the plan reads `knip.json`, or else `knip.ts`, and adds one more write: `husky.config` naming the committed hooks, and the hook-tool `ignoreDependencies` entries removed. Both edits are text edits; `knip.json` must parse back to exactly the intended object, and `knip.ts` must be a plain object literal. `refuse` takes an optional remedy, so Knip refusals point at the Knip file rather than at the hooks.
+- `src/tests/cli/repo/hooks.test.ts`: 17 cases through `run(args, context)`: conversion and already-converted repositories, dry run, idempotence, one-line, empty and already-configured `knip.json`, ki-principal's `knip.ts` and three other `knip.ts` shapes, and ten refusals.
+- `knip.json`: tools-ki's own configuration, converted by `bin/ki repo conform --skill ki-repo` from this source.
+- Documentation: the manual, the regenerated command inventory, the changelog and the repository-operations guide.
+- Deviations:
+  - README is unchanged: its conform line names the hook move only in outline.
+  - The conform run on tools-ki also rewrote `.rumdl.toml`, the known `ki-authoring` rewrite that the wave runs also met; it was restored and is not part of this change.
+
+### Verification
+
+| Requirement | Evidence |
+| --- | --- |
+| 1 | `a conversion points knip.json at the committed hooks…` asserts the whole file, every other line byte for byte |
+| 2 | `knip.ts gains husky as its first member…` on ki-principal's `knip.ts`, and the three `knip.ts:` cases |
+| 3 | The `googleapis` entry kept in `a converted repository gains the Knip configuration…` and the last-member `knip.ts` cases; empty arrays lose their key |
+| 4 | `a converted repository gains the Knip configuration…` runs with no `.husky/` |
+| 5 | The ten `refuses …` Knip cases, each asserting the Knip file, `.githooks/` and the binding unchanged |
+| 6 | Repeated runs in the `knip.json` and `knip.ts` cases write nothing; the dry run leaves `knip.json` unchanged |
+| 7 | tools-ki's `knip.json` converted; `bunx knip` passes and a second dry run proposes no Knip write |
+
+- Gate:
+  - `bun run test:coverage` passed: 82 files and 1,423 tests, all at 100%.
+  - `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and the command-inventory check all passed.
+  - `ki repo audit --repo .` reports no failure; its warnings predate this change.
+- ki-principal's `knip.ts`, edited as the step edits it in a temporary copy and run with `knip -c`, reports no unused dependency. ki-principal was not changed.
+
+### Outstanding concerns
+
+- The step cannot create a Knip configuration. A new repository gets `knip.json` from the harness `ki-engineering` KNIP-1 scaffold, after this step in the same conform run, so its Husky configuration arrives on the next conform. Making the scaffold write it is a harness change.
+- A `knip.ts` in any other shape, such as `defineConfig(…)` or a multi-line `ignoreDependencies`, refuses the whole conversion until edited by hand. Only ki-principal has a `knip.ts` in the estate.
+
+### Post-change review
+
+Pointing the plugin at the committed hooks lets Knip treat the hook tools as used rather than ignored, so a tool the hooks stop calling becomes a finding again. Running on every conform, not only during conversion, makes the estate cleanup a plain conform run after release.
+
+### Mini recap
+
+`ki repo conform` with `ki-repo` selected now points Knip at `.githooks/` and drops the hook-tool ignores, in `knip.json` or `knip.ts`; tools-ki's own configuration is converted.
+
+## Discussion
+
+The edits are textual because reserialising `knip.json` changes the layout of unrelated arrays, which Biome then reports; the round-trip check keeps the textual edit honest. `knip.ts` is not executed, since conform should not run repository code, so only a plain object literal is edited.
