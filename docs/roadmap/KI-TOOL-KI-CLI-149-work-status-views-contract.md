@@ -2,12 +2,19 @@
 id: KI-TOOL-KI-CLI-149
 area: CLI
 title: Work status views contract
-status: triage
+kind: deliver
+purpose: capability
+project: observatory
+component: agent
+priority: low
+size: m
+horizon: soon
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-18T09:27:30Z
-updated_at: 2026-10-18T09:27:30Z
+updated_at: 2026-10-19T22:49:04Z
 ---
 
 # KI-TOOL-KI-CLI-149: Work Status Views Contract
@@ -28,6 +35,16 @@ Kris decided on 18 October, in the [ways-of-working decisions log](/Users/krisbr
 
 - In: a `ki/work-status/v2` JSON report carrying, beside the v1 fields, the five views, each line naming its work or item, holder and since and, on hold, whether a paused hold is past 31 days, in the order the text form prints them; the `+/_WORK_REVIEW/` count; the schema's documentation, help and manual, and the CHANGELOG naming the version change.
 - Out: changing the view rules themselves, which the Work Process note owns; changing what the text form shows; the Observatory's switch to v2, which is its own work once v2 ships.
+
+## Shaping
+
+**Approach:** a `ki/work-status/v2` JSON report that adds the five views and the `+/_WORK_REVIEW/` count beside the v1 fields, taken from `deriveWorkViews` and `WorkStatus` rather than derived again.
+
+**Dependencies:** none to build. The Observatory works from v1 and nothing there waits on this, which is why it is `low`. [KI-TOOL-KI-CLI-160](KI-TOOL-KI-CLI-160-work-status-routing-view.md) touches the same report and may be planned beside it.
+
+**Decisions still needed:** how long v1 stays available or whether `--schema` selects it; whether views carry full lines or keys into `work`; and where the review count sits.
+
+**Promotion to Next:** when those are answered and the Observatory confirms it will move to v2.
 
 ## Dependencies / blocks
 

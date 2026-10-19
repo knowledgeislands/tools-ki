@@ -2,12 +2,19 @@
 id: KI-TOOL-KI-CLI-152
 area: CLI
 title: Work folder housekeeping commands
-status: triage
+kind: deliver
+purpose: corrective
+project: ways-of-working
+component: agent
+priority: high
+size: m
+horizon: soon
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-18T19:40:00Z
-updated_at: 2026-10-18T19:40:00Z
+updated_at: 2026-10-19T22:49:04Z
 ---
 
 # KI-TOOL-KI-CLI-152: Work Folder Housekeeping Commands
@@ -30,6 +37,16 @@ The code disagrees with the [work-folder standard](/Users/krisbrown/workspaces/k
 
 - In: the close gate reading timestamped headings, with numbered headings still read in logs written before the work model; `decide` writing unnumbered timestamped headings and `reconcile` addressing an entry by its timestamp; `ki work message <receiver id>` adding one Messages line in the standard's shape and committing that path alone under `docs(work): <receiver id> message from <sender id>`; `ki work prune <id>` listing, and on confirmation deleting by explicit path, the reports and briefs the tidy rules let go, never deciding whether an outcome is homed; the manual, `man/ki.commands.json`, help text, specification and tests that follow.
 - Out: the launch refusal and the state-folder report path in the run skeleton, which KI-TOOL-KI-CLI-150 carries; the rubric checks, which [KI-HARNESS-GOV-200](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-200-thread-folder-closed-list.md) owns; old checkpoints' `type: ki-checkpoint` reading in `ki work status`; a release.
+
+## Shaping
+
+**Approach:** the close-gate parse first, since today a log in the current heading form shows the gate no entries; then unnumbered `decide` with timestamp-addressed `reconcile`; then `ki work message` and `ki work prune`, each its own commit through `run(args, context)`.
+
+**Dependencies:** none to build; [KI-TOOL-KI-CLI-150 (pruned)](https://github.com/knowledgeislands/tools-ki/blob/fa31efee/docs/roadmap/KI-TOOL-KI-CLI-150-work-folder-entry-points.md) delivered the launch part. The rubric side stays with KI-HARNESS-GOV-200.
+
+**Decisions still needed:** the Messages line shape and commit message `ki work message` writes, and what `ki work prune` lists, both read from the current work-folder standard at planning.
+
+**Promotion to Next:** at once, if the close-gate fix is wanted before the next work closes; it may be split so the gate parse goes first as its own `s` record.
 
 ## Dependencies / blocks
 

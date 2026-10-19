@@ -2,15 +2,18 @@
 id: KI-TOOL-KI-CLI-161
 area: CLI
 title: Git message check
+kind: deliver
+purpose: capability
 project: tools-burndown
-priority: medium
+priority: high
 size: s
-status: triage
+horizon: soon
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T21:30:00Z
-updated_at: 2026-10-19T21:55:00Z
+updated_at: 2026-10-19T22:49:04Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design, COMMIT-MSG a), 2026-10-19
 ---
 
@@ -32,6 +35,16 @@ The deterministic rules are those `ki-git`'s standard binds through Commitlint t
 
 - In: the command, reading the message file Git passes to `commit-msg` and ignoring comment lines and a scissors cut as `git commit` does; the rule set above taken from one source that `ki-git` owns, ideally read from the installed harness rather than copied; exit codes and a concise failure message naming the rule and the remedy; help text, manual, command inventory, README and REPO-OPS-028 lines; tests through `run(args, context)`.
 - Out: writing or binding hooks, which the hooks-standard composition and binding work owns; any change to `ki-git`'s vocabulary; trailer checks; replacing Commitlint inside this record, which the Husky retirement in the hooks rollout decides.
+
+## Shaping
+
+**Approach:** one command that reads the message file, skips comments and the scissors cut, and applies the deterministic `ki-git` rules read from one source `ki-git` owns, exiting non-zero with the rule and remedy.
+
+**Dependencies:** none to build. The estate-wide hooks migration Kris ordered at 23:24 BST leaves package-less repositories without `commit-msg` until this ships, and the hook checks cannot move to FAIL before then, which is why it is `high`.
+
+**Decisions still needed:** the four open planning questions in Discussion, chiefly the command group, which may need a `git` component in `.ki.toml`, and where the rule set is read from.
+
+**Promotion to Next:** at once under `ki-plan`, settling those questions with Kris.
 
 ## Dependencies / blocks
 

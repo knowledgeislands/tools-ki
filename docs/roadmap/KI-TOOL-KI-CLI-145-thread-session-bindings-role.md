@@ -2,12 +2,19 @@
 id: KI-TOOL-KI-CLI-145
 area: CLI
 title: Thread session bindings
-status: triage
+kind: deliver
+purpose: capability
+project: ways-of-working
+component: agent
+priority: medium
+size: m
+horizon: soon
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-16T21:28:02Z
-updated_at: 2026-10-16T21:28:02Z
+updated_at: 2026-10-19T22:49:04Z
 ---
 
 # KI-TOOL-KI-CLI-145: Thread Session Bindings
@@ -39,6 +46,16 @@ The agreed design this record implements:
 
 - In: the `ki thread` commands, the binding file and its tests; Claude through `--session-id` and `-n`, Codex through `codex resume` and read-only `thread/read`; role resolution and role-cache drift; `ki agent launch` running background agents with an explicit non-coordinator output style.
 - Out: any write to a native session through the Codex app-server, such as `thread/name/set`; `ki agent launch` passing `--session-id` or recording it in the run packet, an optional later step; passing the output style per session, which ROLE-STYLE's option b) would have needed; moving bindings between hosts; the hook itself.
+
+## Shaping
+
+**Approach:** a `ki thread` command group over one JSON binding per thread under `~/.local/state/ki/threads/`, as the agreed design above sets, with Claude bound through `--session-id` and `-n` and Codex through `codex resume` and read-only `thread/read`; then `ki agent launch` selecting a non-coordinator output style.
+
+**Dependencies:** [KI-HARNESS-GOV-199](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-199-thread-identity-role-native-sessions.md) Phase 1, in progress at Now, which defines the `role` field.
+
+**Decisions still needed:** the two planning questions in Discussion: how `ki agent launch` selects the style and proves its per-session effect, and how a Codex session learns its own native ID.
+
+**Promotion to Next:** when KI-HARNESS-GOV-199 Phase 1 lands and the launch-style mechanism is confirmed by a probe.
 
 ## Dependencies / blocks
 

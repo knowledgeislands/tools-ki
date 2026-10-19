@@ -2,12 +2,18 @@
 id: KI-TOOL-KI-CLI-151
 area: CLI
 title: CLI conventions departures
-status: triage
+kind: deliver
+purpose: debt
+project: tools-burndown
+priority: medium
+size: m
+horizon: soon
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-18T19:23:40Z
-updated_at: 2026-10-18T19:23:40Z
+updated_at: 2026-10-19T22:49:04Z
 ---
 
 # KI-TOOL-KI-CLI-151: CLI Conventions Departures
@@ -31,6 +37,16 @@ Kris Brown answered CLI-DEPARTURES a) on 18 October 2026, recorded in the [tools
 
 - In: the four departures above, with help, completion, manual, `man/ki.commands.json`, guides, CHANGELOG and contract tests through `run(args, context)`.
 - Out: `-f, --filter` (CLI-F-FILTER); the conventions themselves, which `ki-repo-tools` owns; other tools' departures, which `tools-mgit` and `tools-rig` carry; a release.
+
+## Shaping
+
+**Approach:** the four departures as separate commits behind contract tests through `run(args, context)`: `ki --version` in `src/cli.ts`, audit and conform progress to standard error, the machine-output option, and `-n` for `--dry-run`, each with help, completion, manual, command inventory, guide and changelog lines.
+
+**Dependencies:** none. CLI-DEPARTURES a) fixes each at `ki`'s next change to the commands concerned.
+
+**Decisions still needed:** whether `--format` gives way to `--json` or `--json` is added beside it; and whether moving progress to standard error breaks any consumer that reads audit output, such as the commit hooks and CI.
+
+**Promotion to Next:** when the output-option form is chosen and the consumers of audit standard output are listed.
 
 ## Dependencies / blocks
 

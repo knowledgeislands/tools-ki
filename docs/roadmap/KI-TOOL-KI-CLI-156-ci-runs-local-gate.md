@@ -2,12 +2,19 @@
 id: KI-TOOL-KI-CLI-156
 area: CLI
 title: CI runs local gate
-status: triage
+kind: deliver
+purpose: corrective
+project: tools-burndown
+component: dev
+priority: medium
+size: s
+horizon: soon
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T08:04:00Z
-updated_at: 2026-10-19T20:52:45Z
+updated_at: 2026-10-19T22:49:04Z
 ---
 
 # KI-TOOL-KI-CLI-156: CI Runs Local Gate
@@ -29,6 +36,16 @@ Intended priority `medium` and size `s`. The installed `ki` rejects `priority` a
 ## Boundary
 
 This record changes `.github/workflows/ci.yml` only, with any test that guards its shape. It does not change `release.yml`, the lint-staged or Husky hooks, the Biome configuration or the ki-engineering standard and checker.
+
+## Shaping
+
+**Approach:** read the latest CI runs first; if the audit gate is broken, fix it rather than repeat its checks in `ci.yml`, as BIOME-CI-STANDARD a) chose; only if the gate is sound and still let the drift through, add `biome check .`, `tsc` and `bun run test` steps.
+
+**Dependencies:** none. The commit gate now lives in `.githooks/`, after [KI-TOOL-KI-CLI-163](KI-TOOL-KI-CLI-163-githooks-conversion.md), so the Husky mention in Boundary reads as the committed hooks.
+
+**Decisions still needed:** none before the CI evidence is read; the route follows from it.
+
+**Promotion to Next:** when the CI run evidence is read, which needs a connected session.
 
 ## Discussion
 

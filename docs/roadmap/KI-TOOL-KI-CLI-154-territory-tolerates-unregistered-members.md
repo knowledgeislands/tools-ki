@@ -2,12 +2,19 @@
 id: KI-TOOL-KI-CLI-154
 area: CLI
 title: Territory tolerates unregistered members
-status: triage
+kind: deliver
+purpose: corrective
+project: observatory
+component: territory
+priority: medium
+size: m
+horizon: soon
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T07:40:43Z
-updated_at: 2026-10-19T07:40:43Z
+updated_at: 2026-10-19T22:49:04Z
 ---
 
 # KI-TOOL-KI-CLI-154: Territory Tolerates Unregistered Members
@@ -40,6 +47,16 @@ Read at `62a37949` on 19 October 2026.
 - Where the warning goes and how it looks: stderr, the existing `TerritoryWarning` callback, an audit finding, and whether the exit code changes.
 - Whether `--null` roots output stays atomic when it leaves members out.
 - How the specification's requirement on missing registration and its verification in `src/tests/cli/territory/selection.test.ts` change.
+
+## Shaping
+
+**Approach:** select registered members and warn, naming each unregistered one, in `resolveTerritory`, with the territories specification's requirement and its verification changed in the same unit.
+
+**Dependencies:** none. The immediate failure was cleared by registering `ki-design`, so this is resilience rather than an outage.
+
+**Decisions still needed:** the four open design questions above, chiefly which commands keep failing and where the warning goes.
+
+**Promotion to Next:** when those are answered and the specification change is worded.
 
 ## Discussion
 

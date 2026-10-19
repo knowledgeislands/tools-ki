@@ -2,16 +2,19 @@
 id: KI-TOOL-KI-CLI-160
 area: CLI
 title: Work status routing view
+kind: deliver
+purpose: capability
 project: ways-of-working
 component: agent
 priority: medium
 size: s
-status: triage
+horizon: soon
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T21:10:00Z
-updated_at: 2026-10-19T21:10:00Z
+updated_at: 2026-10-19T22:49:04Z
 transferred_from: ki-principal ki.ways-of-working work-package design, point 35, 2026-10-19
 ---
 
@@ -33,6 +36,16 @@ The data already exists. Since KI-TOOL-KI-CLI-158 each `ki/work-status/v1` entry
 
 - In: a human routing view in `ki work status`, every live work in one listing with its id, state, pending count and description, drawn from the existing report; its help text, manual, command inventory, README and REPO-OPS-028 lines; tests through `run(args, context)`.
 - Out: any change to how work folders are read, which KI-TOOL-KI-CLI-158 owns; any new field in `ki/work-status/v1`; the five derived views and the `v2` contract, [KI-TOOL-KI-CLI-149](KI-TOOL-KI-CLI-149-work-status-views-contract.md); routing itself, which State of play does under `ki-coordination`; any write to a work folder.
+
+## Shaping
+
+**Approach:** a human routing listing in `ki work status`, one line per live work, drawn from the report KI-TOOL-KI-CLI-158 already builds.
+
+**Dependencies:** none to build; it may sit beside [KI-TOOL-KI-CLI-149](KI-TOOL-KI-CLI-149-work-status-views-contract.md)'s views if that is planned first.
+
+**Decisions still needed:** the four open planning questions in Discussion: flag, subcommand or section; which folders appear; how a long description is cut; and filtering.
+
+**Promotion to Next:** when State of play confirms the form it wants to read.
 
 ## Dependencies / blocks
 

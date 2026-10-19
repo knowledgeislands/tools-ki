@@ -2,16 +2,19 @@
 id: KI-TOOL-KI-CLI-159
 area: CLI
 title: Island maturity and health
+kind: deliver
+purpose: capability
 project: observatory
 component: territory
 priority: medium
 size: m
-status: triage
+horizon: soon
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T18:53:00Z
-updated_at: 2026-10-19T18:53:00Z
+updated_at: 2026-10-19T22:49:04Z
 transferred_from: ki-principal ki.observatory CONDITION-TOML, 2026-10-19
 ---
 
@@ -37,6 +40,16 @@ Health is derived, not declared, so it needs a rule and a cost bound: running ev
 - In: reading the declared maturity key and validating it against the scale; deriving health from the island's `ki repo audit` outcome under the mapping the `ki-repo` standard states; a versioned JSON shape carrying both, with the observed time of the health reading; human output; tests.
 - In: reporting an undeclared maturity or an audit that cannot run as unknown, never as a level.
 - Out: defining the scale, the key or the health mapping, which the harness's `ki-repo` standard owns; declaring a level in any repository; the Observatory views that draw the signals, which apps-observatory.local owns.
+
+## Shaping
+
+**Approach:** read the declared maturity key, derive health from `ki repo audit` under the `ki-repo` mapping, and publish both in a versioned JSON form, reporting unknown rather than guessing.
+
+**Dependencies:** KI-HARNESS-GOV-223, still at triage, defines the scale, key and health mapping; this record cannot be planned before it.
+
+**Decisions still needed:** the open planning questions in Discussion: the surface, live or cached health, and the contract name and version.
+
+**Promotion to Next:** when KI-HARNESS-GOV-223 is Ready or done.
 
 ## Dependencies / blocks
 
