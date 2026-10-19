@@ -1,7 +1,7 @@
 ---
 id: KI-TOOL-KI-CLI-161
 area: CLI
-title: Git check-message for committed commit-msg hooks
+title: Git message check
 project: tools-burndown
 priority: medium
 size: s
@@ -10,11 +10,11 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T21:30:00Z
-updated_at: 2026-10-19T21:30:00Z
+updated_at: 2026-10-19T21:55:00Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design, COMMIT-MSG a), 2026-10-19
 ---
 
-# KI-TOOL-KI-CLI-161: Git Check-Message for Committed Commit-Msg Hooks
+# KI-TOOL-KI-CLI-161: Git Message Check
 
 ## Goal
 
