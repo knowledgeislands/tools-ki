@@ -5,13 +5,12 @@ title: Biome schema drift
 project: tools-burndown
 purpose: debt
 kind: deliver
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 35ba8ec1944ec7c5167c8d6b050e62c34f2eeb83
 created_at: 2026-10-19T07:05:55Z
-updated_at: 2026-10-19T08:00:24Z
+updated_at: 2026-10-19T10:02:46Z
 ---
 
 # KI-TOOL-KI-CLI-153: Biome Schema Drift
@@ -125,6 +124,17 @@ Independent review, 19 October 2026, by the `review153` run of the tools-burndow
 
 `biome check .` is silent on the 2.5.15 schema, with no behaviour change.
 
+## Done
+
+Accepted 2026-10-19 by Kris Brown on the review packet above.
+
 ## Discussion
 
-None.
+Acceptance authority: Kris Brown's HIGH-CONFIDENCE answer of 19 October 2026, "do all high confidence items", read back as KI-153-VERDICT a), recorded in the [tools-burndown decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.tools-burndown/decisions.md). It accepts the record on the independent `review153` review with both of that review's observations as known limits. No source changed between the reviewed `cc930b04` and acceptance.
+
+Known limits, accepted as they stand rather than carried as follow-up records:
+
+- The Decision and Verify 3 overstate the assertion replacement: 18 of the 19 edited non-null assertions became type assertions, one became an optional chain in `contract.test.ts`, and six remain in the excluded vendored `source-mirrors.ts`. Change Summary describes the delivered change.
+- `src/core/kb/contract.ts` now differs in syntax only from the copy mcp-ki-kb-fs pins at tools-ki `2f37fb0e`; its next re-vendor picks up the change.
+
+The Outstanding concern that CI does not run `biome check` is carried by [KI-TOOL-KI-CLI-156](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-156-ci-runs-local-gate.md).
