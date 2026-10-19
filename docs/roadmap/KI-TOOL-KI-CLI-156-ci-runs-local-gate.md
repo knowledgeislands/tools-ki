@@ -7,7 +7,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T08:04:00Z
-updated_at: 2026-10-19T08:04:00Z
+updated_at: 2026-10-19T20:52:45Z
 ---
 
 # KI-TOOL-KI-CLI-156: CI Runs Local Gate
@@ -42,3 +42,7 @@ Planning should first find out why it did not, for example the pinned `KI_VERSIO
 - Make the audit's existing gate effective in CI and leave `ci.yml` without repeated steps. This keeps CI-2 clean but may need a harness or pin change outside this record.
 
 If the explicit steps win, the standard needs an exception or a change in ki-agentic-harness, which this record would hand off rather than make.
+
+### Route chosen
+
+On 2026-10-19 Kris answered the tools-burndown summary with "All recommended", which took BIOME-CI-STANDARD a): keep this record, and have planning check the latest CI runs first. If the audit gate turns out to be broken, fix it rather than repeat its checks in `ci.yml`. The explicit-steps route above therefore applies only if the audit gate proves sound and still let the drift through.
