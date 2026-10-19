@@ -9,13 +9,13 @@ status: draft
 horizon: hold
 hold:
   reason: waiting-for
-  condition: An ARM host is needed, or vega is rebuilt
+  condition: An ARM host is needed
   review: 2026-11-16
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-13T22:53:48Z
-updated_at: 2026-10-14T06:52:07Z
+updated_at: 2026-10-19T23:45:57Z
 ---
 
 # KI Release Contract
@@ -46,3 +46,7 @@ Origin: `ki-principal`, state-of-play thread, under Kris Brown's acceptance of t
 ### Adoption
 
 On 14 October 2026 Kris approved the state-of-play thread's triage burn-down as written, under Kris's instruction to burn the roadmap down: adopted as `deliver / Hold` until 2026-11-16. No ARM host exists and vega has been deleted; `ki` already ships signed archives for the three platforms in use. Review it with the vega rebuild. Adoption grants no planning, implementation or acceptance authority.
+
+### Hold review on 20 October 2026
+
+Reviewed with the vega rebuild, as the adoption note asked, under Kris's OVERNIGHT authority of 20 October 2026, answering the agent-host work's CLI125-HOLD query with option a), reviewed blind by query-review-6, which agreed. vega was rebuilt on 14 October as an x86 host, no ARM host exists or is planned, and Rig's signed-release install kind does not depend on this contract. The hold stays, its condition reduced to an ARM host being needed, with the same review date.
