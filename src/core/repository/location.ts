@@ -21,3 +21,11 @@ export const targetFromDirectory = async (
   const root = await physicalDirectory(directory, directoryMessage)
   return { root, declaration: await requireCanonicalRepositoryDeclaration(root, declarationMessage) }
 }
+
+/** An explicitly named repository, followed through a symbolic link to its real location first. */
+export const targetFromNamedDirectory = async (
+  directory: string,
+  directoryMessage: string,
+  declarationMessage = directoryMessage
+): Promise<RepositoryLocation> =>
+  targetFromDirectory(await realpath(directory).catch(() => directory), directoryMessage, declarationMessage)

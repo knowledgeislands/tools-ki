@@ -7,7 +7,12 @@ import type { Runner } from '../runtime/runner.ts'
 import { matchesDirectoryName, validateFilters } from '../territory/filters.ts'
 import { noRepositoriesMatched, resolveTerritory } from '../territory/index.ts'
 import { inspectRepositoryDeclarationState, repositoryDeclarationError } from './declaration.ts'
-import { physicalDirectory, type RepositoryLocation, targetFromDirectory } from './location.ts'
+import {
+  physicalDirectory,
+  type RepositoryLocation,
+  targetFromDirectory,
+  targetFromNamedDirectory
+} from './location.ts'
 import { MGIT_MANIFEST_FILE, repositoriesFromMgitManifest } from './mgit.ts'
 
 export type { RepositoryLocation } from './location.ts'
@@ -49,7 +54,7 @@ export const resolveRepository = async (options: {
       'run from inside a KI repository, or pass --repo <checkout>'
     )
   }
-  return targetFromDirectory(
+  return targetFromNamedDirectory(
     options.repository,
     '--repo must be an existing directory',
     `--repo must name a repository containing ${REPOSITORY_DECLARATION_FILE}`
@@ -158,7 +163,7 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
         const path = resolve(options.workingDirectory, value)
         if (!matchesDirectoryName(path, filters)) continue
         targets.push(
-          await targetFromDirectory(
+          await targetFromNamedDirectory(
             path,
             '--repo must be an existing directory',
             `--repo must name a repository containing ${REPOSITORY_DECLARATION_FILE}`

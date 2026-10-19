@@ -476,6 +476,19 @@ describe('[ki repo target sets]', () => {
       })
     })
 
+    test('audits a repository named through a symbolic link at its real location', async () => {
+      const box = await sandbox()
+      await box.root.write('real/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await symlink(`${box.root.path}/real`, `${box.root.path}/link`)
+      const real = await realpath(`${box.root.path}/real`)
+
+      const result = await box.run(['ki', 'repo', 'audit', '--repo', `${box.root.path}/link`])
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain(`📁 real (${real})`)
+    })
+
     test('recaps every repository verdict and aggregate finding volume', async () => {
       const box = await sandbox()
       await box.root.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
