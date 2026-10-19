@@ -9,12 +9,12 @@ component: repo
 priority: high
 size: m
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 0629726466b3cb085c4ec3c1bb2f2e5da8a01390
 created_at: 2026-10-19T22:10:00Z
-updated_at: 2026-10-19T22:10:00Z
+updated_at: 2026-10-19T23:40:00Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design section 4.2, GIT-HOOKS a), 2026-10-19
 ---
 
@@ -86,18 +86,18 @@ Each change prints one line through the existing conform event stream: `proposed
 
 ## Steps
 
-- [ ] Add `src/core/repository/hooks.ts`: plan (read, compose, refuse) and apply (writes, removals, binding).
-- [ ] Wire it into `conformRepositories` with the new events, and render them in `src/commands/repo/conform.ts`.
-- [ ] Write fixture tests through `run(args, context)` on tools-ki's and ki-principal's hook shapes, package-less and refusal cases, the binding cases, idempotence and dry run.
-- [ ] Update the manual, changelog and README.
-- [ ] Run the gate and move the record to Awaiting review.
+- [x] Add `src/core/repository/hooks.ts`: plan (read, compose, refuse) and apply (writes, removals, binding).
+- [x] Wire it into `conformRepositories` with the new events, and render them in `src/commands/repo/conform.ts`.
+- [x] Write fixture tests through `run(args, context)` on tools-ki's and ki-principal's hook shapes, package-less and refusal cases, the binding cases, idempotence and dry run.
+- [x] Update the manual, changelog and README.
+- [x] Run the gate and move the record to Awaiting review.
 
 ## Files touched
 
-- `src/core/repository/hooks.ts`, `src/core/repository/index.ts`, `src/core/repository/operations/conform.ts`
+- `src/core/repository/hooks.ts`, `src/core/repository/operations/conform.ts`, `src/core/runtime/git.ts`
 - `src/commands/repo/conform.ts`
 - `src/tests/cli/repo/hooks.test.ts`
-- `man/ki.1`, `CHANGELOG.md`, `README.md`
+- `man/ki.1`, `man/ki.commands.json`, `CHANGELOG.md`, `README.md`, `docs/guides/user/repository-operations.md`
 - this record
 
 ## Verify
@@ -121,11 +121,65 @@ None: no portable contract changes.
 
 ### Guides
 
-None: the manual's `repo conform` entry names the step.
+The repository-operations guide and the manual's `repo conform` entry name the step.
 
 ### Roadmap
 
 The claims mechanism and the estate binding sweep stay "To capture" in the design note.
+
+## Review
+
+### Delivered
+
+The whole record, from baseline `06297264` on 19 October 2026, by the `hookconf` run in the tools-burndown Project.
+
+### Change Summary
+
+- `src/core/repository/hooks.ts`: plans the conversion (reads `.husky/` and `.githooks/`, composes both hooks, edits `package.json` and `bun.lock`, reads the binding) and refuses before any change; applies it by validating every write, reporting each step, then publishing, removing `.husky/` and binding.
+- `src/core/repository/operations/conform.ts`: runs the step after the repository frame opens and before the rubric conform, when `ki-repo` is selected; the four hook events join the conform event stream.
+- `src/core/runtime/git.ts`: exports `scrubbedGitEnvironment`, so the binding is read and set for the repository root rather than an inherited `GIT_DIR`.
+- `src/commands/repo/conform.ts`: renders `write`, `remove`, `bind` and `keep core.hooksPath` lines, with `would` in a dry run.
+- Tests: `src/tests/cli/repo/hooks.test.ts` holds 27 cases through `run(args, context)` with real Git.
+- Documentation: the manual, the regenerated command inventory, the changelog, README and the repository-operations guide.
+- Deviations:
+  - The `.husky/` index-tracking check became a directory check: any entry other than `_`, `pre-commit` and `commit-msg` refuses, tracked or not, and so needs no Git call.
+  - A missing `prepare` gains the binding only when Husky was in use and a committed pre-commit hook will exist, so a leftover `.husky/_` alone does not add one.
+  - A `.githooks/<hook>` whose only `.husky` mention is a comment counts as not delegating.
+
+### Verification
+
+| Requirement | Evidence |
+| --- | --- |
+| 1 | Covered by `converts a Husky-only repository…` and `inlines Husky into committed stubs…`: the first non-frame line under the HOOK-4 `FRAME_LINE` pattern is the SCR-11 baseline `lint-staged` line |
+| 2 | Covered by `inlines Husky into committed stubs…`: the KB audit lines follow the inlined content and `ki` joins the PATH refusal |
+| 3 | Covered by `converts a Husky-only repository…` and the `prepare` cases |
+| 4 | Covered by `converts a Husky-only repository…`, `a lockless package…` and the lockfile refusals |
+| 5 | Covered by the unset, `.husky/_`, `.githooks` and `tooling/hooks` binding cases, and `a failed binding is reported` |
+| 6 | Covered by 15 refusal cases and the symlink and non-regular-file case, each asserting every file and the binding unchanged |
+| 7 | The mode assertions in `converts a Husky-only repository…` |
+| 8 | The repeated run in `converts a Husky-only repository…`, and `…a repository already converted needs nothing` |
+| 9 | Covered by `a dry run reports every change and makes none` |
+| 10 | Covered by `runs only with ki-repo selected…`, whose hook-less case runs with the refusing sandbox runner |
+
+- Gate:
+  - `bun run test:coverage` passed: 82 files and 1,405 tests, all at 100%.
+  - `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and the command-inventory check all passed.
+  - `ki repo audit --repo .` passes with no failure. Its HOOK-1, HOOK-3, HOOK-5, SCR-5 and SCR-11 warnings are tools-ki's own unconverted Husky gate, which the pilot wave converts.
+- Composition was planned, without applying, on temporary copies of the tracked hook files, manifest and lockfile of tools-ki, ki-principal and ki-agentic-harness. All three composed with no refusal, the Husky content inlined, ki-principal's KB audit and ki-agentic-harness's staged-skill functions kept, and `tsc` and `ki` in their refusal lists. No repository was touched.
+
+### Outstanding concerns
+
+- va-principal has no hook and no Husky, so this step gives it nothing; its first `.githooks/pre-commit` needs the claims mechanism or a hand-written hook.
+- Once released, every `ki repo conform` with `ki-repo` selected converts a Husky repository. The pilot runs the local source build; the release should follow the pilot so that the estate converts only after it.
+- Refusal names a file and line but not a fix for every case; the wave runs will show which refusals need a hand edit.
+
+### Post-change review
+
+The conversion composes from what each repository already runs rather than from a template, so it needs no harness claim and keeps repository-specific content, at the cost of refusing whatever it cannot place. Planning everything before any write makes a refusal leave the tree, manifest, lockfile and binding untouched.
+
+### Mini recap
+
+`ki repo conform` with `ki-repo` selected now moves a Husky commit gate into a committed, bound, frame-first `.githooks/` and removes Husky; the three Husky repositories compose cleanly.
 
 ## Discussion
 
