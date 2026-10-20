@@ -5,6 +5,7 @@ title: EBU sources sync
 project: knowledge-acquisition
 purpose: capability
 kind: deliver
+size: l
 component: acquire
 horizon: next
 status: draft
@@ -12,7 +13,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-15T23:15:13Z
-updated_at: 2026-10-16T01:15:23Z
+updated_at: 2026-10-20T00:46:49Z
 ---
 
 # EBU Sources Sync

@@ -5,6 +5,7 @@ title: Git hygiene estate audit
 project: tools-burndown
 purpose: capability
 kind: deliver
+size: m
 component: repo
 horizon: next
 status: draft
@@ -12,7 +13,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-16T00:29:07Z
-updated_at: 2026-10-18T19:22:14Z
+updated_at: 2026-10-20T00:46:49Z
 ---
 
 # Git Hygiene Estate Audit

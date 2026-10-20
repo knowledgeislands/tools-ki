@@ -5,6 +5,7 @@ title: Launch footer follows brief
 project: tools-burndown
 purpose: corrective
 kind: deliver
+size: l
 component: agent
 horizon: now
 status: in-progress
@@ -12,7 +13,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 0e48ca2764f7ab3eb9a54b99b4a8e2a40aa4edc8
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-18T18:15:26Z
+updated_at: 2026-10-20T00:46:49Z
 ---
 
 # Launch Footer Follows Brief
