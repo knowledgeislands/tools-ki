@@ -13,6 +13,26 @@ export const HOOK_DIRECTORY = '.githooks'
 const HUSKY_DIRECTORY = '.husky'
 const HOOKS = ['pre-commit', 'commit-msg'] as const
 const HUSKY_ENTRIES = new Set<string>(['_', ...HOOKS])
+// Husky 9 generates only these regular files below `_`; no descendant directory is owned.
+const HUSKY_GENERATED = new Set([
+  ...HOOKS,
+  '.gitignore',
+  'h',
+  'husky.sh',
+  'applypatch-msg',
+  'post-applypatch',
+  'post-checkout',
+  'post-commit',
+  'post-merge',
+  'post-rewrite',
+  'pre-applypatch',
+  'pre-auto-gc',
+  'pre-merge-commit',
+  'pre-push',
+  'pre-rebase',
+  'pre-receive',
+  'prepare-commit-msg'
+])
 const BINDING = `git config core.hooksPath ${HOOK_DIRECTORY}`
 const OTHER_LOCKFILES = ['bun.lockb', 'package-lock.json', 'npm-shrinkwrap.json', 'pnpm-lock.yaml', 'yarn.lock']
 const EXECUTABLE = 0o755
@@ -28,7 +48,13 @@ const KNIP_REMEDY = "point Knip's `husky.config` at the committed hooks by hand,
 const JSON_IGNORES = /("ignoreDependencies"\s*:\s*\[)([^\]]*)\]/g
 const JSON_EMPTY_IGNORES =
   /,\s*"ignoreDependencies"\s*:\s*\[\s*\]|"ignoreDependencies"\s*:\s*\[\s*\]\s*,\s*|"ignoreDependencies"\s*:\s*\[\s*\]/g
-const TS_OPEN = /^(?:export\s+default|const\s+\w+(?:\s*:\s*\w+)?\s*=)\s*\{[ \t]*$/m
+const TS_OPEN = /^(?:export\s+default|const\s+(\w+)(?:\s*:\s*\w+)?\s*=)\s*\{[ \t]*$/m
+const TS_PREAMBLE =
+  /^(?:[ \t]*(?:\/\/[^\r\n]*|import\s+type\s+\{[\w,\s]+\}\s+from\s+['"][^'"\r\n]+['"];?)?[ \t]*\r?\n)*$/
+// Deliberately bounded: simple root members and the canonical Husky member only.
+// Nested objects, executable configuration and helper declarations require manual repair.
+const TS_MEMBER =
+  /^[ \t]*(?:\w+:\s*(?:true|false|\d+|(['"])(?:(?!\1)[^\\\r\n])*\1|\[[^[\]{};`\r\n]*\]|\{ config: \[[^[\]{};`\r\n]*\] \}),?|\/\/[^\r\n]*)[ \t]*$/
 const TS_IGNORES = /^([ \t]*)ignoreDependencies:\s*\[([^\]\n]*)\](,?)[ \t]*\r?\n/gm
 const TS_HUSKY = /^[ \t]*husky\s*:.*$/m
 const STRING_LITERAL = /(['"])((?:(?!\1)[^\\])*)\1/g
@@ -84,8 +110,21 @@ const huskyEntries = async (root: string): Promise<ReadonlySet<string> | undefin
   if (!state) return undefined
   if (!state.isDirectory()) refuse(`${HUSKY_DIRECTORY} is not a directory`)
   const entries = await readdir(join(root, HUSKY_DIRECTORY))
-  for (const entry of entries)
-    if (!HUSKY_ENTRIES.has(entry)) refuse(`${HUSKY_DIRECTORY}/${entry} has no place in ${HOOK_DIRECTORY}/`)
+  for (const entry of entries) {
+    const path = `${HUSKY_DIRECTORY}/${entry}`
+    if (!HUSKY_ENTRIES.has(entry)) refuse(`${path} has no place in ${HOOK_DIRECTORY}/`)
+    if (entry !== '_') {
+      await readRegular(root, path)
+      continue
+    }
+    const generated = await lstat(join(root, path))
+    if (!generated.isDirectory()) refuse(`${path} is not a directory`)
+    for (const name of await readdir(join(root, path))) {
+      const descendant = `${path}/${name}`
+      if (!HUSKY_GENERATED.has(name)) refuse(`${descendant} is not a generated Husky file`)
+      await readRegular(root, descendant)
+    }
+  }
   return new Set(entries)
 }
 
@@ -210,7 +249,7 @@ const knipJsonWrite = (
   return { path: 'knip.json', content }
 }
 
-/** Puts `husky` first in a recognised `knip.ts` object literal and drops redundant ignores from its one-line array. */
+/** Edits only a bounded exported `knip.ts` object; ambiguous scopes are refused before any repair. */
 const knipTsWrite = (
   source: string,
   hookPaths: readonly string[],
@@ -221,6 +260,16 @@ const knipTsWrite = (
   const openEnd = open ? open.index + open[0].length : -1
   const indent = /^\r?\n([ \t]+)\S/.exec(source.slice(openEnd))?.[1]
   if (!open || !indent) return unrecognised()
+  const close = /^\}[ \t]*;?[ \t]*\r?$/m.exec(source.slice(openEnd))
+  if (!close || !TS_PREAMBLE.test(source.slice(0, open.index))) return unrecognised()
+  const bodyEnd = openEnd + close.index
+  const suffix = source
+    .slice(bodyEnd + close[0].length)
+    .trim()
+    .replace(/;$/, '')
+  if (suffix !== (open[1] ? `export default ${open[1]}` : '')) return unrecognised()
+  const body = source.slice(openEnd, bodyEnd)
+  if (!body.split(/\r?\n/).every((line) => !line.trim() || TS_MEMBER.test(line))) return unrecognised()
   const arrays = [...source.matchAll(TS_IGNORES)]
   const mentions = source.match(/\bignoreDependencies\b/g)?.length ?? 0
   if (arrays.length !== mentions || mentions > 1) unrecognised()
@@ -285,6 +334,10 @@ export const planHookConversion = async (
   canonical: CanonicalHooks | null
 ): Promise<HookConversion | undefined> => {
   if (canonical === null) return undefined
+  // Validate the physical parent independently of hook drift: even a binding-only
+  // plan must never adopt hooks through an internal or external directory symlink.
+  const directory = await lstat(join(root, HOOK_DIRECTORY)).catch(() => undefined)
+  if (directory && !directory.isDirectory()) refuse(`${HOOK_DIRECTORY} is not a physical directory`)
   const entries = await huskyEntries(root)
   const manifest = await readRegular(root, 'package.json')
   const writes: NativeWrite[] = []

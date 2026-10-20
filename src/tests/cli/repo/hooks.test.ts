@@ -457,7 +457,7 @@ const knipRefusals: readonly (readonly [string, string, string, string])[] = [
   [
     'a conflicting husky in knip.ts',
     'knip.ts',
-    'const config = {\n  husky: false,\n  ignoreExportsUsedInFile: true\n}\n',
+    'const config = {\n  husky: false,\n  ignoreExportsUsedInFile: true\n}\nexport default config\n',
     'knip.ts configures husky otherwise'
   ],
   [
@@ -505,4 +505,116 @@ test.each(knipRefusals)('refuses %s and changes nothing', async (_, path, source
   expect(await box.project.read(path)).toBe(source)
   expect(await exists(box, '.githooks')).toBe(false)
   expect(await binding(box)).toBe('.husky/_')
+})
+
+test.each([
+  '.husky/pre-commit/notes.md',
+  '.husky/commit-msg/notes.md',
+  '.husky/_/notes.md',
+  '.husky/_/h/notes.md',
+  '.husky/_/pre-commit/notes.md'
+])('refuses to retire a Husky tree containing %s', async (path) => {
+  const source = 'Unrelated notes that must survive\n'
+  const manifest = '{"scripts":{"prepare":"husky"},"devDependencies":{"husky":"9"}}\n'
+  const box = await setup({ [path]: source, 'package.json': manifest }, '.husky/_')
+  for (const flags of [' --dry-run', '']) {
+    const result = await conform(box, flags)
+    expect(result.exitCode, result.output).toBe(1)
+    expect(result.output).toContain('hook conversion refused:')
+    expect(result.output).not.toContain('remove .husky\n')
+    expect(await box.project.read(path)).toBe(source)
+    expect(await box.project.read('package.json')).toBe(manifest)
+    expect(await exists(box, '.githooks')).toBe(false)
+    expect(await binding(box)).toBe('.husky/_')
+  }
+})
+
+test.each(['.husky/pre-commit', '.husky/_', '.husky/_/h'])(
+  'refuses to retire a Husky tree with a symlink at %s',
+  async (path) => {
+    const box = await setup({ 'notes.md': 'Keep me\n' }, '.husky/_')
+    await box.project.mkdir(path.slice(0, path.lastIndexOf('/')))
+    await symlink(join(box.project.path, 'notes.md'), join(box.project.path, path))
+    const result = await conform(box, ' --dry-run')
+    expect(result.exitCode, result.output).toBe(1)
+    expect(result.output).toContain('hook conversion refused:')
+    expect(await box.project.isSymlink(path)).toBe(true)
+    expect(await box.project.read('notes.md')).toBe('Keep me\n')
+    expect(await exists(box, '.githooks')).toBe(false)
+    expect(await binding(box)).toBe('.husky/_')
+  }
+)
+
+test('refuses a regular file in place of the generated Husky directory', async () => {
+  const box = await setup({ '.husky/_': 'Keep me\n' }, '.husky/_')
+  const result = await conform(box, ' --dry-run')
+  expect(result.exitCode, result.output).toBe(1)
+  expect(result.output).toContain('.husky/_ is not a directory')
+  expect(await box.project.read('.husky/_')).toBe('Keep me\n')
+  expect(await exists(box, '.githooks')).toBe(false)
+})
+
+test('retires only regular generated Husky entries', async () => {
+  const box = await setup({
+    '.husky/_/.gitignore': '*\n',
+    '.husky/_/h': '#!/bin/sh\n',
+    '.husky/_/pre-commit': '#!/bin/sh\n',
+    '.husky/_/pre-push': '#!/bin/sh\n'
+  })
+  expect((await conform(box)).exitCode).toBe(0)
+  expect(await exists(box, '.husky')).toBe(false)
+})
+
+test.each([
+  [
+    'a helper object before a separate default object',
+    "const helper = {\n  ignoreDependencies: ['lint-staged'],\n}\nexport default {\n  entry: ['src/main.ts'],\n}\n"
+  ],
+  [
+    'a helper object before an exported named configuration',
+    "const helper = {\n  entry: ['helper.ts'],\n}\nconst config = {\n  ignoreDependencies: ['lint-staged'],\n}\nexport default config\n"
+  ],
+  [
+    'an inline helper before the default object',
+    "const helper = { ignoreDependencies: ['lint-staged'] }\nexport default {\n  entry: ['src/main.ts'],\n}\n"
+  ],
+  ['an unexported object', "const config = {\n  entry: ['src/main.ts'],\n}\n"],
+  ['a different exported identifier', "const helper = {\n  entry: ['helper.ts'],\n}\nexport default config\n"],
+  ['a missing closing brace', "export default {\n  entry: ['src/main.ts'],\n"],
+  [
+    'a nested unrelated ignore list',
+    "export default {\n  workspaces: { '.': {\n    ignoreDependencies: ['lint-staged'],\n  } },\n}\n"
+  ]
+])('refuses ambiguous Knip configuration: %s', async (_name, source) => {
+  const box = await setup({ ...toolsKi, 'knip.ts': source }, '.husky/_')
+  for (const flags of [' --dry-run', '']) {
+    const result = await conform(box, flags)
+    expect(result.exitCode, result.output).toBe(1)
+    expect(result.output).toContain('knip.ts is not an object literal the conversion can edit')
+    expect(await box.project.read('knip.ts')).toBe(source)
+    expect(await box.project.read('package.json')).toBe(toolsKiManifest)
+    expect(await box.project.read('bun.lock')).toBe(toolsKiLock)
+    expect(await exists(box, '.githooks')).toBe(false)
+    expect(await exists(box, '.husky')).toBe(true)
+    expect(await binding(box)).toBe('.husky/_')
+  }
+})
+
+test('repairs a named exported Knip configuration with comments and blank lines', async () => {
+  const source =
+    '// Configuration\n\nconst config = {\n  // Keep this comment\n\n  ignoreExportsUsedInFile: true\n}\nexport default config;\n'
+  const box = await setup({ ...converted, 'knip.ts': source }, '.githooks')
+  expect((await conform(box)).exitCode).toBe(0)
+  expect(await box.project.read('knip.ts')).toBe(
+    source.replace('const config = {\n', `const config = {\n  ${huskyTs("'")}\n`)
+  )
+})
+
+test('refuses duplicate root Knip ignore arrays', async () => {
+  const source = "export default {\n  ignoreDependencies: ['a'],\n  ignoreDependencies: ['b'],\n}\n"
+  const box = await setup({ ...converted, 'knip.ts': source })
+  const result = await conform(box, ' --dry-run')
+  expect(result.exitCode, result.output).toBe(1)
+  expect(result.output).toContain('knip.ts is not an object literal the conversion can edit')
+  expect(await box.project.read('knip.ts')).toBe(source)
 })

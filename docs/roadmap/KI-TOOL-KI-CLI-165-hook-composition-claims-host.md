@@ -14,7 +14,7 @@ blocks: []
 blocked_by: []
 baseline_ref: ee40f26565fd3852a067164dab564e0f4745d23c
 created_at: 2026-10-19T22:46:17Z
-updated_at: 2026-10-20T04:40:28Z
+updated_at: 2026-10-20T04:54:04Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design section 4.2, HOOK-CAPTURE a), 2026-10-19
 ---
 
@@ -37,7 +37,7 @@ The owner approved implementation on 20 October 2026 with one canonical hook pai
 
 - tools-ki immutable baseline: `ee40f26565fd3852a067164dab564e0f4745d23c`.
 - Harness main: `1089728178ff835d3119ab7c7434ade2309867f2`; 1,343 tests passed.
-- tools-ki: 1,365 tests passed with 100% statement, branch, function and line coverage; `tsc --noEmit` and `biome check .` passed. The first isolated-checkout attempt lacked the existing boundary-tool dependencies; linking the already installed local dependencies resolved it without an install.
+- Independent-review correction baseline: tools-ki `f2fdf22721ded0a9871bc93ece957332885d9a17`, with 1,372 tests and 100% coverage, type-check and Biome green before correction. Harness main also passed all 1,343 tests. The runtime-owned linked worktree reused installed dependencies without an install.
 
 ## Steps
 
@@ -82,7 +82,7 @@ Update only this record and prepare its review packet. Capture, acceptance and p
 
 ### Delivered
 
-Canonical hook publication and binding are delivered from immutable baseline `ee40f26565fd3852a067164dab564e0f4745d23c`. Canonical policy and text stay in the resolved harness; the host creates or replaces each due hook at mode `0755`, binds `.githooks`, and reports an unapplied dry-run plan. Dotfiles shapes and targets without `.ki.toml` receive no hook creation. No estate conform was applied, no new record was created, and no release or remote operation was performed.
+Canonical hook publication and binding are delivered from immutable baseline `ee40f26565fd3852a067164dab564e0f4745d23c`. Canonical policy and text stay in the resolved harness; the host creates or replaces each due hook at mode `0755`, binds `.githooks`, and reports an unapplied dry-run plan. Dotfiles shapes and targets without `.ki.toml` receive no hook creation. No estate conform was applied, no new record was created, and no release or remote operation was performed. The independent review of `f2fdf227` identified three publication-safety defects; this correction refuses symlinked hook parents independently of drift, validates the entire bounded Husky retirement tree, and limits TypeScript Knip repair to an unambiguous exported configuration. The record remains Awaiting review.
 
 ### Change Summary
 
@@ -92,27 +92,36 @@ Canonical hook publication and binding are delivered from immutable baseline `ee
 - The manual, generated `man/ki.commands.json`, repository operations guide and changelog describe the resulting behavior.
 - Two unrelated committed roadmap changes advanced main during the run; the isolated branch fast-forwarded to `949cd36a6ac5b0d9b04be5982fa9cd840eddf60e` before the final combined gate. Their files were not edited by this delivery.
 
+### Independent-review corrections
+
+- `.githooks` must be a physical repository directory when present, even when both canonical hooks already match and the only proposed action is binding, or when the binding also already matches. Internal and external parent symlinks are refused before hook publication.
+- Husky retirement checks regular hook entries and allows only known regular generated files below the physical `_` directory, including its generated `.gitignore`. Unknown files, descendant directories and symlinks are refused without deleting their contents or publishing package, lockfile or hook changes.
+- TypeScript Knip repair recognizes a direct default object or a single named object exported as default, with a bounded import/comment preamble and simple root members. Helper declarations, mismatched exports and nested or otherwise ambiguous scopes require manual repair; unrelated members are never selected for editing.
+- CLI regressions cover both symlink destinations with drift, binding-only and already-bound canonical hooks; notes beneath hook names and `_`; unsafe generated entries; helper objects, missing or mismatched exports and nested ignores. They also retain successful generated-file retirement and simple exported-configuration repair.
+
 ### Verification
 
-- `bun run test:coverage`: 85 files and 1,372 tests passed; statements, branches, functions and lines all 100%.
+- Corrective `bun run test:coverage`: 85 files and 1,397 tests passed; statements, branches, functions and lines all 100%.
 - `./node_modules/.bin/tsc --noEmit`: passed.
-- `./node_modules/.bin/biome check .`: passed, 376 files, no fixes.
-- `./node_modules/.bin/rumdl check CHANGELOG.md docs/guides/user/repository-operations.md docs/roadmap/KI-TOOL-KI-CLI-165-hook-composition-claims-host.md`: passed.
-- `bun run ki:tools:lint-man` and `bun scripts/generate-command-inventory.ts`: passed.
-- `bun src/main.ts repo conform --repo <checkout> --skill ki-repo --dry-run --progress never`: all three previews exited 0. `ki-principal` and `ki-agentic-harness` required no hook write or binding; `tools-mgit` proposed replacing `.githooks/pre-commit` and creating `.githooks/commit-msg`, with its existing binding already correct. Pre-publication warnings on tools-mgit describe the unapplied old hooks; dependency-owned `.rumdl.toml` proposals were also left unapplied.
-- Harness baseline: 1,343 tests passed at `1089728178ff835d3119ab7c7434ade2309867f2`.
+- `./node_modules/.bin/biome check .`: passed without fixes.
+- `./node_modules/.bin/rumdl check .` and the focused changelog, repository guide and roadmap check: passed.
+- `bun run ki:tools:lint-man`: passed.
+- `bun scripts/generate-command-inventory.ts`: passed in read-only mode.
+- Adversarial regressions were exercised against the reviewed implementation before restoring the correction; the unsafe symlink parents, Husky descendant trees and helper-object Knip repairs failed those assertions.
+- Read-only `bun src/main.ts repo conform --repo <checkout> --skill ki-repo --dry-run --progress never` previews matched the reviewed baseline: chezmoi exited 0 with no hook operation; tools-mgit exited 0 with the same two canonical hook writes and no binding change; paperclip exited 2 for its missing `.ki.toml`, with no hook or binding plan. Hook, migration and declaration files, working-tree status and binding snapshots remained unchanged for all three targets.
+- Harness green-main baseline: all 1,343 tests passed, without installation or network access.
 
 ### Outstanding concerns
 
-None within the approved implementation boundary. Estate application and release remain outside this delivery; acceptance belongs to the owner.
+No unresolved review defect remains within this correction. Complex or ambiguous `knip.ts` files are deliberately refused with a manual-repair next step. Estate application, release and acceptance remain outside this delivery.
 
 ### Post-change review
 
-The goal and scope are satisfied. Hook policy has one owning data source, and no claims or extension contract was introduced. Core owns loading and repository effects; commands only render events. Fresh CLI and estate previews support creation, replacement, exclusion and no-op behavior, while migration tests protect the remaining package, lockfile and Knip repairs. The record is ready for human review, without self-acceptance.
+The correction addresses all three independent-review findings through the public CLI seam, including dry-run refusal and preservation of adversarial files. Hook policy still has one owning data source; commands and the generic publisher are unchanged. Bounded TypeScript recognition intentionally refuses ambiguous configurations instead of guessing their effective export. Full coverage and unchanged estate previews support the revised publication boundary. The record remains ready for human review, without self-acceptance.
 
 ### Mini recap
 
-Canonical hook writing, binding and read-only previews are implemented and documented, with the complete local gate green. No additional knowledge record or follow-on record is proposed; the existing harness contract and repository guide hold the durable behavior.
+Canonical hook writing and binding now reject unsafe parents, Husky retirement rejects unknown descendants, and Knip repair requires a recognized exported object. The corrective gate is green, and the same three estate previews remain read-only. No new record was created; this record retains the correction evidence and remains Awaiting review.
 
 ## Discussion
 

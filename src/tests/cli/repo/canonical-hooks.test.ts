@@ -164,3 +164,35 @@ test.each([
   expect(await exists(box, '.githooks')).toBe(false)
   expect(await binding(box)).toBe('')
 })
+
+test.each(
+  ['internal', 'external'].flatMap((location) => ['drift', 'binding-only', 'no-op'].map((state) => [location, state]))
+)('refuses a %s symlinked hook parent during %s', async (location, state) => {
+  const box = await setup()
+  const target = location === 'internal' ? box.project : box.data
+  const contents = Object.fromEntries(
+    ['pre-commit', 'commit-msg'].map((name) => [name, state === 'drift' ? `Document ${name}\n` : hook(name)])
+  )
+  for (const [name, content] of Object.entries(contents)) {
+    await target.write(`documents/${name}`, content)
+    await chmod(join(target.path, 'documents', name), 0o755)
+  }
+  await symlink(
+    location === 'internal' ? 'documents' : join(target.path, 'documents'),
+    join(box.project.path, '.githooks')
+  )
+  const originalBinding = state === 'no-op' ? '.githooks' : ''
+  if (originalBinding) await box.project.git(['config', 'core.hooksPath', originalBinding])
+  for (const flags of [' --dry-run', '']) {
+    const result = await conform(box, flags)
+    expect(result.exitCode, result.output).toBe(1)
+    expect(result.output).toContain('.githooks is not a physical directory')
+    expect(result.output).not.toContain('would write .githooks/')
+    expect(await binding(box)).toBe(originalBinding)
+    expect(await box.project.isSymlink('.githooks')).toBe(true)
+    for (const [name, content] of Object.entries(contents)) {
+      expect(await target.read(`documents/${name}`)).toBe(content)
+      expect((await lstat(join(target.path, 'documents', name))).mode & 0o777).toBe(0o755)
+    }
+  }
+})
