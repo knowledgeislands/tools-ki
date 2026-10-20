@@ -2,17 +2,19 @@
 id: KI-TOOL-KI-CLI-164
 area: CLI
 title: Estate hook binding sweep
+kind: deliver
 purpose: capability
 project: tools-burndown
 component: repo
 priority: high
 size: m
-status: triage
+horizon: now
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T22:46:17Z
-updated_at: 2026-10-19T22:46:17Z
+updated_at: 2026-10-20T00:02:38Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design section 4.2, HOOK-CAPTURE a), 2026-10-19
 ---
 
@@ -35,6 +37,73 @@ Kris took HOOK-CAPTURE a) at 23:21 BST the same evening: capture the scope now a
 - In: a `hooks-path` action, planned for each registered clone with a tracked `.githooks/pre-commit` whose effective `core.hooksPath` is unset or `.husky/_`; the leftover untracked `.husky/_` removal; one action per clone covering its linked worktrees; preview, apply and roll-back through the converge log, rolling back by restoring the previous value or unsetting it; reporting, without changing, any other value; tests through `run(args, context)`; help, manual and guide lines.
 - Out: writing or composing hook content, which [KI-TOOL-KI-CLI-163](KI-TOOL-KI-CLI-163-githooks-conversion.md) and [KI-TOOL-KI-CLI-165](KI-TOOL-KI-CLI-165-hook-composition-claims-host.md) own; `ki git check-message` ([KI-TOOL-KI-CLI-161](KI-TOOL-KI-CLI-161-git-check-message.md)); a clone without `.ki.toml`, which NON-KI a) leaves out; running the sweep on either machine, which the migration run owns; raising the hook checks to FAIL, which the harness owns.
 
+## Current state
+
+`ki estate converge` takes exactly one manifest or `--rollback <log>`; it plans `ConvergeAction`s, writes a `ki/estate-converge/v1` log after every step and reverses it on `--rollback`. `src/core/repository/hooks.ts` decides one clone's binding in a private `currentBinding`: `.githooks` already bound is nothing, unset or `.husky/_` binds, anything else is kept and reported. `ki repo conform` removes `.husky/` during the conversion.
+
+## Design
+
+Decided under HIGH-APPLY, 20 October, with the coordinator's HOOK-ADOPT a) adopting the record:
+
+- **Where:** `ki estate converge --hooks`, exclusive with a manifest and with `--rollback`, plans from the local registry alone and shares the converge preview, `--apply`, log and `--rollback`. It stays in `converge`, as the design note names, without inventing a manifest entry or mixing binding into a move run whose paths change underneath it.
+- **Which clones:** each registered checkout with `.ki.toml` and a tracked `.githooks/pre-commit`. A path that is missing or not a primary checkout is reported as skipped.
+- **Actions:** `hooks-path` with the previous value, planned by the same rule `ki repo conform` uses, exported from `hooks.ts` rather than restated; rollback restores the previous value or unsets it. Any other value is a note, left alone. A `.husky/` with nothing tracked in it is set aside under the converge state folder by a `set-aside` action, which rollback moves back; it is never deleted.
+- **Worktrees:** the binding lives in the shared repository configuration, so one action covers every linked worktree. With `extensions.worktreeConfig` on, a linked worktree whose own configuration sets `core.hooksPath` is reported as a note and left, as `HOOK-2` reports it.
+- **Output:** one line per clone, `bind`, `bound`, `skip` or `keep`, its actions and notes, and a summary count line.
+
+## Requirements
+
+1. The preview lists every registered KI clone with a tracked `.githooks/pre-commit` and an unbound or Husky binding, and changes nothing.
+2. `--apply` binds them, sets aside an untracked `.husky/`, and writes a converge log.
+3. `--rollback <log> --apply` restores each previous value or unsets it, and moves `.husky/` back.
+4. A clone already bound, without committed hooks, or without `.ki.toml` gets no action; another value and a worktree override are reported and left.
+5. `--hooks` with a manifest, `--rollback`, `--clone` or `--allow-busy` is a usage error.
+
+## Steps
+
+- [ ] Export the binding rule from `src/core/repository/hooks.ts`.
+- [ ] Add `hooks-path` and `set-aside` actions to `src/core/estate/model.ts` and `apply.ts`, with their inverses.
+- [ ] Add `src/core/estate/hooks.ts` planning the sweep from the registry.
+- [ ] Add `--hooks` to `src/commands/estate/converge.ts` with its rendering.
+- [ ] Add tests through `run(args, context)` in `src/tests/cli/estate/`.
+- [ ] Update the manual, regenerated command inventory and changelog.
+- [ ] Run the gate and move the record to Awaiting review.
+
+## Files touched
+
+- `src/core/repository/hooks.ts`, `src/core/estate/{model,apply,hooks,index}.ts`, `src/commands/estate/converge.ts`
+- `src/tests/cli/estate/hooks.test.ts`
+- `man/ki.1`, `man/ki.commands.json`, `CHANGELOG.md`
+- this record
+
+## Verify
+
+- `bun run test:coverage` passes at 100%.
+- `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and `ki repo audit` pass.
+- The source-built `ki estate converge --hooks` previews this machine's registry without changing it.
+
+## Dependencies / blocks
+
+Builds on [KI-TOOL-KI-CLI-163](KI-TOOL-KI-CLI-163-githooks-conversion.md), done. Running the sweep on Terra and Sol belongs to the migration run.
+
+## Documentation impact
+
+### Decision Records
+
+None.
+
+### Specifications
+
+None: no specification covers `ki estate converge` yet.
+
+### Guides
+
+None beyond the manual.
+
+### Roadmap
+
+None.
+
 ## Discussion
 
 ### Where the action belongs
@@ -48,3 +117,5 @@ Kris took HOOK-CAPTURE a) at 23:21 BST the same evening: capture the scope now a
 ### Reuse
 
 The binding rule already lives in `src/core/repository/hooks.ts`; the sweep should call it rather than restate it, so `conform` and the sweep cannot disagree.
+
+All three questions are settled in Design.
