@@ -7,13 +7,13 @@ purpose: debt
 project: tools-burndown
 priority: medium
 size: m
-horizon: soon
-status: draft
+status: cancelled
+resolution: obsolete
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-18T19:23:40Z
-updated_at: 2026-10-19T22:49:04Z
+updated_at: 2026-10-20T04:33:28Z
 ---
 
 # KI-TOOL-KI-CLI-151: CLI Conventions Departures
@@ -48,9 +48,9 @@ Kris Brown answered CLI-DEPARTURES a) on 18 October 2026, recorded in the [tools
 
 **Promotion to Next:** when the output-option form is chosen and the consumers of audit standard output are listed.
 
-## Dependencies / blocks
+## Cancelled
 
-Not blocked. Fixed at `ki`'s next change to the commands concerned, per CLI-DEPARTURES a).
+Approved by Kris on 20 October 2026 under SWEEP-CONVERT a), recorded in Knowledge Islands Principal `+/_WORK/ki.ways-of-working/decisions.md` (05:20 BST): "I agree with sweep merge ... should become message records". CLI-DEPARTURES a) already fixes each departure at `ki`'s next change to the command concerned, so this is a standing rule rather than a unit of delivery, and it is cancelled as obsolete as a record. The four departures and the two open questions go as a standing line to `ki.tools-burndown`'s `messages.md` in Knowledge Islands Principal. None of the departures has been fixed yet.
 
 ## Discussion
 
