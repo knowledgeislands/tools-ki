@@ -8,13 +8,12 @@ project: observatory
 component: territory
 priority: medium
 size: m
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: b4f8a100c0c4675d11a9b8ce7baaddee4afaafa3
 created_at: 2026-10-19T18:53:00Z
-updated_at: 2026-10-20T07:30:00Z
+updated_at: 2026-10-20T07:34:49Z
 transferred_from: ki-principal ki.observatory CONDITION-TOML, 2026-10-19
 ---
 
@@ -168,6 +167,10 @@ The boundary held: the scale and rule are read from the harness standard and res
 
 Island condition is now readable through `ki territory show --format json` as `ki/territory/v1`, fed by whole-repository audits. Next: acceptance review, then the Observatory can consume the contract.
 
+## Done
+
+Accepted 20 October 2026 by Kris Brown under the quoted standing grant recorded below, on the review packet above.
+
 ## Discussion
 
 Planning's open questions were which surface carries the signals, whether health is read live or from a recorded audit, and the contract name and version. They are answered under Decision. tools-ki owns priority and design.
@@ -175,3 +178,11 @@ Planning's open questions were which surface carries the signals, whether health
 ### Planning, 20 October 2026
 
 Promoted to Now and made Ready in the burn3-tools-ki run under Kris Brown's 20 October overnight grant, "get all of the tools burnt down ... getting the roadmaps down to zero", and PLANNED-READY a), "the old do need to move to Ready if possible, and we need to move them", once its own promotion condition held: KI-HARNESS-GOV-223 is done. The readiness checks pass: the boundary is the record's own, the dependency is met, and Verify is checkable through the public CLI seam.
+
+### Independent acceptance, 20 October 2026
+
+accept5-tools-ki independently reviewed the immutable delivery at `5aebeb9d` against baseline `b4f8a100`, every Step and Verify requirement, the owning maturity and health standard, the source and the CLI contract tests. The review passed: 1,405 tests in 86 files, 100% statements, branches, functions and lines, TypeScript, Biome, rumdl, knip, manual lint and command-inventory checks. Focused roadmap, authoring, engineering and ki-self audits reported no failures; existing configuration warnings remain outside this delivery. The acceptance commit runs the pre-commit and commit-msg hooks.
+
+Authority: Kris Brown, 20 October 2026 about 05:20 BST, "if you can quickly now accept ... accepting new things that are waiting with you and pruning those ... getting the roadmaps down to zero", as read back for this exact record in the [Ways of working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md), including its 08:29 BST assignment to accept5-tools-ki.
+
+Retained after acceptance: live links in ki-principal cannot be repaired and published by this run because that repository has other sessions' unpublished commits. No pruning or peer changes were made.
