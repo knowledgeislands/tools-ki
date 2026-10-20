@@ -1,6 +1,20 @@
 # Manage local VS Code projections
 
-Use `ki vscode` when a chezmoi source owns the machine's VS Code workspace files and shared agent trusted-folder inventory. The command derives repository folders, explicit `sources` bindings, and permitted runtime clients from the local KI registry and each repository's `.ki.toml`. It ignores `legacy` bindings and never infers stores from directory names.
+Use `ki vscode` when a chezmoi source owns the machine's VS Code workspace files and shared agent trusted-folder inventory. The command derives repository folders, explicit `sources` bindings, and permitted runtime clients from the local KI registry and each repository's `.ki.toml`. It ignores `legacy` bindings and never infers stores from directory names. Trust also includes existing territory roots and Git checkouts declared by the chezmoi source's `workspaces/**/dot_mgit.toml` manifests, independently of VS Code workspace files.
+
+## Author independent trust
+
+Use `.chezmoidata/trusted-folders-authored.yaml` for support directories and client-specific grants:
+
+```yaml
+trustedFolderDeclarations:
+  - path: /absolute/support/folder
+    clients: [claude-code, claude-desktop]
+```
+
+Sync preserves this authored file and merges its paths into the generated `.chezmoidata/trusted-folders.yaml`. Each entry needs an absolute path and a non-empty list drawn from `claude-code`, `claude-desktop`, and `chatgpt-codex`; duplicate paths are rejected. Authored client selections take precedence over registry scopes and workspace or mgit defaults. Unregistered mgit checkouts and territory roots default to all three clients; registered checkouts retain their declared runtimes. A checkout needs an existing directory and a `.git` entry, including a linked-worktree `.git` file. External mgit members outside `~/workspaces` are excluded from this input; registry and authored grants still cover their own declared paths.
+
+Rebuilding VS Code workspaces cannot remove these independent declarations. Authored entries remain declared even when their folder is temporarily absent; retire them by editing the authored source. Ordinary child directories need no separate declaration when a trusted parent covers them.
 
 ## Check and synchronise
 
@@ -21,7 +35,7 @@ chezmoi diff
 
 The write changes only chezmoi source state. It never runs `chezmoi apply`; review and apply rendered targets through the owning dotfiles workflow.
 
-Sync removes folder entries whose paths no longer resolve to directories. If every folder in a project is missing, it deletes that `.code-workspace` source file and removes its paths from the trusted-folder inventory. It preserves live folders, their metadata, workspace settings, special filenames, and intentionally empty workspaces. Existing projects remain even when their folders are outside the KI registry.
+Sync removes folder entries whose paths no longer resolve to directories. If every folder in a project is missing, it deletes that `.code-workspace` source file and removes its workspace-derived trust unless an independent declaration still covers it. It preserves live folders, their metadata, workspace settings, special filenames, and intentionally empty workspaces. Existing projects remain even when their folders are outside the KI registry.
 
 A bound `sources` folder that is unavailable on this host is left out of the workspace and the trusted-folder inventory with a `ki: warning:` naming its fix, rather than failing the sync. Missing registered checkouts are skipped during projection without changing the registry. Restore a checkout before syncing if it is temporarily unavailable and you want to keep its project. A conventional workspace for a moved repository is regenerated at the current registered path.
 

@@ -1,6 +1,7 @@
 import { lstat, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
-import { basename, isAbsolute, join } from 'node:path'
+import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { parse } from 'smol-toml'
+import { parse as parseYaml } from 'yaml'
 import { errorWithNext, KiError } from '../errors.ts'
 import type { Runner } from '../runtime/runner.ts'
 import { type LocalRegistryEntry, repositoryStoreDirectory, requiredLocalRegistry } from '../storage/index.ts'
@@ -175,13 +176,83 @@ const renderTrustedFolders = (
   if (position === -1) throw new KiError('trusted-folder source has no trustedFolders root key', 1)
   const entries = [...folders]
     .sort((left, right) => left.localeCompare(right))
-    .map((path) => `  - path: ${path}\n    clients: [${(repositoryClients.get(path) ?? trustedClients).join(', ')}]`)
+    .map(
+      (path) =>
+        `  - path: ${JSON.stringify(path)}\n    clients: [${(repositoryClients.get(path) ?? trustedClients).join(', ')}]`
+    )
   return `${source.slice(0, position)}${marker}\n${entries.join('\n')}\n`
 }
 
 const existingDirectory = async (path: string): Promise<boolean> => {
   const state = await stat(path, { throwIfNoEntry: false })
   return state?.isDirectory() === true
+}
+
+/** Optional authored data and mgit manifests belong to chezmoi source, never editor state. */
+const optionalSource = async (path: string): Promise<string | undefined> =>
+  (await stat(path, { throwIfNoEntry: false })) ? readFile(path, 'utf8') : undefined
+
+const mgitTrustFolders = async (port: VscodeManagePort, root: string): Promise<ReadonlySet<string>> => {
+  const folders = new Set<string>()
+  const workspacesRoot = join(port.homeDirectory, 'workspaces')
+  const visit = async (source: string, directory: string): Promise<void> => {
+    const text = await optionalSource(join(source, 'dot_mgit.toml'))
+    if (text === undefined) return
+    const members = parse(text)['members']
+    if (members === undefined) return
+    if (!isRecord(members)) throw new KiError(`invalid mgit members table: ${source}`, 1)
+    for (const [name, member] of Object.entries(members)) {
+      const path = resolve(directory, name)
+      const child = relative(directory, path)
+      if (
+        !isRecord(member) ||
+        !['repository', 'workspace'].includes(String(member['kind'])) ||
+        isAbsolute(name) ||
+        !child ||
+        child === '..' ||
+        (member['kind'] === 'workspace' && child.startsWith(`..${sep}`))
+      ) {
+        throw new KiError(`invalid mgit member ${name}: ${source}`, 1)
+      }
+      const workspacePath = relative(workspacesRoot, path)
+      if (workspacePath === '..' || workspacePath.startsWith(`..${sep}`)) continue
+      if (!(await existingDirectory(path))) continue
+      if (member['kind'] === 'workspace') {
+        folders.add(path)
+        await visit(join(source, name), path)
+      } else if (await stat(join(path, '.git'), { throwIfNoEntry: false })) {
+        folders.add(path)
+      }
+    }
+  }
+  await visit(join(root, 'workspaces'), workspacesRoot)
+  return folders
+}
+
+const authoredTrustClients = async (root: string): Promise<ReadonlyMap<string, readonly string[]>> => {
+  const path = join(root, '.chezmoidata', 'trusted-folders-authored.yaml')
+  const text = await optionalSource(path)
+  const result = new Map<string, readonly string[]>()
+  if (text === undefined) return result
+  const data: unknown = parseYaml(text)
+  if (!isRecord(data) || !Array.isArray(data['trustedFolderDeclarations'])) {
+    throw new KiError(`trusted-folder source has no trustedFolderDeclarations array: ${path}`, 1)
+  }
+  for (const entry of data['trustedFolderDeclarations']) {
+    if (
+      !isRecord(entry) ||
+      typeof entry['path'] !== 'string' ||
+      !isAbsolute(entry['path']) ||
+      !Array.isArray(entry['clients']) ||
+      !entry['clients'].length ||
+      entry['clients'].some((client: unknown) => !trustedClients.includes(client as (typeof trustedClients)[number])) ||
+      result.has(entry['path'])
+    ) {
+      throw new KiError(`invalid or duplicate trusted-folder declaration: ${path}`, 1)
+    }
+    result.set(entry['path'], entry['clients'] as string[])
+  }
+  return result
 }
 
 const buildPlan = async (
@@ -251,12 +322,20 @@ const buildPlan = async (
   }
 
   const knownFolders = new Set(documents.flatMap(({ workspace }) => workspace.folders.map((folder) => folder.path)))
+  for (const path of await mgitTrustFolders(port, root)) knownFolders.add(path)
+  // Authored scopes win over defaults and registry projections; adding workspace or mgit
+  // membership must never expand an explicitly selected set of clients.
+  const trustClients = new Map(repositoryClients)
+  for (const [path, clients] of await authoredTrustClients(root)) {
+    knownFolders.add(path)
+    trustClients.set(path, clients)
+  }
   const trustedSource = await readFile(trustedFoldersPath, 'utf8')
   await validateTrustedFolders(port, trustedFoldersPath)
   writes.set(trustedFoldersPath, {
     path: trustedFoldersPath,
     before: trustedSource,
-    after: renderTrustedFolders(trustedSource, knownFolders, repositoryClients)
+    after: renderTrustedFolders(trustedSource, knownFolders, trustClients)
   })
   return [...writes.values()].filter((write) => write.before !== write.after)
 }

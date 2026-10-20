@@ -1,6 +1,7 @@
 import { readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { describe, expect, test } from 'vitest'
+import { parse as parseYaml } from 'yaml'
 import { sandbox } from '../_cli_helper.ts'
 
 type Box = Awaited<ReturnType<typeof sandbox>>
@@ -85,6 +86,166 @@ const prepare = async (names: readonly string[]) => {
 }
 
 describe('ki vscode', () => {
+  test('rebuilds workspaces without losing independent trust or broadening client scopes', async () => {
+    const { box, repositories, sourceRoot } = await prepare(['alpha'])
+    const territory = await box.home.mkdir('workspaces/humans-not-robots')
+    const checkout = await box.home.mkdir('workspaces/humans-not-robots/hnr-backend/.git')
+    const backend = join(checkout, '..')
+    const registered = await box.home.mkdir('workspaces/humans-not-robots/registered')
+    await box.home.write('workspaces/humans-not-robots/registered/.git', 'gitdir: /unused\n')
+    await box.home.write('workspaces/humans-not-robots/registered/.ki.toml', repositoryDeclaration('registered'))
+    const scoped = await box.home.mkdir('workspaces/humans-not-robots/scoped/.git')
+    const scopedRoot = join(scoped, '..')
+    const desktop = await box.home.mkdir('workspaces/claude-desktop/Projects/Legal')
+    const support = join(box.home.path, '.claude')
+    await box.state.write(
+      'ki/registry.toml',
+      registry([
+        { key: 'alpha', path: repositories[0] as string },
+        { key: 'registered', path: registered }
+      ])
+    )
+    await box.root.write('chezmoi-source/workspaces/dot_mgit.toml', '[members.humans-not-robots]\nkind = "workspace"\n')
+    await box.root.write(
+      'chezmoi-source/workspaces/humans-not-robots/dot_mgit.toml',
+      `
+[members.hnr-backend]
+kind = "repository"
+[members.registered]
+kind = "repository"
+[members.scoped]
+kind = "repository"
+[members.missing]
+kind = "repository"
+[members.not-a-checkout]
+kind = "repository"
+[members.nested]
+kind = "workspace"
+[members.empty]
+kind = "workspace"
+`
+    )
+    await box.home.mkdir('workspaces/humans-not-robots/not-a-checkout')
+    await box.home.mkdir('workspaces/humans-not-robots/nested')
+    await box.home.mkdir('workspaces/humans-not-robots/empty')
+    await box.root.write('chezmoi-source/workspaces/humans-not-robots/empty/dot_mgit.toml', 'kind = "workspace"\n')
+    const authored = JSON.stringify({
+      trustedFolderDeclarations: [
+        { path: desktop, clients: ['claude-desktop'] },
+        { path: support, clients: ['claude-code', 'claude-desktop'] },
+        { path: scopedRoot, clients: ['chatgpt-codex'] }
+      ]
+    })
+    await box.root.write('chezmoi-source/.chezmoidata/trusted-folders-authored.yaml', authored)
+    await box.root.write(
+      'chezmoi-source/workspaces/vscode/support.code-workspace',
+      JSON.stringify({ folders: [{ path: desktop }] })
+    )
+    expect((await box.run('ki vscode sync --write')).exitCode).toBe(0)
+    const trustPath = join(sourceRoot, '.chezmoidata/trusted-folders.yaml')
+    const before = await readFile(trustPath, 'utf8')
+    const folders = parseYaml(before).trustedFolders
+    expect(folders).toEqual(
+      expect.arrayContaining([
+        { path: territory, clients: ['claude-desktop', 'chatgpt-codex', 'claude-code'] },
+        { path: backend, clients: ['claude-desktop', 'chatgpt-codex', 'claude-code'] },
+        { path: registered, clients: ['claude-code'] },
+        { path: desktop, clients: ['claude-desktop'] },
+        { path: support, clients: ['claude-code', 'claude-desktop'] },
+        { path: scopedRoot, clients: ['chatgpt-codex'] }
+      ])
+    )
+    expect(
+      folders.some(({ path }: { path: string }) => path.endsWith('/missing') || path.endsWith('/not-a-checkout'))
+    ).toBe(false)
+    await rm(join(sourceRoot, 'workspaces/vscode'), { recursive: true })
+    await box.root.mkdir('chezmoi-source/workspaces/vscode')
+    await box.root.write('chezmoi-source/.chezmoidata/trusted-folders.yaml', '# Test inventory\ntrustedFolders: []\n')
+    expect((await box.run('ki vscode sync --write')).exitCode).toBe(0)
+    expect(await readFile(trustPath, 'utf8')).toBe(before)
+    expect(await box.root.read('chezmoi-source/.chezmoidata/trusted-folders-authored.yaml')).toBe(authored)
+    expect((await box.run('ki vscode check')).exitCode).toBe(0)
+  })
+
+  test('includes external mgit repositories only while they remain under workspaces', async () => {
+    const { box, sourceRoot } = await prepare(['alpha'])
+    const inside = await box.home.mkdir('workspaces/other/repo')
+    await box.home.write('workspaces/other/repo/.git', 'gitdir: /unused\n')
+    const outside = await box.home.mkdir('private/repo/.git')
+    await box.home.mkdir('workspaces/territory')
+    await box.root.write('chezmoi-source/workspaces/dot_mgit.toml', '[members.territory]\nkind = "workspace"\n')
+    await box.root.write(
+      'chezmoi-source/workspaces/territory/dot_mgit.toml',
+      `
+[members."../other/repo"]
+kind = "repository"
+[members."../../private/repo"]
+kind = "repository"
+[members."../.."]
+kind = "repository"
+`
+    )
+    expect((await box.run('ki vscode sync --write')).exitCode).toBe(0)
+    const folders = parseYaml(
+      await readFile(join(sourceRoot, '.chezmoidata/trusted-folders.yaml'), 'utf8')
+    ).trustedFolders
+    expect(folders).toContainEqual({ path: inside, clients: ['claude-desktop', 'chatgpt-codex', 'claude-code'] })
+    expect(folders.some(({ path }: { path: string }) => path === join(outside, '..') || path === box.home.path)).toBe(
+      false
+    )
+  })
+
+  test('rejects unsafe mgit declarations before writing any projections', async () => {
+    const { box, sourceRoot } = await prepare(['alpha'])
+    for (const manifest of [
+      'members = 1',
+      '[members]\nbad = 1',
+      '[members.bad]\nkind = "unknown"',
+      '[members."/absolute"]\nkind = "repository"',
+      '[members."."]\nkind = "repository"',
+      '[members.".."]\nkind = "repository"',
+      '[members."../escape"]\nkind = "workspace"'
+    ]) {
+      await box.root.write('chezmoi-source/workspaces/dot_mgit.toml', manifest)
+      const result = await box.run('ki vscode sync --write')
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('invalid mgit member')
+      expect(await readFile(join(sourceRoot, '.chezmoidata/trusted-folders.yaml'), 'utf8')).toBe(
+        '# Test inventory\ntrustedFolders:\n'
+      )
+      await expect(readFile(join(sourceRoot, 'workspaces/vscode/kis-alpha.code-workspace'))).rejects.toMatchObject({
+        code: 'ENOENT'
+      })
+    }
+  })
+
+  test('validates authored client scopes and rejects duplicate paths without writes', async () => {
+    const { box, sourceRoot } = await prepare(['alpha'])
+    const entry = { path: '/support', clients: ['claude-code'] }
+    for (const data of [
+      null,
+      {},
+      { trustedFolderDeclarations: true },
+      ...[
+        null,
+        { ...entry, path: 1 },
+        { ...entry, path: 'relative' },
+        { ...entry, clients: 'claude-code' },
+        { ...entry, clients: [] },
+        { ...entry, clients: ['unknown'] }
+      ].map((value) => ({ trustedFolderDeclarations: [value] })),
+      { trustedFolderDeclarations: [entry, entry] }
+    ]) {
+      await box.root.write('chezmoi-source/.chezmoidata/trusted-folders-authored.yaml', JSON.stringify(data))
+      const result = await box.run('ki vscode sync --write')
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('trusted-folder')
+      expect(await readFile(join(sourceRoot, '.chezmoidata/trusted-folders.yaml'), 'utf8')).toBe(
+        '# Test inventory\ntrustedFolders:\n'
+      )
+    }
+  })
+
   test('exposes only projection check and sync commands', async () => {
     const box = await sandbox()
     const help = await box.run('ki vscode --help')
@@ -107,7 +268,7 @@ describe('ki vscode', () => {
       JSON.parse(await readFile(`${sourceRoot}/workspaces/vscode/kis-er-research.code-workspace`, 'utf8'))
     ).toEqual({ folders: [{ path: repositories[0] }] })
     expect(await readFile(`${sourceRoot}/.chezmoidata/trusted-folders.yaml`, 'utf8')).toContain(
-      `path: ${repositories[0]}\n    clients: [claude-code]`
+      `path: ${JSON.stringify(repositories[0])}\n    clients: [claude-code]`
     )
     expect((await box.run('ki vscode check')).exitCode).toBe(0)
   })
@@ -137,8 +298,10 @@ describe('ki vscode', () => {
     expect(second).toEqual({ folders: [{ path: repositories[0] }, { path: sources }] })
     expect(JSON.stringify([first, second])).not.toContain(legacy)
     const trusted = await readFile(`${sourceRoot}/.chezmoidata/trusted-folders.yaml`, 'utf8')
-    expect(trusted).toContain(`path: ${sources}\n    clients: [claude-code]`)
-    expect(trusted).toContain(`path: ${unbound}\n    clients: [claude-desktop, chatgpt-codex, claude-code]`)
+    expect(trusted).toContain(`path: ${JSON.stringify(sources)}\n    clients: [claude-code]`)
+    expect(trusted).toContain(
+      `path: ${JSON.stringify(unbound)}\n    clients: [claude-desktop, chatgpt-codex, claude-code]`
+    )
   })
 
   test('previews and removes obsolete projects and missing folders while preserving live workspaces', async () => {
