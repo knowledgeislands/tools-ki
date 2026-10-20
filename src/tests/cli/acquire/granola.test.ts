@@ -1,6 +1,5 @@
-import { createHash } from 'node:crypto'
 import { lstat, mkdir, readdir, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 import { type GranolaMeetingFixture, granolaFixtureRunner } from '../_granola_helper.ts'
@@ -107,441 +106,14 @@ const command = (repository: string, ...options: readonly string[]): readonly st
 
 type JsonRecord = Record<string, unknown>
 
-const firstRecord = (value: unknown): JsonRecord => Object.values(value as JsonRecord)[0] as JsonRecord
-
-const checkpointMeeting = (checkpoint: JsonRecord): JsonRecord => firstRecord(checkpoint['meetings'])
-
-const checkpointDisposition = (checkpoint: JsonRecord): JsonRecord =>
-  checkpointMeeting(checkpoint)['disposition'] as JsonRecord
-
-const checkpointCorruptions: readonly {
-  readonly name: string
-  readonly mutate: (checkpoint: JsonRecord) => void
-}[] = [
-  {
-    name: 'schema',
-    mutate: (value) => {
-      value['schema'] = 4
-    }
-  },
-  {
-    name: 'adapter',
-    mutate: (value) => {
-      value['adapter'] = 'other'
-    }
-  },
-  {
-    name: 'provider',
-    mutate: (value) => {
-      value['provider'] = 'other'
-    }
-  },
-  {
-    name: 'generation',
-    mutate: (value) => {
-      value['generation'] = null
-    }
-  },
-  {
-    name: 'repository',
-    mutate: (value) => {
-      value['repository'] = null
-    }
-  },
-  {
-    name: 'account',
-    mutate: (value) => {
-      value['account_sha256'] = null
-    }
-  },
-  {
-    name: 'source schema',
-    mutate: (value) => {
-      value['source_schema_sha256'] = null
-    }
-  },
-  {
-    name: 'identity',
-    mutate: (value) => {
-      value['identity_checkpoint_sha256'] = null
-    }
-  },
-  {
-    name: 'interval',
-    mutate: (value) => {
-      value['interval'] = null
-    }
-  },
-  {
-    name: 'exhaustive',
-    mutate: (value) => {
-      value['exhaustive'] = false
-    }
-  },
-  {
-    name: 'windows',
-    mutate: (value) => {
-      value['windows'] = null
-    }
-  },
-  {
-    name: 'meetings',
-    mutate: (value) => {
-      value['meetings'] = null
-    }
-  },
-  {
-    name: 'updated timestamp',
-    mutate: (value) => {
-      value['updated_at'] = null
-    }
-  },
-  {
-    name: 'meeting path',
-    mutate: (value) => {
-      checkpointMeeting(value)['path'] = null
-    }
-  },
-  {
-    name: 'meeting document hash',
-    mutate: (value) => {
-      checkpointMeeting(value)['document_sha256'] = null
-    }
-  },
-  {
-    name: 'meeting detail hash',
-    mutate: (value) => {
-      checkpointMeeting(value)['detail_sha256'] = null
-    }
-  },
-  {
-    name: 'transcript state',
-    mutate: (value) => {
-      checkpointMeeting(value)['transcript_state'] = 'unknown'
-    }
-  },
-  {
-    name: 'transcript retry count',
-    mutate: (value) => {
-      checkpointMeeting(value)['transcript_retry_count'] = 'one'
-    }
-  },
-  {
-    name: 'meeting versions',
-    mutate: (value) => {
-      checkpointMeeting(value)['versions'] = null
-    }
-  },
-  {
-    name: 'meeting folders',
-    mutate: (value) => {
-      checkpointMeeting(value)['folder_ids'] = null
-    }
-  },
-  {
-    name: 'meeting unfoldered evidence',
-    mutate: (value) => {
-      checkpointMeeting(value)['inferred_unfoldered'] = null
-    }
-  },
-  {
-    name: 'meeting acquired timestamp',
-    mutate: (value) => {
-      checkpointMeeting(value)['acquired_at'] = null
-    }
-  },
-  {
-    name: 'meeting disposition',
-    mutate: (value) => {
-      checkpointMeeting(value)['disposition'] = null
-    }
-  },
-  {
-    name: 'disposition state',
-    mutate: (value) => {
-      checkpointDisposition(value)['state'] = 'unknown'
-    }
-  },
-  {
-    name: 'disposition document hash',
-    mutate: (value) => {
-      checkpointDisposition(value)['document_sha256'] = null
-    }
-  },
-  {
-    name: 'disposition timestamp',
-    mutate: (value) => {
-      checkpointDisposition(value)['disposed_at'] = null
-    }
-  },
-  {
-    name: 'disposition source version',
-    mutate: (value) => {
-      checkpointDisposition(value)['source_version_sha256'] = null
-    }
-  },
-  {
-    name: 'component document mismatch',
-    mutate: (value) => {
-      checkpointDisposition(value)['document_sha256'] = 'different'
-    }
-  },
-  {
-    name: 'available transcript missing hash',
-    mutate: (value) => {
-      checkpointMeeting(value)['transcript_sha256'] = undefined
-    }
-  },
-  {
-    name: 'available transcript retry count',
-    mutate: (value) => {
-      checkpointMeeting(value)['transcript_retry_count'] = 1
-    }
-  },
-  {
-    name: 'invalid optional disposition field',
-    mutate: (value) => {
-      checkpointDisposition(value)['canonical_destination'] = 1
-    }
-  }
-]
-
-const journalComponent = (journal: JsonRecord): JsonRecord => firstRecord(journal['components'])
-
-const journalFailureRecord = (journal: JsonRecord): JsonRecord => (journal['failures'] as JsonRecord[])[0] as JsonRecord
-
-const journalCorruptions: readonly {
-  readonly name: string
-  readonly mutate: (journal: JsonRecord) => void
-}[] = [
-  {
-    name: 'schema',
-    mutate: (value) => {
-      value['schema'] = 2
-    }
-  },
-  {
-    name: 'phase',
-    mutate: (value) => {
-      value['phase'] = 'complete'
-    }
-  },
-  {
-    name: 'adapter',
-    mutate: (value) => {
-      value['adapter'] = 'other'
-    }
-  },
-  {
-    name: 'run identity',
-    mutate: (value) => {
-      value['run_id'] = null
-    }
-  },
-  {
-    name: 'repository',
-    mutate: (value) => {
-      value['repository'] = null
-    }
-  },
-  {
-    name: 'account',
-    mutate: (value) => {
-      value['account_sha256'] = null
-    }
-  },
-  {
-    name: 'source schema',
-    mutate: (value) => {
-      value['source_schema_sha256'] = null
-    }
-  },
-  {
-    name: 'interval',
-    mutate: (value) => {
-      value['discovery_interval'] = null
-    }
-  },
-  {
-    name: 'identity',
-    mutate: (value) => {
-      value['identity_checkpoint_sha256'] = null
-    }
-  },
-  {
-    name: 'selected identities',
-    mutate: (value) => {
-      value['selected_identities'] = null
-    }
-  },
-  {
-    name: 'selected identity value',
-    mutate: (value) => {
-      value['selected_identities'] = [1]
-    }
-  },
-  {
-    name: 'components',
-    mutate: (value) => {
-      value['components'] = null
-    }
-  },
-  {
-    name: 'remaining identities',
-    mutate: (value) => {
-      value['remaining_identities'] = null
-    }
-  },
-  {
-    name: 'failures',
-    mutate: (value) => {
-      value['failures'] = null
-    }
-  },
-  {
-    name: 'retry state',
-    mutate: (value) => {
-      value['retry_state'] = null
-    }
-  },
-  {
-    name: 'created timestamp',
-    mutate: (value) => {
-      value['created_at'] = null
-    }
-  },
-  {
-    name: 'updated timestamp',
-    mutate: (value) => {
-      value['updated_at'] = null
-    }
-  },
-  {
-    name: 'component detail hash',
-    mutate: (value) => {
-      journalComponent(value)['detail_sha256'] = null
-    }
-  },
-  {
-    name: 'component transcript state',
-    mutate: (value) => {
-      journalComponent(value)['transcript_state'] = 'unknown'
-    }
-  },
-  {
-    name: 'component path',
-    mutate: (value) => {
-      journalComponent(value)['staged_document_path'] = null
-    }
-  },
-  {
-    name: 'component document hash',
-    mutate: (value) => {
-      journalComponent(value)['staged_document_sha256'] = null
-    }
-  },
-  {
-    name: 'component timestamp',
-    mutate: (value) => {
-      journalComponent(value)['verified_at'] = null
-    }
-  },
-  {
-    name: 'component checkpoint',
-    mutate: (value) => {
-      journalComponent(value)['checkpoint'] = null
-    }
-  },
-  {
-    name: 'failure record',
-    mutate: (value) => {
-      ;(value['failures'] as unknown[])[0] = null
-    }
-  },
-  {
-    name: 'failure source',
-    mutate: (value) => {
-      journalFailureRecord(value)['source_id'] = null
-    }
-  },
-  {
-    name: 'failure message',
-    mutate: (value) => {
-      journalFailureRecord(value)['message'] = null
-    }
-  },
-  {
-    name: 'failure attempts',
-    mutate: (value) => {
-      journalFailureRecord(value)['attempts'] = null
-    }
-  },
-  {
-    name: 'failure timestamp',
-    mutate: (value) => {
-      journalFailureRecord(value)['observed_at'] = null
-    }
-  },
-  {
-    name: 'retry count',
-    mutate: (value) => {
-      value['retry_state'] = { 'meeting-00': 'one' }
-    }
-  },
-  {
-    name: 'component and checkpoint mismatch',
-    mutate: (value) => {
-      journalComponent(value)['detail_sha256'] = 'different'
-    }
-  },
-  {
-    name: 'duplicate selected identity',
-    mutate: (value) => {
-      value['selected_identities'] = ['meeting-00', 'meeting-00']
-    }
-  },
-  {
-    name: 'remaining identity outside selection',
-    mutate: (value) => {
-      value['remaining_identities'] = ['other']
-    }
-  },
-  {
-    name: 'component remains pending',
-    mutate: (value) => {
-      value['remaining_identities'] = ['meeting-00']
-    }
-  },
-  {
-    name: 'retry identity outside selection',
-    mutate: (value) => {
-      value['retry_state'] = { other: 1 }
-    }
-  },
-  {
-    name: 'failure identity outside selection',
-    mutate: (value) => {
-      journalFailureRecord(value)['source_id'] = 'other'
-    }
-  },
-  {
-    name: 'selected identity unaccounted',
-    mutate: (value) => {
-      value['components'] = {}
-    }
-  }
-]
-
 const packageDirectories = async (repository: string): Promise<readonly string[]> =>
   (await readdir(join(repository, '+/_ACQUIRE/granola'), { withFileTypes: true }))
     .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
     .map((entry) => entry.name)
     .sort()
 
-const sha256 = (value: string): string => createHash('sha256').update(value).digest('hex')
-
 describe('[ki acquire import --adapter granola]', () => {
-  test('stages one readable Markdown file per meeting and leaves unchanged repeats untouched', async () => {
+  test('stages one readable Markdown file per meeting and keeps existing captures unless refreshed', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('repository with spaces')
     const receiver: ReceiverFixture = {
@@ -591,7 +163,7 @@ describe('[ki acquire import --adapter granola]', () => {
 
     expect(first.exitCode, first.output).toBe(0)
     expect(first.output).toContain('Coverage: 3 discovered, 2 selected, 1 routed elsewhere')
-    expect(first.output).toContain('Meetings: 2 new, 0 amended, 0 unchanged')
+    expect(first.output).toContain('Meetings: 2 new, 0 refreshed, 0 kept')
     const packages = await packageDirectories(repository)
     expect(packages).toHaveLength(2)
     for (const packageName of packages) {
@@ -610,17 +182,21 @@ describe('[ki acquire import --adapter granola]', () => {
       }
       expect(document).not.toMatch(/[ \t]+$/m)
     }
-    const ledgerPath = 'repository with spaces/+/_ACQUIRE/granola/ledger.json'
-    const originalLedger = await box.root.read(ledgerPath)
+    expect(await readdir(join(repository, '+/_ACQUIRE/granola'))).toEqual(packages)
+    const firstDocument = await box.root.read(`repository with spaces/+/_ACQUIRE/granola/${packages[1]}`)
 
     const repeatedSource = granolaFixtureRunner({ meetings, folders })
     box.setRunner(repeatedSource.runner)
-    const repeated = await box.run(command(repository, '--refresh-transcripts'), {
-      now: () => Date.parse('2026-01-05T12:00:00Z')
-    })
-    expect(repeated.output).toContain('Meetings: 0 new, 0 amended, 2 unchanged')
-    expect(repeated.output).toContain('Checkpoint: unchanged')
-    expect(await box.root.read(ledgerPath)).toBe(originalLedger)
+    const repeated = await box.run(command(repository), { now: () => Date.parse('2026-01-05T12:00:00Z') })
+    expect(repeated.exitCode, repeated.output).toBe(0)
+    expect(repeated.output).toContain('Meetings: 0 new, 0 refreshed, 2 kept')
+    expect(repeated.output).toContain(
+      `Kept: meeting-b · capture exists at ${packages[1]}; not overwritten without --refresh`
+    )
+    expect(
+      repeatedSource.calls.filter((call) => ['get_meetings', 'get_meeting_transcript'].includes(call.tool))
+    ).toEqual([])
+    expect(await box.root.read(`repository with spaces/+/_ACQUIRE/granola/${packages[1]}`)).toBe(firstDocument)
 
     const amendedSource = granolaFixtureRunner({
       meetings: [
@@ -631,13 +207,11 @@ describe('[ki acquire import --adapter granola]', () => {
       folders
     })
     box.setRunner(amendedSource.runner)
-    const amended = await box.run(command(repository), { now: () => Date.parse('2026-01-06T12:00:00Z') })
-    expect(amended.output).toContain('Meetings: 0 new, 1 amended, 1 unchanged')
-    expect(await packageDirectories(repository)).toHaveLength(2)
-    const ledger = JSON.parse(await box.root.read(ledgerPath)) as {
-      meetings: Record<string, { versions: string[] }>
-    }
-    expect(ledger.meetings['meeting-b']?.versions).toHaveLength(2)
+    const amended = await box.run(command(repository, '--refresh'), { now: () => Date.parse('2026-01-06T12:00:00Z') })
+    expect(amended.exitCode, amended.output).toBe(0)
+    expect(amended.output).toContain('Meetings: 0 new, 2 refreshed, 0 kept')
+    expect(await packageDirectories(repository)).toEqual(packages)
+    expect(await box.root.read(`repository with spaces/+/_ACQUIRE/granola/${packages[1]}`)).toContain('amended')
   })
 
   test('splits saturated date windows and fails closed on a saturated single day', async () => {
@@ -858,7 +432,7 @@ describe('[ki acquire import --adapter granola]', () => {
     box.setRunner(granolaFixtureRunner({ meetings, folders }).runner)
     const omitted = await box.run(command(repository))
     expect(omitted.exitCode).toBe(0)
-    expect(omitted.output).toContain('Transcripts: 1 provider reads, 1 omissions')
+    expect(omitted.output).toContain('Omissions: 1')
     const [packageName] = await packageDirectories(repository)
     const document = await box.root.read(`target/+/_ACQUIRE/granola/${packageName}`)
     expect(document).toContain('  - "transcript"')
@@ -1236,6 +810,62 @@ describe('[ki acquire import --adapter granola]', () => {
     )
   })
 
+  test('discovers folder-only meetings, keeps several captures and refreshes minimal captures', async () => {
+    const folderBox = await sandbox()
+    const folderRepository = await folderBox.root.mkdir('target')
+    await setupReceivers(folderBox, [
+      {
+        key: 'target',
+        repository: 'https://github.com/example/target',
+        path: folderRepository,
+        folderIds: ['folder-a']
+      }
+    ])
+    const folderMeeting: GranolaMeetingFixture = {
+      id: 'meeting-a',
+      date: '2026-01-02',
+      title: 'Meeting',
+      folderIds: ['folder-a']
+    }
+    folderBox.setRunner(
+      granolaFixtureRunner({
+        meetings: [folderMeeting],
+        folders: [{ id: 'folder-a', title: 'Folder' }],
+        onList: ({ folderId, matches }) => (folderId ? matches : [])
+      }).runner
+    )
+    expect((await folderBox.run(command(folderRepository))).output).toContain('1 new, 0 refreshed, 0 kept')
+
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      { key: 'target', repository: 'https://github.com/example/target', path: repository, unfoldered: true }
+    ])
+    const meeting: GranolaMeetingFixture = { id: 'meeting-a', date: '2026-01-02', title: 'Meeting', transcript: null }
+    const root = join(repository, '+/_ACQUIRE/granola')
+    const path = join(root, '2026-01-02--meeting--meeting-a.md')
+    await mkdir(root, { recursive: true })
+    const minimal = '---\nsource_id: "meeting-a"\n---\n'
+    for (const content of [
+      minimal,
+      `${minimal}\n## Transcript\n\n`,
+      `${minimal}\n## Transcript\n\n_Transcript unavailable from the source._\n`
+    ]) {
+      await writeFile(path, content)
+      box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
+      const result = await box.run(command(repository, '--refresh'))
+      expect(result.output).toContain('0 new, 1 refreshed, 0 kept')
+      const refreshed = await readFile(path, 'utf8')
+      expect(refreshed).toContain('_Transcript unavailable from the source._')
+      expect(refreshed).not.toContain('transcript_sha256')
+    }
+    await writeFile(join(root, '2026-01-03--copy--meeting-a.md'), minimal)
+    box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
+    const several = await box.run(command(repository, '--refresh'))
+    expect(several.output).toContain('0 new, 0 refreshed, 1 kept')
+    expect(several.output).toContain('Kept: meeting-a · several captures exist')
+  })
+
   test('requires an available registered eligible target and validates selected folder identities', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('target')
@@ -1547,31 +1177,16 @@ describe('[ki acquire import --adapter granola]', () => {
     const result = await batch.run(command(batchRepository))
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('2 new')
-    expect(result.output).toContain('1 omissions')
+    expect(result.output).toContain('Omissions: 1')
     expect(detailCalls).toEqual([['meeting-a', 'meeting-b'], ['meeting-b']])
   })
 
   test.each([
-    { name: 'non-JSON', content: 'not-json', expected: 'checkpoint is not valid JSON' },
-    { name: 'non-object', content: '[]', expected: 'checkpoint malformed' },
-    { name: 'wrong top-level shape', content: '{"schema":2}', expected: 'checkpoint malformed' },
-    {
-      name: 'wrong meeting shape',
-      content: JSON.stringify({
-        schema: 1,
-        provider: 'granola',
-        account_sha256: 'account',
-        source_schema_sha256: 'schema',
-        identity_checkpoint_sha256: 'identity',
-        interval: { since: '2026-01-01', until: '2026-01-03' },
-        exhaustive: true,
-        windows: [],
-        meetings: { bad: null },
-        updated_at: '2026-01-04T00:00:00.000Z'
-      }),
-      expected: 'checkpoint malformed'
-    }
-  ])('rejects a $name receiver ledger', async ({ content, expected }) => {
+    { name: 'another identity', content: 'source_id: "meeting-other"', expected: 'does not carry source identity' },
+    { name: 'malformed identity', content: 'source_id: meeting-a', expected: 'has malformed source_id' },
+    { name: 'non-string identity', content: 'source_id: 7', expected: 'has malformed source_id' },
+    { name: 'missing front matter', content: '', expected: 'does not carry source identity' }
+  ])('ignores retired ledgers and refuses a capture with $name', async ({ content, expected }) => {
     const box = await sandbox()
     const repository = await box.root.mkdir('target')
     await setupReceivers(box, [
@@ -1583,35 +1198,19 @@ describe('[ki acquire import --adapter granola]', () => {
       }
     ])
     await mkdir(join(repository, '+/_ACQUIRE/granola'), { recursive: true })
-    await writeFile(join(repository, '+/_ACQUIRE/granola/ledger.json'), content)
-    box.setRunner(granolaFixtureRunner({ meetings: [] }).runner)
-    const result = await box.run(command(repository))
+    await writeFile(join(repository, '+/_ACQUIRE/granola/ledger.json'), 'not-json')
+    await writeFile(join(repository, '+/_ACQUIRE/granola/journal.json'), 'not-json')
+    await writeFile(
+      join(repository, '+/_ACQUIRE/granola/2026-01-01--meeting--meeting-a.md'),
+      content ? `---\n${content}\n---\n` : 'no front matter\n'
+    )
+    box.setRunner(granolaFixtureRunner({ meetings: [{ id: 'meeting-a', date: '2026-01-01', title: 'A' }] }).runner)
+    const kept = await box.run(command(repository))
+    expect(kept.exitCode, kept.output).toBe(0)
+    expect(kept.output).toContain('Meetings: 0 new, 0 refreshed, 1 kept')
+    const result = await box.run(command(repository, '--refresh'))
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain(expected)
-  })
-
-  test.each(checkpointCorruptions)('rejects corrupt current checkpoint $name', async ({ mutate }) => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('target')
-    await setupReceivers(box, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: repository,
-        unfoldered: true
-      }
-    ])
-    box.setRunner(
-      granolaFixtureRunner({ meetings: [{ id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }] }).runner
-    )
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    const path = join(repository, '+/_ACQUIRE/granola/ledger.json')
-    const checkpoint = JSON.parse(await readFile(path, 'utf8')) as JsonRecord
-    mutate(checkpoint)
-    await writeFile(path, `${JSON.stringify(checkpoint)}\n`)
-    const status = await box.run(['ki', 'acquire', 'status', '--adapter', 'granola', '--repo', repository])
-    expect(status.exitCode).toBe(1)
-    expect(status.output).toContain('checkpoint')
   })
 
   test('retries an explicit Granola rate limit without weakening other source failures', async () => {
@@ -1638,44 +1237,7 @@ describe('[ki acquire import --adapter granola]', () => {
     expect(source.calls.filter((call) => call.tool === 'get_meetings')).toHaveLength(2)
   })
 
-  test('resumes verified packages after interruption and refuses corrupted staged evidence', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('target')
-    await setupReceivers(box, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: repository,
-        unfoldered: true
-      }
-    ])
-    const meetings = Array.from({ length: 11 }, (_, index) => ({
-      id: `meeting-${String(index).padStart(2, '0')}`,
-      date: '2026-01-01',
-      title: `Meeting ${index}`
-    }))
-    const source = granolaFixtureRunner({ meetings, failDetailOnce: 'meeting-10' })
-    box.setRunner(source.runner)
-    const interrupted = await box.run(command(repository))
-    expect(interrupted.exitCode).toBe(1)
-    expect(await packageDirectories(repository)).toHaveLength(10)
-    expect(await lstat(join(repository, '+/_ACQUIRE/granola/ledger.json')).catch(() => undefined)).toBeUndefined()
-
-    const resumed = await box.run(command(repository))
-    expect(resumed.exitCode, resumed.output).toBe(0)
-    expect(await packageDirectories(repository)).toHaveLength(11)
-    const ledger = JSON.parse(await box.root.read('target/+/_ACQUIRE/granola/ledger.json')) as {
-      meetings: Record<string, { path: string }>
-    }
-    const corrupted = ledger.meetings['meeting-00']?.path
-    expect(corrupted).toBeDefined()
-    await box.root.write(`target/+/_ACQUIRE/granola/${corrupted}`, '# Corrupt\n')
-    const refused = await box.run(command(repository))
-    expect(refused.exitCode).toBe(1)
-    expect(refused.output).toContain('disposed document checksum differs')
-  })
-
-  test('separates mutable detail from cached transcripts and supports explicit refresh', async () => {
+  test('keeps captures unless refreshed and retains a transcript the provider withdraws', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('target')
     await setupReceivers(box, [
@@ -1698,27 +1260,31 @@ describe('[ki acquire import --adapter granola]', () => {
     expect((await box.run(command(repository))).exitCode).toBe(0)
     expect(firstSource.calls.filter((call) => call.tool === 'get_meeting_transcript')).toHaveLength(1)
 
+    const path = 'target/+/_ACQUIRE/granola/2026-01-02--meeting--meeting-a.md'
+    const transcriptSha256 = /^transcript_sha256: (.+)$/m.exec(await box.root.read(path))?.[1]
+    expect(transcriptSha256).toMatch(/^"[a-f0-9]{64}"$/)
     const changedSource = granolaFixtureRunner({
       meetings: [{ ...original, detail: { summary: 'Changed notes' } }]
     })
     box.setRunner(changedSource.runner)
-    const changed = await box.run(command(repository))
+    const kept = await box.run(command(repository))
+    expect(kept.exitCode, kept.output).toBe(0)
+    expect(kept.output).toContain('Meetings: 0 new, 0 refreshed, 1 kept')
+    expect(await box.root.read(path)).toContain('Original notes')
+    const changed = await box.run(command(repository, '--refresh'))
     expect(changed.exitCode, changed.output).toBe(0)
-    expect(changed.output).toContain('Meetings: 0 new, 1 amended, 0 unchanged')
-    expect(changedSource.calls.filter((call) => call.tool === 'get_meeting_transcript')).toHaveLength(0)
-    const ledger = JSON.parse(await box.root.read('target/+/_ACQUIRE/granola/ledger.json')) as {
-      meetings: Record<string, { detail_sha256: string; transcript_sha256: string; transcript_state: string }>
-    }
-    expect(ledger.meetings['meeting-a']?.detail_sha256).toMatch(/^[a-f0-9]{64}$/)
-    expect(ledger.meetings['meeting-a']?.transcript_sha256).toMatch(/^[a-f0-9]{64}$/)
-    expect(ledger.meetings['meeting-a']?.transcript_state).toBe('available')
-
-    const refreshSource = granolaFixtureRunner({ meetings: [{ ...original, detail: { summary: 'Changed notes' } }] })
-    box.setRunner(refreshSource.runner)
-    const refreshed = await box.run(command(repository, '--refresh-transcripts'))
-    expect(refreshed.exitCode, refreshed.output).toBe(0)
-    expect(refreshSource.calls.filter((call) => call.tool === 'get_meeting_transcript')).toHaveLength(1)
-    expect(refreshSource.calls.every((call) => !/(archive|delete|move|tag|update)/i.test(call.tool))).toBe(true)
+    expect(changed.output).toContain('Meetings: 0 new, 1 refreshed, 0 kept')
+    expect(await box.root.read(path)).toContain('Changed notes')
+    const withdrawnSource = granolaFixtureRunner({ meetings: [{ ...original, transcript: null }] })
+    box.setRunner(withdrawnSource.runner)
+    const withdrawn = await box.run(command(repository, '--refresh'))
+    expect(withdrawn.exitCode, withdrawn.output).toBe(0)
+    expect(withdrawn.output).toContain('Omissions: 0')
+    const document = await box.root.read(path)
+    expect(document).toContain('Speaker: immutable transcript')
+    expect(document).toContain('Original notes')
+    expect(document).toContain(`transcript_sha256: ${transcriptSha256}`)
+    expect(withdrawnSource.calls.every((call) => !/(archive|delete|move|tag|update)/i.test(call.tool))).toBe(true)
   })
 
   test('treats a successful meeting-not-found transcript response as unavailable', async () => {
@@ -1748,13 +1314,9 @@ describe('[ki acquire import --adapter granola]', () => {
     const result = await box.run(command(repository))
 
     expect(result.exitCode, result.output).toBe(0)
-    const ledger = JSON.parse(await box.root.read('target/+/_ACQUIRE/granola/ledger.json')) as {
-      meetings: Record<string, { transcript_state: string; transcript_retry_count: number }>
-    }
-    expect(ledger.meetings['meeting-a']).toMatchObject({
-      transcript_state: 'retrying',
-      transcript_retry_count: 1
-    })
+    const document = await box.root.read('target/+/_ACQUIRE/granola/2026-01-02--meeting--meeting-a.md')
+    expect(document).toContain('transcript_state: "unavailable"')
+    expect(document).not.toContain('transcript_sha256')
   })
 
   test('records a successful structured transcript omission', async () => {
@@ -1786,597 +1348,6 @@ describe('[ki acquire import --adapter granola]', () => {
     )
   })
 
-  test('retries unavailable transcripts to availability and then records bounded durable omission', async () => {
-    const availableBox = await sandbox()
-    const availableRepository = await availableBox.root.mkdir('target')
-    await setupReceivers(availableBox, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: availableRepository,
-        unfoldered: true
-      }
-    ])
-    const unavailable: GranolaMeetingFixture = {
-      id: 'meeting-a',
-      date: '2026-01-02',
-      title: 'Meeting',
-      transcript: null
-    }
-    availableBox.setRunner(granolaFixtureRunner({ meetings: [unavailable] }).runner)
-    expect((await availableBox.run(command(availableRepository))).exitCode).toBe(0)
-    const recoveredSource = granolaFixtureRunner({
-      meetings: [{ ...unavailable, transcript: { transcript: 'Now available' } }]
-    })
-    availableBox.setRunner(recoveredSource.runner)
-    expect((await availableBox.run(command(availableRepository))).exitCode).toBe(0)
-    const recoveredLedger = JSON.parse(await availableBox.root.read('target/+/_ACQUIRE/granola/ledger.json')) as {
-      meetings: Record<string, { transcript_state: string }>
-    }
-    expect(recoveredLedger.meetings['meeting-a']?.transcript_state).toBe('available')
-
-    const omittedBox = await sandbox()
-    const omittedRepository = await omittedBox.root.mkdir('target')
-    await setupReceivers(omittedBox, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: omittedRepository,
-        unfoldered: true
-      }
-    ])
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      omittedBox.setRunner(granolaFixtureRunner({ meetings: [unavailable] }).runner)
-      expect((await omittedBox.run(command(omittedRepository))).exitCode).toBe(0)
-    }
-    const bounded = granolaFixtureRunner({ meetings: [unavailable] })
-    omittedBox.setRunner(bounded.runner)
-    expect((await omittedBox.run(command(omittedRepository))).exitCode).toBe(0)
-    expect(bounded.calls.filter((call) => call.tool === 'get_meeting_transcript')).toHaveLength(0)
-    const omittedLedger = JSON.parse(await omittedBox.root.read('target/+/_ACQUIRE/granola/ledger.json')) as {
-      meetings: Record<string, { transcript_state: string; transcript_retry_count: number }>
-    }
-    expect(omittedLedger.meetings['meeting-a']).toMatchObject({
-      transcript_state: 'durable-omission',
-      transcript_retry_count: 3
-    })
-  })
-
-  test('rejects corrupt and incompatible journals without advancing checkpoint', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('target')
-    await setupReceivers(box, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: repository,
-        unfoldered: true
-      }
-    ])
-    await mkdir(join(repository, '+/_ACQUIRE/granola'), { recursive: true })
-    await writeFile(join(repository, '+/_ACQUIRE/granola/journal.json'), 'not-json')
-    box.setRunner(
-      granolaFixtureRunner({ meetings: [{ id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }] }).runner
-    )
-    const corrupt = await box.run(command(repository))
-    expect(corrupt.exitCode).toBe(1)
-    expect(corrupt.output).toContain('journal is not valid JSON')
-    expect(await lstat(join(repository, '+/_ACQUIRE/granola/ledger.json')).catch(() => undefined)).toBeUndefined()
-
-    await rm(join(repository, '+/_ACQUIRE/granola/journal.json'))
-    const meetings = Array.from({ length: 11 }, (_, index) => ({
-      id: `meeting-${String(index).padStart(2, '0')}`,
-      date: '2026-01-02',
-      title: `Meeting ${index}`
-    }))
-    box.setRunner(granolaFixtureRunner({ meetings, failDetailOnce: 'meeting-10' }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(1)
-    box.setRunner(granolaFixtureRunner({ meetings }).runner)
-    const incompatible = await box.run([
-      'ki',
-      'acquire',
-      'import',
-      '--adapter',
-      'granola',
-      '--repo',
-      repository,
-      '--since',
-      '2026-01-02',
-      '--until',
-      '2026-01-03'
-    ])
-    expect(incompatible.exitCode).toBe(1)
-    expect(incompatible.output).toContain('journal is stale or incompatible')
-    expect(await lstat(join(repository, '+/_ACQUIRE/granola/ledger.json')).catch(() => undefined)).toBeUndefined()
-  })
-
-  test.each(journalCorruptions)('rejects corrupt journal $name', async ({ mutate }) => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('target')
-    await setupReceivers(box, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: repository,
-        unfoldered: true
-      }
-    ])
-    const meetings = Array.from({ length: 11 }, (_, index) => ({
-      id: `meeting-${String(index).padStart(2, '0')}`,
-      date: '2026-01-02',
-      title: `Meeting ${index}`
-    }))
-    box.setRunner(granolaFixtureRunner({ meetings, failDetailOnce: 'meeting-10' }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(1)
-    const path = join(repository, '+/_ACQUIRE/granola/journal.json')
-    const journal = JSON.parse(await readFile(path, 'utf8')) as JsonRecord
-    mutate(journal)
-    await writeFile(path, `${JSON.stringify(journal)}\n`)
-    const status = await box.run(['ki', 'acquire', 'status', '--adapter', 'granola', '--repo', repository])
-    expect(status.exitCode).toBe(1)
-    expect(status.output).toContain('journal')
-  })
-
-  test('preserves proof and refuses unsafe reset scopes without provider calls', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('target')
-    await setupReceivers(box, [
-      { key: 'target', repository: 'https://github.com/example/target', path: repository, unfoldered: true }
-    ])
-    const source = granolaFixtureRunner({ meetings: [{ id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }] })
-    box.setRunner(source.runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    const base = join(repository, '+/_ACQUIRE/granola')
-    const ledgerPath = join(base, 'ledger.json')
-    const original = await readFile(ledgerPath, 'utf8')
-    const ledger = JSON.parse(original) as JsonRecord
-    const documentPath = join(base, String(checkpointMeeting(ledger)['path']))
-    const document = await readFile(documentPath)
-    const calls = source.calls.length
-    const reset = ['ki', 'acquire', 'reset', '--adapter', 'granola', '--repo', repository]
-    for (const state of [
-      'retained',
-      'harvested-locally',
-      'routed-through-ki-trades',
-      'superseded',
-      'awaiting-review'
-    ]) {
-      checkpointDisposition(ledger)['state'] = state
-      const bytes = JSON.stringify(ledger)
-      await writeFile(ledgerPath, bytes)
-      for (const scope of [
-        [],
-        ['--rebuild'],
-        ['--source', 'meeting-a'],
-        ['--source', 'meeting-a', '--component', 'detail'],
-        ['--source', 'meeting-a', '--component', 'transcript']
-      ]) {
-        for (const confirmation of [[], ['--confirm']]) {
-          const result = await box.run([...reset, ...scope, ...confirmation])
-          expect(result.exitCode, result.output).toBe(1)
-          expect(result.output).toContain('retained handling or awaiting-review evidence')
-          expect(await readFile(ledgerPath, 'utf8')).toBe(bytes)
-          expect(await readFile(documentPath)).toEqual(document)
-        }
-      }
-    }
-    await rm(documentPath)
-    expect((await box.run([...reset, '--rebuild', '--confirm'])).exitCode).toBe(1)
-    await writeFile(documentPath, document)
-    await writeFile(ledgerPath, original)
-    await writeFile(join(base, 'journal.json'), 'interrupted evidence')
-    expect((await box.run([...reset, '--confirm'])).output).toContain('in-progress journal')
-    expect(await readFile(join(base, 'journal.json'), 'utf8')).toBe('interrupted evidence')
-    expect(await readFile(ledgerPath, 'utf8')).toBe(original)
-    await rm(join(base, 'journal.json'))
-    await writeFile(ledgerPath, '{}')
-    expect((await box.run([...reset, '--rebuild', '--confirm'])).exitCode).toBe(1)
-    expect(await readFile(ledgerPath, 'utf8')).toBe('{}')
-    await writeFile(ledgerPath, original)
-    await writeFile(documentPath, 'changed bytes')
-    expect((await box.run([...reset, '--rebuild', '--confirm'])).exitCode).toBe(1)
-    expect(await readFile(ledgerPath, 'utf8')).toBe(original)
-    await writeFile(documentPath, document)
-    for (const name of ['migration/proof.json', 'source-variants/original.md', 'attachment.jpg', 'unknown.txt']) {
-      await mkdir(join(base, name, '..'), { recursive: true })
-      await writeFile(join(base, name), 'retained bytes')
-    }
-    const preview = await box.run([...reset, '--rebuild'])
-    expect(preview.output).toContain(`Delete files: ${documentPath}, ${ledgerPath}.`)
-    expect((await box.run([...reset, '--rebuild', '--confirm'])).exitCode).toBe(0)
-    for (const name of ['migration/proof.json', 'source-variants/original.md', 'attachment.jpg', 'unknown.txt']) {
-      expect(await readFile(join(base, name), 'utf8')).toBe('retained bytes')
-    }
-    expect(await lstat(documentPath).catch(() => undefined)).toBeUndefined()
-    expect(await lstat(ledgerPath).catch(() => undefined)).toBeUndefined()
-    expect((await box.run([...reset, '--rebuild', '--confirm'])).exitCode).toBe(0)
-    expect(source.calls).toHaveLength(calls)
-  })
-
-  test('previews and confirms scoped reset without provider access', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('target')
-    await setupReceivers(box, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: repository,
-        unfoldered: true
-      }
-    ])
-    const source = granolaFixtureRunner({
-      meetings: [{ id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }]
-    })
-    box.setRunner(source.runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    const calls = source.calls.length
-    const reset = ['ki', 'acquire', 'reset', '--adapter', 'granola', '--repo', repository]
-    const plan = await box.run(reset)
-    expect(plan.exitCode).toBe(0)
-    expect(plan.output).toContain('No changes made; repeat with --confirm.')
-    expect((await lstat(join(repository, '+/_ACQUIRE/granola/ledger.json'))).isFile()).toBe(true)
-    const applied = await box.run([...reset, '--confirm'])
-    expect(applied.exitCode, applied.output).toBe(0)
-    expect(applied.output).toContain('Provider data will not be changed.')
-    expect(await lstat(join(repository, '+/_ACQUIRE/granola/ledger.json')).catch(() => undefined)).toBeUndefined()
-    expect(source.calls).toHaveLength(calls)
-  })
-
-  test('reports status, reconciles checkpoints, and exposes in-progress recovery state', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('target')
-    await setupReceivers(box, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: repository,
-        unfoldered: true
-      }
-    ])
-    const statusCommand = ['ki', 'acquire', 'status', '--adapter', 'granola', '--repo', repository]
-    const absent = await box.run(statusCommand)
-    expect(absent.exitCode, absent.output).toBe(0)
-    expect(absent.output).toContain('Checkpoint: absent')
-    expect(absent.output).toContain('Images: 0 verified in 0 meeting manifests')
-    expect(absent.output).toContain('Disposition: none')
-    expect(absent.output).toContain('Journal: absent')
-    const missingReconcile = await box.run(['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository])
-    expect(missingReconcile.exitCode).toBe(1)
-    expect(missingReconcile.output).toContain('checkpoint is absent')
-
-    const meetings = Array.from({ length: 11 }, (_, index) => ({
-      id: `meeting-${String(index).padStart(2, '0')}`,
-      date: '2026-01-02',
-      title: `Meeting ${index}`
-    }))
-    box.setRunner(granolaFixtureRunner({ meetings, failDetailOnce: 'meeting-10' }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(1)
-    const interrupted = await box.run(statusCommand)
-    expect(interrupted.output).toContain('Journal: in-progress · 1 remaining, 1 failures')
-
-    box.setRunner(granolaFixtureRunner({ meetings }).runner)
-    const imported = await box.run(command(repository))
-    expect(imported.exitCode).toBe(0)
-    expect(imported.output).toContain('Attachments: not inventoried by Granola MCP')
-    const current = await box.run(statusCommand)
-    expect(current.output).toContain('Checkpoint: current · ')
-    expect(current.output).toContain('Disposition: staged=11')
-    const reconciled = await box.run(['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository])
-    expect(reconciled.exitCode, reconciled.output).toBe(0)
-    expect(reconciled.output).toContain('Meetings: 11')
-  })
-
-  test('migrates the committed schema-two checkpoint used by completed receivers', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('target')
-    await setupReceivers(box, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: repository,
-        unfoldered: true
-      }
-    ])
-    const meeting: GranolaMeetingFixture = {
-      id: 'meeting-a',
-      date: '2026-01-02',
-      title: 'Meeting',
-      transcript: { transcript: 'Speaker: historical' }
-    }
-    box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    const path = join(repository, '+/_ACQUIRE/granola/ledger.json')
-    const current = JSON.parse(await readFile(path, 'utf8')) as {
-      account_sha256: string
-      source_schema_sha256: string
-      identity_checkpoint_sha256: string
-      interval: { since: string; until: string }
-      windows: unknown[]
-      updated_at: string
-      meetings: Record<
-        string,
-        {
-          path: string
-          document_sha256: string
-          detail_sha256: string
-          versions: string[]
-          folder_ids: string[]
-          inferred_unfoldered: boolean
-          acquired_at: string
-        }
-      >
-    }
-    const historical = current.meetings['meeting-a']
-    await writeFile(
-      path,
-      `${JSON.stringify(
-        {
-          schema: 2,
-          provider: 'granola',
-          account_sha256: current.account_sha256,
-          source_schema_sha256: current.source_schema_sha256,
-          identity_checkpoint_sha256: current.identity_checkpoint_sha256,
-          interval: current.interval,
-          exhaustive: true,
-          windows: current.windows,
-          meetings: {
-            'meeting-a': {
-              path: historical?.path,
-              latest_content_sha256: historical?.document_sha256,
-              latest_source_sha256: historical?.detail_sha256,
-              versions: historical?.versions,
-              folder_ids: historical?.folder_ids,
-              inferred_unfoldered: historical?.inferred_unfoldered,
-              acquired_at: historical?.acquired_at
-            }
-          },
-          updated_at: current.updated_at
-        },
-        null,
-        2
-      )}\n`
-    )
-    const status = await box.run(['ki', 'acquire', 'status', '--adapter', 'granola', '--repo', repository])
-    expect(status.exitCode, status.output).toBe(0)
-    expect(status.output).toContain('Checkpoint: legacy')
-    box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    expect((JSON.parse(await readFile(path, 'utf8')) as { schema: number }).schema).toBe(3)
-
-    const malformed = { schema: 2, provider: 'granola', meetings: { bad: null } }
-    await writeFile(path, `${JSON.stringify(malformed)}\n`)
-    box.setRunner(granolaFixtureRunner({ meetings: [] }).runner)
-    expect((await box.run(command(repository))).output).toContain('legacy checkpoint malformed')
-  })
-
-  test('applies source, component, and rebuild reset scopes with validation', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('target')
-    await setupReceivers(box, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: repository,
-        unfoldered: true
-      }
-    ])
-    const meeting: GranolaMeetingFixture = {
-      id: 'meeting-a',
-      date: '2026-01-02',
-      title: 'Meeting',
-      transcript: { transcript: 'Speaker: hello' }
-    }
-    box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    const reset = ['ki', 'acquire', 'reset', '--adapter', 'granola', '--repo', repository]
-    expect((await box.run([...reset, '--component', 'transcript'])).output).toContain('--component requires --source')
-    expect((await box.run([...reset, '--component', 'unknown', '--source', 'meeting-a'])).output).toContain(
-      '--component must be detail or transcript'
-    )
-    expect((await box.run([...reset, '--rebuild', '--source', 'meeting-a'])).output).toContain(
-      '--rebuild cannot be combined'
-    )
-    expect((await box.run([...reset, '--source', 'missing', '--confirm'])).output).toContain('has no source missing')
-
-    const transcript = await box.run([...reset, '--source', 'meeting-a', '--component', 'transcript', '--confirm'])
-    expect(transcript.exitCode, transcript.output).toBe(0)
-    const transcriptLedger = JSON.parse(await box.root.read('target/+/_ACQUIRE/granola/ledger.json')) as {
-      meetings: Record<string, { transcript_state: string; transcript_sha256?: string }>
-    }
-    expect(transcriptLedger.meetings['meeting-a']).toMatchObject({ transcript_state: 'retrying' })
-    expect(transcriptLedger.meetings['meeting-a']?.transcript_sha256).toBeUndefined()
-
-    expect((await box.run([...reset, '--source', 'meeting-a', '--component', 'detail', '--confirm'])).exitCode).toBe(0)
-    const detailLedger = JSON.parse(await box.root.read('target/+/_ACQUIRE/granola/ledger.json')) as {
-      meetings: Record<string, { detail_sha256: string }>
-    }
-    expect(detailLedger.meetings['meeting-a']?.detail_sha256).toBe('')
-
-    expect((await box.run([...reset, '--source', 'meeting-a', '--confirm'])).exitCode).toBe(0)
-    const sourceLedger = JSON.parse(await box.root.read('target/+/_ACQUIRE/granola/ledger.json')) as {
-      meetings: Record<string, unknown>
-    }
-    expect(sourceLedger.meetings['meeting-a']).toBeUndefined()
-
-    box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    const rebuilt = await box.run([...reset, '--rebuild', '--confirm'])
-    expect(rebuilt.exitCode, rebuilt.output).toBe(0)
-    expect(rebuilt.output).toContain('complete rebuild')
-    expect((await lstat(join(repository, '+/_ACQUIRE/granola'))).isDirectory()).toBe(true)
-  })
-
-  test('accepts harvested local dispositions and stages changed-source amendments for review', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('target')
-    await setupReceivers(box, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: repository,
-        unfoldered: true
-      }
-    ])
-    const meeting: GranolaMeetingFixture = {
-      id: 'meeting-a',
-      date: '2026-01-02',
-      title: 'Meeting',
-      detail: { summary: 'Original' },
-      transcript: { transcript: 'Speaker: retained' }
-    }
-    box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    const ledgerPath = join(repository, '+/_ACQUIRE/granola/ledger.json')
-    const ledger = JSON.parse(await readFile(ledgerPath, 'utf8')) as {
-      meetings: Record<
-        string,
-        {
-          path: string
-          document_sha256: string
-          detail_sha256: string
-          disposition: Record<string, unknown>
-        }
-      >
-    }
-    const current = ledger.meetings['meeting-a']
-    expect(current).toBeDefined()
-    const destination = 'harvested/meeting-a.md'
-    await mkdir(join(repository, '+/_ACQUIRE/granola/harvested'), { recursive: true })
-    await rename(
-      join(repository, '+/_ACQUIRE/granola', current?.path ?? ''),
-      join(repository, '+/_ACQUIRE/granola', destination)
-    )
-    if (current) {
-      current.disposition = {
-        state: 'harvested-locally',
-        canonical_destination: destination,
-        document_sha256: current.document_sha256,
-        disposed_at: '2026-01-04T00:00:00.000Z',
-        source_version_sha256: current.detail_sha256
-      }
-    }
-    await writeFile(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`)
-
-    const unchangedSource = granolaFixtureRunner({ meetings: [meeting] })
-    box.setRunner(unchangedSource.runner)
-    const unchanged = await box.run(command(repository))
-    expect(unchanged.exitCode, unchanged.output).toBe(0)
-    expect(unchanged.output).toContain('Meetings: 0 new, 0 amended, 1 unchanged')
-    expect(await packageDirectories(repository)).toHaveLength(0)
-    expect(unchangedSource.calls.filter((call) => call.tool === 'get_meeting_transcript')).toHaveLength(0)
-
-    const changedSource = granolaFixtureRunner({
-      meetings: [{ ...meeting, detail: { summary: 'Changed after harvest' } }]
-    })
-    box.setRunner(changedSource.runner)
-    const changed = await box.run(command(repository))
-    expect(changed.exitCode, changed.output).toBe(0)
-    expect(await packageDirectories(repository)).toHaveLength(1)
-    const amended = JSON.parse(await readFile(ledgerPath, 'utf8')) as {
-      meetings: Record<string, { disposition: { state: string } }>
-    }
-    expect(amended.meetings['meeting-a']?.disposition.state).toBe('awaiting-review')
-  })
-
-  test('guards checkpoint journal document and cached transcript recovery evidence', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('target')
-    await setupReceivers(box, [
-      { key: 'target', repository: 'https://github.com/example/target', path: repository, unfoldered: true }
-    ])
-    const meeting: GranolaMeetingFixture = { id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }
-    box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-
-    const base = join(repository, '+/_ACQUIRE/granola')
-    const ledgerPath = join(base, 'ledger.json')
-    const originalLedger = await readFile(ledgerPath, 'utf8')
-    const ledger = JSON.parse(originalLedger) as JsonRecord
-    const current = checkpointMeeting(ledger)
-    const documentPath = join(base, String(current['path']))
-    const originalDocument = await readFile(documentPath, 'utf8')
-    const reconcile = ['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository]
-
-    const wrongRepository = JSON.parse(originalLedger) as JsonRecord
-    wrongRepository['repository'] = 'https://github.com/example/other'
-    await writeFile(ledgerPath, `${JSON.stringify(wrongRepository)}\n`)
-    expect((await box.run(['ki', 'acquire', 'status', '--adapter', 'granola', '--repo', repository])).output).toContain(
-      'repository binding differs'
-    )
-
-    const multipleDispositions = JSON.parse(originalLedger) as JsonRecord
-    const retainedMeeting = structuredClone(checkpointMeeting(multipleDispositions))
-    ;(retainedMeeting['disposition'] as JsonRecord)['state'] = 'retained'
-    ;(multipleDispositions['meetings'] as JsonRecord)['meeting-b'] = retainedMeeting
-    await writeFile(ledgerPath, `${JSON.stringify(multipleDispositions)}\n`)
-    expect((await box.run(['ki', 'acquire', 'status', '--adapter', 'granola', '--repo', repository])).output).toContain(
-      'retained=1, staged=1'
-    )
-
-    await writeFile(ledgerPath, originalLedger)
-    current['path'] = '../unsafe.md'
-    await writeFile(ledgerPath, `${JSON.stringify(ledger)}\n`)
-    expect((await box.run(reconcile)).output).toContain('unsafe document path')
-
-    await writeFile(ledgerPath, originalLedger)
-    await rm(documentPath)
-    await symlink(join(repository, '.ki.toml'), documentPath)
-    expect((await box.run(reconcile)).output).toContain('is unsafe')
-
-    await rm(documentPath)
-    expect((await box.run(reconcile)).output).toContain('staged document is missing')
-
-    const awaiting = JSON.parse(originalLedger) as JsonRecord
-    checkpointDisposition(awaiting)['state'] = 'awaiting-review'
-    await writeFile(ledgerPath, `${JSON.stringify(awaiting)}\n`)
-    expect((await box.run(reconcile)).output).toContain('staged document is missing')
-
-    await writeFile(documentPath, `${originalDocument}\nchanged`)
-    expect((await box.run(reconcile)).output).toContain('checksum differs')
-
-    const retained = JSON.parse(originalLedger) as JsonRecord
-    checkpointDisposition(retained)['state'] = 'retained'
-    await writeFile(ledgerPath, `${JSON.stringify(retained)}\n`)
-    await rm(documentPath)
-    expect((await box.run(reconcile)).exitCode).toBe(0)
-    expect((await box.run(command(repository))).output).toContain('Meetings: 0 new, 0 amended, 1 unchanged')
-
-    const retainedReset = await box.run([
-      'ki',
-      'acquire',
-      'reset',
-      '--adapter',
-      'granola',
-      '--repo',
-      repository,
-      '--source',
-      'meeting-a',
-      '--confirm'
-    ])
-    expect(retainedReset.exitCode, retainedReset.output).toBe(1)
-
-    for (const replacement of [null, '', '_Transcript source unavailable._']) {
-      const altered =
-        replacement === null
-          ? originalDocument.replace('## Transcript', '## Conversation')
-          : originalDocument.replace(/## Transcript\n\n[\s\S]*$/, `## Transcript\n\n${replacement}`)
-      const alteredLedger = JSON.parse(originalLedger) as JsonRecord
-      const alteredMeeting = checkpointMeeting(alteredLedger)
-      const alteredHash = sha256(altered)
-      alteredMeeting['document_sha256'] = alteredHash
-      checkpointDisposition(alteredLedger)['document_sha256'] = alteredHash
-      await writeFile(ledgerPath, `${JSON.stringify(alteredLedger)}\n`)
-      await writeFile(documentPath, altered)
-      expect((await box.run(command(repository))).output).toContain('cached transcript differs from checkpoint')
-    }
-
-    await rm(ledgerPath)
-    await mkdir(ledgerPath)
-    expect((await box.run(['ki', 'acquire', 'status', '--adapter', 'granola', '--repo', repository])).output).toContain(
-      'checkpoint must be physical file'
-    )
-  })
-
   test('handles orphan identity collision rename account refresh and unavailable detail boundaries', async () => {
     const orphan = await sandbox()
     const orphanRepository = await orphan.root.mkdir('target')
@@ -2393,7 +1364,10 @@ describe('[ki acquire import --adapter granola]', () => {
     await mkdir(join(orphanRepository, '+/_ACQUIRE/granola'), { recursive: true })
     await writeFile(orphanPath, '---\nsource_id: "other"\n---\n')
     orphan.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
-    expect((await orphan.run(command(orphanRepository))).output).toContain('belongs to another source identity')
+    expect((await orphan.run(command(orphanRepository))).output).toContain('capture exists at')
+    expect((await orphan.run(command(orphanRepository, '--refresh'))).output).toContain(
+      'does not carry source identity meeting-a'
+    )
 
     await rm(orphanPath)
     await mkdir(orphanPath)
@@ -2401,8 +1375,10 @@ describe('[ki acquire import --adapter granola]', () => {
     await rm(orphanPath, { recursive: true })
     expect((await orphan.run(command(orphanRepository))).exitCode).toBe(0)
     orphan.setRunner(granolaFixtureRunner({ meetings: [{ ...meeting, title: 'Renamed' }] }).runner)
-    expect((await orphan.run(command(orphanRepository))).exitCode).toBe(0)
-    expect(await packageDirectories(orphanRepository)).toEqual(['2026-01-02--renamed--meeting-a.md'])
+    const renamed = await orphan.run(command(orphanRepository, '--refresh'))
+    expect(renamed.output).toContain('0 new, 1 refreshed, 0 kept')
+    expect(await packageDirectories(orphanRepository)).toEqual(['2026-01-02--meeting--meeting-a.md'])
+    expect(await readFile(orphanPath, 'utf8')).toContain('# Renamed')
 
     orphan.setRunner(
       granolaFixtureRunner({
@@ -2414,11 +1390,13 @@ describe('[ki acquire import --adapter granola]', () => {
         }
       }).runner
     )
-    expect((await orphan.run(command(orphanRepository))).output).toContain('account differs')
+    const other = await orphan.run(command(orphanRepository, '--refresh'))
+    expect(other.exitCode, other.output).toBe(0)
+    expect(other.output).toContain('belongs to another Granola account')
 
     const refresh = granolaFixtureRunner({ meetings: [{ ...meeting, title: 'Renamed', transcript: null }] })
     orphan.setRunner(refresh.runner)
-    const refreshed = await orphan.run([...command(orphanRepository), '--refresh-transcripts'])
+    const refreshed = await orphan.run(command(orphanRepository, '--refresh'))
     expect(refreshed.exitCode, refreshed.output).toBe(0)
     expect(refresh.calls.filter((call) => call.tool === 'get_meeting_transcript')).toHaveLength(1)
 
@@ -2435,52 +1413,7 @@ describe('[ki acquire import --adapter granola]', () => {
     unavailable.setRunner(granolaFixtureRunner({ meetings: [{ ...meeting, detailUnavailable: true }] }).runner)
     const imported = await unavailable.run(command(unavailableRepository))
     expect(imported.exitCode, imported.output).toBe(0)
-    expect(imported.output).toContain('1 omissions')
-
-    await rm(join(unavailableRepository, '+/_ACQUIRE/granola/ledger.json'))
-    await mkdir(join(unavailableRepository, '+/_ACQUIRE/granola/journal.json'))
-    expect(
-      (await unavailable.run(['ki', 'acquire', 'status', '--adapter', 'granola', '--repo', unavailableRepository]))
-        .output
-    ).toContain('journal must be physical file')
-  })
-
-  test('preserves a verified presentation and document path when the source is unchanged', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('target')
-    await setupReceivers(box, [
-      { key: 'target', repository: 'https://github.com/example/target', path: repository, unfoldered: true }
-    ])
-    const meeting: GranolaMeetingFixture = { id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }
-    box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    const root = join(repository, '+/_ACQUIRE/granola')
-    const checkpoint = join(root, 'ledger.json')
-    const ledger = JSON.parse(await readFile(checkpoint, 'utf8'))
-    const entry = ledger.meetings['meeting-a']
-    const oldPath = join(root, entry.path)
-    const content = (await readFile(oldPath, 'utf8')).replace('\n# Meeting\n', '\n# Meeting\n\n')
-    entry.path = '2026-01-02--presentation--meeting-a.md'
-    entry.document_sha256 = createHash('sha256').update(content).digest('hex')
-    entry.disposition.document_sha256 = entry.document_sha256
-    entry.versions.push(entry.document_sha256)
-    await rename(oldPath, join(root, entry.path))
-    await writeFile(join(root, entry.path), content)
-    const verifiedCheckpoint = `${JSON.stringify(ledger, null, 2)}\n`
-    await writeFile(checkpoint, verifiedCheckpoint)
-
-    for (const options of [[], ['--refresh-transcripts']]) {
-      box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
-      const result = await box.run(command(repository, ...options))
-      expect(result.exitCode, result.output).toBe(0)
-      expect(result.output).toContain('0 new, 0 amended, 1 unchanged')
-      expect(await readFile(checkpoint, 'utf8')).toBe(verifiedCheckpoint)
-      expect(await readFile(join(root, entry.path), 'utf8')).toBe(content)
-      expect(await packageDirectories(repository)).toEqual([entry.path])
-      expect(
-        (await box.run(['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository])).exitCode
-      ).toBe(0)
-    }
+    expect(imported.output).toContain('Omissions: 1')
   })
 
   test('retains account binding across workspace inventory changes and rejects identity or access changes', async () => {
@@ -2497,8 +1430,9 @@ describe('[ki acquire import --adapter granola]', () => {
     }
     box.setRunner(granolaFixtureRunner({ meetings: [meeting], account }).runner)
     expect((await box.run(command(repository))).exitCode).toBe(0)
-    const checkpoint = join(repository, '+/_ACQUIRE/granola/ledger.json')
-    const original = await readFile(checkpoint, 'utf8')
+    const capture = join(repository, '+/_ACQUIRE/granola/2026-01-02--meeting--meeting-a.md')
+    const binding = (content: string): string | undefined => /^source_account_sha256: .*$/m.exec(content)?.[0]
+    const original = await readFile(capture, 'utf8')
 
     for (const workspaces of [[], [{ id: 'active-workspace' }], [{ id: 'new-workspace' }]]) {
       box.setRunner(
@@ -2512,10 +1446,12 @@ describe('[ki acquire import --adapter granola]', () => {
           }
         }).runner
       )
-      const result = await box.run(command(repository))
+      const result = await box.run(command(repository, '--refresh'))
       expect(result.exitCode, result.output).toBe(0)
-      expect(await readFile(checkpoint, 'utf8')).toBe(original)
+      expect(result.output).toContain('0 new, 1 refreshed, 0 kept')
+      expect(binding(await readFile(capture, 'utf8'))).toBe(binding(original))
     }
+    const bound = await readFile(capture, 'utf8')
 
     for (const changed of [
       { ...account, email: 'other@example.com' },
@@ -2523,10 +1459,10 @@ describe('[ki acquire import --adapter granola]', () => {
       { ...account, mcp_note_access: { scopes: ['personal'] } }
     ]) {
       box.setRunner(granolaFixtureRunner({ meetings: [meeting], account: changed }).runner)
-      const result = await box.run(command(repository))
-      expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('account differs')
-      expect(await readFile(checkpoint, 'utf8')).toBe(original)
+      const result = await box.run(command(repository, '--refresh'))
+      expect(result.exitCode, result.output).toBe(0)
+      expect(result.output).toContain('belongs to another Granola account')
+      expect(await readFile(capture, 'utf8')).toBe(bound)
     }
 
     for (const missingKey of ['email', 'active_workspace', 'mcp_note_access']) {
@@ -2534,7 +1470,7 @@ describe('[ki acquire import --adapter granola]', () => {
       delete incomplete[missingKey]
       box.setRunner(granolaFixtureRunner({ meetings: [meeting], account: incomplete }).runner)
       expect((await box.run(command(repository))).output).toContain('lacks stable identity or note-access scopes')
-      expect(await readFile(checkpoint, 'utf8')).toBe(original)
+      expect(await readFile(capture, 'utf8')).toBe(bound)
     }
 
     const fixture = granolaFixtureRunner({ meetings: [meeting], account })
@@ -2583,131 +1519,10 @@ describe('[ki acquire import --adapter granola]', () => {
     )
     expect((await box.run(command(repository))).output).toContain('unsupported key unknown')
   })
-
-  test('records non-Error detail and transcript failures in resumable journals', async () => {
-    const detailBox = await sandbox()
-    const detailRepository = await detailBox.root.mkdir('target')
-    await setupReceivers(detailBox, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: detailRepository,
-        unfoldered: true
-      }
-    ])
-    const meeting: GranolaMeetingFixture = { id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }
-    const detailSource = granolaFixtureRunner({ meetings: [meeting] })
-    detailBox.setRunner(async (executable, arguments_, environment) => {
-      if (arguments_[1] === 'granola.get_meetings') throw 'detail failure'
-      return detailSource.runner(executable, arguments_, environment)
-    })
-    await expect(detailBox.run(command(detailRepository))).rejects.toBe('detail failure')
-
-    const transcriptBox = await sandbox()
-    const transcriptRepository = await transcriptBox.root.mkdir('target')
-    await setupReceivers(transcriptBox, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: transcriptRepository,
-        unfoldered: true
-      }
-    ])
-    const transcriptSource = granolaFixtureRunner({ meetings: [meeting] })
-    transcriptBox.setRunner(async (executable, arguments_, environment) => {
-      if (arguments_[1] === 'granola.get_meeting_transcript') throw 'transcript failure'
-      return transcriptSource.runner(executable, arguments_, environment)
-    })
-    await expect(transcriptBox.run(command(transcriptRepository))).rejects.toBe('transcript failure')
-
-    for (const path of [detailRepository, transcriptRepository]) {
-      const journal = JSON.parse(await readFile(join(path, '+/_ACQUIRE/granola/journal.json'), 'utf8')) as {
-        failures: readonly { message: string }[]
-      }
-      expect(journal.failures[0]?.message).toContain('failure')
-    }
-  })
-
-  test('recovers folder-only discovery and a journal whose verified staged document disappeared', async () => {
-    const folderBox = await sandbox()
-    const folderRepository = await folderBox.root.mkdir('target')
-    await setupReceivers(folderBox, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: folderRepository,
-        folderIds: ['folder-a']
-      }
-    ])
-    const folderMeeting: GranolaMeetingFixture = {
-      id: 'meeting-a',
-      date: '2026-01-02',
-      title: 'Meeting',
-      folderIds: ['folder-a']
-    }
-    folderBox.setRunner(
-      granolaFixtureRunner({
-        meetings: [folderMeeting],
-        folders: [{ id: 'folder-a', title: 'Folder' }],
-        onList: ({ folderId, matches }) => (folderId ? matches : [])
-      }).runner
-    )
-    expect((await folderBox.run(command(folderRepository))).exitCode).toBe(0)
-
-    const resumeBox = await sandbox()
-    const resumeRepository = await resumeBox.root.mkdir('target')
-    await setupReceivers(resumeBox, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: resumeRepository,
-        unfoldered: true
-      }
-    ])
-    const meetings = Array.from({ length: 11 }, (_, index) => ({
-      id: `meeting-${String(index).padStart(2, '0')}`,
-      date: '2026-01-02',
-      title: `Meeting ${index}`
-    }))
-    resumeBox.setRunner(granolaFixtureRunner({ meetings, failDetailOnce: 'meeting-10' }).runner)
-    expect((await resumeBox.run(command(resumeRepository))).exitCode).toBe(1)
-    const journalPath = join(resumeRepository, '+/_ACQUIRE/granola/journal.json')
-    const journal = JSON.parse(await readFile(journalPath, 'utf8')) as JsonRecord
-    const component = journalComponent(journal)
-    await rm(join(resumeRepository, '+/_ACQUIRE/granola', String(component['staged_document_path'])))
-    resumeBox.setRunner(granolaFixtureRunner({ meetings }).runner)
-    const resumed = await resumeBox.run(command(resumeRepository))
-    expect(resumed.exitCode, resumed.output).toBe(0)
-    expect(resumed.output).toContain('9 resumed')
-
-    const empty = await sandbox()
-    const emptyRepository = await empty.root.mkdir('target')
-    await setupReceivers(empty, [
-      {
-        key: 'target',
-        repository: 'https://github.com/example/target',
-        path: emptyRepository,
-        unfoldered: true
-      }
-    ])
-    const reset = await empty.run([
-      'ki',
-      'acquire',
-      'reset',
-      '--adapter',
-      'granola',
-      '--repo',
-      emptyRepository,
-      '--source',
-      'meeting-a',
-      '--confirm'
-    ])
-    expect(reset.output).toContain('checkpoint is absent')
-  })
 })
 
 describe('[ki acquire central Granola inbox]', () => {
-  test('captures multiple folders once, retains memberships, flags identities without reading their content, and rebuilds only acquired state', async () => {
+  test('captures multiple folders once, retains memberships, flags identities without reading their content, and finds moved captures', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('inbox')
     const receiver: ReceiverFixture = {
@@ -2743,41 +1558,29 @@ describe('[ki acquire central Granola inbox]', () => {
     expect(await lstat(join(repository, '.acquire')).catch(() => undefined)).toBeUndefined()
     const imported = await box.run(command(repository))
     expect(imported.exitCode, imported.output).toBe(0)
-    const ledgerPath = join(repository, '.acquire/granola/ledger.json')
-    const ledger = JSON.parse(await readFile(ledgerPath, 'utf8')) as { meetings: Record<string, { path: string }> }
-    expect(Object.keys(ledger.meetings)).toEqual(['multiple', 'single'])
-    expect(ledger.meetings['single']?.path).toBe('captures/legal/granola/2026-01-02--single--single/meeting.md')
-    expect(ledger.meetings['multiple']?.path).toBe('captures/_review/granola/2026-01-02--multiple--multiple/meeting.md')
-    const markdown = await readFile(join(repository, ledger.meetings['multiple']?.path ?? ''), 'utf8')
+    expect(await lstat(join(repository, '.acquire')).catch(() => undefined)).toBeUndefined()
+    const single = 'captures/legal/granola/2026-01-02--single--single/meeting.md'
+    const multiple = 'captures/_review/granola/2026-01-02--multiple--multiple/meeting.md'
+    expect(await readFile(join(repository, single), 'utf8')).toContain('source_id: "single"')
+    const markdown = await readFile(join(repository, multiple), 'utf8')
     expect(markdown).toContain('territory_names:\n  - "legal"\n  - "personal"')
     expect(markdown).toContain('name: "Legal"')
     expect(markdown).toContain('name: "Personal"')
-    const flags = JSON.parse(await readFile(join(repository, '.acquire/granola/flagged.json'), 'utf8')) as {
-      meetings: { id: string }[]
-    }
-    expect(flags.meetings.map((meeting) => meeting.id)).toEqual(['unfoldered', 'unmatched'])
+    expect(imported.output).toContain('Flagged: unmatched · ')
     const contentCalls = source.calls.filter((call) => ['get_meetings', 'get_meeting_transcript'].includes(call.tool))
     expect(JSON.stringify(contentCalls)).not.toContain('unfoldered')
     expect(JSON.stringify(contentCalls)).not.toContain('unmatched')
-    expect((await box.run(['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository])).exitCode).toBe(
-      0
-    )
-    expect((await box.run(command(repository))).output).toContain('Meetings: 0 new, 0 amended, 2 unchanged')
-    const reset = await box.run([
-      'ki',
-      'acquire',
-      'reset',
-      '--adapter',
-      'granola',
-      '--repo',
-      repository,
-      '--rebuild',
-      '--confirm'
-    ])
-    expect(reset.exitCode, reset.output).toBe(0)
+    expect((await box.run(command(repository))).output).toContain('Meetings: 0 new, 0 refreshed, 2 kept')
+
+    // A capture Acquire has moved to its territory is still found and kept.
+    const moved = 'captures/personal/granola/2026-01-02--multiple--multiple/meeting.md'
+    await mkdir(dirname(join(repository, moved)), { recursive: true })
+    await rename(dirname(join(repository, multiple)), dirname(join(repository, moved)))
+    const again = await box.run(command(repository, '--refresh'))
+    expect(again.output).toContain('Meetings: 0 new, 2 refreshed, 0 kept')
+    expect(await lstat(join(repository, multiple)).catch(() => undefined)).toBeUndefined()
+    expect(await readFile(join(repository, moved), 'utf8')).toContain('source_id: "multiple"')
     expect(await readFile(join(repository, 'README.md'), 'utf8')).toBe('Keep this repository')
-    expect(await lstat(ledgerPath).catch(() => undefined)).toBeUndefined()
-    expect(await lstat(join(repository, ledger.meetings['single']?.path ?? '')).catch(() => undefined)).toBeUndefined()
   })
 
   test('reports empty unmatched folders and keeps mixed memberships in review, including textual listing evidence', async () => {
@@ -2813,9 +1616,7 @@ describe('[ki acquire central Granola inbox]', () => {
     expect(result.exitCode, result.output).toBe(0)
     expect(result.output).toContain('Unmatched folder: unknown · Empty unexpected folder')
     expect(result.output).toContain('Flagged: outside · unfoldered · 2026-01-02 · Title & detail')
-    const ledger = JSON.parse(await readFile(join(repository, '.acquire/granola/ledger.json'), 'utf8')) as JsonRecord
-    const meetingPath = String(checkpointMeeting(ledger)['path'])
-    expect(meetingPath).toContain('captures/_review/granola/')
+    const meetingPath = 'captures/_review/granola/2026-01-02--mixed--mixed/meeting.md'
     expect(await readFile(join(repository, meetingPath), 'utf8')).toContain('unmapped_folder_ids:\n  - "unknown"')
     box.setRunner(granolaFixtureRunner({ meetings: [], folders }).runner)
     const empty = await box.run(command(repository))
@@ -2851,110 +1652,7 @@ describe('[ki acquire central Granola inbox]', () => {
     expect(source.calls.filter((call) => ['get_meetings', 'get_meeting_transcript'].includes(call.tool))).toEqual([])
   })
 
-  test('keeps renamed packages stable and moves complete packages safely when territory membership changes', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('inbox')
-    await setupReceivers(box, [
-      {
-        key: 'inbox',
-        repository: 'https://github.com/example/inbox',
-        path: repository,
-        folderIds: ['one', 'two'],
-        captureRoot: 'captures',
-        folderTerritories: { one: 'legal', two: 'personal' }
-      }
-    ])
-    const folders = [
-      { id: 'one', title: 'Legal' },
-      { id: 'two', title: 'Personal' }
-    ]
-    const meeting: GranolaMeetingFixture = { id: 'first', date: '2026-01-02', title: 'Original', folderIds: ['one'] }
-    box.setRunner(granolaFixtureRunner({ meetings: [meeting], folders }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    const ledgerPath = join(repository, '.acquire/granola/ledger.json')
-    let ledger = JSON.parse(await readFile(ledgerPath, 'utf8')) as JsonRecord
-    const oldPath = String(checkpointMeeting(ledger)['path'])
-    const oldPackage = oldPath.replace('/meeting.md', '')
-    const variantPath = join(repository, oldPackage, 'source-variants')
-    await mkdir(variantPath)
-    await writeFile(join(variantPath, 'original.md'), 'Immutable original source')
-    await writeFile(join(repository, oldPackage, 'image.png'), Buffer.from([1, 2, 3]))
-    const renamed = { ...meeting, title: 'Renamed', date: '2026-01-03' }
-    box.setRunner(granolaFixtureRunner({ meetings: [renamed], folders }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    ledger = JSON.parse(await readFile(ledgerPath, 'utf8')) as JsonRecord
-    expect(checkpointMeeting(ledger)['path']).toBe(oldPath)
-    expect(await readFile(join(repository, oldPath), 'utf8')).toContain('# Renamed')
-    const mixed = { ...renamed, folderIds: ['one', 'two'] }
-    const newMeeting: GranolaMeetingFixture = { id: 'last', date: '2026-01-03', title: 'New', folderIds: ['two'] }
-    const changingSource = granolaFixtureRunner({ meetings: [mixed, newMeeting], folders })
-    box.setRunner((executable, arguments_, environment) => {
-      if (
-        arguments_[1] === 'granola.get_meeting_transcript' &&
-        arguments_.some((value) => value.includes('"meeting_id":"last"'))
-      )
-        return Promise.resolve({ exitCode: 1, output: 'temporary provider read failure' })
-      return changingSource.runner(executable, arguments_, environment)
-    })
-    const failed = await box.run(command(repository))
-    expect(failed.exitCode, failed.output).toBe(1)
-    expect(await readFile(join(repository, oldPath), 'utf8')).toContain('# Renamed')
-    expect(checkpointMeeting(JSON.parse(await readFile(ledgerPath, 'utf8')) as JsonRecord)['path']).toBe(oldPath)
-    box.setRunner(granolaFixtureRunner({ meetings: [mixed, newMeeting], folders }).runner)
-    const recovered = await box.run(command(repository))
-    expect(recovered.exitCode, recovered.output).toBe(0)
-    expect(recovered.output).toContain('1 resumed')
-    ledger = JSON.parse(await readFile(ledgerPath, 'utf8')) as JsonRecord
-    const newPath = String(
-      (ledger['meetings'] as JsonRecord)['first'] && ((ledger['meetings'] as JsonRecord)['first'] as JsonRecord)['path']
-    )
-    expect(newPath).toContain('captures/_review/granola/')
-    const newPackage = newPath.replace('/meeting.md', '')
-    expect(await readFile(join(repository, newPackage, 'source-variants/original.md'), 'utf8')).toBe(
-      'Immutable original source'
-    )
-    expect(await readFile(join(repository, newPackage, 'image.png'))).toEqual(Buffer.from([1, 2, 3]))
-    expect(await lstat(join(repository, oldPackage)).catch(() => undefined)).toBeUndefined()
-  })
-
-  test('rejects unsafe package entries or existing destination packages during territory changes', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('inbox')
-    await setupReceivers(box, [
-      {
-        key: 'inbox',
-        repository: 'https://github.com/example/inbox',
-        path: repository,
-        folderIds: ['one', 'two'],
-        captureRoot: 'captures',
-        folderTerritories: { one: 'legal', two: 'personal' }
-      }
-    ])
-    const folders = [
-      { id: 'one', title: 'Legal' },
-      { id: 'two', title: 'Personal' }
-    ]
-    const meeting: GranolaMeetingFixture = { id: 'note', date: '2026-01-02', title: 'Note', folderIds: ['one'] }
-    box.setRunner(granolaFixtureRunner({ meetings: [meeting], folders }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    const ledgerPath = join(repository, '.acquire/granola/ledger.json')
-    const originalLedger = await readFile(ledgerPath, 'utf8')
-    const oldPath = String(checkpointMeeting(JSON.parse(originalLedger) as JsonRecord)['path'])
-    const oldPackage = oldPath.replace('/meeting.md', '')
-    const link = join(repository, oldPackage, 'unsafe-link')
-    await symlink(join(repository, '.ki.toml'), link)
-    const mixed = { ...meeting, folderIds: ['one', 'two'] }
-    box.setRunner(granolaFixtureRunner({ meetings: [mixed], folders }).runner)
-    expect((await box.run(command(repository))).output).toContain('Unsafe Granola package entry')
-    expect(await readFile(ledgerPath, 'utf8')).toBe(originalLedger)
-    await rm(link)
-    const destination = oldPackage.replace('/legal/', '/_review/')
-    await mkdir(join(repository, destination), { recursive: true })
-    expect((await box.run(command(repository))).output).toContain('destination package already exists')
-    expect(await readFile(ledgerPath, 'utf8')).toBe(originalLedger)
-  })
-
-  test('acquires original image bytes beside a central meeting and preserves handled evidence during rebuild', async () => {
+  test('acquires original image bytes beside a central meeting', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('inbox')
     await setupReceivers(box, [
@@ -2994,52 +1692,13 @@ describe('[ki acquire central Granola inbox]', () => {
       '1'
     ])
     expect(images.exitCode, images.output).toBe(0)
-    const ledgerPath = join(repository, '.acquire/granola/ledger.json')
-    const ledger = JSON.parse(await readFile(ledgerPath, 'utf8')) as JsonRecord
-    const entry = checkpointMeeting(ledger)
-    const meetingPath = String(entry['path'])
+    const meetingPath = `captures/legal/granola/2026-01-02--images--${id}/meeting.md`
     const acquiredImage = join(
       repository,
       meetingPath.replace('meeting.md', `${id}--attachment-bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.png`)
     )
     expect(await readFile(acquiredImage)).toEqual(original)
-    expect(
-      (await box.run(['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository])).output
-    ).toContain('Images: 1 verified')
-    checkpointDisposition(ledger)['state'] = 'retained'
-    await writeFile(ledgerPath, JSON.stringify(ledger))
-    expect(
-      (
-        await box.run([
-          'ki',
-          'acquire',
-          'reset',
-          '--adapter',
-          'granola',
-          '--repo',
-          repository,
-          '--rebuild',
-          '--confirm'
-        ])
-      ).exitCode
-    ).toBe(1)
-    expect(await readFile(acquiredImage)).toEqual(original)
     expect(await readFile(join(repository, meetingPath), 'utf8')).toContain('Images')
-    expect(
-      (
-        await box.run([
-          'ki',
-          'acquire',
-          'reset',
-          '--adapter',
-          'granola',
-          '--repo',
-          repository,
-          '--rebuild',
-          '--confirm'
-        ])
-      ).exitCode
-    ).toBe(1)
   })
 
   test('rejects unsafe and incomplete central layout declarations and symlinked parents', async () => {
@@ -3081,77 +1740,6 @@ describe('[ki acquire central Granola inbox]', () => {
     const unsafe = await box.run(command(repository))
     expect(unsafe.output).toContain('Unsafe Granola parent directory')
     expect(await readdir(elsewhere)).toEqual([])
-  })
-
-  test('keeps handled checkpoints after removal, verifies missing-cache transcripts and stages source amendments', async () => {
-    const box = await sandbox()
-    const repository = await box.root.mkdir('inbox')
-    await setupReceivers(box, [
-      {
-        key: 'inbox',
-        repository: 'https://github.com/example/inbox',
-        path: repository,
-        folderIds: ['one'],
-        captureRoot: 'captures',
-        folderTerritories: { one: 'legal' }
-      }
-    ])
-    const folders = [{ id: 'one', title: 'Legal' }]
-    const meeting: GranolaMeetingFixture = {
-      id: 'handled',
-      date: '2026-01-02',
-      title: 'Handled',
-      folderIds: ['one'],
-      transcript: { transcript: 'Original retained text' }
-    }
-    box.setRunner(granolaFixtureRunner({ meetings: [meeting], folders }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
-    const ledgerPath = join(repository, '.acquire/granola/ledger.json')
-    const ledger = JSON.parse(await readFile(ledgerPath, 'utf8')) as JsonRecord
-    const entry = checkpointMeeting(ledger)
-    const documentPath = join(repository, String(entry['path']))
-    checkpointDisposition(ledger)['state'] = 'harvested-locally'
-    await writeFile(ledgerPath, JSON.stringify(ledger))
-    await rm(documentPath)
-    const source = granolaFixtureRunner({ meetings: [meeting], folders })
-    box.setRunner(source.runner)
-    const unchanged = await box.run(command(repository))
-    expect(unchanged.exitCode, unchanged.output).toBe(0)
-    expect(unchanged.output).toContain('Meetings: 0 new, 0 amended, 1 unchanged')
-    expect(source.calls.filter((call) => call.tool === 'get_meeting_transcript')).toHaveLength(1)
-    expect(await lstat(documentPath).catch(() => undefined)).toBeUndefined()
-    expect(checkpointDisposition(JSON.parse(await readFile(ledgerPath, 'utf8')) as JsonRecord)['state']).toBe(
-      'harvested-locally'
-    )
-    const preservedElsewhere = JSON.parse(await readFile(ledgerPath, 'utf8')) as JsonRecord
-    checkpointMeeting(preservedElsewhere)['path'] = 'preserved-elsewhere/meeting.md'
-    await writeFile(ledgerPath, JSON.stringify(preservedElsewhere))
-    box.setRunner(granolaFixtureRunner({ meetings: [{ ...meeting, transcript: null }], folders }).runner)
-    expect((await box.run(command(repository))).output).toContain('handled transcript cannot currently be verified')
-    box.setRunner(
-      granolaFixtureRunner({ meetings: [{ ...meeting, transcript: { transcript: 'Source amendment' } }], folders })
-        .runner
-    )
-    const amendment = await box.run(command(repository))
-    expect(amendment.exitCode, amendment.output).toBe(0)
-    expect(checkpointDisposition(JSON.parse(await readFile(ledgerPath, 'utf8')) as JsonRecord)['state']).toBe(
-      'awaiting-review'
-    )
-    expect(await readFile(documentPath, 'utf8')).toContain('Source amendment')
-    const reset = await box.run([
-      'ki',
-      'acquire',
-      'reset',
-      '--adapter',
-      'granola',
-      '--repo',
-      repository,
-      '--source',
-      'handled',
-      '--confirm'
-    ])
-    expect(reset.exitCode, reset.output).toBe(1)
-    expect(await readFile(documentPath, 'utf8')).toContain('Source amendment')
   })
 })
 
@@ -3200,17 +1788,13 @@ describe('[ki acquire images --adapter granola]', () => {
     expect((manifest['assets'] as JsonRecord[])[0]?.['attachment_id']).toBe(attachmentId)
     const acquired = join(repository, '+/_ACQUIRE/granola', `${meetingId}--attachment-${attachmentId}.png`)
     expect(await readFile(acquired)).toEqual(bytes)
-    const reconciled = await box.run(['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository])
-    expect(reconciled.exitCode, reconciled.output).toBe(0)
-    expect(reconciled.output).toContain('Images: 1 verified in 1 meeting manifests')
     expect((await box.run(args)).exitCode).toBe(0)
     expect((await box.run([...args.slice(0, -1), '2'])).output).toContain('expected 2')
     await writeFile(source, Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 4, 5, 6]))
     expect((await box.run(args)).output).toContain('differs from acquired copy')
     await writeFile(acquired, Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 7, 8, 9]))
-    expect(
-      (await box.run(['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository])).output
-    ).toContain('differs from manifest')
+    await writeFile(source, Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 7, 8, 9]))
+    expect((await box.run(args)).output).toContain('differs from manifest')
   })
 
   test('rejects invalid command scope, receiver, export directory, and files', async () => {
@@ -3241,11 +1825,13 @@ describe('[ki acquire images --adapter granola]', () => {
       'positive integer from the Granola image stack'
     )
     expect((await box.run([...args.slice(0, 8), 'bad', ...args.slice(9)])).output).toContain('meeting UUID')
-    expect((await box.run(args)).output).toContain('Current Granola checkpoint is required')
+    expect((await box.run(args)).output).toContain('must have exactly one capture')
     box.setRunner(granolaFixtureRunner({ meetings: [{ id: meetingId, date: '2026-01-02', title: 'Meeting' }] }).runner)
     expect((await box.run(command(repository))).exitCode).toBe(0)
     const missingId = '00000000-0000-0000-0000-000000000000'
-    expect((await box.run([...args.slice(0, 8), missingId, ...args.slice(9)])).output).toContain('has no meeting')
+    expect((await box.run([...args.slice(0, 8), missingId, ...args.slice(9)])).output).toContain(
+      'must have exactly one capture'
+    )
     expect((await box.run([...args.slice(0, 10), join(directory, 'missing'), ...args.slice(11)])).output).toContain(
       'physical directory'
     )
@@ -3269,19 +1855,9 @@ describe('[ki acquire images --adapter granola]', () => {
     expect((await box.run([...args.slice(0, -1), '2'])).output).toContain('repeats an attachment UUID')
     await rm(source)
     await rm(duplicate)
-    const ledgerPath = join(repository, '+/_ACQUIRE/granola/ledger.json')
-    const ledger = JSON.parse(await readFile(ledgerPath, 'utf8')) as JsonRecord
-    const meeting = (ledger['meetings'] as JsonRecord)[meetingId] as JsonRecord
-    const disposition = meeting['disposition'] as JsonRecord
-    disposition['state'] = 'retained'
-    await writeFile(ledgerPath, JSON.stringify(ledger))
-    await rm(join(repository, '+/_ACQUIRE/granola', String(meeting['path'])))
-    expect((await box.run(args)).output).toContain('document must be present')
-    meeting['path'] = '../../outside.md'
-    await writeFile(ledgerPath, JSON.stringify(ledger))
-    expect((await box.run(['ki', 'acquire', 'status', '--adapter', 'granola', '--repo', repository])).output).toContain(
-      'unsafe document path'
-    )
+    const capture = join(repository, `+/_ACQUIRE/granola/2026-01-02--meeting--${meetingId}.md`)
+    await writeFile(join(repository, `+/_ACQUIRE/granola/2026-01-03--copy--${meetingId}.md`), await readFile(capture))
+    expect((await box.run(args)).output).toContain('must have exactly one capture')
   })
 
   test('verifies manifest shape, image presence, and JPEG and WebP exports', async () => {
@@ -3309,7 +1885,6 @@ describe('[ki acquire images --adapter granola]', () => {
       '--expected',
       '1'
     ]
-    const status = ['ki', 'acquire', 'status', '--adapter', 'granola', '--repo', repository]
     const target = join(repository, '+/_ACQUIRE/granola')
     const manifestPath = join(target, `${meetingId}--attachments.json`)
     await writeFile(source, Buffer.from([255, 216, 255, 1]))
@@ -3319,14 +1894,14 @@ describe('[ki acquire images --adapter granola]', () => {
     const original = JSON.parse(await readFile(manifestPath, 'utf8')) as JsonRecord
     const check = async (value: unknown, expected: string): Promise<void> => {
       await writeFile(manifestPath, typeof value === 'string' ? value : JSON.stringify(value))
-      expect((await box.run(status)).output).toContain(expected)
+      expect((await box.run(args)).output).toContain(expected)
     }
     await check('{', 'invalid JSON')
     await check({ ...original, expected_count: 2 }, 'malformed')
     await check({ ...original, assets: [{}] }, 'invalid asset')
     await writeFile(manifestPath, JSON.stringify(original))
     await rm(jpg)
-    expect((await box.run(status)).output).toContain('is missing')
+    expect((await box.run(args)).output).toContain('is missing')
     await writeFile(jpg, Buffer.from([255, 216, 255, 1]))
     const wrong = {
       ...original,
@@ -3334,7 +1909,7 @@ describe('[ki acquire images --adapter granola]', () => {
     }
     await check(wrong, 'is missing')
     await writeFile(join(target, `${meetingId}--attachment-${attachmentId}.png`), Buffer.from([255, 216, 255, 1]))
-    expect((await box.run(status)).output).toContain('wrong format extension')
+    expect((await box.run(args)).output).toContain('wrong format extension')
     await writeFile(manifestPath, JSON.stringify(original))
     const webpDirectory = await box.root.mkdir('webp')
     const webpSource = join(webpDirectory, `attachment-${missingAttachmentId}.webp`)

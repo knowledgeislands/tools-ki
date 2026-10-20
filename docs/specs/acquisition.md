@@ -92,7 +92,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### ACQUIRE-011 — Action-first selection
 
-`ki acquire` MUST expose `list`, `import`, `status`, `reconcile`, `reset`, and explicitly selected `mark` as actions; select exactly one adapter with `--adapter`, all applicable enabled adapters with `--all`, or infer only a sole enabled adapter; and reject the retired provider-first grammar.
+`ki acquire` MUST expose `list`, `import`, `images`, and explicitly selected `mark` as actions; select exactly one adapter with `--adapter`, all applicable enabled adapters with `--all`, or infer only a sole enabled adapter; and reject the retired provider-first grammar.
 
 _Conformance:_ conforming
 
@@ -112,47 +112,29 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### ACQUIRE-013 — Separate detail and transcript observations
 
-Granola acquisition MUST hash mutable detail separately from transcript content, exclude transcript content from the detail hash, reuse a verified transcript by default, retry an unavailable transcript under a bounded policy, and support explicit single-adapter transcript refresh. An explicit refresh that returns identical detail and transcript hashes MUST leave the meeting document, version history, and authoritative checkpoint unchanged.
+Granola acquisition MUST hash mutable detail separately from transcript content, exclude transcript content from the detail hash, and record both hashes and the transcript state in the capture's front matter. An explicit single-adapter `--refresh` MUST rewrite an existing capture in place at its filed path and MUST retain a transcript the provider no longer returns, with its recorded hash.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `separates mutable detail from cached transcripts and supports explicit refresh` and bounded-omission cases.
+_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `keeps captures unless refreshed and retains a transcript the provider withdraws` and minimal-capture refresh cases.
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
-### ACQUIRE-014 — Atomic resumable generations
+### ACQUIRE-014 — ~~Atomic resumable generations~~ (deprecated)
 
-Granola acquisition MUST atomically replace an in-progress journal and authoritative checkpoint, bind the journal to adapter, repository, account, source schema, interval, and identity selection, resume verified components without treating the journal as completion, and advance the checkpoint only after every selected identity verifies.
+Deprecated on 2026-10-20 when Granola acquisition stopped keeping a ledger, checkpoint or journal; ACQUIRE-019 governs the capture as the only record, and an interrupted run is simply repeated.
 
-_Conformance:_ conforming
+### ACQUIRE-015 — ~~Post-acquisition disposition~~ (deprecated)
 
-_Verify:_ `src/tests/cli/acquire/granola.test.ts` interrupted-resume, missing-staged-component, corrupt-journal, incompatible-journal, and checkpoint-advancement cases.
+Deprecated on 2026-10-20 with the checkpoint that carried dispositions; Acquired-folder membership now marks a meeting as dealt with.
 
-_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+### ACQUIRE-016 — ~~Governed local reset~~ (deprecated)
 
-### ACQUIRE-015 — Post-acquisition disposition
-
-A Granola checkpoint MUST represent staged, retained, harvested-local, trade-routed, superseded, and awaiting-review dispositions with applicable destination, document, trade, timestamp, and covered-source evidence; an unchanged disposed source MUST NOT be restaged, while later detail change MUST stage an amendment for renewed review.
-
-_Conformance:_ conforming
-
-_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `accepts harvested local dispositions and stages changed-source amendments for review`.
-
-_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
-
-### ACQUIRE-016 — Governed local reset
-
-`ki acquire reset` MUST show an exact local file deletion/update plan before mutation, require explicit confirmation, distinguish adapter, source, component and rebuild scopes, reject incompatible scope combinations, and never authorise provider mutation. It MUST refuse any selected non-staged disposition, including awaiting-review amendments, even when its capture is absent. It MUST refuse reset while any journal exists or the ledger is unsafe/corrupt. Rebuild MUST prevalidate every selected staged document and delete only its exact regular-file paths and ledger; it MUST preserve directories, migration proof, unknown files, attachments and source variants in both legacy and central layouts. Component reset MUST preserve all unrelated entries. Reset is not recovery authority for interrupted writes.
-
-_Conformance:_ conforming
-
-_Verify:_ `src/tests/cli/acquire/granola.test.ts` reset planning, confirmation, scope, and no-provider-call cases.
-
-_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+Deprecated on 2026-10-20 when `ki acquire reset`, `status` and `reconcile` were removed with the local acquisition state they governed.
 
 ### ACQUIRE-017 — MCP screenshot preservation
 
-Granola import MUST restrict every listing to principal-owned notes, complete folder and transcript pagination, reconcile screenshot counts and distinct attachment UUIDs, fetch at most five images per request, bind image metadata to requested identities, and validate canonical base64, true format and MIME. Exact returned bytes, metadata, counts and checksums MUST be stored beside the meeting before its receipt advances; prior evidence and immutable attachment bytes remain preserved. Unsupported attachment access MUST remain an explicit omission. A known daemon frame-limit failure MUST reduce the batch, down to singletons, without modifying returned bytes; a singleton failure MUST remain visible in the recovery journal. Completed interrupted amendments MUST verify their document and promised image evidence before bypassing old-generation checks.
+Granola import MUST restrict every listing to principal-owned notes, complete folder and transcript pagination, reconcile screenshot counts and distinct attachment UUIDs, fetch at most five images per request, bind image metadata to requested identities, and validate canonical base64, true format and MIME. Exact returned bytes, metadata, counts and checksums MUST be stored beside the meeting before its document is written; prior evidence and immutable attachment bytes remain preserved. Unsupported attachment access MUST remain an explicit omission. A known daemon frame-limit failure MUST reduce the batch, down to singletons, without modifying returned bytes; a singleton failure MUST remain visible.
 
 _Conformance:_ conforming
 
@@ -162,13 +144,23 @@ _Evidence:_ Public in-process CLI fixtures establish the returned-byte boundary;
 
 ### ACQUIRE-018 — Explicit progress markers
 
-Routine Granola import MUST skip Acquired members on that membership alone, without content reads, a ledger lookup or a preservation check, and MUST NOT flag them; the ledger carries any existing entry for a skipped member forward unchanged and gains none. Explicit `--refresh-acquired` MUST bypass that skip. Marking MUST remain a separate preview/`--confirm` action, require an owner-controlled private selector distinct from routing, and verify committed local evidence, fresh source hashes and screenshot bytes before invoking only `add_note_to_folder`. Readback MUST preserve all original memberships. No marker confers reconciliation or retirement authority.
+Routine Granola import MUST skip Acquired members on that membership alone, without content reads or a preservation check, and MUST NOT flag them or change their captures. Explicit `--refresh-acquired` MUST bypass that skip and implies `--refresh`. Marking MUST remain a separate preview/`--confirm` action, require an owner-controlled private selector distinct from routing, and verify exactly one committed capture, fresh source hashes against its front matter and screenshot bytes before invoking only `add_note_to_folder`. Readback MUST preserve all original memberships. No marker confers reconciliation or retirement authority.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/acquire/granola-marker.test.ts` preview, committed evidence, private folder, mutation allowlist, idempotence, membership-only skip, carried-forward entry, refresh, amendment and failed-marker cases.
+_Verify:_ `src/tests/cli/acquire/granola-marker.test.ts` preview, committed evidence, private folder, mutation allowlist, idempotence, membership-only skip, unchanged uncommitted capture, refresh, amendment, duplicated-capture and failed-marker cases.
 
 _Evidence:_ Synthetic public CLI tests exercise both read and explicitly confirmed write paths without live network access.
+
+### ACQUIRE-019 — Capture as the only record
+
+Granola acquisition MUST read and write no repository acquisition state: no ledger, checkpoint, journal or flagged-identity file. It MUST find an existing capture by its meeting UUID wherever it is filed beneath the capture directory, MUST keep it rather than overwrite it unless `--refresh` is explicit, and MUST always keep, and report, several captures of one meeting or a capture bound to another Granola account. Each new meeting MUST be written to its folder-mapped capture path. Granola remains read-only during import.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `stages one readable Markdown file per meeting and keeps existing captures unless refreshed`, `ignores retired ledgers and refuses a capture with $name`, moved-capture, several-capture and account-binding cases.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Gaps
 

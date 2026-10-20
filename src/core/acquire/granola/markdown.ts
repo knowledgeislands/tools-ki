@@ -166,7 +166,7 @@ export const renderGranolaMeeting = (options: {
   readonly transcript: GranolaTranscript
   readonly transcriptObservedAt: string
   readonly transcriptSha256?: string
-  readonly transcriptState: 'available' | 'retrying' | 'durable-omission'
+  readonly transcriptState: 'available' | 'unavailable'
 }): GranolaMeetingDocument => {
   const detail = options.detail.projection
   const title =

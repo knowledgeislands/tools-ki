@@ -93,7 +93,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   'repo trade policy': ['check', 'compare', 'show'],
   'repo trade routes': ['check', 'list'],
   'repo trade standing': ['capture', 'check', 'list'],
-  acquire: ['images', 'import', 'list', 'mark', 'reconcile', 'reset', 'status'],
+  acquire: ['images', 'import', 'list', 'mark'],
   agent: [
     'close',
     'decide',

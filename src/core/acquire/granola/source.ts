@@ -210,7 +210,7 @@ const identity = (value: unknown, names: readonly [string, ...string[]], label: 
 const transcriptUnavailable = (output: string): boolean =>
   /(?:not available|unavailable|not entitled|paid plan|not found|no transcript)/i.test(output)
 
-export const transcriptProjectionUnavailable = (projection: unknown): boolean => {
+const transcriptProjectionUnavailable = (projection: unknown): boolean => {
   const text =
     typeof projection === 'string'
       ? projection

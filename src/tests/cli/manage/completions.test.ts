@@ -9,9 +9,6 @@ const commandPaths = [
   'acquire',
   'acquire list',
   'acquire import',
-  'acquire status',
-  'acquire reconcile',
-  'acquire reset',
   'territory',
   'territory audit',
   'territory inspect',
@@ -140,7 +137,7 @@ describe('[ki completion]', () => {
     expect(bash.output).toContain("'territory inspect:--workspace')")
     expect(zsh.output).toContain("'acquire list')")
     expect(zsh.output).toContain("'acquire import')")
-    expect(zsh.output).toContain("'acquire reset')")
+    expect(zsh.output).toContain("'acquire mark')")
     expect(zsh.output).toContain("'dev local')")
     expect(zsh.output).toContain('import:acquire source material into repository Harbour')
     expect(zsh.output).toContain('-h:display help for command')

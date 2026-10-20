@@ -264,7 +264,7 @@ const fixture = async (settings: Settings = {}) => {
       }
     }
   }
-  const ledger = async () => JSON.parse(await box.project.read('.acquire/granola/ledger.json'))
+  const capture = `captures/personal/granola/2026-10-06--owner-note--${id}/meeting.md`
   const respond = (tool: string, value: unknown, exitCode = 0) =>
     responses.set(tool, { exitCode, output: exitCode ? String(value) : JSON.stringify(value) })
   return {
@@ -276,7 +276,7 @@ const fixture = async (settings: Settings = {}) => {
     command,
     mark,
     commit,
-    ledger,
+    capture,
     committed,
     folder,
     setImageBytes: (value: Buffer) => {
@@ -304,7 +304,7 @@ describe('[Granola screenshots and Acquired markers]', () => {
     expect(
       f.calls.some((call) => ['add_note_to_folder', 'sign_out', 'remove_note_from_folder'].includes(call.tool))
     ).toBe(false)
-    const entry = (await f.ledger()).meetings[id]
+    const entry = { path: f.capture }
     const directory = join(f.box.project.path, entry.path, '..')
     const manifest = JSON.parse(await readFile(join(directory, `${id}--attachments.json`), 'utf8'))
     expect(manifest.assets).toHaveLength(8)
@@ -331,8 +331,7 @@ describe('[Granola screenshots and Acquired markers]', () => {
         .some((call) => ['get_meetings', 'get_meeting_transcript', 'get_meeting_attachment'].includes(call.tool))
     ).toBe(false)
     expect((await f.box.run([...f.mark, '--confirm'])).stdout).toContain('1 already acquired')
-    expect((await f.box.run([...f.command, '--refresh-acquired', '--refresh-transcripts'])).exitCode).toBe(0)
-    expect(Object.keys((await f.ledger()).meetings)).toEqual([id])
+    expect((await f.box.run([...f.command, '--refresh-acquired'])).stdout).toContain('0 new, 1 refreshed, 0 kept')
     expect(
       f.calls.some((call) => call.tool === 'get_meetings' && (call.args['meeting_ids'] as string[]).includes(shared))
     ).toBe(false)
@@ -354,7 +353,7 @@ describe('[Granola screenshots and Acquired markers]', () => {
     async (transcriptError) => {
       const f = await fixture({ transcriptError, text: true })
       expect((await f.box.run(f.command)).exitCode).toBe(0)
-      const entry = (await f.ledger()).meetings[id]
+      const entry = { path: f.capture }
       const document = await f.box.project.read(entry.path)
       expect(document).toContain('Me: first')
       expect(document).toContain('Them: last')
@@ -376,7 +375,7 @@ describe('[Granola screenshots and Acquired markers]', () => {
   test.each(['empty', 'offset', 'range'])('refuses incomplete transcript pagination: %s', async (transcriptError) => {
     const f = await fixture({ transcriptError })
     expect((await f.box.run(f.command)).exitCode).toBe(1)
-    expect(await exists(join(f.box.project.path, '.acquire/granola/ledger.json'))).toBe(false)
+    expect(await exists(join(f.box.project.path, 'captures'))).toBe(false)
   })
 
   test.each(['bad-id', 'duplicate', 'failure', 'missing', 'mime', 'base64', 'identity'])(
@@ -384,7 +383,7 @@ describe('[Granola screenshots and Acquired markers]', () => {
     async (imageError) => {
       const f = await fixture({ images: 2, imageError })
       expect((await f.box.run(f.command)).exitCode).toBe(1)
-      expect(await exists(join(f.box.project.path, '.acquire/granola/ledger.json'))).toBe(false)
+      expect(await exists(join(f.box.project.path, 'captures'))).toBe(false)
       expect(f.calls.some((call) => call.tool === 'add_note_to_folder')).toBe(false)
     }
   )
@@ -396,15 +395,15 @@ describe('[Granola screenshots and Acquired markers]', () => {
     expect(result.stdout).toContain('1 skipped')
     expect(result.stdout).not.toContain('acquired-without-proof')
     expect(f.calls.some((call) => call.tool === 'get_meetings' || call.tool.startsWith('git:'))).toBe(false)
-    expect((await f.ledger()).meetings).toEqual({})
+    expect(await exists(join(f.box.project.path, f.capture))).toBe(false)
     expect((await f.box.run([...f.command, '--refresh-acquired'])).exitCode).toBe(0)
-    expect(Object.keys((await f.ledger()).meetings)).toEqual([id])
+    expect(await exists(join(f.box.project.path, f.capture))).toBe(true)
   })
 
-  test('carries an uncommitted marked entry forward unchanged instead of re-proving it', async () => {
+  test('leaves an uncommitted marked capture unchanged instead of re-proving it', async () => {
     const f = await fixture()
     expect((await f.box.run(f.command)).exitCode).toBe(0)
-    const entry = (await f.ledger()).meetings[id]
+    const content = await f.box.project.read(f.capture)
     f.note.folders.push('acquired')
     const before = f.calls.length
     const result = await f.box.run(f.command)
@@ -416,7 +415,7 @@ describe('[Granola screenshots and Acquired markers]', () => {
         .slice(before)
         .some((call) => ['get_meetings', 'get_meeting_transcript'].includes(call.tool) || call.tool.startsWith('git:'))
     ).toBe(false)
-    expect((await f.ledger()).meetings[id]).toEqual(entry)
+    expect(await f.box.project.read(f.capture)).toBe(content)
   })
 
   test.each(['failure', 'ignored'])(
@@ -450,13 +449,14 @@ describe('[Granola screenshots and Acquired markers]', () => {
   test('retains prior manifest evidence on refresh and refuses changed bytes for an immutable attachment ID', async () => {
     const f = await fixture({ images: 1 })
     expect((await f.box.run(f.command)).exitCode).toBe(0)
-    const entry = (await f.ledger()).meetings[id]
+    const entry = { path: f.capture }
     f.note.notes = 'Updated source'
-    expect((await f.box.run([...f.command, '--refresh-transcripts'])).exitCode).toBe(0)
+    expect((await f.box.run([...f.command, '--refresh'])).exitCode).toBe(0)
     const directory = join(f.box.project.path, entry.path, '..')
     expect((await readdir(join(directory, 'source-evidence'))).length).toBe(1)
     f.setImageBytes(Buffer.concat([png, Buffer.from([0])]))
-    expect((await f.box.run(f.command)).stderr).toContain('changed bytes')
+    expect((await f.box.run(f.command)).stdout).toContain('1 kept')
+    expect((await f.box.run([...f.command, '--refresh'])).stderr).toContain('changed bytes')
   })
 
   test('refuses unsafe folder settings, a missing marker selector and unrelated source identities', async () => {
@@ -471,11 +471,11 @@ describe('[Granola screenshots and Acquired markers]', () => {
     expect((await f.box.run([...f.mark, '--source', id, id, '--confirm'])).exitCode).toBe(1)
   })
 
-  test('refuses local mutations, a missing staged file and an interrupted journal before marking', async () => {
+  test('refuses local mutations and a missing or uncommitted capture before marking', async () => {
     const f = await fixture({ images: 1 })
     expect((await f.box.run(f.command)).exitCode).toBe(0)
     await f.commit()
-    const entry = (await f.ledger()).meetings[id]
+    const entry = { path: f.capture }
     const content = await f.box.project.read(entry.path)
     await f.box.project.write(entry.path, `${content}\nchanged`)
     expect((await f.box.run([...f.mark, '--confirm'])).exitCode).toBe(1)
@@ -485,15 +485,13 @@ describe('[Granola screenshots and Acquired markers]', () => {
     await f.box.project.write(entry.path, content)
     f.committed.clear()
     expect((await f.box.run([...f.mark, '--confirm'])).exitCode).toBe(1)
-    await writeFile(join(f.box.project.path, '.acquire/granola/journal.json'), '{}')
-    expect((await f.box.run([...f.mark, '--confirm'])).exitCode).toBe(1)
     expect(f.note.folders).toEqual(['personal'])
   })
 
-  test('requires an explicitly selected marker action and a current source-bound receipt', async () => {
+  test('requires an explicitly selected marker action and a capture bound to the source account', async () => {
     const f = await fixture()
     expect((await f.box.run(['ki', 'acquire', 'mark'])).exitCode).toBe(2)
-    expect((await f.box.run([...f.mark, '--confirm'])).stderr).toContain('current preservation checkpoint')
+    expect((await f.box.run([...f.mark, '--confirm'])).stdout).toContain('No capture exists for this note')
     expect((await f.box.run(f.command)).exitCode).toBe(0)
     await f.commit()
     f.respond('get_account_info', {
@@ -501,7 +499,7 @@ describe('[Granola screenshots and Acquired markers]', () => {
       active_workspace: 'workspace',
       mcp_note_access: ['personal']
     })
-    expect((await f.box.run([...f.mark, '--confirm'])).stderr).toContain('account does not match')
+    expect((await f.box.run([...f.mark, '--confirm'])).stdout).toContain('account does not match')
     f.responses.clear()
     const schema = (tools: string[]) => ({ tools: tools.map((name) => ({ name, inputSchema: {} })) })
     const reads = [
@@ -536,7 +534,7 @@ describe('[Granola screenshots and Acquired markers]', () => {
       .filter((call) => call.tool === 'get_meeting_attachment')
       .map((call) => (call.args['attachment_ids'] as string[]).length)
     expect(sizes).toEqual([5, 2, 3, 1, 2, 3, 1, 2])
-    const entry = (await f.ledger()).meetings[id]
+    const entry = { path: f.capture }
     const directory = join(entry.path, '..')
     const manifest = JSON.parse(await f.box.project.read(join(directory, `${id}--attachments.json`)))
     expect(manifest.assets).toHaveLength(8)
@@ -547,20 +545,15 @@ describe('[Granola screenshots and Acquired markers]', () => {
   test('retains a visible failure if a single image still exceeds the daemon frame', async () => {
     const f = await fixture({ images: 2, imageError: 'frame-single' })
     expect((await f.box.run(f.command)).stderr).toContain('Daemon frame limit exceeded')
-    const journal = JSON.parse(await f.box.project.read('.acquire/granola/journal.json'))
-    expect(journal.failures).toHaveLength(1)
-    expect(journal.failures[0].source_id).toBe(id)
-    expect(await exists(join(f.box.project.path, '.acquire/granola/ledger.json'))).toBe(false)
+    expect(await exists(join(f.box.project.path, 'captures'))).toBe(false)
     expect(f.note.folders).toEqual(['personal'])
   })
 
-  test('checks ledger and committed blobs independently of local checksums', async () => {
+  test('checks committed blobs independently of local checksums', async () => {
     const f = await fixture({ images: 1 })
     await f.box.run(f.command)
     await f.commit()
-    const ledger = await f.ledger()
-    const entry = ledger.meetings[id]
-    const path = entry.path as string
+    const path = f.capture
     f.committed.delete(path)
     expect((await f.box.run(f.mark)).stdout).toContain('not committed at HEAD')
     await f.commit()
@@ -572,27 +565,29 @@ describe('[Granola screenshots and Acquired markers]', () => {
     f.respond('git:rev-parse', '')
     f.responses.delete('git:hash-object')
     expect((await f.box.run(f.mark)).exitCode).toBe(1)
-    f.responses.clear()
-    ledger.meetings[id].acquired_at = '2026-10-01T00:00:00Z'
-    await f.box.project.write('.acquire/granola/ledger.json', JSON.stringify(ledger))
-    expect((await f.box.run(f.mark)).stdout).toContain('receipt differs')
   })
 
-  test.each(['provider', 'version', 'count'])('refuses stale screenshot preservation proof: %s', async (change) => {
-    const f = await fixture({ images: 1 })
-    await f.box.run(f.command)
-    const entry = (await f.ledger()).meetings[id]
-    const path = join(entry.path, '..', `${id}--attachments.json`)
-    const manifest = JSON.parse(await f.box.project.read(path))
-    if (change === 'provider') delete manifest.provider
-    if (change === 'version') manifest.detail_sha256 = '0'.repeat(64)
-    if (change === 'count') f.note.images = 2
-    await f.box.project.write(path, JSON.stringify(manifest))
-    await f.commit()
-    expect((await f.box.run(f.mark)).stdout).toContain('screenshot inventory is not verified')
-  })
+  test.each(['provider', 'version', 'count', 'missing'])(
+    'refuses stale screenshot preservation proof: %s',
+    async (change) => {
+      const f = await fixture({ images: 1 })
+      await f.box.run(f.command)
+      const entry = { path: f.capture }
+      const path = join(entry.path, '..', `${id}--attachments.json`)
+      const manifest = JSON.parse(await f.box.project.read(path))
+      if (change === 'provider') delete manifest.provider
+      if (change === 'version') manifest.detail_sha256 = '0'.repeat(64)
+      if (change === 'count') f.note.images = 2
+      await f.box.project.write(path, JSON.stringify(manifest))
+      if (change === 'missing') await rm(join(f.box.project.path, path))
+      await f.commit()
+      expect((await f.box.run(f.mark)).stdout).toContain(
+        change === 'missing' ? 'screenshot manifest is missing' : 'screenshot inventory is not verified'
+      )
+    }
+  )
 
-  test('leaves unavailable transcripts, missing receipts, changed folders and unavailable details unmarked', async () => {
+  test('leaves unavailable transcripts, missing or duplicated captures, changed folders and unavailable details unmarked', async () => {
     const unavailable = await fixture({ transcriptError: 'unavailable' })
     await unavailable.box.run(unavailable.command)
     await unavailable.commit()
@@ -606,11 +601,12 @@ describe('[Granola screenshots and Acquired markers]', () => {
     f.respond('get_meetings', { meetings: [], not_found: [id] })
     expect((await f.box.run(f.mark)).stdout).toContain('source detail is unavailable')
     f.responses.clear()
-    const ledger = await f.ledger()
-    delete ledger.meetings[id]
-    await f.box.project.write('.acquire/granola/ledger.json', JSON.stringify(ledger))
-    await f.commit()
-    expect((await f.box.run(f.mark)).stdout).toContain('No preservation receipt')
+    const copy = f.capture.replace('2026-10-06--owner-note--', '2026-10-06--copy--')
+    await f.box.project.write(copy, await f.box.project.read(f.capture))
+    expect((await f.box.run(f.mark)).stdout).toContain('Several captures exist')
+    await rm(join(f.box.project.path, copy, '..'), { recursive: true })
+    await rm(join(f.box.project.path, f.capture))
+    expect((await f.box.run(f.mark)).stdout).toContain('No capture exists')
   })
 
   test.each([
@@ -709,55 +705,47 @@ describe('[Granola screenshots and Acquired markers]', () => {
     }
   })
 
-  test('retains handled proof without recreating removed captures or granting a new marker', async () => {
+  test('does not recreate a removed capture once the note is in Acquired', async () => {
     const f = await fixture()
     await f.box.run(f.command)
-    const ledger = await f.ledger()
-    const entry = ledger.meetings[id]
-    entry.disposition = {
-      ...entry.disposition,
-      state: 'harvested-locally',
-      canonical_destination: 'handled/meeting.md'
-    }
-    await f.box.project.write('.acquire/granola/ledger.json', JSON.stringify(ledger))
     await f.commit()
-    expect((await f.box.run(f.mark)).stdout).toContain('complete local capture')
-    await rm(join(f.box.project.path, entry.path))
-    await f.commit()
-    expect((await f.box.run(f.mark)).stdout).toContain('complete local capture')
+    await rm(join(f.box.project.path, f.capture))
+    expect((await f.box.run(f.mark)).stdout).toContain('No capture exists')
     f.note.folders.push('acquired')
     expect((await f.box.run(f.command)).stdout).toContain('1 skipped')
-    expect(await exists(join(f.box.project.path, entry.path))).toBe(false)
+    expect(await exists(join(f.box.project.path, f.capture))).toBe(false)
   })
 
-  test('refuses a valid interrupted journal before any provider write', async () => {
+  test('leaves an existing capture untouched when a refresh fails', async () => {
     const f = await fixture()
     await f.box.run(f.command)
-    await f.commit()
+    const content = await f.box.project.read(f.capture)
     f.respond('get_meeting_transcript', 'transport disconnected', 1)
-    expect((await f.box.run([...f.command, '--refresh-transcripts'])).exitCode).toBe(1)
-    expect((await f.box.run(f.mark)).stderr).toContain('interrupted acquisition journal')
+    expect((await f.box.run([...f.command, '--refresh'])).exitCode).toBe(1)
+    expect(await f.box.project.read(f.capture)).toBe(content)
   })
 
   test('reuses immutable images and archived manifests and detects corrupted archive evidence', async () => {
     const f = await fixture({ images: 1 })
     await f.box.run(f.command)
-    const entry = (await f.ledger()).meetings[id]
+    const entry = { path: f.capture }
     const path = join(entry.path, '..', `${id}--attachments.json`)
     const original = await f.box.project.read(path)
-    expect((await f.box.run(f.command)).stdout).toContain('1 unchanged')
+    expect((await f.box.run(f.command)).stdout).toContain('1 kept')
+    expect((await f.box.run([...f.command, '--refresh'])).exitCode).toBe(0)
+    expect(await f.box.project.read(path)).toBe(original)
     f.note.notes = 'new version'
-    await f.box.run(f.command)
+    await f.box.run([...f.command, '--refresh'])
     f.note.notes = '## Notes\nOwner note'
-    await f.box.run(f.command)
+    await f.box.run([...f.command, '--refresh'])
     f.note.notes = 'new version'
-    expect((await f.box.run(f.command)).exitCode).toBe(0)
+    expect((await f.box.run([...f.command, '--refresh'])).exitCode).toBe(0)
     f.note.notes = '## Notes\nOwner note'
-    await f.box.run(f.command)
+    await f.box.run([...f.command, '--refresh'])
     const hash = createHash('sha256').update(original).digest('hex')
     await f.box.project.write(join(entry.path, '..', 'source-evidence', `images-${hash}.json`), 'corrupted')
     f.note.notes = 'new version'
-    expect((await f.box.run(f.command)).stderr).toContain('archive changed bytes')
+    expect((await f.box.run([...f.command, '--refresh'])).stderr).toContain('archive changed bytes')
   })
 
   test('accepts advertised JPEG bytes and excludes invalid meeting identities', async () => {
@@ -812,79 +800,5 @@ describe('[Granola screenshots and Acquired markers]', () => {
       `schema = 1\n[repositories.target]\nrepository = "https://github.com/example/granola-marker"\npath = ${JSON.stringify(f.box.project.path)}\n[repositories.peer]\nrepository = "https://github.com/example/granola-peer"\npath = ${JSON.stringify(peer)}\n`
     )
     expect((await f.box.run(f.command)).stderr).toContain('separate from every receiver')
-  })
-
-  test.each([
-    'present',
-    'missing',
-    'stale',
-    'unavailable-detail',
-    'amendment',
-    'amendment-corrupt',
-    'amendment-unavailable',
-    'amendment-unavailable-corrupt'
-  ])('verifies MCP screenshot evidence before journal reuse: %s', async (state) => {
-    const f = await fixture({
-      images: 1,
-      ...(state.includes('unavailable-corrupt') || state === 'amendment-unavailable'
-        ? { transcriptError: 'unavailable' }
-        : {})
-    })
-    if (state === 'unavailable-detail') f.respond('get_meetings', { meetings: [], not_found: [id] })
-    await f.box.run(f.command)
-    const oldLedger = await f.ledger()
-    if (state.startsWith('amendment')) {
-      f.note.notes = 'Amended after the prior committed generation'
-      await f.box.run(f.command)
-    }
-    const ledger = await f.ledger()
-    const entry = ledger.meetings[id]
-    const journal = {
-      schema: 1,
-      phase: 'in-progress',
-      run_id: 'test-run',
-      adapter: 'granola',
-      repository: ledger.repository,
-      account_sha256: ledger.account_sha256,
-      source_schema_sha256: ledger.source_schema_sha256,
-      discovery_interval: ledger.interval,
-      identity_checkpoint_sha256: ledger.identity_checkpoint_sha256,
-      selected_identities: [id],
-      remaining_identities: [],
-      failures: [],
-      retry_state: {},
-      created_at: ledger.updated_at,
-      updated_at: ledger.updated_at,
-      components: {
-        [id]: {
-          detail_sha256: entry.detail_sha256,
-          transcript_sha256: entry.transcript_sha256,
-          transcript_state: entry.transcript_state,
-          transcript_observed_at: entry.transcript_observed_at,
-          staged_document_path: entry.path,
-          staged_document_sha256: entry.document_sha256,
-          verified_at: ledger.updated_at,
-          checkpoint: entry
-        }
-      }
-    }
-    await f.box.project.write('.acquire/granola/journal.json', JSON.stringify(journal))
-    if (state.startsWith('amendment'))
-      await f.box.project.write('.acquire/granola/ledger.json', JSON.stringify(oldLedger))
-    if (state.endsWith('-corrupt')) await f.box.project.write(entry.path, 'corrupted staged amendment')
-    const path = join(entry.path, '..', `${id}--attachments.json`)
-    if (state === 'missing') await rm(join(f.box.project.path, path))
-    if (state === 'stale') {
-      const manifest = JSON.parse(await f.box.project.read(path))
-      manifest.detail_sha256 = '0'.repeat(64)
-      await f.box.project.write(path, JSON.stringify(manifest))
-    }
-    const result = await f.box.run(f.command)
-    expect(result.exitCode, result.stderr).toBe(
-      ['present', 'unavailable-detail', 'amendment', 'amendment-unavailable'].includes(state) ? 0 : 1
-    )
-    if (['present', 'unavailable-detail', 'amendment', 'amendment-unavailable'].includes(state))
-      expect(result.stdout).toContain('1 resumed')
-    else expect(await exists(join(f.box.project.path, '.acquire/granola/journal.json'))).toBe(true)
   })
 })

@@ -1,6 +1,6 @@
 import { KiError } from '../../errors.ts'
 import type { GranolaMeeting, GranolaSource, GranolaWindow } from './source.ts'
-import { sha256, stableJson } from './source.ts'
+import { stableJson } from './source.ts'
 
 export interface GranolaWindowEvidence extends GranolaWindow {
   readonly scope: string
@@ -86,17 +86,3 @@ export const enumerateGranolaMeetings = async (
   await visit(interval)
   return { meetings, evidence }
 }
-
-export const identityCheckpointSha256 = (
-  global: GranolaEnumeration,
-  folders: ReadonlyMap<string, GranolaEnumeration>
-): string =>
-  sha256(
-    stableJson({
-      global: [...global.meetings.keys()].sort(),
-      folders: [...folders.entries()]
-        .sort(([left], [right]) => left.localeCompare(right, 'en'))
-        .map(([id, result]) => ({ id, meetings: [...result.meetings.keys()].sort() })),
-      windows: [...global.evidence, ...[...folders.values()].flatMap((result) => result.evidence)]
-    })
-  )

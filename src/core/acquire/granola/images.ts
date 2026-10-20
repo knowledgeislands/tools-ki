@@ -2,14 +2,9 @@ import { createHash, randomUUID } from 'node:crypto'
 import { lstat, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 import { KiError } from '../../errors.ts'
+import { granolaCaptureIndex } from './captures.ts'
 import { granolaCaptureRoot, granolaLayout, verifyGranolaParents } from './layout.ts'
 import type { GranolaAttachmentImage } from './projection.ts'
-import {
-  type GranolaCheckpointMeeting,
-  loadGranolaCheckpoint,
-  safeRelativePath,
-  verifyGranolaDocument
-} from './state.ts'
 
 const uuid = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 const sourcePattern = new RegExp(`^attachment-(${uuid})\\.(?:jpg|jpeg|png|webp)$`, 'i')
@@ -31,15 +26,10 @@ const imageExtension = (bytes: Buffer): string => {
 const record = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === 'object' && !Array.isArray(value))
 
-export const verifyGranolaImages = async (
-  root: string,
-  meetingId: string,
-  meeting: GranolaCheckpointMeeting
-): Promise<number> => {
-  if (!safeRelativePath(meeting.path)) throw new KiError(`Granola image meeting ${meetingId} has unsafe document path`)
-  const directory = dirname(join(root, meeting.path))
+/** Callers establish that the manifest is a physical file before verifying it. */
+export const verifyGranolaImages = async (root: string, meetingId: string, path: string): Promise<number> => {
+  const directory = dirname(join(root, path))
   const manifest = join(directory, `${meetingId}--attachments.json`)
-  if (!(await regularFile(manifest))) return 0
   let parsed: unknown
   try {
     parsed = JSON.parse(await readFile(manifest, 'utf8')) as unknown
@@ -86,7 +76,6 @@ export const verifyGranolaImages = async (
 
 export interface GranolaImageOptions {
   readonly repository: string
-  readonly repositoryId: string
   readonly captureRoot?: string
   readonly source: string
   readonly directory: string
@@ -104,14 +93,15 @@ export interface GranolaMcpImageManifest {
 export const verifyGranolaMcpImages = async (
   root: string,
   meetingId: string,
-  meeting: GranolaCheckpointMeeting,
+  path: string,
+  detailSha256: string | undefined,
   expected: number
 ): Promise<GranolaMcpImageManifest> => {
-  const count = await verifyGranolaImages(root, meetingId, meeting)
-  const path = join(dirname(join(root, meeting.path)), `${meetingId}--attachments.json`)
-  if (!(await regularFile(path))) throw new KiError('Granola MCP screenshot manifest is missing')
-  const raw = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>
-  if (raw['provider'] !== 'granola-mcp' || raw['detail_sha256'] !== meeting.detail_sha256 || count !== expected)
+  const manifest = join(dirname(join(root, path)), `${meetingId}--attachments.json`)
+  if (!(await regularFile(manifest))) throw new KiError('Granola MCP screenshot manifest is missing')
+  const count = await verifyGranolaImages(root, meetingId, path)
+  const raw = JSON.parse(await readFile(manifest, 'utf8')) as Record<string, unknown>
+  if (raw['provider'] !== 'granola-mcp' || raw['detail_sha256'] !== detailSha256 || count !== expected)
     throw new KiError('Granola screenshot inventory is not verified for this source version')
   return raw as unknown as GranolaMcpImageManifest
 }
@@ -192,12 +182,10 @@ export const importGranolaImages = async (options: GranolaImageOptions): Promise
     throw new KiError('--expected must be a positive integer from the Granola image stack', 2)
   const layout = granolaLayout(options.repository, granolaCaptureRoot(options.captureRoot))
   const root = layout.documents
-  const checkpoint = await loadGranolaCheckpoint(join(layout.state, 'ledger.json'), options.repositoryId)
-  if (checkpoint?.schema !== 3) throw new KiError('Current Granola checkpoint is required')
-  const meeting = checkpoint.meetings[options.source]
-  if (!meeting) throw new KiError(`Granola checkpoint has no meeting ${options.source}`)
-  if (!(await verifyGranolaDocument(root, meeting, options.source)))
-    throw new KiError('Granola meeting document must be present before images are acquired')
+  const captures = (await granolaCaptureIndex(layout, [options.source])).get(options.source) ?? []
+  if (captures.length !== 1)
+    throw new KiError(`Granola meeting ${options.source} must have exactly one capture before images are acquired`)
+  const path = captures[0] as string
   const sourceDirectory = resolve(options.directory)
   const directoryState = await lstat(sourceDirectory).catch(() => undefined)
   if (!directoryState?.isDirectory() || directoryState.isSymbolicLink())
@@ -205,7 +193,7 @@ export const importGranolaImages = async (options: GranolaImageOptions): Promise
   const names = (await readdir(sourceDirectory)).sort((a, b) => a.localeCompare(b, 'en'))
   if (names.length !== options.expected)
     throw new KiError(`Granola image export has ${names.length} files; expected ${options.expected}`)
-  const targetDirectory = dirname(join(root, meeting.path))
+  const targetDirectory = dirname(join(root, path))
   const assets: { attachment_id: string; file: string; sha256: string; bytes: number }[] = []
   const copies: { target: string; bytes: Buffer }[] = []
   for (const name of names) {
@@ -228,7 +216,7 @@ export const importGranolaImages = async (options: GranolaImageOptions): Promise
     throw new KiError('Granola image export repeats an attachment UUID')
   const manifest = join(targetDirectory, `${options.source}--attachments.json`)
   if (await regularFile(manifest)) {
-    await verifyGranolaImages(root, options.source, meeting)
+    await verifyGranolaImages(root, options.source, path)
     const existing = JSON.parse(await readFile(manifest, 'utf8')) as { assets?: unknown }
     if (JSON.stringify(existing.assets) !== JSON.stringify(assets))
       throw new KiError('Existing Granola image manifest differs; review the source update before replacing it')

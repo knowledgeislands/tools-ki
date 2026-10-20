@@ -126,7 +126,7 @@ describe('[ki acquire adapter selection]', () => {
       '--adapter and --all are mutually exclusive'
     )
     expect((await multiple.run('ki acquire import --adapter unknown')).output).toContain('unknown; run ki acquire list')
-    expect((await multiple.run('ki acquire status --adapter chatgpt')).output).toContain('does not support status')
+    expect((await multiple.run('ki acquire mark --adapter granola')).output).toContain('does not support mark')
 
     const unresolved = await sandbox()
     await installSkills(unresolved, [])
@@ -171,9 +171,9 @@ describe('[ki acquire adapter selection]', () => {
     const all = await box.run('ki acquire import --all --dry-run --since 2026-01-01')
     expect(all.exitCode, all.output).toBe(0)
     expect(all.output).toContain('Dry run: no files written.')
-    const override = await box.run('ki acquire import --all --refresh-transcripts')
+    const override = await box.run('ki acquire import --all --refresh')
     expect(override.exitCode).toBe(2)
-    expect(override.output).toContain('--refresh-transcripts cannot be combined with --all')
+    expect(override.output).toContain('--refresh cannot be combined with --all')
     const inferredOverride = await box.run('ki acquire import --capture capture --output out')
     expect(inferredOverride.exitCode).toBe(2)
     expect(inferredOverride.output).toContain('requires explicit --adapter <name>')
@@ -185,12 +185,6 @@ describe('[ki acquire adapter selection]', () => {
     await repository(missing, [{ name: 'ki-acquire-chatgpt' }])
     expect((await missing.run('ki acquire import --adapter chatgpt')).output).toContain(
       'requires --capture and --output'
-    )
-    expect((await missing.run('ki acquire status --adapter chatgpt')).output).toContain(
-      'has no executable status implementation'
-    )
-    expect((await missing.run('ki acquire reset --adapter chatgpt')).output).toContain(
-      'has no executable reset implementation'
     )
 
     const malformed = await sandbox()

@@ -7,14 +7,10 @@ import {
   acquisitionAdapterInventory,
   type GranolaImportResult,
   type GranolaOperationContext,
-  type GranolaStatusResult,
-  granolaStatus,
   importCapture,
   importGranola,
   importGranolaImages,
   markGranola,
-  reconcileGranola,
-  resetGranola,
   selectAcquisitionAdapters
 } from '../../core/acquire/index.ts'
 import { KiError } from '../../core/errors.ts'
@@ -30,17 +26,10 @@ interface ImportOptions extends SelectionOptions {
   readonly since: string
   readonly until?: string
   readonly dryRun?: boolean
-  readonly refreshTranscripts?: boolean
+  readonly refresh?: boolean
   readonly refreshAcquired?: boolean
   readonly capture?: string
   readonly output?: string
-}
-
-interface ResetOptions extends SelectionOptions {
-  readonly source?: string
-  readonly component?: string
-  readonly rebuild?: boolean
-  readonly confirm?: boolean
 }
 
 interface ImageOptions extends SelectionOptions {
@@ -104,13 +93,13 @@ const renderGranolaResult = (result: GranolaImportResult): string =>
       (meeting) =>
         `Flagged: ${meeting.id} · ${meeting.reason} · ${meeting.date ?? 'unknown date'} · ${meeting.title ?? 'unknown title'} · folders=${JSON.stringify(meeting.folderIds)}`
     ),
-    `Meetings: ${result.created} new, ${result.amended} amended, ${result.unchanged} unchanged`,
-    `Transcripts: ${result.transcriptReads} provider reads, ${result.omissions} omissions, ${result.resumed} resumed`,
+    `Meetings: ${result.created} new, ${result.refreshed} refreshed, ${result.kept.length} kept`,
+    ...result.kept.map((meeting) => `Kept: ${meeting.id} · ${meeting.reason}; not overwritten without --refresh`),
+    `Omissions: ${result.omissions}`,
     result.attachmentsAvailable
       ? `Attachments: ${result.images} screenshots across ${result.imageMeetings} verified MCP inventories`
       : 'Attachments: not inventoried by Granola MCP; snapshot-bearing notes need separate image verification before deletion.',
-    `Acquired: ${result.skipped} skipped with verified committed preservation evidence`,
-    `Checkpoint: ${result.ledgerChanged ? (result.dryRun ? 'would advance' : 'advanced atomically') : 'unchanged'}`,
+    `Acquired: ${result.skipped} skipped on Acquired folder membership`,
     'Boundary: read-only Granola MCP; no source mutation, harvesting, cross-repository write, archive, or deletion.',
     ...(result.dryRun ? ['Dry run: no repository files written.'] : [])
   ].join('\n')
@@ -123,22 +112,6 @@ const renderCaptureResult = (result: Awaited<ReturnType<typeof importCapture>>):
     `Omissions: ${JSON.stringify(result.omissions)}`,
     'Boundary: user-provided files only; no network, credentials, repository discovery, or archive extraction.',
     ...(result.dryRun ? ['Dry run: no files written.'] : [])
-  ].join('\n')
-
-const renderStatus = (adapter: string, status: GranolaStatusResult): string =>
-  [
-    `${adapter} acquisition status · ${status.repository}`,
-    `Checkpoint: ${status.checkpoint}${status.generation ? ` · ${status.generation}` : ''}`,
-    `Meetings: ${status.meetings}`,
-    `Transcripts: ${status.availableTranscripts} available, ${status.retryingTranscripts} retrying, ${status.durableOmissions} durable omissions`,
-    `Images: ${status.images} verified in ${status.imageMeetings} meeting manifests; MCP and desktop manifests retain their own source-count evidence.`,
-    `Disposition: ${
-      Object.entries(status.dispositions)
-        .sort(([left], [right]) => left.localeCompare(right, 'en'))
-        .map(([state, count]) => `${state}=${count}`)
-        .join(', ') || 'none'
-    }`,
-    `Journal: ${status.journal}${status.journal === 'in-progress' ? ` · ${status.remaining} remaining, ${status.failures} failures` : ''}`
   ].join('\n')
 
 const addSelection = (command: Command): Command =>
@@ -161,7 +134,7 @@ const selected = async (
 
 const rejectAdapterOverrides = (options: ImportOptions): void => {
   const properties = [
-    options.refreshTranscripts ? '--refresh-transcripts' : undefined,
+    options.refresh ? '--refresh' : undefined,
     options.refreshAcquired ? '--refresh-acquired' : undefined,
     options.capture ? '--capture' : undefined,
     options.output ? '--output' : undefined
@@ -190,7 +163,7 @@ const runImport = async (context: KiContext, options: ImportOptions): Promise<vo
           since: options.since,
           until: options.until ?? new Date(context.now()).toISOString().slice(0, 10),
           dryRun: options.dryRun,
-          refreshTranscripts: options.refreshTranscripts,
+          refresh: options.refresh,
           refreshAcquired: options.refreshAcquired
         },
         granolaOperationContext(context)
@@ -211,55 +184,12 @@ const runImport = async (context: KiContext, options: ImportOptions): Promise<vo
   }
 }
 
-const runStatus = async (context: KiContext, options: SelectionOptions, reconcile: boolean): Promise<void> => {
-  const action: AcquisitionAction = reconcile ? 'reconcile' : 'status'
-  const selection = await selected(context, action, options)
-  for (const adapter of selection.adapters) {
-    if (adapter.adapter !== 'granola') {
-      throw new KiError(`acquisition adapter ${adapter.adapter} has no executable ${action} implementation`)
-    }
-    const status = await (reconcile ? reconcileGranola : granolaStatus)({
-      repository: selection.inventory.root,
-      workingDirectory: context.workingDirectory,
-      homeDirectory: context.homeDirectory,
-      stateDirectory: context.paths.state
-    })
-    context.stdout.write(`${renderStatus(adapter.adapter, status)}\n`)
-  }
-}
-
-const runReset = async (context: KiContext, options: ResetOptions): Promise<void> => {
-  if (options.component && options.component !== 'detail' && options.component !== 'transcript') {
-    throw new KiError('--component must be detail or transcript', 2)
-  }
-  const selection = await selected(context, 'reset', options)
-  for (const adapter of selection.adapters) {
-    if (adapter.adapter !== 'granola') {
-      throw new KiError(`acquisition adapter ${adapter.adapter} has no executable reset implementation`)
-    }
-    const result = await resetGranola(
-      {
-        repository: selection.inventory.root,
-        source: options.source,
-        component: options.component as 'detail' | 'transcript' | undefined,
-        rebuild: options.rebuild,
-        confirm: options.confirm
-      },
-      granolaOperationContext(context)
-    )
-    context.stdout.write(
-      `${result.plan}\n${result.changed ? 'Reset applied.' : 'No changes made; repeat with --confirm.'}\n`
-    )
-  }
-}
-
 const runImages = async (context: KiContext, options: ImageOptions): Promise<void> => {
   if (options.all || options.adapter !== 'granola') throw new KiError('images requires --adapter granola', 2)
   if (!/^[1-9][0-9]*$/.test(options.expected)) throw new KiError('--expected must be a positive integer', 2)
   const selection = await selected(context, 'import', options)
   const result = await importGranolaImages({
     repository: selection.inventory.root,
-    repositoryId: selection.inventory.repository,
     captureRoot: configurationString(selection.adapters[0] as AcquisitionAdapterInventoryItem, 'capture_root'),
     source: options.source,
     directory: options.directory,
@@ -315,29 +245,19 @@ export const createAcquireCommand = (context: KiContext): Command => {
       .option('--since <date>', 'inclusive history start in YYYY-MM-DD', '1970-01-01')
       .option('--until <date>', 'inclusive history end in YYYY-MM-DD')
       .option('--dry-run', 'read and validate without writing repository files')
-      .option('--refresh-transcripts', 'Granola: explicitly re-read transcripts')
-      .option('--refresh-acquired', 'Granola: explicitly refresh notes already in the Acquired folder')
+      .option('--refresh', 'Granola: explicitly overwrite existing captures with the current source')
+      .option('--refresh-acquired', 'Granola: also re-acquire notes already in the Acquired folder')
       .option('--capture <path>', 'ChatGPT: local capture directory')
       .option('--output <path>', 'ChatGPT: Knowledge Export Package output directory')
       .action((options: ImportOptions) => runImport(context, options))
   )
   command.addCommand(
-    addSelection(new Command('status').description('show local adapter checkpoints and recovery state')).action(
-      (options: SelectionOptions) => runStatus(context, options, false)
-    )
-  )
-  command.addCommand(
     addSelection(new Command('images').description('acquire Granola desktop image exports beside a staged meeting'))
-      .requiredOption('--source <uuid>', 'Granola meeting UUID already in the receiving checkpoint')
+      .requiredOption('--source <uuid>', 'Granola meeting UUID with one capture in the receiving repository')
       .requiredOption('--directory <path>', 'directory containing only attachment-UUID image exports')
       .requiredOption('--expected <count>', 'image count observed in the Granola desktop stack')
       .option('--dry-run', 'verify exports and destination without writing files')
       .action((options: ImageOptions) => runImages(context, options))
-  )
-  command.addCommand(
-    addSelection(new Command('reconcile').description('verify adapter checkpoints and dispositions')).action(
-      (options: SelectionOptions) => runStatus(context, options, true)
-    )
   )
   command.addCommand(
     addSelection(
@@ -348,14 +268,6 @@ export const createAcquireCommand = (context: KiContext): Command => {
       .option('--source <UUID...>', 'mark only these owned note identities in the requested interval')
       .option('--confirm', 'add only verified committed captures to the private Acquired folder')
       .action((options: MarkOptions) => runMark(context, options))
-  )
-  command.addCommand(
-    addSelection(new Command('reset').description('preview or confirm destructive local acquisition reset'))
-      .option('--source <identity>', 'limit reset to one provider source identity')
-      .option('--component <name>', 'limit source reset to detail or transcript')
-      .option('--rebuild', 'remove all local adapter acquisition state and staged documents')
-      .option('--confirm', 'apply the displayed destructive local reset plan')
-      .action((options: ResetOptions) => runReset(context, options))
   )
   return command
 }

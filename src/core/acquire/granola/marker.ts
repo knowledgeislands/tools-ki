@@ -1,16 +1,10 @@
 import { dirname, join, relative } from 'node:path'
 import { KiError } from '../../errors.ts'
 import type { Runner } from '../../runtime/runner.ts'
+import { type GranolaCapture, granolaCaptureIndex, readGranolaCapture } from './captures.ts'
 import { type GranolaMcpImageManifest, verifyGranolaMcpImages } from './images.ts'
 import { granolaLayout } from './layout.ts'
-import {
-  attribute,
-  granolaAttachmentInventory,
-  granolaScreenshotCount,
-  providerRecord,
-  record,
-  stringField
-} from './projection.ts'
+import { attribute, granolaAttachmentInventory, granolaScreenshotCount, record, stringField } from './projection.ts'
 import { granolaReceivers } from './routing.ts'
 import {
   type GranolaFolder,
@@ -21,12 +15,6 @@ import {
   sha256,
   stableJson
 } from './source.ts'
-import {
-  type GranolaCheckpointMeeting,
-  loadGranolaCheckpoint,
-  loadGranolaJournal,
-  verifyGranolaDocument
-} from './state.ts'
 import { enumerateGranolaMeetings, granolaInterval } from './windows.ts'
 
 export const privateGranolaMarker = (id: string, folders: readonly GranolaFolder[]): GranolaFolder => {
@@ -69,42 +57,32 @@ const committedFile = async (
     throw new KiError(`Granola capture is not committed at HEAD: ${path}`)
 }
 
-/** Shared by routine skipping and explicit marking; a source tag alone is not a receipt. */
+/** The committed capture and its screenshots are the preservation evidence; there is no separate receipt. */
 export const verifyGranolaPreservation = async (options: {
   readonly repository: string
   readonly root: string
-  readonly ledger: string
+  readonly capture: GranolaCapture
   readonly id: string
-  readonly entry: GranolaCheckpointMeeting
   readonly expectedImages: number
   readonly runner: Runner
   readonly environment: NodeJS.ProcessEnv
-}): Promise<{ readonly handled: true } | { readonly handled: false; readonly manifest: GranolaMcpImageManifest }> => {
-  const ledgerPath = relative(options.repository, options.ledger)
-  const receipt = await options.runner(
-    'git',
-    ['-C', options.repository, 'show', `HEAD:${ledgerPath}`],
-    options.environment
+}): Promise<GranolaMcpImageManifest> => {
+  const directory = dirname(join(options.root, options.capture.path))
+  const manifest = await verifyGranolaMcpImages(
+    options.root,
+    options.id,
+    options.capture.path,
+    options.capture.detailSha256,
+    options.expectedImages
   )
-  if (receipt.exitCode) throw new KiError('Granola preservation ledger is not committed')
-  const committed = providerRecord(receipt.output)
-  const entries = record(committed?.['meetings'])
-  if (stableJson(entries?.[options.id]) !== stableJson(options.entry))
-    throw new KiError('Granola preservation receipt differs from its committed version')
-  const document = await verifyGranolaDocument(options.root, options.entry, options.id)
-  if (document === undefined || !['staged', 'awaiting-review'].includes(options.entry.disposition.state))
-    return { handled: true }
-  const directory = dirname(join(options.root, options.entry.path))
-  const manifestPath = join(directory, `${options.id}--attachments.json`)
-  const manifest = await verifyGranolaMcpImages(options.root, options.id, options.entry, options.expectedImages)
   const paths = [
-    join(options.root, options.entry.path),
-    manifestPath,
+    join(options.root, options.capture.path),
+    join(directory, `${options.id}--attachments.json`),
     ...manifest.assets.map((asset) => join(directory, asset.file))
   ]
   for (const path of paths)
     await committedFile(options.repository, relative(options.repository, path), options.runner, options.environment)
-  return { handled: false, manifest }
+  return manifest
 }
 
 export interface GranolaMarkOptions {
@@ -132,21 +110,15 @@ export const markGranola = async (
   const { target } = await granolaReceivers({ repository: options.repository, ...context })
   if (!target.acquiredFolderId) throw new KiError('Granola marking requires acquired_folder_id')
   const layout = granolaLayout(target.root, target.captureRoot)
-  const ledgerPath = join(layout.state, 'ledger.json')
-  const checkpoint = await loadGranolaCheckpoint(ledgerPath, target.repository)
-  if (checkpoint?.schema !== 3) throw new KiError('Granola marking requires a current preservation checkpoint')
-  if (await loadGranolaJournal(join(layout.state, 'journal.json')))
-    throw new KiError('Granola marking refuses an interrupted acquisition journal')
   const source = await granolaSource(context.runner, context.environment)
   if (!source.images) throw new KiError('Granola marking requires authoritative MCP screenshot access')
-  if (source.accountSha256 !== checkpoint.account_sha256)
-    throw new KiError('Granola marking source account does not match the capture')
   privateGranolaMarker(target.acquiredFolderId, await source.folders())
   const writer = options.confirm ? await granolaFolderMarker(context.runner, context.environment) : undefined
   const enumeration = await enumerateGranolaMeetings(source, interval)
   const sources = options.sources ?? [...enumeration.meetings.keys()]
   if (new Set(sources).size !== sources.length || sources.some((id) => !enumeration.meetings.has(id)))
     throw new KiError('Every mark source must be a distinct owned note in the requested interval')
+  const index = await granolaCaptureIndex(layout, sources)
   let ready = 0
   let marked = 0
   let already = 0
@@ -156,40 +128,44 @@ export const markGranola = async (
       const meeting = enumeration.meetings.get(id)
       /* v8 ignore next -- validated source IDs index this unchanged enumeration map. */
       if (!meeting) throw new KiError('Granola source identity disappeared')
-      const entry = checkpoint.meetings[id]
-      if (!entry) throw new KiError('No preservation receipt exists for this note')
       const folders = granolaMeetingFolders(meeting.projection)
-      const evidence = await verifyGranolaPreservation({
-        repository: target.root,
-        root: layout.documents,
-        ledger: ledgerPath,
-        id,
-        entry,
-        expectedImages: granolaScreenshotCount(meeting.projection),
-        runner: context.runner,
-        environment: context.environment
-      })
+      // Acquired membership alone marks a note dealt with; it needs no local evidence.
       if (folders.includes(target.acquiredFolderId)) {
         already += 1
         continue
       }
-      if (evidence.handled || entry.transcript_state !== 'available')
+      const paths = index.get(id) ?? []
+      if (paths.length !== 1)
+        throw new KiError(paths.length ? 'Several captures exist for this note' : 'No capture exists for this note')
+      const capture = await readGranolaCapture(layout.documents, paths[0] as string, id)
+      if (capture.accountSha256 !== source.accountSha256)
+        throw new KiError('Granola marking source account does not match the capture')
+      const manifest = await verifyGranolaPreservation({
+        repository: target.root,
+        root: layout.documents,
+        capture,
+        id,
+        expectedImages: granolaScreenshotCount(meeting.projection),
+        runner: context.runner,
+        environment: context.environment
+      })
+      if (capture.transcriptState !== 'available')
         throw new KiError('A complete local capture and available transcript are required before marking')
-      if (stableJson(folders) !== stableJson(entry.folder_ids))
+      if (stableJson(folders) !== stableJson(capture.folderIds))
         throw new KiError('Original Granola folder memberships changed after capture')
       const detail = (await source.details([id])).get(id)
       if (detail?.state !== 'available') throw new KiError('Current source detail is unavailable')
       const detailHash = granolaDetailHash(
-        { projection: meeting.projection, folderIds: folders, inferredUnfoldered: entry.inferred_unfoldered },
+        { projection: meeting.projection, folderIds: folders, inferredUnfoldered: capture.inferredUnfoldered },
         detail
       )
-      if (detailHash !== entry.detail_sha256) throw new KiError('Granola source note changed after capture')
+      if (detailHash !== capture.detailSha256) throw new KiError('Granola source note changed after capture')
       const transcript = await source.transcript(id)
-      if (transcript.state !== 'available' || sha256(stableJson(transcript.projection)) !== entry.transcript_sha256)
+      if (transcript.state !== 'available' || sha256(stableJson(transcript.projection)) !== capture.transcriptSha256)
         throw new KiError('Granola source transcript changed or is unavailable')
       const inventory = granolaAttachmentInventory(detail.projection, meeting.projection)
       const images = await source.images(id, inventory.ids)
-      const saved = evidence.manifest.assets
+      const saved = manifest.assets
       if (
         images.length !== saved.length ||
         images.some((image) => saved.find((asset) => asset.attachment_id === image.id)?.sha256 !== sha256(image.bytes))
