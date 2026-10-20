@@ -26,7 +26,7 @@ transferred_from: ki-principal ki.ways-of-working work-package design, point 35,
 
 ## Context
 
-Point 35 of the ki.ways-of-working [work-package design](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/design/work-package.md) asks tools-ki for two things: the both-shapes reader with three additive fields, and "a routing view listing each work's id, state, pending-message count and description, the register State of play reads". [KI-TOOL-KI-CLI-158](KI-TOOL-KI-CLI-158-work-status-reads-packages.md) delivered the first and named the routing view as out of its boundary and outstanding.
+Point 35 of the ki.ways-of-working [work-package design](https://github.com/knowledgeislands/ki-principal/blob/fba56feb/+/_WORK/ki.ways-of-working/design/work-package.md) asks tools-ki for two things: the both-shapes reader with three additive fields, and "a routing view listing each work's id, state, pending-message count and description, the register State of play reads". [KI-TOOL-KI-CLI-158](KI-TOOL-KI-CLI-158-work-status-reads-packages.md) delivered the first and named the routing view as out of its boundary and outstanding.
 
 Kris decided on 19 October, ROUTING-VIEW a) in the ki.tools-burndown [decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.tools-burndown/decisions.md), to capture this record now and plan it straight after KI-TOOL-KI-CLI-158.
 
