@@ -14,7 +14,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T21:10:00Z
-updated_at: 2026-10-19T22:49:04Z
+updated_at: 2026-10-20T22:21:15Z
 transferred_from: ki-principal ki.ways-of-working work-package design, point 35, 2026-10-19
 ---
 
@@ -41,7 +41,7 @@ The data already exists. Since KI-TOOL-KI-CLI-158 each `ki/work-status/v1` entry
 
 **Approach:** a human routing listing in `ki work status`, one line per live work, drawn from the report KI-TOOL-KI-CLI-158 already builds.
 
-**Dependencies:** none to build; it may sit beside [KI-TOOL-KI-CLI-149](KI-TOOL-KI-CLI-149-work-status-views-contract.md)'s views if that is planned first.
+**Dependencies:** waits on State of play confirming the work-status form, alongside [KI-TOOL-KI-CLI-149](KI-TOOL-KI-CLI-149-work-status-views-contract.md); it may sit beside [KI-TOOL-KI-CLI-149](KI-TOOL-KI-CLI-149-work-status-views-contract.md)'s views if that is planned first.
 
 **Decisions still needed:** the four open planning questions in Discussion: flag, subcommand or section; which folders appear; how a long description is cut; and filtering.
 
@@ -49,8 +49,14 @@ The data already exists. Since KI-TOOL-KI-CLI-158 each `ki/work-status/v1` entry
 
 ## Dependencies / blocks
 
+Waits on State of play confirming the work-status form, alongside [KI-TOOL-KI-CLI-149](KI-TOOL-KI-CLI-149-work-status-views-contract.md). This is an external decision dependency; `blocked_by` stays empty because no local work record owns it.
+
 Predecessor: [KI-TOOL-KI-CLI-158](KI-TOOL-KI-CLI-158-work-status-reads-packages.md), whose `description` and `messages` fields this view reads. Its work has landed, so it is sequence rather than build order and `blocked_by` stays empty. If KI-TOOL-KI-CLI-149 is planned first, the routing view may sit beside its views in the same text form; neither waits on the other.
 
 ## Discussion
 
 Open for planning: whether the view is a flag on `ki work status` (such as `--view routing`), a subcommand, or a section of the default text form; whether checkpoints and `+/_WORK_REVIEW/` folders appear; how a long description is cut on one line; and whether finished or on-hold works list or are filtered. tools-ki owns priority and design.
+
+### Agreed form dependency
+
+Kris confirmed TOOLS-KI-SHAPES a) on 20 October 2026 at 23:16 BST in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md#2026-10-20-2316-bst---query-sign-offs-first-batch). Ask State of play for the form, then plan this record as `--view routing` beside the text views; [KI-TOOL-KI-CLI-149](KI-TOOL-KI-CLI-149-work-status-views-contract.md) waits alongside it. No implementation or promotion is authorised by this confirmation.

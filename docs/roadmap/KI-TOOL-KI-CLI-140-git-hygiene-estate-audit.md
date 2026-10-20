@@ -13,7 +13,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-16T00:29:07Z
-updated_at: 2026-10-20T00:46:49Z
+updated_at: 2026-10-20T22:21:15Z
 ---
 
 # Git Hygiene Estate Audit
@@ -66,6 +66,8 @@ Not yet set. The plan names the exact gates; at minimum the repository test suit
 
 ## Dependencies / blocks
 
+The CLEAN-1 to CLEAN-7 checks become mechanical in the harness `ki-git` catalogue. tools-ki composes those checks with `mgit overview --json` through its existing repository selectors; it does not duplicate their policy in native code. Planning waits for the harness catalogue change.
+
 Planning depends on the ki-git rubric gaining the clean-down criteria the audit evaluates ([KI-HARNESS-GOV-203](https://github.com/knowledgeislands/ki-agentic-harness/blob/87da1b262fcc60678a31850461dd63c4a848e592/docs/roadmap/KI-HARNESS-GOV-203-git-clean-down-criteria.md)), and on `mgit overview --json` from [KI-TOOL-MGIT-CLI-021](https://github.com/knowledgeislands/tools-mgit/blob/2ca3a8e06b88deb72b48476420f0f2211e56f5b8/docs/roadmap/KI-TOOL-MGIT-CLI-021-estate-overview.md).
 
 ## Documentation impact
@@ -93,3 +95,7 @@ Capture only; adoption, priority and plan belong to this repository. Questions f
 Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-burndown Project, whose Scope lists this record as the one REPO-GIT-HYGIENE capture inside its burn-to-zero, under the tools-burndown thread's BURN-OVERNIGHT decision. Planning waits on the ki-git rubric dependency above.
 
 Reworded on 18 October 2026 by the tools-burndown run: the roadmap overview's ESTATE-HOME query recommended a), "mgit owns `mgit overview`, terminal table and `--json`, copying git-almanac's output conventions. KI-TOOL-KI-CLI-140 reworded to read mgit's JSON, and git-almanac stays single-repository". The run took a) under Kris's overnight instruction to take the recommended course on a judgement call; provisional, for Kris to confirm. That answers the planning question of where Git fact collection belongs.
+
+### Agreed check ownership
+
+Kris confirmed TOOLS-KI-SHAPES a) on 20 October 2026 at 23:16 BST in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md#2026-10-20-2316-bst---query-sign-offs-first-batch). The harness owns the mechanical CLEAN checks; tools-ki composes them with mgit facts. This settles the check home without planning or implementing this draft. The harness follow-up goes to `ki.ways-of-working`, which owns `ki-git`.

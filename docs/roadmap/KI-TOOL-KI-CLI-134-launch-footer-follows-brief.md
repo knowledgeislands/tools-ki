@@ -7,13 +7,12 @@ purpose: corrective
 kind: deliver
 size: l
 component: agent
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 0e48ca277d7e784affb7806d646df313345742c4
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-20T06:10:01Z
+updated_at: 2026-10-20T22:23:20Z
 ---
 
 # Launch Footer Follows Brief
@@ -120,19 +119,17 @@ The whole record, from immutable baseline `0e48ca277d7e784affb7806d646df31334574
 
 ### Verification
 
-| Verify | Evidence |
-| --- | --- |
-| 1, 2 | Covered since 18 October by the footer cases in `ki agent launch`; still passing |
-| 3 | The report-path warning cases; still passing |
-| 4 | `appends each --allow grant after the tier footer in the order given`, the held launch with `--allow fetch`, and `carries the model, effort and grants through the queue to the launched runtime`; the missing-asset cases name the grant; an unknown grant exits 2 from the option parser |
-| 5 | The first launch case asserts `outstanding queries), then write DONE` and no "reply block" |
-| 6 | `bun run test:coverage` 1,373 tests at 100% statements, branches, functions and lines, and 1,398 after rebasing onto `75427fa2`; `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and the command-inventory check pass; `ki repo audit --repo .` on the integrated primary checkout reports one failure, the review-packet shape of KI-TOOL-KI-CLI-165 from another session's `f2fdf227`, which this record does not touch |
+- **Verify 1, 2:** Covered since 18 October by the footer cases in `ki agent launch`; still passing
+- **Verify 3:** The report-path warning cases; still passing
+- **Verify 4:** `appends each --allow grant after the tier footer in the order given`, the held launch with `--allow fetch`, and `carries the model, effort and grants through the queue to the launched runtime`; the missing-asset cases name the grant; an unknown grant exits 2 from the option parser
+- **Verify 5:** The first launch case asserts `outstanding queries), then write DONE` and no "reply block"
+- **Verify 6:** `bun run test:coverage` 1,373 tests at 100% statements, branches, functions and lines, and 1,398 after rebasing onto `75427fa2`; `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and the command-inventory check pass; `ki repo audit --repo .` on the integrated primary checkout reports one failure, the review-packet shape of KI-TOOL-KI-CLI-165 from another session's `f2fdf227`, which this record does not touch
 
 ### Outstanding concerns
 
 - The harness `ki-delegation` Grants subsection keeps its interim sentence under GRANT-INTERIM a) until a `ki` release carries `--allow`; its removal is carried as a `messages.md` line to `ki.ways-of-working` in Knowledge Islands Principal under CAPTURE-GATE, not as a record.
-- The three provisional choices from 18 October (fixes ahead of grants, no warning for a bare `<name>.report.md`, each differing path named once) still await Kris's confirmation at acceptance.
-- No release: `--allow` reaches launched agents only once a `ki` release is installed.
+- Kris confirmed all three provisional choices on 20 October 2026 at 23:16 BST: marker and report-path fixes before the grants; no warning for a bare `<name>.report.md`; each differing report path named once.
+- Release installation and the interim-sentence removal remain with [ki.tools-burndown](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.tools-burndown/work.md) and [ki.ways-of-working](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/work.md), whose live work carries them. This acceptance does not authorise a release.
 
 ### Post-change review
 
@@ -141,6 +138,10 @@ A grant lifts exactly one ban by appending harness-owned text, so the launcher s
 ### Mini recap
 
 `ki agent launch` and `queue` take `--allow fetch` and `--allow machine`, appending the harness grant sections after the tier footer, and the progress protocol no longer asks for a reply block.
+
+## Done
+
+Accepted 20 October 2026 by Kris Brown on the review packet above.
 
 ## Discussion
 
@@ -171,3 +172,15 @@ The `burn2-tools-ki` run traced the unresolvable `baseline_ref`: its first eight
 The independent `accept4-tools-ki` review verified that the repaired full `baseline_ref` resolves to the sole parent of the first delivery commit, and that both delivery commits are ancestors of the reviewed primary checkout. The Review packet has exactly the required six headings, and every planned Step is complete. The independently run coverage gate passed all 1,398 tests in 85 files at 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint, command inventory and both Syncpack checks passed. The complete repository audit passed with zero failures and seven warnings after running it sequentially with coverage; an earlier overlapping invocation refused the occupied coverage directory and was rerun without bypass. No technical defect was reproduced.
 
 The record remains awaiting review because Outstanding concerns expressly reserves three choices for Kris at acceptance: delivering the marker and report-path fixes before the grants, no warning for a bare report filename, and naming each differing report path once. The existing FOOTER-PROVISIONALS query in the [ways-of-working queries](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/queries.md) still carries that decision; the overnight grant excludes checks needing Kris personally. No acceptance or pruning is recorded for this item.
+
+### Owner confirmation, 20 October 2026
+
+Kris confirmed FOOTER-PROVISIONALS a) at 23:16 BST in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md#2026-10-20-2316-bst---query-sign-offs-first-batch): the marker and report-path fixes were delivered before the grants; a bare `<name>.report.md` gives no warning; and each differing report path is named once. All three are confirmed as implemented. The sign-off brief grants independent acceptance and, on a pass, pruning for this record only, overriding its general acceptance and pruning ban.
+
+### Independent sign-off review, 20 October 2026
+
+The independent `wow-signoff-toolski` run reviewed delivery at `a0cadb9f1ad9b1ee513b41d837f83834e6301fa5` without delivering it. Exact predicates verified the six Review headings, all seven completed Steps, the immutable baseline as the sole parent of the first delivery commit, and both delivery commits as ancestors of the reviewed checkout. The launch contract cases exercise exact footer and grant markers, absolute links, bare report filenames, repeated conflicting paths, queue and hold behaviour, invalid grants and the protocol wording. The later state-folder-only report rule deliberately supersedes the original thread-folder destination; current tests and the user guide agree. No technical defect remains.
+
+Independent gates passed: all 1,405 tests in 86 files with 100% statements, branches, functions and lines; TypeScript; Biome; Knip; manual lint; command inventory; Syncpack lint and format; and the complete baseline repository audit with zero failures and six existing warnings. The first worktree coverage attempt lacked its nested boundary-tool dependencies; linking the already installed dependency tree and rerunning the complete gate passed without a network call. Roadmap and authoring audits passed with no failures; the authoring template drift warning is pre-existing. The judgement review found the goal, delivery scope, dependency ownership and honest lifecycle coherent.
+
+Kris's 23:16 BST FOOTER-PROVISIONALS a) confirmation and the record-specific acceptance grant cover this exact record. On the passing independent review, the run records that approved acceptance. The remaining release and harness follow-up survive in the live works linked above. Inbound reference preflight searches the accessible Knowledge Islands checkout roots and the installed harness; six live links in Knowledge Islands Principal require pinning before the dedicated prune commit. The archived repositories named by Known Lands are unavailable locally and were retired on 4, 5 and 11 October, before this record was created on 14 October; no claim is made to having searched those archives.

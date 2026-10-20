@@ -14,7 +14,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-18T09:27:30Z
-updated_at: 2026-10-19T22:49:04Z
+updated_at: 2026-10-20T22:21:15Z
 ---
 
 # KI-TOOL-KI-CLI-149: Work Status Views Contract
@@ -40,16 +40,22 @@ Kris decided on 18 October, in the [ways-of-working decisions log](/Users/krisbr
 
 **Approach:** a `ki/work-status/v2` JSON report that adds the five views and the `+/_WORK_REVIEW/` count beside the v1 fields, taken from `deriveWorkViews` and `WorkStatus` rather than derived again.
 
-**Dependencies:** none to build. The Observatory works from v1 and nothing there waits on this, which is why it is `low`. [KI-TOOL-KI-CLI-160](KI-TOOL-KI-CLI-160-work-status-routing-view.md) touches the same report and may be planned beside it.
+**Dependencies:** waits on State of play confirming the work-status form, alongside [KI-TOOL-KI-CLI-160](KI-TOOL-KI-CLI-160-work-status-routing-view.md). The Observatory works from v1 and nothing there waits on this, which is why it is `low`. [KI-TOOL-KI-CLI-160](KI-TOOL-KI-CLI-160-work-status-routing-view.md) touches the same report and may be planned beside it.
 
 **Decisions still needed:** how long v1 stays available or whether `--schema` selects it; whether views carry full lines or keys into `work`; and where the review count sits.
 
-**Promotion to Next:** when those are answered and the Observatory confirms it will move to v2.
+**Promotion to Next:** once State of play confirms the work-status form, the remaining design questions are answered and the Observatory confirms it will move to v2.
 
 ## Dependencies / blocks
+
+Waits on State of play confirming the work-status form, alongside [KI-TOOL-KI-CLI-160](KI-TOOL-KI-CLI-160-work-status-routing-view.md). This is an external decision dependency; `blocked_by` stays empty because no local work record owns it.
 
 Not blocking: the Observatory works from v1 today. Planning decides how long v1 stays available, or whether `--schema` selects it, so the Observatory can move when it is ready.
 
 ## Discussion
 
 Open for planning: whether the views carry full lines or keys into `work`, which keeps the report smaller and leaves a single copy of each entry; and whether the review count belongs at the top level or as a sixth, count-only view.
+
+### Agreed form dependency
+
+Kris confirmed TOOLS-KI-SHAPES a) on 20 October 2026 at 23:16 BST in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md#2026-10-20-2316-bst---query-sign-offs-first-batch). Both work-status records wait on State of play confirming the form before planning. The compatibility and representation questions remain open.
