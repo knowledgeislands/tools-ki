@@ -8,20 +8,20 @@ project: ways-of-working
 component: agent
 priority: high
 size: m
-horizon: soon
-status: draft
+horizon: now
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-18T19:40:00Z
-updated_at: 2026-10-19T22:49:04Z
+updated_at: 2026-10-20T00:19:40Z
 ---
 
 # KI-TOOL-KI-CLI-152: Work Folder Housekeeping Commands
 
 ## Goal
 
-`ki` keeps the rest of the work folder to the entry points the `ki-work-folder` standard sets: the close gate reads the decisions log's timestamped headings, `ki agent decide` writes unnumbered timestamped entries that `reconcile` addresses by timestamp, and `ki work message` and `ki work prune` write a Messages line and tidy a work folder under that standard's rules.
+`ki` reads and writes the decisions log as the `ki-coordination` standard sets it. The close gate sees every entry, whatever its heading. `ki agent decide` writes unnumbered, timestamped entries, and `reconcile` finds an entry by its heading.
 
 ## Context
 
@@ -35,23 +35,86 @@ The code disagrees with the [work-folder standard](/Users/krisbrown/workspaces/k
 
 ## Boundary
 
-- In: the close gate reading timestamped headings, with numbered headings still read in logs written before the work model; `decide` writing unnumbered timestamped headings and `reconcile` addressing an entry by its timestamp; `ki work message <receiver id>` adding one Messages line in the standard's shape and committing that path alone under `docs(work): <receiver id> message from <sender id>`; `ki work prune <id>` listing, and on confirmation deleting by explicit path, the reports and briefs the tidy rules let go, never deciding whether an outcome is homed; the manual, `man/ki.commands.json`, help text, specification and tests that follow.
-- Out: the launch refusal and the state-folder report path in the run skeleton, which KI-TOOL-KI-CLI-150 carries; the rubric checks, which [KI-HARNESS-GOV-200](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-200-thread-folder-closed-list.md) owns; old checkpoints' `type: ki-checkpoint` reading in `ki work status`; a release.
+- In:
+  - the close gate reading every entry of a decisions log, with numbered headings still read as history;
+  - `decide` writing `## <YYYY-MM-DD HH:MM zone> - <title>` entries without numbers;
+  - `reconcile` addressing an entry by its heading or its leading timestamp, and still by number in a numbered log;
+  - the manual, help text, command inventory, changelog and tests that follow.
+- Out:
+  - `ki work message` and `ki work prune`, set out under Discussion and left for a record of their own;
+  - the launch refusal, which [KI-TOOL-KI-CLI-150 (pruned)](https://github.com/knowledgeislands/tools-ki/blob/fa31efee/docs/roadmap/KI-TOOL-KI-CLI-150-work-folder-entry-points.md) delivered;
+  - the rubric checks, which [KI-HARNESS-GOV-200](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-200-thread-folder-closed-list.md) owns;
+  - a release.
 
-## Shaping
+## Current state
 
-**Approach:** the close-gate parse first, since today a log in the current heading form shows the gate no entries; then unnumbered `decide` with timestamp-addressed `reconcile`; then `ki work message` and `ki work prune`, each its own commit through `run(args, context)`.
+`parseDecisions` in `src/core/agent/thread.ts` matches only `## Decision <n>`. Knowledge Islands Principal's work logs head their entries in several ways: `## 2026-10-20 00:31 BST - WOW-RESUME a) and NO-GATE disposition`, `## 2026-10-19 - WAVE-1`, `## Pointer - SPECIFICATIONS-PROJECT` and `## One tools-ki writer (16 October)`. The close gate sees none of these entries, so a log in the current form passes the decision check unread. `appendDecision` numbers each entry, and `reconcileDecision` finds an entry only by its number.
 
-**Dependencies:** none to build; [KI-TOOL-KI-CLI-150 (pruned)](https://github.com/knowledgeislands/tools-ki/blob/fa31efee/docs/roadmap/KI-TOOL-KI-CLI-150-work-folder-entry-points.md) delivered the launch part. The rubric side stays with KI-HARNESS-GOV-200.
+## Design
 
-**Decisions still needed:** the Messages line shape and commit message `ki work message` writes, and what `ki work prune` lists, both read from the current work-folder standard at planning.
+Decided under HIGH-APPLY, 20 October:
 
-**Promotion to Next:** at once, if the close-gate fix is wanted before the next work closes; it may be split so the gate parse goes first as its own `s` record.
+- **Every H2 is an entry.** The `ki-coordination` decisions log holds nothing but entries, so the gate reads each H2 section as one. The alternative was a strict timestamp pattern, which would hide the date-only and pointer headings already in use: a close gate that skips what it cannot parse is the defect this record fixes. A numbered heading keeps its number as history. The gate names an entry by that number where it has one, and otherwise by its heading text.
+- **Unnumbered `decide`.** `decide` appends `## <YYYY-MM-DD HH:MM zone> - <title>` in the owner's time zone. `TZ` sets the zone, as the launcher's status stamps already do. The title comes from `--title`; for a `<TAG> - <letter>` answer it defaults to `<TAG> <letter>)`, and otherwise to `owner decision`, the wording the live logs use. The output names the heading.
+- **Reconcile by heading.** `reconcile <run> <entry>` matches an entry whose heading equals `<entry>` or begins with it followed by a space, so `2026-10-20 00:31` finds a timestamped entry. A whole number also matches `Decision <n>` in a numbered log. When more than one entry matches, the command refuses and names how many did.
+- The local-time formatter moves from `runs.ts` to `context.ts` so that `thread.ts` can share it without a dependency cycle.
+
+The heading form settled here is the one the decision-heading check in KI-HARNESS-GOV-200 must match: any H2 heading is an entry.
+
+## Requirements
+
+1. `ki agent close` reports each entry of a log whose headings are timestamped, date-only or free text, and blocks one without a home exactly as it blocks a numbered entry.
+2. A numbered log still reads, and its entries are still named by number.
+3. `ki agent decide` writes an unnumbered timestamped heading with the title rules above and prints it.
+4. `ki agent reconcile` finds an entry by its full heading, its leading timestamp or, in a numbered log, its number; it refuses an entry that is absent or ambiguous.
+
+## Steps
+
+- [ ] Move the local clock helper to `src/core/agent/context.ts`.
+- [ ] Make `parseDecisions` read every H2 with an optional number, and name entries by number or heading in `close.ts`.
+- [ ] Make `appendDecision` unnumbered with `--title`, and `reconcileDecision` heading-addressed, in `thread.ts` and `src/commands/agent/index.ts`.
+- [ ] Update the agent tests, the manual, the command inventory and the changelog.
+- [ ] Run the gate and move the record to Awaiting review.
+
+## Files touched
+
+- `src/core/agent/{context,runs,thread,close}.ts`, `src/commands/agent/index.ts`
+- `src/tests/cli/agent.test.ts`, `src/tests/cli/agent-threads.test.ts`
+- `man/ki.1`, `man/ki.commands.json`, `CHANGELOG.md`
+- this record
+
+## Verify
+
+- `bun run test:coverage` passes at 100%.
+- `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and `ki repo audit` pass.
 
 ## Dependencies / blocks
 
-The heading form the close gate parses must match the decision-heading check KI-HARNESS-GOV-200 adds, so the two settle one form between them.
+None to build. KI-HARNESS-GOV-200's decision-heading check should adopt the rule settled here.
+
+## Documentation impact
+
+### Decision Records
+
+None.
+
+### Specifications
+
+None: no specification covers `ki agent`.
+
+### Guides
+
+None beyond the manual.
+
+### Roadmap
+
+KI-HARNESS-GOV-200 can take its heading form from this record.
 
 ## Discussion
 
-Capture only, as the split-out remainder of KI-TOOL-KI-CLI-150; adoption, priority and plan belong to this repository. Questions for planning, carried over: whether `ki work prune` deletes only on an explicit list or also offers the candidates interactively; and whether the close gate keeps reading numbered headings after the tolerance window closes.
+Adopted to Now and planned on 20 October 2026 under TRIAGE-NEXT a), which asked for the close-gate repair to come first and be split out if it could be. The run's brief allows no new record, so this record keeps the decisions-log repair. `ki work message` and `ki work prune` are offered for a record of their own in the run's CANCEL-MERGE query, with these findings:
+
+- **`ki work message`:** the `ki-work-package` standard sets the line, `- [IMPORTANT · ]<YYYY-MM-DD> · <TAG> · <sender title>: <text>`, the important-first order and the commit `docs(work): <receiver id> message from <sender id>`. It leaves open where the sender's title comes from: the sender's `work.md` `title`, which may be in another repository, or an argument.
+- **`ki work prune`:** the standard names briefs as `briefs/<run>.md`, but live folders keep `<name>.brief.md` beside the reports. Whether an outcome is homed is the steward's judgement, so the command can list only briefs mechanically and must take reports from an explicit list.
+
+The close gate keeps reading numbered headings indefinitely, as history.
