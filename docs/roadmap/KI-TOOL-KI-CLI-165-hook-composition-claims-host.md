@@ -2,6 +2,7 @@
 id: KI-TOOL-KI-CLI-165
 area: CLI
 title: Hook composition claims host
+kind: deliver
 purpose: capability
 project: tools-burndown
 component: repo
@@ -35,6 +36,16 @@ Kris took HOOK-CAPTURE a) at 23:21 BST: capture the scope now, plans refined by 
 
 - In: loading and validating hook-content claims from rubric catalogues beside `packageScripts`; aggregating them per repository in declared skill order; composing each hook as frame then claimed lines, at mode `0755`, idempotently; refusing, writing nothing, when an existing hook carries a line no claim or frame rule attributes; reusing the frame recogniser in `src/core/repository/hooks.ts`; dry-run reporting; tests through `run(args, context)` with ki-principal's and va-principal's converted hooks as fixtures; manual, guide and changelog lines.
 - Out: the claim declarations, the `ki-repo` frame template text and the shape criteria, which [KI-HARNESS-GOV-225](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-225-hook-content-claims.md) owns; the Husky conversion, which KI-TOOL-KI-CLI-163 delivered; the estate binding sweep, [KI-TOOL-KI-CLI-164](KI-TOOL-KI-CLI-164-estate-hook-binding-sweep.md); `ki git check-message`, [KI-TOOL-KI-CLI-161](KI-TOOL-KI-CLI-161-git-check-message.md); running conform against any repository.
+
+## Shaping
+
+**Approach:** hook-content claims declared beside `packageScripts` in rubric catalogues, validated in `src/core/rubric/loader.ts` and aggregated per repository in declared skill order, then composed by `ki repo conform` as the `ki-repo` frame followed by the claimed lines, at mode `0755`, refusing any existing hook with an unattributed line.
+
+**Dependencies:** [KI-HARNESS-GOV-225](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-225-hook-content-claims.md), which owns the claim declarations and frame text and leads the build.
+
+**Decisions still needed:** how repository-specific lines are kept, and whether the KI-TOOL-KI-CLI-163 conversion merges with composition, as set out in Discussion.
+
+**Promotion to Next:** when KI-HARNESS-GOV-225 settles the claim declaration shape and the repository-specific lines question is answered.
 
 ## Discussion
 
