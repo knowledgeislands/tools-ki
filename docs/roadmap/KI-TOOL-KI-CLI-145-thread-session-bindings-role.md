@@ -38,9 +38,9 @@ The agreed design this record implements:
 - `ki thread start|resume <key> --client claude|codex` sets `KI_THREAD=<key>`, passes `--session-id` and `-n <label>` to Claude or `codex resume <id>` to Codex, and opens with the thread's resume line.
 - The checkpoint label is authoritative; tooling sets the native name only at Claude start through `-n`, and Codex names are set by hand. `ki thread check` reads Codex names through read-only `thread/read` and reports name and role-cache drift; it never renames.
 - `ki thread show` prints the resolved role and its source; the checkpoint always wins over the cache.
-- `ki-checkpoint` validation accepts the `role` field, which [KI-HARNESS-GOV-199](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-199-thread-identity-role-native-sessions.md) adds to the standard and its rubric in Phase 1.
+- `ki-checkpoint` validation accepts the `role` field, which [KI-HARNESS-GOV-199 (pruned)](https://github.com/knowledgeislands/ki-agentic-harness/blob/727af90e9f619b782655677e1aa1e7897c34a279/docs/roadmap/KI-HARNESS-GOV-199-thread-identity-role-native-sessions.md) adds to the standard and its rubric in Phase 1.
 
-[KI-TOOL-KI-CLI-127 (pruned)](https://github.com/knowledgeislands/tools-ki/blob/a22214ee581b73a1f395da88f9a118ad89814bb9/docs/roadmap/KI-TOOL-KI-CLI-127-agent-status-live-threads.md) lists live runs and could later show bound threads, but stays separate because it is about runs. [KI-HARNESS-GOV-189](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-189-move-thread-between-hosts.md) owns moving a thread between hosts; bindings are rebuilt on each host rather than moved. The hook that reads the binding is [KI-HARNESS-GOV-199](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-199-thread-identity-role-native-sessions.md) Phase 3, registered by [KB-DOTFILES-UE-096](/Users/krisbrown/.local/share/chezmoi/docs/roadmap/KB-DOTFILES-UE-096-thread-identity-hook-registration.md).
+[KI-TOOL-KI-CLI-127 (pruned)](https://github.com/knowledgeislands/tools-ki/blob/a22214ee581b73a1f395da88f9a118ad89814bb9/docs/roadmap/KI-TOOL-KI-CLI-127-agent-status-live-threads.md) lists live runs and could later show bound threads, but stays separate because it is about runs. [KI-HARNESS-GOV-189](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-189-move-thread-between-hosts.md) owns moving a thread between hosts; bindings are rebuilt on each host rather than moved. The hook that reads the binding is [KI-HARNESS-GOV-199 (pruned)](https://github.com/knowledgeislands/ki-agentic-harness/blob/727af90e9f619b782655677e1aa1e7897c34a279/docs/roadmap/KI-HARNESS-GOV-199-thread-identity-role-native-sessions.md) Phase 3, registered by [KB-DOTFILES-UE-096](/Users/krisbrown/.local/share/chezmoi/docs/roadmap/KB-DOTFILES-UE-096-thread-identity-hook-registration.md).
 
 ## Boundary
 
@@ -51,7 +51,7 @@ The agreed design this record implements:
 
 **Approach:** a `ki thread` command group over one JSON binding per thread under `~/.local/state/ki/threads/`, as the agreed design above sets, with Claude bound through `--session-id` and `-n` and Codex through `codex resume` and read-only `thread/read`; then `ki agent launch` selecting a non-coordinator output style.
 
-**Dependencies:** [KI-HARNESS-GOV-199](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-199-thread-identity-role-native-sessions.md) Phase 1, in progress at Now, which defines the `role` field.
+**Dependencies:** [KI-HARNESS-GOV-199 (pruned)](https://github.com/knowledgeislands/ki-agentic-harness/blob/727af90e9f619b782655677e1aa1e7897c34a279/docs/roadmap/KI-HARNESS-GOV-199-thread-identity-role-native-sessions.md) Phase 1, in progress at Now, which defines the `role` field.
 
 **Decisions still needed:** the two planning questions in Discussion: how `ki agent launch` selects the style and proves its per-session effect, and how a Codex session learns its own native ID.
 
@@ -59,7 +59,7 @@ The agreed design this record implements:
 
 ## Dependencies / blocks
 
-Starts after [KI-HARNESS-GOV-199](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-199-thread-identity-role-native-sessions.md) Phase 1 has defined the `role` field. The ways-of-working thread dispatches it.
+Starts after [KI-HARNESS-GOV-199 (pruned)](https://github.com/knowledgeislands/ki-agentic-harness/blob/727af90e9f619b782655677e1aa1e7897c34a279/docs/roadmap/KI-HARNESS-GOV-199-thread-identity-role-native-sessions.md) Phase 1 has defined the `role` field. The ways-of-working thread dispatches it.
 
 ## Discussion
 
