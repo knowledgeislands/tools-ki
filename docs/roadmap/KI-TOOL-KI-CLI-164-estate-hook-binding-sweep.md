@@ -9,12 +9,12 @@ component: repo
 priority: high
 size: m
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: f0cc4012a8932538cc29bae4824c00ce20b48672
 created_at: 2026-10-19T22:46:17Z
-updated_at: 2026-10-20T00:02:38Z
+updated_at: 2026-10-20T00:16:07Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design section 4.2, HOOK-CAPTURE a), 2026-10-19
 ---
 
@@ -61,13 +61,13 @@ Decided under HIGH-APPLY, 20 October, with the coordinator's HOOK-ADOPT a) adopt
 
 ## Steps
 
-- [ ] Export the binding rule from `src/core/repository/hooks.ts`.
-- [ ] Add `hooks-path` and `set-aside` actions to `src/core/estate/model.ts` and `apply.ts`, with their inverses.
-- [ ] Add `src/core/estate/hooks.ts` planning the sweep from the registry.
-- [ ] Add `--hooks` to `src/commands/estate/converge.ts` with its rendering.
-- [ ] Add tests through `run(args, context)` in `src/tests/cli/estate/`.
-- [ ] Update the manual, regenerated command inventory and changelog.
-- [ ] Run the gate and move the record to Awaiting review.
+- [x] Export the binding rule from `src/core/repository/hooks.ts`.
+- [x] Add `hooks-path` and `set-aside` actions to `src/core/estate/model.ts` and `apply.ts`, with their inverses.
+- [x] Add `src/core/estate/hooks.ts` planning the sweep from the registry.
+- [x] Add `--hooks` to `src/commands/estate/converge.ts` with its rendering.
+- [x] Add tests through `run(args, context)` in `src/tests/cli/estate/`.
+- [x] Update the manual, regenerated command inventory and changelog.
+- [x] Run the gate and move the record to Awaiting review.
 
 ## Files touched
 
@@ -103,6 +103,46 @@ None beyond the manual.
 ### Roadmap
 
 None.
+
+## Review
+
+### Delivered
+
+The whole record, from baseline `f0cc4012` on 20 October 2026, by the `burnki` run in the tools-burndown Project.
+
+### Change Summary
+
+- `src/core/repository/hooks.ts`: `currentBinding` and `HOOK_DIRECTORY` are exported, so `conform` and the sweep share one binding rule.
+- `src/core/estate/model.ts`, `apply.ts`: new `hooks-path` and `set-aside` actions. `hooks-path` sets `core.hooksPath` or unsets it, and its inverse swaps the two values. `set-aside` moves a folder and is reversed by moving it back.
+- `src/core/estate/hooks.ts`: `planHookSweep` plans from the local registry. It skips registered linked worktrees, passes over clones without `.ki.toml` or a tracked `.githooks/pre-commit`, binds unset or Husky bindings, keeps and reports any other value, sets an untracked `.husky/` aside under `converge/set-aside/<stamp>/`, and notes linked-worktree overrides when `extensions.worktreeConfig` is on.
+- `src/commands/estate/converge.ts`: `--hooks [--apply]` prints one `bind`, `bound`, `keep` or `skip` line for each clone, then a summary. It is exclusive with a manifest, `--rollback`, `--clone` and `--allow-busy`.
+- `src/tests/cli/estate/hooks.test.ts`: covers preview, apply, idempotent rerun, rollback, rollback of the rollback, and grammar, all against real Git.
+- `man/ki.1`, the regenerated command inventory and the changelog.
+
+### Verification
+
+| Requirement | Evidence |
+| --- | --- |
+| 1 preview lists and changes nothing | `previews, applies and rolls back the hook binding sweep` asserts the exact preview and an unchanged `core.hooksPath` |
+| 2 apply binds, sets aside, logs | the same case asserts both bindings, the moved `.husky/` contents and the log's registry manifest |
+| 3 rollback restores | the same case asserts the unset and `.husky/_` values and `.husky/` moved back; reversing the rollback log plans the bind again |
+| 4 no action or report-only cases | bound, no `.ki.toml`, no tracked hook, another value and a worktree override in the same fixture; the rerun applies nothing |
+| 5 usage errors | `rejects a manifest, --rollback, --clone and --allow-busy alongside --hooks` |
+
+- Gate: `bun run test:coverage` passed with 1,454 tests at 100%. `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and the command-inventory check passed. `ki repo audit --repo .` reported FAIL=0.
+- The source-built `ki estate converge --hooks` previewed this machine's registry without changing it: 47 clones are bound, and `ki-design` would be rebound from `.husky/_`.
+
+### Outstanding concerns
+
+- The sweep has not been applied on any machine. Running it on Terra and Sol belongs to the migration run, and `ki-design` is this machine's only candidate.
+
+### Post-change review
+
+A single estate-wide command now brings every registered KI clone to its committed hooks, using the same rule as `ki repo conform`, and the existing converge log reverses it.
+
+### Mini recap
+
+`ki estate converge --hooks` previews, applies and rolls back hook binding across the registry.
 
 ## Discussion
 

@@ -65,6 +65,16 @@ const perform = async (ports: EstatePorts, action: ConvergeAction): Promise<void
       return
     case 'mkdir':
       await mkdir(action.path, { recursive: true })
+      return
+    case 'hooks-path':
+      await requiredGit(
+        ports,
+        action.path,
+        action.to === undefined ? ['config', '--unset', 'core.hooksPath'] : ['config', 'core.hooksPath', action.to]
+      )
+      return
+    case 'set-aside':
+      await relocate(action.from, action.to)
   }
 }
 
@@ -131,6 +141,13 @@ const inverse = (action: ConvergeAction): ConvergeAction | undefined => {
       return { kind: 'mkdir', path: action.path }
     case 'mkdir':
       return { kind: 'rmdir', path: action.path }
+    case 'hooks-path':
+      return {
+        kind: 'hooks-path',
+        path: action.path,
+        ...(action.to === undefined ? {} : { from: action.to }),
+        ...(action.from === undefined ? {} : { to: action.from })
+      }
     default:
       return { ...action, from: action.to, to: action.from }
   }

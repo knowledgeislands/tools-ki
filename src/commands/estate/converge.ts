@@ -8,7 +8,10 @@ import {
   type ConvergePlan,
   type EstatePorts,
   executeConvergence,
+  type HookSweepItem,
+  type HookSweepPlan,
   planConvergence,
+  planHookSweep,
   planRollback,
   type SweepHit,
   sweepOccurrences
@@ -17,6 +20,7 @@ import {
 interface ConvergeCommandOptions {
   readonly apply?: boolean
   readonly clone?: boolean
+  readonly hooks?: boolean
   readonly allowBusy: readonly string[]
   readonly rollback?: string
 }
@@ -46,6 +50,10 @@ const describe = (action: ConvergeAction): readonly string[] => {
       return [`remove empty ${action.path}`]
     case 'mkdir':
       return [`recreate ${action.path}`]
+    case 'hooks-path':
+      return [`core.hooksPath ${action.path}: ${action.from ?? 'unset'} -> ${action.to ?? 'unset'}`]
+    case 'set-aside':
+      return [`set aside ${action.from} -> ${action.to}`]
   }
 }
 
@@ -79,6 +87,22 @@ const renderPlan = (plan: ConvergePlan, heading: string): string => {
   ].join('\n')
 }
 
+const renderHookItem = (item: HookSweepItem): string =>
+  [
+    `${item.state} ${item.path}`,
+    ...item.actions.flatMap(describe).map((line) => `  ${line}`),
+    ...item.notes.map((note) => `  note: ${note}`)
+  ].join('\n')
+
+const renderHookSweep = (plan: HookSweepPlan, heading: string): string => {
+  const count = (state: HookSweepItem['state']): number => plan.items.filter((item) => item.state === state).length
+  return [
+    heading,
+    ...plan.items.map(renderHookItem),
+    `summary: ${count('bind')} bind, ${count('bound')} bound, ${count('keep')} keep, ${count('skip')} skip`
+  ].join('\n')
+}
+
 const renderSweep = (hits: readonly SweepHit[]): string =>
   [
     `sweep: ${hits.length} remaining occurrence(s), report only`,
@@ -98,9 +122,14 @@ export const createEstateConvergeCommand = (context: KiContext): Command =>
       []
     )
     .option('--rollback <log>', 'reverse the actions recorded in a converge log')
+    .option('--hooks', 'bind registered KI checkouts to their tracked .githooks instead of moving checkouts')
     .action(async (manifest: string | undefined, options: ConvergeCommandOptions) => {
-      if ((manifest === undefined) === (options.rollback === undefined))
-        throw grammarError('ki estate converge requires exactly one manifest or --rollback <log>')
+      if (options.hooks && (manifest !== undefined || options.rollback !== undefined))
+        throw grammarError('ki estate converge --hooks does not accept a manifest or --rollback')
+      if (options.hooks && (options.clone || options.allowBusy.length))
+        throw grammarError('ki estate converge --hooks does not accept --clone or --allow-busy')
+      if (!options.hooks && (manifest === undefined) === (options.rollback === undefined))
+        throw grammarError('ki estate converge requires exactly one manifest, --rollback <log> or --hooks')
       if (options.rollback !== undefined && (options.clone || options.allowBusy.length))
         throw grammarError('ki estate converge --rollback does not accept --clone or --allow-busy')
       const ports: EstatePorts = {
@@ -114,6 +143,15 @@ export const createEstateConvergeCommand = (context: KiContext): Command =>
       const local = (path: string): string =>
         resolve(context.workingDirectory, path.replace(/^~(?=\/)/, context.homeDirectory))
       const mode = options.apply ? 'apply' : 'preview'
+      if (options.hooks) {
+        const plan = await planHookSweep(ports)
+        context.stdout.write(`${renderHookSweep(plan, `ki estate converge: hooks ${mode} from ${plan.registry}`)}\n`)
+        const actions = plan.items.flatMap((item) => item.actions)
+        if (!options.apply) context.stdout.write('preview only; rerun with --apply to execute\n')
+        else if (!actions.length) context.stdout.write('nothing to apply\n')
+        else context.stdout.write(`log ${await executeConvergence(ports, plan.registry, actions)}\n`)
+        return
+      }
       if (options.rollback !== undefined) {
         const plan = await planRollback(local(options.rollback))
         context.stdout.write(

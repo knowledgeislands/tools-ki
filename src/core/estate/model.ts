@@ -42,6 +42,9 @@ export type ConvergeAction =
   | { readonly kind: 'symlink'; readonly path: string; readonly from: string; readonly to: string }
   | { readonly kind: 'rmdir'; readonly path: string }
   | { readonly kind: 'mkdir'; readonly path: string }
+  /** Sets `core.hooksPath` to `to`, or unsets it when `to` is absent. */
+  | { readonly kind: 'hooks-path'; readonly path: string; readonly from?: string; readonly to?: string }
+  | { readonly kind: 'set-aside'; readonly from: string; readonly to: string }
 
 export type ConvergeState = 'converge' | 'no-op' | 'skip' | 'to clone' | 'absent'
 

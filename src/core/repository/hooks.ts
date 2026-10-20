@@ -11,7 +11,7 @@ import type { Runner } from '../runtime/runner.ts'
 // neither set a hook's executable mode, remove `.husky/` nor bind the clone, so the host
 // composes the hooks from what the repository already runs and refuses what it cannot place.
 
-const HOOK_DIRECTORY = '.githooks'
+export const HOOK_DIRECTORY = '.githooks'
 const HUSKY_DIRECTORY = '.husky'
 const HUSKY_BINDING = '.husky/_'
 const HOOKS = ['pre-commit', 'commit-msg'] as const
@@ -450,7 +450,8 @@ const knipWrite = async (
   return undefined
 }
 
-const currentBinding = async (
+/** What binding a clone needs: none when `.githooks` is bound, `bind` when unset or Husky's, else `keep`. */
+export const currentBinding = async (
   root: string,
   runner: Runner,
   environment: Environment

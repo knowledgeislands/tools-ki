@@ -457,6 +457,9 @@ Preview or apply moving this machine's checkouts to an estate targets manifest.
 .TP
 .B ki estate converge --rollback <log> [--apply]
 Preview or apply the reverse of a recorded convergence.
+.TP
+.B ki estate converge --hooks [--apply]
+Preview or apply binding registered KI checkouts to their tracked hooks.
 .SS Development
 \&
 .TP
@@ -2223,6 +2226,39 @@ under
 .B ki estate converge --rollback <log> [--apply]
 Reverse the actions recorded in a convergence log, newest first, refusing any
 step whose recorded state has since changed. Cloned checkouts are retained.
+.TP
+.B ki estate converge --hooks [--apply]
+Plan from the local registry rather than a manifest. Each registered primary
+checkout with a
+.I .ki.toml
+and a tracked
+.I .githooks/pre-commit
+is bound by the rule
+.B ki repo conform
+applies: an unset
+.I core.hooksPath
+or Husky's
+.I .husky/_
+becomes
+.IR .githooks ,
+and any other value is kept and reported. A
+.I .husky/
+holding nothing tracked is set aside under
+.IR $KI_STATE_HOME/converge/set-aside/ ,
+never deleted. A linked worktree that sets its own
+.I core.hooksPath
+is reported and left. Registered linked worktrees are skipped. Each checkout
+prints one line,
+.BR bind ,
+.BR bound ,
+.B keep
+or
+.BR skip ,
+then a summary.
+.B --apply
+writes a convergence log that
+.B --rollback
+reverses.
 .SS Development
 \&
 .PP

@@ -625,7 +625,7 @@ describe('[ki estate converge]', () => {
     const box = await sandbox()
     const home = await realpath(box.home.path)
     expect((await box.run('ki estate converge')).output).toContain(
-      'ki: error: ki estate converge requires exactly one manifest or --rollback <log>'
+      'ki: error: ki estate converge requires exactly one manifest, --rollback <log> or --hooks'
     )
     expect((await box.run('ki estate converge targets.json --rollback log.json')).exitCode).toBe(2)
     expect((await box.run('ki estate converge --rollback log.json --clone')).output).toContain(
