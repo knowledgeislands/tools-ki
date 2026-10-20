@@ -8,13 +8,12 @@ project: observatory
 component: territory
 priority: medium
 size: m
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: c5168f3e11ec48d1937fa50ce0be8918e48d6327
 created_at: 2026-10-19T07:40:43Z
-updated_at: 2026-10-20T00:01:25Z
+updated_at: 2026-10-20T00:50:25Z
 ---
 
 # KI-TOOL-KI-CLI-154: Territory Tolerates Unregistered Members
@@ -132,6 +131,18 @@ A single unregistered member no longer hides the rest of a territory from `show`
 
 `ki territory show` and `audit` report unregistered members and check the rest, exiting 1 until coverage is complete.
 
+## Done
+
+Accepted 2026-10-20 by Kris Brown under the TO-DONE standing grant, independently verified by Codex acceptki2, on the review packet above.
+
 ## Discussion
 
 The four open design questions are settled in Design.
+
+### Independent acceptance review, 20 October 2026
+
+Kris Brown's TO-DONE decision of 20 October 2026 ([source](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.tools-burndown/decisions.md)) explicitly authorises an independent accept pass taking Awaiting review to Done; the acceptki2 brief names this record and grants acceptance and pruning.
+
+Independent acceptki2 verification on 20 October 2026: the full coverage run passed all 1,454 tests in 84 files with 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint and the command-inventory check passed. The complete declared repository audit passed with FAIL=0 and three pre-existing warnings. GitHub checks were unavailable under the brief's prohibition on remote calls; the audit used its normal unavailable-GitHub path. The public CLI tests and the changed implementation were reviewed independently of the delivery reports.
+
+The source-built Techmedix audit named the archived unregistered member, checked three registered repositories and exited 1; show exited 1 and strict roots exited 2.

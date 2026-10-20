@@ -8,13 +8,12 @@ project: tools-burndown
 component: acquire
 priority: high
 size: s
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 64dacc4e134c6552ba83029519671e6fc82c38a1
 created_at: 2026-10-19T22:52:35Z
-updated_at: 2026-10-20T00:16:35Z
+updated_at: 2026-10-20T00:50:25Z
 transferred_from: Personal > Acquire intake, Kris's decision relayed on 19 October 2026
 ---
 
@@ -132,6 +131,16 @@ The skip is now a pure selection filter applied before any content read, so it n
 
 Routine Granola import trusts Acquired membership alone: marked meetings are skipped silently, the ledger only carries forward what it already held, and marking stays the proof-gated step.
 
+## Done
+
+Accepted 2026-10-20 by Kris Brown under the TO-DONE standing grant, independently verified by Codex acceptki2, on the review packet above.
+
 ## Discussion
 
 Keeping the ledger untouched for skipped meetings, rather than writing a marker-only entry, means the ledger still records only verified captures and Acquire's existing `.acquire/granola/ledger.json` needs no migration.
+
+### Independent acceptance review, 20 October 2026
+
+Kris Brown's TO-DONE decision of 20 October 2026 ([source](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.tools-burndown/decisions.md)) explicitly authorises an independent accept pass taking Awaiting review to Done; the acceptki2 brief names this record and grants acceptance and pruning.
+
+Independent acceptki2 verification on 20 October 2026: the full coverage run passed all 1,454 tests in 84 files with 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint and the command-inventory check passed. The complete declared repository audit passed with FAIL=0 and three pre-existing warnings. GitHub checks were unavailable under the brief's prohibition on remote calls; the audit used its normal unavailable-GitHub path. The public CLI tests and the changed implementation were reviewed independently of the delivery reports.

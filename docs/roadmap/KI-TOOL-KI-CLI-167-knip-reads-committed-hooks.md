@@ -9,12 +9,12 @@ component: repo
 priority: high
 size: s
 horizon: now
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked_by: []
 baseline_ref: b7e64c0e850129dee48f1401993b50820c8bfcfa
 created_at: 2026-10-19T23:05:00Z
-updated_at: 2026-10-19T23:34:44Z
+updated_at: 2026-10-20T00:50:25Z
 transferred_from: ki-principal ki.tools-burndown KNIP-HUSKY a), Kris, 19 October 2026 23:42 BST
 ---
 
@@ -150,3 +150,9 @@ Pointing the plugin at the committed hooks lets Knip treat the hook tools as use
 ## Discussion
 
 The edits are textual because reserialising `knip.json` changes the layout of unrelated arrays, which Biome then reports; the round-trip check keeps the textual edit honest. `knip.ts` is not executed, since conform should not run repository code, so only a plain object literal is edited.
+
+### Independent acceptance review, 20 October 2026
+
+Acceptance failed on the work-item-format standard's Awaiting review rule: Outstanding concerns leaves Knip scaffolding as a harness change without a work identifier. KNIP-HUSKY a) in the 19 October decision includes scaffolding; this record explicitly excludes creating a Knip configuration, leaving a newly scaffolded configuration dependent on a second conform run. The implemented existing-configuration requirements and full gate pass, but the remaining requested scaffolding must be carried by an identified follow-up before acceptance. The coordinator must authorise and capture that follow-up (or explicitly dispose of the requirement); this pass creates no record or scope decision.
+
+Independent acceptki2 verification on 20 October 2026: the full coverage run passed all 1,454 tests in 84 files with 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint and the command-inventory check passed. The complete declared repository audit passed with FAIL=0 and three pre-existing warnings. GitHub checks were unavailable under the brief's prohibition on remote calls; the audit used its normal unavailable-GitHub path. The public CLI tests and the changed implementation were reviewed independently of the delivery reports.

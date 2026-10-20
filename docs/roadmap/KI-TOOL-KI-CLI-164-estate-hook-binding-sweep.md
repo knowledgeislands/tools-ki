@@ -8,13 +8,12 @@ project: tools-burndown
 component: repo
 priority: high
 size: m
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: f0cc4012a8932538cc29bae4824c00ce20b48672
 created_at: 2026-10-19T22:46:17Z
-updated_at: 2026-10-20T00:16:07Z
+updated_at: 2026-10-20T00:50:25Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design section 4.2, HOOK-CAPTURE a), 2026-10-19
 ---
 
@@ -144,6 +143,10 @@ A single estate-wide command now brings every registered KI clone to its committ
 
 `ki estate converge --hooks` previews, applies and rolls back hook binding across the registry.
 
+## Done
+
+Accepted 2026-10-20 by Kris Brown under the TO-DONE standing grant, independently verified by Codex acceptki2, on the review packet above.
+
 ## Discussion
 
 ### Where the action belongs
@@ -159,3 +162,11 @@ A single estate-wide command now brings every registered KI clone to its committ
 The binding rule already lives in `src/core/repository/hooks.ts`; the sweep should call it rather than restate it, so `conform` and the sweep cannot disagree.
 
 All three questions are settled in Design.
+
+### Independent acceptance review, 20 October 2026
+
+Kris Brown's TO-DONE decision of 20 October 2026 ([source](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.tools-burndown/decisions.md)) explicitly authorises an independent accept pass taking Awaiting review to Done; the acceptki2 brief names this record and grants acceptance and pruning.
+
+Independent acceptki2 verification on 20 October 2026: the full coverage run passed all 1,454 tests in 84 files with 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint and the command-inventory check passed. The complete declared repository audit passed with FAIL=0 and three pre-existing warnings. GitHub checks were unavailable under the brief's prohibition on remote calls; the audit used its normal unavailable-GitHub path. The public CLI tests and the changed implementation were reviewed independently of the delivery reports.
+
+The source-built hook sweep preview reported one binding candidate and 47 bound clones; byte hashes of every available registered clone's Git configuration and the registry remained unchanged. Apply and rollback passed through the public CLI sandbox tests; no live sweep was applied.

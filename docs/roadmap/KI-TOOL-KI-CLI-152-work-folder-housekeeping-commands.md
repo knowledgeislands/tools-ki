@@ -9,12 +9,12 @@ component: agent
 priority: high
 size: m
 horizon: now
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked_by: []
 baseline_ref: 708a3b3266eaed05cda82a355c13ab03d0fc1640
 created_at: 2026-10-18T19:40:00Z
-updated_at: 2026-10-20T00:31:00Z
+updated_at: 2026-10-20T00:50:25Z
 ---
 
 # KI-TOOL-KI-CLI-152: Work Folder Housekeeping Commands
@@ -159,3 +159,9 @@ Adopted to Now and planned on 20 October 2026 under TRIAGE-NEXT a), which asked 
 - **`ki work prune`:** the standard names briefs as `briefs/<run>.md`, but live folders keep `<name>.brief.md` beside the reports. Whether an outcome is homed is the steward's judgement, so the command can list only briefs mechanically and must take reports from an explicit list.
 
 The close gate keeps reading numbered headings indefinitely, as history.
+
+### Independent acceptance review, 20 October 2026
+
+Acceptance failed on the work-item-format standard's Awaiting review rule: Outstanding concerns names `ki work message` and `ki work prune` as unrecorded follow-up work. Required follow-up must have its own work identifier before acceptance. The implementation and full gate pass, but this review packet cannot be accepted until the coordinator authorises and captures that follow-up (or explicitly disposes of the requirement) and the packet cites the resulting durable record. CANCEL-MERGE-BURNKI is already with the coordinator; this pass creates no record or scope decision.
+
+Independent acceptki2 verification on 20 October 2026: the full coverage run passed all 1,454 tests in 84 files with 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint and the command-inventory check passed. The complete declared repository audit passed with FAIL=0 and three pre-existing warnings. GitHub checks were unavailable under the brief's prohibition on remote calls; the audit used its normal unavailable-GitHub path. The public CLI tests and the changed implementation were reviewed independently of the delivery reports.

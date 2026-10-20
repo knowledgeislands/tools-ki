@@ -8,13 +8,12 @@ component: git
 project: tools-burndown
 priority: high
 size: s
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: b32a5e5a6f752c5686bbf3e27ff4b77d16b3a968
 created_at: 2026-10-19T21:30:00Z
-updated_at: 2026-10-19T23:53:17Z
+updated_at: 2026-10-20T00:50:25Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design, COMMIT-MSG a), 2026-10-19
 ---
 
@@ -152,6 +151,18 @@ Package-less repositories can now bind `.githooks/commit-msg` to `ki git check-m
 
 `ki git check-message <file>` checks a commit message against the deterministic `ki-git` rules with no package.
 
+## Done
+
+Accepted 2026-10-20 by Kris Brown under the TO-DONE standing grant, independently verified by Codex acceptki2, on the review packet above.
+
 ## Discussion
 
 The four planning questions are settled in Design. Header length and subject case, which `@commitlint/config-conventional` also checks, are left out because `ki-git` does not bind them; tools-ki owns priority and design.
+
+### Independent acceptance review, 20 October 2026
+
+Kris Brown's TO-DONE decision of 20 October 2026 ([source](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.tools-burndown/decisions.md)) explicitly authorises an independent accept pass taking Awaiting review to Done; the acceptki2 brief names this record and grants acceptance and pruning.
+
+Independent acceptki2 verification on 20 October 2026: the full coverage run passed all 1,454 tests in 84 files with 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint and the command-inventory check passed. The complete declared repository audit passed with FAIL=0 and three pre-existing warnings. GitHub checks were unavailable under the brief's prohibition on remote calls; the audit used its normal unavailable-GitHub path. The public CLI tests and the changed implementation were reviewed independently of the delivery reports.
+
+The source-built check-message command accepted the ten most recent repository commit messages and rejected a malformed header with exit 1.
