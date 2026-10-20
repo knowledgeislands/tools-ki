@@ -7,6 +7,7 @@ import { agentState, agents, existingRun, pidOf, readQueue, running } from './ru
 import {
   adoptStateFiles,
   type DecisionEntry,
+  decisionName,
   decisionsLog,
   parseDecisions,
   type ThreadHome,
@@ -104,7 +105,7 @@ const decisionLines = async (
     }
   const lines: GateLine[] = []
   for (const entry of decisions) {
-    const name = `decision ${entry.number}${entry.class === undefined ? '' : ` (${entry.class})`}`
+    const name = `decision ${decisionName(entry)}${entry.class === undefined ? '' : ` (${entry.class})`}`
     if (entry.home === undefined) {
       lines.push(
         entry.class === 'operational' ? ok(`${name} is its own home`) : blocker(`${name} has no home (${log})`)
@@ -215,7 +216,7 @@ const note = (
           ]
         : decisions.map(
             (entry) =>
-              `- Decision ${entry.number}${entry.class === undefined ? '' : ` (${entry.class})`}: ${entry.home ?? 'its own home'}`
+              `- Decision ${decisionName(entry)}${entry.class === undefined ? '' : ` (${entry.class})`}: ${entry.home ?? 'its own home'}`
           )),
     ''
   ].join('\n')

@@ -12,6 +12,7 @@ import {
   instant,
   read,
   runDirectory,
+  localTime as stamp,
   temporaryDirectory
 } from './context.ts'
 import { deriveEvents, type Observed, type RunEvent, readEvents, recordEvent } from './events.ts'
@@ -50,26 +51,6 @@ export const existingRun = async (context: AgentContext, run: string): Promise<s
 }
 
 const lines = (text: string | undefined): string[] => (text ?? '').split('\n').filter((line) => line.trim())
-
-const clock = (context: AgentContext, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormatPart[] => {
-  try {
-    return new Intl.DateTimeFormat('en-GB', {
-      ...options,
-      timeZone: context.environment.TZ || undefined
-    }).formatToParts(context.now())
-  } catch {
-    throw new KiError(`invalid TZ: '${context.environment.TZ}'`, 2)
-  }
-}
-
-const part = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes): string =>
-  parts.find((candidate) => candidate.type === type)?.value as string
-
-/** `HH:MM <zone>` in the owner's time zone, taken from `TZ` when set. */
-const stamp = (context: AgentContext): string => {
-  const parts = clock(context, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZoneName: 'short' })
-  return `${part(parts, 'hour')}:${part(parts, 'minute')} ${part(parts, 'timeZoneName')}`
-}
 
 const delegationAssets = async (context: AgentContext): Promise<string> => {
   const skills = join(context.harnessDirectory, 'skills')

@@ -9,12 +9,12 @@ component: agent
 priority: high
 size: m
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 708a3b3266eaed05cda82a355c13ab03d0fc1640
 created_at: 2026-10-18T19:40:00Z
-updated_at: 2026-10-20T00:19:40Z
+updated_at: 2026-10-20T00:31:00Z
 ---
 
 # KI-TOOL-KI-CLI-152: Work Folder Housekeeping Commands
@@ -70,11 +70,11 @@ The heading form settled here is the one the decision-heading check in KI-HARNES
 
 ## Steps
 
-- [ ] Move the local clock helper to `src/core/agent/context.ts`.
-- [ ] Make `parseDecisions` read every H2 with an optional number, and name entries by number or heading in `close.ts`.
-- [ ] Make `appendDecision` unnumbered with `--title`, and `reconcileDecision` heading-addressed, in `thread.ts` and `src/commands/agent/index.ts`.
-- [ ] Update the agent tests, the manual, the command inventory and the changelog.
-- [ ] Run the gate and move the record to Awaiting review.
+- [x] Move the local clock helper to `src/core/agent/context.ts`.
+- [x] Make `parseDecisions` read every H2 with an optional number, and name entries by number or heading in `close.ts`.
+- [x] Make `appendDecision` unnumbered with `--title`, and `reconcileDecision` heading-addressed, in `thread.ts` and `src/commands/agent/index.ts`.
+- [x] Update the agent tests, the manual, the command inventory and the changelog.
+- [x] Run the gate and move the record to Awaiting review.
 
 ## Files touched
 
@@ -109,6 +109,47 @@ None beyond the manual.
 ### Roadmap
 
 KI-HARNESS-GOV-200 can take its heading form from this record.
+
+## Review
+
+### Delivered
+
+The close gate reads every H2 of a decisions log as an entry, `ki agent decide` writes unnumbered `## <YYYY-MM-DD HH:MM zone> - <title>` entries with a `--title` option, and `ki agent reconcile` finds an entry by heading, leading timestamp or, in a numbered log, number.
+
+### Change Summary
+
+- `src/core/agent/context.ts` holds the shared `localTime` formatter; `runs.ts` imports it in place of its own clock.
+- `src/core/agent/thread.ts` parses every H2 with an optional number, names entries through `decisionName`, appends unnumbered entries with the title rules, and refuses an absent or ambiguous `reconcile` entry.
+- `src/core/agent/close.ts` names gate entries by number or heading.
+- `src/commands/agent/index.ts` adds `decide --title` and the `reconcile <entry>` argument, and prints the heading.
+- The test sandbox defaults `TZ` to `UTC` so stamps do not depend on the host; the agent tests cover timestamped, free-text and numbered logs.
+- The manual, command inventory and changelog follow.
+
+### Verification
+
+| Check | Outcome |
+| --- | --- |
+| `bun run test:coverage` | 1454 passed, 100% coverage |
+| `bunx tsc --noEmit` | pass |
+| `bunx biome check .` | pass |
+| `bunx rumdl check .` | pass |
+| `bunx knip` | pass |
+| `mandoc -T lint man/ki.1` | no new findings |
+| command inventory `--check` | pass |
+| `ki repo audit --concise` | FAIL=0 |
+
+### Outstanding concerns
+
+- KI-HARNESS-GOV-200's decision-heading check should take "any H2 is an entry" from this record.
+- `ki work message` and `ki work prune` remain unrecorded; the run's CANCEL-MERGE query offers them for a record of their own.
+
+### Post-change review
+
+Requirements 1 to 4 are met and tested: the close gate reports timestamped, free-text and numbered entries and blocks an unhomed one; `decide` defaults the title to `<TAG> <letter>)` or `owner decision`; `reconcile` refuses absent and ambiguous entries. No legacy alias was added; numbered logs read as history.
+
+### Mini recap
+
+The decisions-log tooling now follows the unnumbered `ki-coordination` form, and the close gate no longer passes a current-form log unread.
 
 ## Discussion
 

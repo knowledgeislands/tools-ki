@@ -276,29 +276,31 @@ export const createAgentCommand = (context: KiContext): Command => {
 
   command.addCommand(
     new Command('decide')
-      .description("append a numbered, timestamped owner decision to the work's tracked decisions log")
+      .description("append a timestamped owner decision to the work's tracked decisions log")
       .argument('<run>', 'run name')
       .argument('<text...>', "the decision, in the owner's words")
       .option('--log <path>', "decisions log to append instead of the work's own")
       .option('--home <path-or-id>', "the decision's durable home: a committed path or a work-record identifier")
+      .option('--title <title>', "the entry heading's title; defaults to the query tag and letter, or 'owner decision'")
       .addOption(classOption())
       .addOption(repoOption)
       .action(
         async (
           run: string,
           text: readonly string[],
-          options: { log?: string; home?: string; class?: DecisionClass; repo?: string }
+          options: { log?: string; home?: string; class?: DecisionClass; title?: string; repo?: string }
         ) => {
           const result = await appendDecision(agentContext(context), run, {
             text: text.join(' '),
             log: options.log,
             home: options.home,
             class: options.class,
+            title: options.title,
             repo: options.repo
           })
           if (result.adopted.length)
             write(`Moved ${result.adopted.join(', ')} from the state folder into ${dirname(result.path)}`)
-          write(`Decision ${result.number} recorded in ${result.path}`)
+          write(`Decision '${result.heading}' recorded in ${result.path}`)
         }
       )
   )
@@ -307,16 +309,16 @@ export const createAgentCommand = (context: KiContext): Command => {
     new Command('reconcile')
       .description("write or replace one decision's durable home or class in the work's tracked decisions log")
       .argument('<run>', 'run name')
-      .argument('<number>', 'decision number', seconds)
+      .argument('<entry>', "the entry's heading or its leading timestamp, or a number in a numbered log")
       .argument('[home]', 'a committed path or a work-record identifier')
       .addOption(classOption())
-      .action(async (run: string, number: number, home: string | undefined, options: { class?: DecisionClass }) => {
-        const path = await reconcileDecision(agentContext(context), run, number, { home, class: options.class })
+      .action(async (run: string, entry: string, home: string | undefined, options: { class?: DecisionClass }) => {
+        const path = await reconcileDecision(agentContext(context), run, entry, { home, class: options.class })
         const changed = [
           ...(home === undefined ? [] : [`home ${home}`]),
           ...(options.class === undefined ? [] : [`class ${options.class}`])
         ]
-        write(`Decision ${number} ${changed.join(' ')} recorded in ${path}`)
+        write(`Decision '${entry}' ${changed.join(' ')} recorded in ${path}`)
       })
   )
 

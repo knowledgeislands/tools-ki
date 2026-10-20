@@ -54,6 +54,32 @@ export const git = async (
 ): Promise<{ readonly exitCode: number; readonly output: string }> =>
   context.runner('git', ['-C', directory, ...arguments_], context.environment)
 
+const clock = (context: AgentContext, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormatPart[] => {
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      ...options,
+      timeZone: context.environment.TZ || undefined
+    }).formatToParts(context.now())
+  } catch {
+    throw new KiError(`invalid TZ: '${context.environment.TZ}'`, 2)
+  }
+}
+
+/** `HH:MM <zone>`, or `YYYY-MM-DD HH:MM <zone>` with the date, in the owner's time zone, taken from `TZ` when set. */
+export const localTime = (context: AgentContext, dated = false): string => {
+  const parts = clock(context, {
+    ...(dated ? { year: 'numeric', month: '2-digit', day: '2-digit' } : {}),
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZoneName: 'short'
+  })
+  const part = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((candidate) => candidate.type === type)?.value as string
+  const time = `${part('hour')}:${part('minute')} ${part('timeZoneName')}`
+  return dated ? `${part('year')}-${part('month')}-${part('day')} ${time}` : time
+}
+
 /** `YYYY-MM-DDTHH:MM:SSZ`: the instant in UTC to the second, as the decisions log and close note record it. */
 export const instant = (context: AgentContext): string =>
   new Date(context.now()).toISOString().replace(/\.\d{3}Z$/, 'Z')

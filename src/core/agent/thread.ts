@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { gitWorkingTreeRoot } from '../runtime/git.ts'
 import { isWorkId, WORK_DIRECTORY, workSlug } from '../work/status.ts'
-import { type AgentContext, git, instant, read, runDirectory } from './context.ts'
+import { type AgentContext, git, localTime, read, runDirectory } from './context.ts'
 
 /**
  * Where a run's knowledge files live: the owning repository's tracked work folder
@@ -318,7 +318,10 @@ export type DecisionClass = (typeof decisionClasses)[number]
 
 /** One entry of a decisions log, with the line range it spans. */
 export interface DecisionEntry {
-  readonly number: number
+  /** The heading's text after `## `. */
+  readonly heading: string
+  /** The number of a `## Decision <n>` heading, kept as history in a log written before the work model. */
+  readonly number: number | undefined
   readonly home: string | undefined
   /** As written, so an entry with a class `ki` does not know is still read. */
   readonly class: string | undefined
@@ -327,25 +330,39 @@ export interface DecisionEntry {
   readonly end: number
 }
 
-const heading = /^## Decision (\d+)\b/
+const numbered = /^Decision (\d+)\b/
 const homeLine = /^home: (.+)$/
 const classLine = /^class: (.+)$/
 
 const field = (lines: readonly string[], pattern: RegExp): string | undefined =>
   lines.map((line) => pattern.exec(line)?.[1]).find((value) => value !== undefined)
 
-/** The numbered entries of a log, in file order; an entry runs to the next `## ` heading. */
+/**
+ * The entries of a log, in file order: every `## ` heading opens one, since the log holds nothing
+ * else, and an entry runs to the next. Timestamped, dated and numbered headings all read alike.
+ */
 export const parseDecisions = (text: string): readonly DecisionEntry[] => {
   const all = text.split('\n')
   const sections = all.flatMap((line, index) => (line.startsWith('## ') ? [index] : []))
-  return sections.flatMap((start, position) => {
-    const match = heading.exec(all[start] as string)
-    if (!match) return []
+  return sections.map((start, position) => {
+    const heading = (all[start] as string).slice(3).trim()
+    const number = numbered.exec(heading)?.[1]
     const end = sections[position + 1] ?? all.length
     const body = all.slice(start + 1, end)
-    return [{ number: Number(match[1]), home: field(body, homeLine), class: field(body, classLine), start, end }]
+    return {
+      heading,
+      number: number === undefined ? undefined : Number(number),
+      home: field(body, homeLine),
+      class: field(body, classLine),
+      start,
+      end
+    }
   })
 }
+
+/** How the close gate and `reconcile` name an entry: its number where it has one, else its heading. */
+export const decisionName = (entry: DecisionEntry): string =>
+  entry.number === undefined ? entry.heading : String(entry.number)
 
 export interface DecisionRequest {
   readonly text: string
@@ -354,6 +371,8 @@ export interface DecisionRequest {
   /** The decision's durable home: a committed path or a work-record identifier. */
   readonly home?: string | undefined
   readonly class?: DecisionClass | undefined
+  /** The heading's title; a `<TAG> - <letter>` answer defaults to `<TAG> <letter>)`, other text to `owner decision`. */
+  readonly title?: string | undefined
   readonly repo?: string | undefined
 }
 
@@ -390,11 +409,11 @@ const resolveLetter = async (
   context: AgentContext,
   run: string,
   text: string
-): Promise<{ readonly text: string; readonly source?: string }> => {
+): Promise<{ readonly text: string; readonly title: string; readonly source?: string }> => {
   if (bareLetter.test(text))
     throw new KiError(`'${text}' is a bare option letter; give its query tag, as '<TAG> - ${text.charAt(0)}'`, 2)
   const match = taggedLetter.exec(text)
-  if (!match) return { text }
+  if (!match) return { text, title: 'owner decision' }
   const [, tag, letter] = match as unknown as [string, string, string]
   const thread = await readThread(context, run)
   const folder = thread && threadPath(thread)
@@ -408,23 +427,23 @@ const resolveLetter = async (
     const source = join((thread as ThreadHome).folder, file)
     const wording = options.get(letter)
     if (wording === undefined) throw new KiError(`${source} has no option ${letter}) under ${tag}`, 1)
-    return { text: `${letter}) ${wording}`, source }
+    return { text: `${letter}) ${wording}`, title: `${tag} ${letter})`, source }
   }
   throw new KiError(`no report in the thread folder of ${run} carries a ${tag} query`, 1)
 }
 
 /**
- * Appends a numbered, timestamped owner decision; returns its number, the log written and
- * the state-folder files moved into the thread folder first, so that a run's tracked log
- * continues its legacy numbering rather than restarting it.
+ * Appends an unnumbered owner decision headed `<YYYY-MM-DD HH:MM zone> - <title>`; returns its
+ * heading, the log written and the state-folder files moved into the thread folder first.
  */
 export const appendDecision = async (
   context: AgentContext,
   run: string,
   request: DecisionRequest
-): Promise<{ readonly number: number; readonly path: string; readonly adopted: readonly string[] }> => {
+): Promise<{ readonly heading: string; readonly path: string; readonly adopted: readonly string[] }> => {
   if (!request.text.trim()) throw new KiError('a decision needs text', 2)
   if (request.home !== undefined && !request.home.trim()) throw new KiError('a home needs a path or identifier', 2)
+  if (request.title !== undefined && !request.title.trim()) throw new KiError('a title needs text', 2)
   const answer = await resolveLetter(context, run, request.text.trim())
   let adopted: readonly string[] = []
   let path: string
@@ -434,7 +453,6 @@ export const appendDecision = async (
     path = decisionsLog(home)
   } else path = resolve(context.workingDirectory, request.log)
   const existing = await read(path)
-  const number = Math.max(0, ...parseDecisions(existing ?? '').map((entry) => entry.number)) + 1
   if (existing === undefined) {
     await mkdir(dirname(path), { recursive: true })
     await writeFile(path, '# Decisions\n')
@@ -444,18 +462,16 @@ export const appendDecision = async (
     ...(request.class === undefined ? [] : [`class: ${request.class}\n`]),
     ...(answer.source === undefined ? [] : [`source: ${answer.source}\n`])
   ].join('')
-  await appendFile(
-    path,
-    `\n## Decision ${number} (${instant(context)})\n\n${fields}${fields ? '\n' : ''}- ${answer.text}\n`
-  )
-  return { number, path, adopted }
+  const heading = `${localTime(context, true)} - ${request.title?.trim() ?? answer.title}`
+  await appendFile(path, `\n## ${heading}\n\n${fields}${fields ? '\n' : ''}- ${answer.text}\n`)
+  return { heading, path, adopted }
 }
 
 /** Writes or replaces the `home:` or `class:` line of one entry in the thread's tracked log. */
 export const reconcileDecision = async (
   context: AgentContext,
   run: string,
-  number: number,
+  name: string,
   change: { readonly home?: string | undefined; readonly class?: DecisionClass | undefined }
 ): Promise<string> => {
   if (change.home === undefined && change.class === undefined) throw new KiError('give a home, --class or both', 2)
@@ -465,8 +481,17 @@ export const reconcileDecision = async (
   const path = decisionsLog(existing)
   const text = await read(path)
   if (text === undefined) throw new KiError(`no decisions log at ${path}`, 1)
-  const entry = parseDecisions(text).find((candidate) => candidate.number === number)
-  if (entry === undefined) throw new KiError(`no Decision ${number} in ${path}`, 1)
+  const wanted = name.trim()
+  const matches = parseDecisions(text).filter(
+    (candidate) =>
+      candidate.heading === wanted ||
+      candidate.heading.startsWith(`${wanted} `) ||
+      (/^\d+$/.test(wanted) && candidate.number === Number(wanted))
+  )
+  if (matches.length > 1)
+    throw new KiError(`${matches.length} entries in ${path} match '${wanted}'; give more of the heading`, 1)
+  const entry = matches[0]
+  if (entry === undefined) throw new KiError(`no entry '${wanted}' in ${path}`, 1)
   const all = text.split('\n')
   let end = entry.end
   const find = (pattern: RegExp): number =>

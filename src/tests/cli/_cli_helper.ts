@@ -276,7 +276,8 @@ const create = async (): Promise<Sandbox> => {
     TMPDIR: join(rootPath, 'tmp'),
     XDG_CONFIG_HOME: config.path,
     XDG_DATA_HOME: data.path,
-    XDG_STATE_HOME: state.path
+    XDG_STATE_HOME: state.path,
+    TZ: 'UTC'
   }
   let environmentOverrides: Record<string, string | undefined> = {}
   let workingDirectory = project.path
