@@ -14,7 +14,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 64dacc4e134c6552ba83029519671e6fc82c38a1
 created_at: 2026-10-19T22:52:35Z
-updated_at: 2026-10-19T22:58:12Z
+updated_at: 2026-10-20T00:16:35Z
 transferred_from: Personal > Acquire intake, Kris's decision relayed on 19 October 2026
 ---
 
@@ -121,7 +121,7 @@ The whole record, from baseline `64dacc4e` on 19 October 2026, by the `granola` 
 
 ### Outstanding concerns
 
-- `verifyGranolaCheckpoint` still checks every ledger entry's document on each import, so a marked meeting whose staged capture has been removed from the receiver, while its entry is still staged or awaiting review, still stops the import. That is whole-ledger integrity rather than the skip, and was left out of scope.
+- `verifyGranolaCheckpoint` still checks every ledger entry's document on each import, so a marked meeting whose staged capture has been removed from the receiver, while its entry is still staged or awaiting review, still stops the import. That is whole-ledger integrity rather than the skip, and was left out of scope. Kept as it is under GRANOLA-CHECKPOINT a), decided on 20 October 2026: the integrity check stays whole-ledger, and the concern is recorded here rather than changed.
 - `ki acquire mark` still requires a committed receipt before it adds membership, so the folder's trust rests on that step and on no one adding notes to the folder by hand.
 
 ### Post-change review
