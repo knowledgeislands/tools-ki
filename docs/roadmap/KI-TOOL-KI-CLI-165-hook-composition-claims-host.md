@@ -9,12 +9,12 @@ component: repo
 priority: medium
 size: m
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: ee40f26565fd3852a067164dab564e0f4745d23c
 created_at: 2026-10-19T22:46:17Z
-updated_at: 2026-10-20T05:41:30Z
+updated_at: 2026-10-20T05:50:36Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design section 4.2, HOOK-CAPTURE a), 2026-10-19
 ---
 
@@ -91,13 +91,10 @@ Canonical hook publication and binding are delivered from immutable baseline `ee
 - Conform orchestration and event rendering use this policy; CLI fixtures and contracts cover adoption, byte drift, executable drift, variants, exclusions, binding, safe refusal and idempotence.
 - The manual, generated `man/ki.commands.json`, repository operations guide and changelog describe the resulting behavior.
 - Two unrelated committed roadmap changes advanced main during the run; the isolated branch fast-forwarded to `949cd36a6ac5b0d9b04be5982fa9cd840eddf60e` before the final combined gate. Their files were not edited by this delivery.
-
-### Independent-review corrections
-
-- `.githooks` must be a physical repository directory when present, even when both canonical hooks already match and the only proposed action is binding, or when the binding also already matches. Internal and external parent symlinks are refused before hook publication.
-- Husky retirement checks regular hook entries and allows only known regular generated files below the physical `_` directory, including its generated `.gitignore`. Unknown files, descendant directories and symlinks are refused without deleting their contents or publishing package, lockfile or hook changes.
-- TypeScript Knip repair recognizes a direct default object or a single named object exported as default, with a bounded import/comment preamble and simple root members. Helper declarations, mismatched exports and nested or otherwise ambiguous scopes require manual repair; unrelated members are never selected for editing.
-- CLI regressions cover both symlink destinations with drift, binding-only and already-bound canonical hooks; notes beneath hook names and `_`; unsafe generated entries; helper objects, missing or mismatched exports and nested ignores. They also retain successful generated-file retirement and simple exported-configuration repair.
+- Independent-review correction, unsafe parents: `.githooks` must be a physical repository directory when present, even when both canonical hooks already match and the only proposed action is binding, or when the binding also already matches. Internal and external parent symlinks are refused before hook publication.
+- Independent-review correction, Husky retirement: the planner checks regular hook entries and allows only known regular generated files below the physical `_` directory, including its generated `.gitignore`. Unknown files, descendant directories and symlinks are refused without deleting their contents or publishing package, lockfile or hook changes.
+- Independent-review correction, Knip repair: TypeScript repair recognizes a direct default object or a single named object exported as default, with a bounded import/comment preamble and simple root members. Helper declarations, mismatched exports and nested or otherwise ambiguous scopes require manual repair; unrelated members are never selected for editing.
+- Independent-review regressions: CLI tests cover both symlink destinations with drift, binding-only and already-bound canonical hooks; notes beneath hook names and `_`; unsafe generated entries; helper objects, missing or mismatched exports and nested ignores. They also retain successful generated-file retirement and simple exported-configuration repair.
 
 ### Verification
 
@@ -130,3 +127,7 @@ The owner settled the previous open questions: canonical text replaces repositor
 ### Independent acceptance, 20 October 2026
 
 Independent acceptance failed the mandatory six-heading Review packet: the exact third-level heading `Independent-review corrections` appears between `Change Summary` and `Verification`, so the declared ki-work-roadmap audit fails ITEM-3. The correction evidence must be retained within the required six-part structure by the delivery owner before resubmission. No code defect was reproduced: the independently run coverage gate passed all 1,398 tests in 85 files at 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint, command inventory and Syncpack passed. Read-only conform previews repeated the delivered results for chezmoi (exit 0, no hook operation), tools-mgit (exit 0, two canonical hook writes proposed), and paperclip (exit 2, missing `.ki.toml`); the inspected files, modes, Git status and hook binding stayed unchanged in all three. No conform was applied. Returned to in-progress under the review brief of 20 October 2026.
+
+### Review-packet correction, 20 October 2026
+
+The `burn2-tools-ki` run moved the four independent-review correction bullets from their extra third-level heading into Change Summary, so the Review packet carries exactly the six required headings in order; no evidence was dropped and no code changed. The record returns to awaiting review.

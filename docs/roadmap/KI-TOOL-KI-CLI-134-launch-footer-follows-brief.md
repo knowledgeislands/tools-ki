@@ -8,12 +8,12 @@ kind: deliver
 size: l
 component: agent
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: 0e48ca2764f7ab3eb9a54b99b4a8e2a40aa4edc8
+baseline_ref: 0e48ca277d7e784affb7806d646df313345742c4
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-20T05:41:30Z
+updated_at: 2026-10-20T05:50:36Z
 ---
 
 # Launch Footer Follows Brief
@@ -107,7 +107,7 @@ None.
 
 ### Delivered
 
-The whole record. Decisions 1 and 2 landed on 18 October 2026; the `burn-tools-ki` run delivered Decision 3's `--allow` grants and Requirement 1 on 20 October 2026 from `f2fdf227`, on branch `run/burn-tools-ki`.
+The whole record, from immutable baseline `0e48ca277d7e784affb7806d646df313345742c4` (`feat(agent): give each agent a temporary folder that close removes`, 18 October 2026), the parent of the first delivery commit. Decisions 1 and 2 landed on 18 October 2026 as `df1c24ed60342c2d9d194bebee9970ab3974bede`; the `burn-tools-ki` run delivered Decision 3's `--allow` grants and Requirement 1 on 20 October 2026 from `f2fdf227`, on branch `run/burn-tools-ki`, as `a14a328d532ffc61e1bf5af76ffef0184f191b5a`.
 
 ### Change Summary
 
@@ -161,3 +161,7 @@ Kris Brown answered GRANT-INTERIM on 18 October 2026, recorded in the [ways-of-w
 ### Independent acceptance, 20 October 2026
 
 Independent acceptance failed against the immutable delivery-evidence requirement: `baseline_ref` names `0e48ca2764f7ab3eb9a54b99b4a8e2a40aa4edc8`, which does not resolve to a commit in this non-shallow checkout after `git fetch -q origin`. This review does not infer a replacement baseline. The delivery owner must supply the correct immutable evidence before resubmission. Outstanding concerns also explicitly leaves three provisional choices for Kris to confirm: delivering the fixes ahead of the grants, no warning for a bare report filename, and naming each differing report path once. Those remain for Kris. The independently run coverage gate passed all 1,398 tests in 85 files at 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint, command inventory and Syncpack passed. The code checks do not replace either missing evidence or the owner decision. Returned to in-progress under the review brief of 20 October 2026.
+
+### Baseline evidence repair, 20 October 2026
+
+The `burn2-tools-ki` run traced the unresolvable `baseline_ref`: its first eight characters match commit `0e48ca277d7e784affb7806d646df313345742c4`, but the remaining characters had been written incorrectly. That commit is the sole parent of `df1c24ed60342c2d9d194bebee9970ab3974bede`, the commit that delivered Decisions 1 and 2 and the first delivery commit for this record, so it is the immutable baseline of execution. `baseline_ref` and Delivered now name it in full, and Delivered names both delivery commits. No code changed. The three provisional choices remain for Kris under FOOTER-PROVISIONALS. The record returns to awaiting review.
