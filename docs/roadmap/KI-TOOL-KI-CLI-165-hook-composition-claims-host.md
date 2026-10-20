@@ -9,12 +9,12 @@ component: repo
 priority: medium
 size: m
 horizon: now
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked_by: []
 baseline_ref: ee40f26565fd3852a067164dab564e0f4745d23c
 created_at: 2026-10-19T22:46:17Z
-updated_at: 2026-10-20T04:54:04Z
+updated_at: 2026-10-20T05:41:30Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design section 4.2, HOOK-CAPTURE a), 2026-10-19
 ---
 
@@ -126,3 +126,7 @@ Canonical hook writing and binding now reject unsafe parents, Husky retirement r
 ## Discussion
 
 The owner settled the previous open questions: canonical text replaces repository-specific hook lines; no extension is preserved. The hook planner owns publication and binding, while the harness owns the text. No new design decision is required by this plan.
+
+### Independent acceptance, 20 October 2026
+
+Independent acceptance failed the mandatory six-heading Review packet: the exact third-level heading `Independent-review corrections` appears between `Change Summary` and `Verification`, so the declared ki-work-roadmap audit fails ITEM-3. The correction evidence must be retained within the required six-part structure by the delivery owner before resubmission. No code defect was reproduced: the independently run coverage gate passed all 1,398 tests in 85 files at 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint, command inventory and Syncpack passed. Read-only conform previews repeated the delivered results for chezmoi (exit 0, no hook operation), tools-mgit (exit 0, two canonical hook writes proposed), and paperclip (exit 2, missing `.ki.toml`); the inspected files, modes, Git status and hook binding stayed unchanged in all three. No conform was applied. Returned to in-progress under the review brief of 20 October 2026.

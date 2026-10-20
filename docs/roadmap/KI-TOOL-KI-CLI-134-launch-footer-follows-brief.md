@@ -8,12 +8,12 @@ kind: deliver
 size: l
 component: agent
 horizon: now
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked_by: []
 baseline_ref: 0e48ca2764f7ab3eb9a54b99b4a8e2a40aa4edc8
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-20T05:05:11Z
+updated_at: 2026-10-20T05:41:30Z
 ---
 
 # Launch Footer Follows Brief
@@ -157,3 +157,7 @@ Decisions 1 and 2 delivered on 18 October 2026 by the tools-burndown run under K
 Kris Brown folded COMPOSE-REPLY-BLOCK into this record on 18 October 2026, recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) as COMPOSE-REPLY-BLOCK a): fold the reply-block wording fix into KI-TOOL-KI-CLI-134. The launch prompt tools-ki writes still asks for "outstanding queries with the reply block", which the owner report no longer carries; Requirement 1, its Step and Verify 5 add the fix. Recorded by the `release-ki` run, which does not build it; the record stays in progress.
 
 Kris Brown answered GRANT-INTERIM on 18 October 2026, recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, recap batch", 17:59 BST) as GRANT-INTERIM a): keep the interim sentence in the harness `ki-delegation` Grants subsection, under which a brief appends a grant section by hand after its footer, and remove it when `--allow` ships. When this record delivers `--allow`, its review packet names the sentence's removal as the harness follow-up, so the hand-append route ends with the release that carries the option.
+
+### Independent acceptance, 20 October 2026
+
+Independent acceptance failed against the immutable delivery-evidence requirement: `baseline_ref` names `0e48ca2764f7ab3eb9a54b99b4a8e2a40aa4edc8`, which does not resolve to a commit in this non-shallow checkout after `git fetch -q origin`. This review does not infer a replacement baseline. The delivery owner must supply the correct immutable evidence before resubmission. Outstanding concerns also explicitly leaves three provisional choices for Kris to confirm: delivering the fixes ahead of the grants, no warning for a bare report filename, and naming each differing report path once. Those remain for Kris. The independently run coverage gate passed all 1,398 tests in 85 files at 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint, command inventory and Syncpack passed. The code checks do not replace either missing evidence or the owner decision. Returned to in-progress under the review brief of 20 October 2026.
