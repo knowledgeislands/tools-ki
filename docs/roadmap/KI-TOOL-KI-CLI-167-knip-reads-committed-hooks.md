@@ -8,13 +8,12 @@ project: tools-burndown
 component: repo
 priority: high
 size: s
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: b7e64c0e850129dee48f1401993b50820c8bfcfa
 created_at: 2026-10-19T23:05:00Z
-updated_at: 2026-10-20T04:34:54Z
+updated_at: 2026-10-20T05:43:14Z
 transferred_from: ki-principal ki.tools-burndown KNIP-HUSKY a), Kris, 19 October 2026 23:42 BST
 ---
 
@@ -147,6 +146,10 @@ Pointing the plugin at the committed hooks lets Knip treat the hook tools as use
 
 `ki repo conform` with `ki-repo` selected now points Knip at `.githooks/` and drops the hook-tool ignores, in `knip.json` or `knip.ts`; tools-ki's own configuration is converted.
 
+## Done
+
+Accepted 2026-10-20 by the independent reviewer under Kris Brown's standing grant on the review packet above.
+
 ## Discussion
 
 The edits are textual because reserialising `knip.json` changes the layout of unrelated arrays, which Biome then reports; the round-trip check keeps the textual edit honest. `knip.ts` is not executed, since conform should not run repository code, so only a plain object literal is edited.
@@ -160,3 +163,11 @@ Independent acceptki2 verification on 20 October 2026: the full coverage run pas
 ### Follow-up disposed, 20 October 2026
 
 The failed acceptance asked for the Knip scaffolding follow-up to be identified or disposed of. Kris answered SWEEP-ACCEPT-TOOLS-BURNDOWN a) on 20 October 2026, recorded in Knowledge Islands Principal `+/_WORK/ki.ways-of-working/decisions.md`: "Same for the tools burned down", taken as accepting the three Rig records with Knip as a message. Under CAPTURE-GATE the follow-up went as one line to `ki.tools-burndown`'s `messages.md` naming the harness `ki-engineering` owner, and Outstanding concerns says so. The apply-sweep run re-ran the gates in a separate worktree at `ee40f265`: TypeScript, Biome, Knip, rumdl, the manual lint and the command-inventory check passed, and the coverage run passed all 1,365 tests in 84 files at 100% statements, branches, functions and lines; the count is lower than at review because the Granola ledger removal (`26c754f3`) took its tests with it. The record returns to awaiting review.
+
+### Independent acceptance, 20 October 2026
+
+Independent acceptance exercised the integrated code at `907a627ef407513ef560fce4b1f7ba103d60d7e5` through the public CLI seam. The coverage gate passed all 1,398 tests in 85 files at 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint, command inventory and Syncpack passed. After returning the two failed review records to in-progress, the complete declared repository audit passed with zero failures. GitHub checks were unavailable under this brief's remote-call restriction; a process-local unavailable-gh shim prevented GitHub access. All planned Steps are complete and the required six-part Review packet is present.
+
+The review brief's explicit CAPTURE-GATE makes receiving-work messages the authorised follow-up route. The `KNIP-HUSKY` line in [ki.tools-burndown messages](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.tools-burndown/messages.md) carries the outstanding follow-up; no new record is required by this grant. No acceptance check requires an attended action or publication. Closure authority is Kris's 20 October 2026 grant, quoted by the acceptance-review brief for this repository and every awaiting-review record: "if you can quickly now accept ... accepting new things that are waiting with you and pruning those ... getting the roadmaps down to zero". This acceptance applies exactly to KI-TOOL-KI-CLI-167.
+
+Pruning is retained pending peer-reference repair: Knowledge Islands Principal's ki.tools-burndown messages and ki.ways-of-working `design/roadmap-sweep.md` still link to this record. The preflight searched all 23 Git checkouts currently present directly under `/Users/krisbrown/workspaces/knowledge-islands/`; it found these concrete surviving references and does not claim coverage of unavailable or archived checkouts. Peer link repairs are outside this run's authority. The accepted terminal state must be committed before the separate prune-only commit.

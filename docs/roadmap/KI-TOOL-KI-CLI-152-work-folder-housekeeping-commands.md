@@ -8,13 +8,12 @@ project: ways-of-working
 component: agent
 priority: high
 size: m
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 708a3b3266eaed05cda82a355c13ab03d0fc1640
 created_at: 2026-10-18T19:40:00Z
-updated_at: 2026-10-20T05:20:00Z
+updated_at: 2026-10-20T05:43:14Z
 ---
 
 # KI-TOOL-KI-CLI-152: Work Folder Housekeeping Commands
@@ -151,6 +150,10 @@ Requirements 1 to 4 are met and tested: the close gate reports timestamped, free
 
 The decisions-log tooling now follows the unnumbered `ki-coordination` form, and the close gate no longer passes a current-form log unread.
 
+## Done
+
+Accepted 2026-10-20 by the independent reviewer under Kris Brown's standing grant on the review packet above.
+
 ## Discussion
 
 Adopted to Now and planned on 20 October 2026 under TRIAGE-NEXT a), which asked for the close-gate repair to come first and be split out if it could be. The run's brief allows no new record, so this record keeps the decisions-log repair. `ki work message` and `ki work prune` are offered for a record of their own in the run's CANCEL-MERGE query, with these findings:
@@ -169,3 +172,11 @@ Independent acceptki2 verification on 20 October 2026: the full coverage run pas
 ### Follow-up homed, 20 October 2026
 
 The failed acceptance asked for the `ki work message` and `ki work prune` follow-up to be identified or disposed of. The `burn-tools-ki` run, under Kris's 20 October instruction that follow-ups never become records (CAPTURE-GATE), carried it as one `messages.md` line to `ki.ways-of-working` and updated Outstanding concerns. The coordinator's open CAPTURE-FOLLOWUPS query, which recommended capturing records, is superseded for this record by that instruction. The gate was re-run on the integrated `main` with KI-TOOL-KI-CLI-134: the coverage run passed all 1,398 tests at 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, the manual lint and the command-inventory check passed. `ki repo audit --repo .` reports one failure, the review-packet shape of KI-TOOL-KI-CLI-165, which another session's commit introduced and which this record does not touch. The record returns to awaiting review.
+
+### Independent acceptance, 20 October 2026
+
+Independent acceptance exercised the integrated code at `907a627ef407513ef560fce4b1f7ba103d60d7e5` through the public CLI seam. The coverage gate passed all 1,398 tests in 85 files at 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint, command inventory and Syncpack passed. After returning the two failed review records to in-progress, the complete declared repository audit passed with zero failures. GitHub checks were unavailable under this brief's remote-call restriction; a process-local unavailable-gh shim prevented GitHub access. All planned Steps are complete and the required six-part Review packet is present.
+
+The review brief's explicit CAPTURE-GATE makes receiving-work messages the authorised follow-up route. The `CAPTURE-FOLLOWUPS` line in [ki.tools-burndown messages](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.tools-burndown/messages.md) carries the outstanding follow-up; no new record is required by this grant. The receiving message is routed to ki.tools-burndown, which corrects the packet's stale reference to ki.ways-of-working. No acceptance check requires an attended action or publication. Closure authority is Kris's 20 October 2026 grant, quoted by the acceptance-review brief for this repository and every awaiting-review record: "if you can quickly now accept ... accepting new things that are waiting with you and pruning those ... getting the roadmaps down to zero". This acceptance applies exactly to KI-TOOL-KI-CLI-152.
+
+Pruning is retained pending peer-reference repair: the harness work record `docs/roadmap/KI-HARNESS-GOV-200-thread-folder-closed-list.md` and Knowledge Islands Principal's work-package messages and `design/roadmap-sweep.md` still link to this record. The preflight searched all 23 Git checkouts currently present directly under `/Users/krisbrown/workspaces/knowledge-islands/`; it found these concrete surviving references and does not claim coverage of unavailable or archived checkouts. Peer link repairs are outside this run's authority. The accepted terminal state must be committed before the separate prune-only commit.
