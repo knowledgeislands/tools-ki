@@ -9,12 +9,12 @@ component: agent
 priority: high
 size: m
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 708a3b3266eaed05cda82a355c13ab03d0fc1640
 created_at: 2026-10-18T19:40:00Z
-updated_at: 2026-10-20T00:50:25Z
+updated_at: 2026-10-20T05:20:00Z
 ---
 
 # KI-TOOL-KI-CLI-152: Work Folder Housekeeping Commands
@@ -141,7 +141,7 @@ The close gate reads every H2 of a decisions log as an entry, `ki agent decide` 
 ### Outstanding concerns
 
 - KI-HARNESS-GOV-200's decision-heading check should take "any H2 is an entry" from this record.
-- `ki work message` and `ki work prune` remain unrecorded; the run's CANCEL-MERGE query offers them for a record of their own.
+- `ki work message` and `ki work prune` are not built. Under CAPTURE-GATE they are carried as one `messages.md` line to `ki.ways-of-working` in Knowledge Islands Principal (CAPTURE-FOLLOWUPS, 20 October 2026), not as a record, as the Knip follow-up of KI-TOOL-KI-CLI-167 was under SWEEP-ACCEPT-TOOLS-BURNDOWN a).
 
 ### Post-change review
 
@@ -165,3 +165,7 @@ The close gate keeps reading numbered headings indefinitely, as history.
 Acceptance failed on the work-item-format standard's Awaiting review rule: Outstanding concerns names `ki work message` and `ki work prune` as unrecorded follow-up work. Required follow-up must have its own work identifier before acceptance. The implementation and full gate pass, but this review packet cannot be accepted until the coordinator authorises and captures that follow-up (or explicitly disposes of the requirement) and the packet cites the resulting durable record. CANCEL-MERGE-BURNKI is already with the coordinator; this pass creates no record or scope decision.
 
 Independent acceptki2 verification on 20 October 2026: the full coverage run passed all 1,454 tests in 84 files with 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint and the command-inventory check passed. The complete declared repository audit passed with FAIL=0 and three pre-existing warnings. GitHub checks were unavailable under the brief's prohibition on remote calls; the audit used its normal unavailable-GitHub path. The public CLI tests and the changed implementation were reviewed independently of the delivery reports.
+
+### Follow-up homed, 20 October 2026
+
+The failed acceptance asked for the `ki work message` and `ki work prune` follow-up to be identified or disposed of. The `burn-tools-ki` run, under Kris's 20 October instruction that follow-ups never become records (CAPTURE-GATE), carried it as one `messages.md` line to `ki.ways-of-working` and updated Outstanding concerns. The coordinator's open CAPTURE-FOLLOWUPS query, which recommended capturing records, is superseded for this record by that instruction. The gate was re-run on the integrated `main` with KI-TOOL-KI-CLI-134: the coverage run passed all 1,398 tests at 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, the manual lint and the command-inventory check passed. `ki repo audit --repo .` reports one failure, the review-packet shape of KI-TOOL-KI-CLI-165, which another session's commit introduced and which this record does not touch. The record returns to awaiting review.

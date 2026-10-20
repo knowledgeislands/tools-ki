@@ -126,7 +126,7 @@ The whole record. Decisions 1 and 2 landed on 18 October 2026; the `burn-tools-k
 | 3 | The report-path warning cases; still passing |
 | 4 | `appends each --allow grant after the tier footer in the order given`, the held launch with `--allow fetch`, and `carries the model, effort and grants through the queue to the launched runtime`; the missing-asset cases name the grant; an unknown grant exits 2 from the option parser |
 | 5 | The first launch case asserts `outstanding queries), then write DONE` and no "reply block" |
-| 6 | `bun run test:coverage` 1,373 tests at 100% statements, branches, functions and lines; `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and the command-inventory check pass; `ki repo audit --repo .` on the primary checkout after integration reports only the pre-existing findings named below |
+| 6 | `bun run test:coverage` 1,373 tests at 100% statements, branches, functions and lines, and 1,398 after rebasing onto `75427fa2`; `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and the command-inventory check pass; `ki repo audit --repo .` on the integrated primary checkout reports one failure, the review-packet shape of KI-TOOL-KI-CLI-165 from another session's `f2fdf227`, which this record does not touch |
 
 ### Outstanding concerns
 
