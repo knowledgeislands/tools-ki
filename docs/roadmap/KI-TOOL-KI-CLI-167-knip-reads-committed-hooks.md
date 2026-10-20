@@ -9,12 +9,12 @@ component: repo
 priority: high
 size: s
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: b7e64c0e850129dee48f1401993b50820c8bfcfa
 created_at: 2026-10-19T23:05:00Z
-updated_at: 2026-10-20T00:50:25Z
+updated_at: 2026-10-20T04:34:54Z
 transferred_from: ki-principal ki.tools-burndown KNIP-HUSKY a), Kris, 19 October 2026 23:42 BST
 ---
 
@@ -136,7 +136,7 @@ The whole record, from baseline `b7e64c0e` on 20 October 2026, by the `knipfix` 
 
 ### Outstanding concerns
 
-- The step cannot create a Knip configuration. A new repository gets `knip.json` from the harness `ki-engineering` KNIP-1 scaffold, after this step in the same conform run, so its Husky configuration arrives on the next conform. Making the scaffold write it is a harness change.
+- The step cannot create a Knip configuration. A new repository gets `knip.json` from the harness `ki-engineering` KNIP-1 scaffold, after this step in the same conform run, so its Husky configuration arrives on the next conform. Making the scaffold write it is a harness change. Kris disposed of it on 20 October 2026 under SWEEP-ACCEPT-TOOLS-BURNDOWN a) ("Knip as a message"): it is carried as a `messages.md` line to `ki.tools-burndown` in Knowledge Islands Principal naming the harness `ki-engineering` owner, not as a record.
 - A `knip.ts` in any other shape, such as `defineConfig(…)` or a multi-line `ignoreDependencies`, refuses the whole conversion until edited by hand. Only ki-principal has a `knip.ts` in the estate.
 
 ### Post-change review
@@ -156,3 +156,7 @@ The edits are textual because reserialising `knip.json` changes the layout of un
 Acceptance failed on the work-item-format standard's Awaiting review rule: Outstanding concerns leaves Knip scaffolding as a harness change without a work identifier. KNIP-HUSKY a) in the 19 October decision includes scaffolding; this record explicitly excludes creating a Knip configuration, leaving a newly scaffolded configuration dependent on a second conform run. The implemented existing-configuration requirements and full gate pass, but the remaining requested scaffolding must be carried by an identified follow-up before acceptance. The coordinator must authorise and capture that follow-up (or explicitly dispose of the requirement); this pass creates no record or scope decision.
 
 Independent acceptki2 verification on 20 October 2026: the full coverage run passed all 1,454 tests in 84 files with 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint and the command-inventory check passed. The complete declared repository audit passed with FAIL=0 and three pre-existing warnings. GitHub checks were unavailable under the brief's prohibition on remote calls; the audit used its normal unavailable-GitHub path. The public CLI tests and the changed implementation were reviewed independently of the delivery reports.
+
+### Follow-up disposed, 20 October 2026
+
+The failed acceptance asked for the Knip scaffolding follow-up to be identified or disposed of. Kris answered SWEEP-ACCEPT-TOOLS-BURNDOWN a) on 20 October 2026, recorded in Knowledge Islands Principal `+/_WORK/ki.ways-of-working/decisions.md`: "Same for the tools burned down", taken as accepting the three Rig records with Knip as a message. Under CAPTURE-GATE the follow-up went as one line to `ki.tools-burndown`'s `messages.md` naming the harness `ki-engineering` owner, and Outstanding concerns says so. The apply-sweep run re-ran the gates in a separate worktree at `ee40f265`: TypeScript, Biome, Knip, rumdl, the manual lint and the command-inventory check passed, and the coverage run passed all 1,365 tests in 84 files at 100% statements, branches, functions and lines; the count is lower than at review because the Granola ledger removal (`26c754f3`) took its tests with it. The record returns to awaiting review.
