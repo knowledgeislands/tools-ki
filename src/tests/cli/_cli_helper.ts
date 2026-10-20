@@ -158,6 +158,7 @@ const setupExampleHarness = async (
   const base = `${root}/skills/${name}`
   await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: []\n---\n`)
   if (name === 'ki-repo') {
+    await data.write(`${base}/scripts/rubric/contexts/canonical-hooks.ts`, 'export const canonicalHooks = () => null\n')
     for (const shape of ['ki-repo-project', 'ki-repo-kb']) {
       await data.write(`${root}/skills/${shape}/SKILL.md`, `---\nname: ${shape}\nki-depends-on: []\n---\n`)
       await data.write(

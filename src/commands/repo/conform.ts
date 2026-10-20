@@ -57,8 +57,6 @@ const renderConformEvent = (event: RepositoryConformEvent): string => {
       return `${event.dryRun ? 'would remove' : 'remove'} ${event.path}/\n`
     case 'hook-bind':
       return `${event.dryRun ? 'would bind' : 'bind'} core.hooksPath .githooks${event.from ? ` (was ${event.from})` : ''}\n`
-    case 'hook-binding-kept':
-      return `keep core.hooksPath ${JSON.stringify(event.value)}\n`
   }
 }
 

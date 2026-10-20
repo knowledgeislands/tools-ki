@@ -6,6 +6,7 @@ import { runSkillAudit } from '../../runtime/audit.ts'
 import { detectFixed, runSkillConform } from '../../runtime/conform.ts'
 import { publishIndependentConformGroups } from '../../runtime/publication.ts'
 import type { Finding, FixedItem, PreparedSkill, SkillConformResult } from '../../runtime/types.ts'
+import { repositoryCanonicalHooks } from '../canonical-hooks.ts'
 import { applyHookConversion, type HookConversionEvent, planHookConversion } from '../hooks.ts'
 import { runPreparedWithProgress, runWithProgress } from '../progress/run.ts'
 import { resolveRepositoryTargets } from '../selection.ts'
@@ -91,8 +92,10 @@ export const conformRepositories = async (
     observer.repositoryStarted(repository.root, skills)
     // The commit gate moves into `.githooks/` before the rubric pass, so ki-repo and
     // ki-engineering audit and repair the converted tree rather than the Husky one.
-    if (skills.some((skill) => skill.declaration.name === 'ki-repo')) {
-      const conversion = await planHookConversion(repository.root, context.runner, context.environment)
+    const repositorySkill = skills.find((skill) => skill.declaration.name === 'ki-repo')
+    if (repositorySkill) {
+      const canonical = await repositoryCanonicalHooks(repository.root, repositorySkill)
+      const conversion = await planHookConversion(repository.root, context.runner, context.environment, canonical)
       if (conversion)
         await applyHookConversion(
           repository.root,

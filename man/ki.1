@@ -965,21 +965,21 @@ For a local invocation it records each selected canonical root in the
 machine-local registry before evaluating findings. Registration is
 an inventory action, not evidence of conformance, so a failing repository
 remains available for later repair and bulk maintenance.
-With \fBki-repo\fR selected, a repository holding \fI.githooks/\fR or
-\fI.husky/\fR first has its commit gate moved into a committed
-\fI.githooks/\fR: \fIpre-commit\fR and \fIcommit-msg\fR are written whole at
-mode 0755, the common refusal frame first and any Husky hook inlined where the
-committed hook called it; \fBprepare\fR binds \fBcore.hooksPath\fR, keeping
-any command after \fBhusky\fR; \fBhusky\fR leaves the manifest and
-\fIbun.lock\fR; \fI.husky/\fR is removed; and an unset or \fI.husky/_\fR
-\fBcore.hooksPath\fR is bound to \fI.githooks\fR, while any other value is
-kept and reported. Where committed hooks exist, \fIknip.json\fR or
-\fIknip.ts\fR gains a \fBhusky\fR entry whose \fBconfig\fR names them, so
-Knip sees the tools they call, and loses the \fBignoreDependencies\fR entries
-for those tools, at the top level and in the root workspace; an
-already-converted repository gains it too. A line, file,
-lockfile or Knip configuration it cannot place refuses the whole conversion
-before any change. A dry run reports each step and changes nothing.
+With \fBki-repo\fR selected, conform creates or replaces both
+\fI.githooks/pre-commit\fR and \fI.githooks/commit-msg\fR at mode 0755,
+byte-exact from the resolved harness's canonical \fBki-repo\fR data for
+\fBprimary_shape\fR and package presence. There is no extension point;
+repository-specific hook lines are replaced. The dotfiles shape receives no
+hook changes, and repositories without \fI.ki.toml\fR are not targets.
+Where hooks are due, the clone's \fBcore.hooksPath\fR becomes the literal
+relative \fI.githooks\fR, replacing foreign and absolute bindings.
+Bounded Husky retirement remains: \fBprepare\fR retains commands after
+Husky while binding the hooks; \fBhusky\fR leaves the manifest and
+\fIbun.lock\fR; and \fI.husky/\fR is removed. Knip's \fBhusky.config\fR
+names both hooks and redundant tool ignores are removed. Unsafe files,
+unsupported lockfiles and unrecognised package or Knip configurations refuse
+publication. A dry run reports each planned write, removal and binding and
+changes nothing.
 .TP
 .B ki repo [repo-options] roadmap list [--horizon <horizons>] [--status <status>] [--by <grouping>] [--format <text|json>] [--links <compact|all>]
 List canonical governed work items from every selected repository without
