@@ -7,6 +7,8 @@ import {
   type AuthorityTier,
   authorityTiers,
   dispatchRun,
+  type GrantName,
+  grantNames,
   holdAgent,
   type LaunchRequest,
   launchAgent,
@@ -66,11 +68,21 @@ interface LaunchOptions {
   readonly runtime: AgentRuntime
   readonly addDir: readonly string[]
   readonly rules: AuthorityTier
+  readonly allow: readonly GrantName[]
   readonly waitFor: readonly string[]
   readonly model?: string
   readonly effort?: AgentEffort
   readonly repo?: string
   readonly relaunch?: boolean
+}
+
+/** `--allow <grant>`: repeatable, each value checked against the grant names as `choices` checks it. */
+const allowOption = (): Option => {
+  const option = new Option('--allow <grant>', 'ki-delegation grant to append after the footer; repeatable').choices(
+    grantNames
+  )
+  const check = option.parseArg as (value: string, previous: unknown) => GrantName
+  return option.argParser((value, previous: readonly GrantName[]) => [...previous, check(value, undefined)]).default([])
 }
 
 /** The launch options `launch` and `queue` share. */
@@ -81,6 +93,7 @@ const withLaunchOptions = (command: Command): Command =>
     .addOption(
       new Option('--rules <tier>', 'ki-delegation authority footer to append').choices(authorityTiers).default('none')
     )
+    .addOption(allowOption())
     .option('--wait-for <name>', 'agent in this run whose DONE gates the start; repeatable', collect, [])
     .option('--model <model>', "runtime model, passed through verbatim; omitted, the runtime's default")
     .addOption(new Option('--effort <level>', "reasoning effort; omitted, the runtime's default").choices(agentEfforts))
@@ -101,6 +114,7 @@ const request = (
   runtime: options.runtime,
   addDirs: options.addDir,
   rules: options.rules,
+  allow: options.allow,
   waitFor: options.waitFor,
   model: options.model,
   effort: options.effort,

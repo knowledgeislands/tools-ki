@@ -8,6 +8,7 @@ import {
   type AuthorityTier,
   agentsDirectory,
   checkName,
+  type GrantName,
   git,
   instant,
   read,
@@ -19,8 +20,8 @@ import { deriveEvents, type Observed, type RunEvent, readEvents, recordEvent } f
 import { type AgentEffort, type AgentRuntime, runtimeLaunch } from './runtimes.ts'
 import { readThread, reportPath, type ThreadHome, threadHome, threadPath } from './thread.ts'
 
-export type { AgentContext, AuthorityTier } from './context.ts'
-export { authorityTiers } from './context.ts'
+export type { AgentContext, AuthorityTier, GrantName } from './context.ts'
+export { authorityTiers, grantNames } from './context.ts'
 
 export interface LaunchRequest {
   readonly run: string
@@ -30,6 +31,8 @@ export interface LaunchRequest {
   readonly runtime: AgentRuntime
   readonly addDirs: readonly string[]
   readonly rules: AuthorityTier
+  /** Grant sections appended after the tier footer, in order; omitted, none. */
+  readonly allow?: readonly GrantName[] | undefined
   readonly waitFor: readonly string[]
   /** Omitted, the runtime uses its own default model or effort. */
   readonly model?: string | undefined
@@ -77,6 +80,15 @@ const footer = async (context: AgentContext, tier: AuthorityTier): Promise<strin
   const text = (await read(join(assets, `rules-${tier}.md`))) ?? ''
   const heading = /^## Rules$/m.exec(text)
   if (!heading) throw new KiError(`the ki-delegation footer for '${tier}' has no '## Rules' section`, 1)
+  return absoluteLinks(text.slice(heading.index).trimEnd(), assets)
+}
+
+/** The grant's section from its `## Grant: <name>` heading line. */
+const grant = async (context: AgentContext, name: GrantName): Promise<string> => {
+  const assets = await delegationAssets(context)
+  const text = (await read(join(assets, `grant-${name}.md`))) ?? ''
+  const heading = new RegExp(`^## Grant: ${name}$`, 'm').exec(text)
+  if (!heading) throw new KiError(`the ki-delegation grant '${name}' has no '## Grant: ${name}' section`, 1)
   return absoluteLinks(text.slice(heading.index).trimEnd(), assets)
 }
 
@@ -228,10 +240,11 @@ const composePrompt = async (
   const sections = [body.trimEnd()]
   sections.push(
     await footer(context, request.rules),
+    ...(await Promise.all((request.allow ?? []).map((name) => grant(context, name)))),
     [
       '---',
       '',
-      `Progress protocol. Overwrite ${base}.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: ${zone}date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to ${report} as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries with the reply block), then write DONE as the last line of ${base}.status. This is the only report path; it governs any other the brief names. Temporary output goes in ${temporary}/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.`
+      `Progress protocol. Overwrite ${base}.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: ${zone}date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to ${report} as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries), then write DONE as the last line of ${base}.status. This is the only report path; it governs any other the brief names. Temporary output goes in ${temporary}/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.`
     ].join('\n')
   )
   return `${sections.join('\n\n')}\n`

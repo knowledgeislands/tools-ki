@@ -397,10 +397,10 @@ A progress marker grants no source retirement or reconciliation authority.
 .SS Background agents
 \&
 .TP
-.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
 Launch one detached agent and write its run packet.
 .TP
-.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
 Append a ready-made agent to the run queue.
 .TP
 .B ki agent dispatch <run> --max <count> [--interval <seconds>]
@@ -1708,15 +1708,24 @@ Claude Code or Codex in their own session with standard input from
 .IR /dev/null ,
 so an interrupt of the launching session cannot stop them.
 .TP
-.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
 Launch one detached agent. The prompt gains the authority footer the pinned
 Harness's
 .B ki-delegation
 skill ships for the
 .B --rules
 tier (default
-.BR none )
-and the progress protocol. The status time zone follows
+.BR none ),
+then, for each
+.B --allow
+grant in the order given,
+.B fetch
+or
+.BR machine ,
+the grant section from its
+.B ## Grant:
+heading, which lifts only the footer's matching ban, and the progress
+protocol. The status time zone follows
 .BR TZ .
 Until every
 .B --wait-for
@@ -1799,7 +1808,7 @@ moves into the first free
 and nothing is deleted, but the relaunch is refused while the thread-folder
 report has uncommitted changes.
 .TP
-.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
 Append a ready-made agent to the run queue, copying its prompt. A name already
 queued or already run is refused as for
 .BR launch ;

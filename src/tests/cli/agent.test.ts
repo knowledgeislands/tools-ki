@@ -8,6 +8,9 @@ const assets = 'ki/harnesses/knowledgeislands/ki-agentic-harness/skills/governan
 const footer = (tier: string): string =>
   `# Authority footer: ${tier}\n\nPreamble the launcher drops: it appends this file from \`## Rules\` onwards, see [the standard](../references/x.md#tiers).\n\n## Rules\n\n- Links: [rule](../references/x.md#rule), [site](https://example.com/a), [here](#rules), [root](/abs/y.md).\n- Tier ${tier} rule.\n`
 
+const grant = (name: string): string =>
+  `# Authority grant: ${name}\n\nAppended from the \`## Grant: ${name}\` heading, see [the standard](../references/x.md#tiers).\n\n## Grant: ${name}\n\n- Grant ${name} lifts one ban; see [rule](../references/x.md#grants).\n`
+
 /** The work file a run's name names, committed, so that the run is homed in its work folder. */
 const work = async (box: Sandbox, id = 'ki.r'): Promise<void> => {
   if (await box.project.read(`+/_WORK/${id}/work.md`).catch(() => undefined)) return
@@ -32,6 +35,7 @@ const setupDelegation = async (box: Sandbox): Promise<void> => {
   await box.data.mkdir('ki/harnesses/knowledgeislands/ki-agentic-harness/skills/agentic-systems/other')
   for (const tier of ['none', 'push', 'prune', 'release'])
     await box.data.write(`${assets}/rules-${tier}.md`, footer(tier))
+  for (const name of ['fetch', 'machine']) await box.data.write(`${assets}/grant-${name}.md`, grant(name))
   await box.data.write(`${assets}/run-prompt.md`, skeleton)
 }
 
@@ -91,6 +95,9 @@ describe('ki agent launch', () => {
     )
     expect(prompt).not.toContain('Preamble the launcher drops')
     expect(prompt).toContain('This is the only report path; it governs any other the brief names.')
+    expect(prompt).toContain('outstanding queries), then write DONE')
+    expect(prompt).not.toContain('reply block')
+    expect(prompt).not.toContain('## Grant:')
     expect(result.stderr).toBe('')
     expect(prompt).toContain("(time from: TZ=Europe/Paris date '+%H:%M %Z')")
     expect(prompt).toContain('Do not use background subagents. Never end your session while waiting.\n')
@@ -205,6 +212,27 @@ describe('ki agent launch', () => {
 
     expect(await box.state.read(`ki/agents/${run}/one.prompt.md`)).toContain(
       `Temporary output goes in /tmp/ki-agents/${run}/one/,`
+    )
+  })
+
+  test('appends each --allow grant after the tier footer in the order given', async () => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    fakeProcesses(box)
+    await box.project.write('task.md', '# Task\n')
+
+    const result = await box.run('ki agent launch r one . task.md --allow machine --allow fetch', { now })
+
+    expect(result.exitCode).toBe(0)
+    const references = `${box.data.path}/${dirname(assets)}/references`
+    expect(await box.state.read('ki/agents/r/one.prompt.md')).toContain(
+      `- Tier none rule.\n\n## Grant: machine\n\n- Grant machine lifts one ban; see [rule](${references}/x.md#grants).\n\n## Grant: fetch\n\n- Grant fetch lifts one ban; see [rule](${references}/x.md#grants).\n\n---\n\nProgress protocol.`
+    )
+
+    const unknown = await box.run('ki agent launch r two . task.md --allow push', { now })
+    expect(unknown.exitCode).toBe(2)
+    expect(unknown.stderr).toContain(
+      "option '--allow <grant>' argument 'push' is invalid. Allowed choices are fetch, machine."
     )
   })
 
@@ -328,6 +356,14 @@ describe('ki agent launch', () => {
     await rm(`${box.data.path}/${assets}/rules-prune.md`)
     const absent = await box.run('ki agent launch r one . task.md --rules prune', { now })
     expect(absent.stderr).toBe("ki: error: the ki-delegation footer for 'prune' has no '## Rules' section\n")
+
+    await box.data.write(`${assets}/grant-machine.md`, '# Broken grant\n\n## Grant: fetch\n')
+    const wrong = await box.run('ki agent launch r one . task.md --rules push --allow machine', { now })
+    expect(wrong.exitCode).toBe(1)
+    expect(wrong.stderr).toBe("ki: error: the ki-delegation grant 'machine' has no '## Grant: machine' section\n")
+    await rm(`${box.data.path}/${assets}/grant-fetch.md`)
+    const gone = await box.run('ki agent launch r one . task.md --rules push --allow fetch', { now })
+    expect(gone.stderr).toBe("ki: error: the ki-delegation grant 'fetch' has no '## Grant: fetch' section\n")
 
     box.setEnv({ TZ: 'Nowhere/Never' })
     const zone = await box.run('ki agent launch r one . task.md --rules push', { now })
@@ -487,13 +523,13 @@ describe('ki agent launch --wait-for', () => {
     await box.state.write('ki/agents/r/first.status', '19:00 UTC - building\n')
 
     const result = await box.run(
-      'ki agent launch r one . task.md --runtime codex --rules push --add-dir extra --wait-for zero --wait-for first --wait-for later --model gpt-6-astra --effort high',
+      'ki agent launch r one . task.md --runtime codex --rules push --allow fetch --add-dir extra --wait-for zero --wait-for first --wait-for later --model gpt-6-astra --effort high',
       { now }
     )
 
     expect(result.stdout).toBe(`held r/one until first, later finish (pid 1001) in ${runDirectory(box)}\n`)
     const prompt = await box.state.read('ki/agents/r/one.prompt.md')
-    expect(prompt).toContain('- Tier push rule.')
+    expect(prompt).toContain('- Tier push rule.\n\n## Grant: fetch\n')
     expect(prompt).not.toContain('Wait gate.')
     expect(await box.state.read('ki/agents/r/one.status')).toBe('19:30 UTC - held until first, later finish\n')
     expect(await box.state.read('ki/agents/r/one.pid')).toBe('1001\n')
@@ -1597,9 +1633,9 @@ describe('ki agent queue, dispatch and wait', () => {
     fakeProcesses(box)
     await box.project.write('task.md', '# Task\n')
 
-    expect((await box.run('ki agent queue r one task.md --rules push --wait-for zero', { now })).stdout).toBe(
-      'queued r/one at position 1\n'
-    )
+    expect(
+      (await box.run('ki agent queue r one task.md --rules push --allow machine --wait-for zero', { now })).stdout
+    ).toBe('queued r/one at position 1\n')
     expect((await box.run('ki agent queue r two task.md', { now })).stdout).toBe('queued r/two at position 2\n')
     await box.project.write('task.md', '# Changed\n')
     expect(await box.state.read('ki/agents/r/one.queued.md')).toBe('# Task\n')
@@ -1612,6 +1648,7 @@ describe('ki agent queue, dispatch and wait', () => {
       runtime: 'claude',
       addDirs: [],
       rules: 'push',
+      allow: ['machine'],
       waitFor: ['zero']
     })
 
@@ -1622,23 +1659,28 @@ describe('ki agent queue, dispatch and wait', () => {
     expect((await box.run('ki agent queue r three task.md', { now })).exitCode).toBe(1)
   })
 
-  test('carries the model and effort through the queue to the launched runtime', async () => {
+  test('carries the model, effort and grants through the queue to the launched runtime', async () => {
     const box = await sandbox()
     box.setEnv({ TZ: 'UTC' })
     await setupDelegation(box)
     const processes = fakeProcesses(box, async () => processes.finish())
     await box.project.write('task.md', '# Task\n')
-    await box.run('ki agent queue r fable task.md --model claude-fable-5-1 --effort max', { now })
+    await box.run('ki agent queue r fable task.md --model claude-fable-5-1 --effort max --allow fetch', { now })
     await box.run('ki agent queue r plain task.md --runtime codex', { now })
     const [fable, plain] = (await box.state.read('ki/agents/r/queue.jsonl')).split('\n')
     expect(JSON.parse(fable as string)).toMatchObject({ name: 'fable', model: 'claude-fable-5-1', effort: 'max' })
     expect(Object.keys(JSON.parse(plain as string))).not.toContain('model')
     expect(Object.keys(JSON.parse(plain as string))).not.toContain('effort')
+    // A queue written before `--allow` existed has no `allow` key and dispatches with no grant.
+    const queue = await box.state.read('ki/agents/r/queue.jsonl')
+    await box.state.write('ki/agents/r/queue.jsonl', queue.replace('"allow":[],', ''))
 
     expect((await box.run('ki agent dispatch r --max 2 --interval 1 --foreground', { now })).exitCode).toBe(0)
 
     const [first, second] = processes.launches as [AgentLaunch, AgentLaunch]
     expect(first.arguments.slice(-4)).toEqual(['--model', 'claude-fable-5-1', '--effort', 'max'])
+    expect(await box.state.read('ki/agents/r/fable.prompt.md')).toContain('- Tier none rule.\n\n## Grant: fetch\n')
+    expect(await box.state.read('ki/agents/r/plain.prompt.md')).not.toContain('## Grant:')
     expect(second.arguments).not.toContain('-m')
     expect(second.arguments).not.toContain('-c')
     // Both runtimes carry the run marker on the dispatch path too, so the harness hook can trust it.

@@ -8,12 +8,12 @@ kind: deliver
 size: l
 component: agent
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 0e48ca2764f7ab3eb9a54b99b4a8e2a40aa4edc8
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-20T00:46:49Z
+updated_at: 2026-10-20T05:05:11Z
 ---
 
 # Launch Footer Follows Brief
@@ -63,9 +63,9 @@ Read at `0f61dd83` on 16 October 2026; the Context above still holds.
 - [x] Contract-test fixture: give the fixture preamble the "`## Rules` onwards" mention and a relative link, so the tests pin both fixes.
 - [x] `composePrompt`: scan the brief for paths ending `/<name>.report.md` outside the thread folder (a bare `<name>.report.md` names no folder and draws no warning); return a launch warning naming both paths; add "This is the only report path; it governs any other the brief names." to the protocol.
 - [x] `ki agent launch` and `ki agent queue` print the warning on stderr, exit 0.
-- [ ] Once the harness ships the agreed grant assets: `grantNames` in `context.ts`, `--allow <grant>` (repeatable, choices) in `src/commands/agent/index.ts`, carried through `LaunchRequest`, the queue file and the hold relaunch; `composePrompt` appends each grant section after the tier footer; a missing grant asset fails like a missing tier; `README.md`, `man/ki.1`, `man/ki.commands.json`, the guide and `CHANGELOG.md` describe `--allow`.
+- [x] Once the harness ships the agreed grant assets: `grantNames` in `context.ts`, `--allow <grant>` (repeatable, choices) in `src/commands/agent/index.ts`, carried through `LaunchRequest`, the queue file and the hold relaunch; `composePrompt` appends each grant section after the tier footer; a missing grant asset fails like a missing tier; `README.md`, `man/ki.1`, `man/ki.commands.json`, the guide and `CHANGELOG.md` describe `--allow`.
 - [x] `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md` describe the footer and report-path fixes.
-- [ ] Requirement 1: drop "with the reply block" from the progress protocol in `composePrompt` (`src/core/agent/runs.ts`), update the contract tests that pin the protocol text, and note the change in `CHANGELOG.md`.
+- [x] Requirement 1: drop "with the reply block" from the progress protocol in `composePrompt` (`src/core/agent/runs.ts`), update the contract tests that pin the protocol text, and note the change in `CHANGELOG.md`.
 
 ## Files touched
 
@@ -102,6 +102,45 @@ None.
 ### Roadmap
 
 None.
+
+## Review
+
+### Delivered
+
+The whole record. Decisions 1 and 2 landed on 18 October 2026; the `burn-tools-ki` run delivered Decision 3's `--allow` grants and Requirement 1 on 20 October 2026 from `f2fdf227`, on branch `run/burn-tools-ki`.
+
+### Change Summary
+
+- `src/core/agent/context.ts`: `grantNames = ['fetch', 'machine']`, mirroring the background-run standard's Grants table.
+- `src/core/agent/runs.ts`: `LaunchRequest.allow`; `grant` slices each `grant-<name>.md` from its exact `## Grant: <name>` line, makes relative links absolute as the footer does, and fails naming the grant when the heading is missing; `composePrompt` appends the sections after the tier footer in `--allow` order; the progress protocol asks for "outstanding queries" with no reply block.
+- `src/commands/agent/index.ts`: `--allow <grant>` on `launch` and `queue`, repeatable, checked against the choices and listed in help.
+- The queue file carries `allow`, so the dispatcher composes the same prompt; a queue line written before the option, with no `allow`, dispatches with no grant. The hold process starts from the already composed `<name>.prompt.md`, so a held agent keeps its grants without a new hold argument.
+- `src/tests/cli/agent.test.ts`: grant fixtures beside the tier footers; order and absolute links, an unknown grant, a missing or mis-headed grant asset, the held launch, the queue and dispatcher, and the protocol wording.
+- `README.md`, `man/ki.1`, the regenerated `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md` describe `--allow` and the protocol wording.
+
+### Verification
+
+| Verify | Evidence |
+| --- | --- |
+| 1, 2 | Covered since 18 October by the footer cases in `ki agent launch`; still passing |
+| 3 | The report-path warning cases; still passing |
+| 4 | `appends each --allow grant after the tier footer in the order given`, the held launch with `--allow fetch`, and `carries the model, effort and grants through the queue to the launched runtime`; the missing-asset cases name the grant; an unknown grant exits 2 from the option parser |
+| 5 | The first launch case asserts `outstanding queries), then write DONE` and no "reply block" |
+| 6 | `bun run test:coverage` 1,373 tests at 100% statements, branches, functions and lines; `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and the command-inventory check pass; `ki repo audit --repo .` on the primary checkout after integration reports only the pre-existing findings named below |
+
+### Outstanding concerns
+
+- The harness `ki-delegation` Grants subsection keeps its interim sentence under GRANT-INTERIM a) until a `ki` release carries `--allow`; its removal is carried as a `messages.md` line to `ki.ways-of-working` in Knowledge Islands Principal under CAPTURE-GATE, not as a record.
+- The three provisional choices from 18 October (fixes ahead of grants, no warning for a bare `<name>.report.md`, each differing path named once) still await Kris's confirmation at acceptance.
+- No release: `--allow` reaches launched agents only once a `ki` release is installed.
+
+### Post-change review
+
+A grant lifts exactly one ban by appending harness-owned text, so the launcher still guarantees what each agent is told and no footer defers to free text in a brief. Composing grants at launch rather than at hold or dispatch keeps one prompt per agent.
+
+### Mini recap
+
+`ki agent launch` and `queue` take `--allow fetch` and `--allow machine`, appending the harness grant sections after the tier footer, and the progress protocol no longer asks for a reply block.
 
 ## Discussion
 

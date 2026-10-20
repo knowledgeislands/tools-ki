@@ -9,6 +9,10 @@ import type { AgentProcesses } from './processes.ts'
 export const authorityTiers = ['none', 'push', 'prune', 'release'] as const
 export type AuthorityTier = (typeof authorityTiers)[number]
 
+/** Grants that each lift one footer ban, appended after the tier footer; also shipped by ki-delegation. */
+export const grantNames = ['fetch', 'machine'] as const
+export type GrantName = (typeof grantNames)[number]
+
 export interface AgentContext {
   /** The KI state root; runs live under its `agents/` directory. */
   readonly stateDirectory: string
