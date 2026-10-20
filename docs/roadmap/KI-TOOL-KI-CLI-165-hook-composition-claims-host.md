@@ -7,12 +7,13 @@ project: tools-burndown
 component: repo
 priority: medium
 size: m
-status: triage
+horizon: soon
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T22:46:17Z
-updated_at: 2026-10-19T22:46:17Z
+updated_at: 2026-10-20T00:34:00Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design section 4.2, HOOK-CAPTURE a), 2026-10-19
 ---
 
@@ -36,6 +37,8 @@ Kris took HOOK-CAPTURE a) at 23:21 BST: capture the scope now, plans refined by 
 - Out: the claim declarations, the `ki-repo` frame template text and the shape criteria, which [KI-HARNESS-GOV-225](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-225-hook-content-claims.md) owns; the Husky conversion, which KI-TOOL-KI-CLI-163 delivered; the estate binding sweep, [KI-TOOL-KI-CLI-164](KI-TOOL-KI-CLI-164-estate-hook-binding-sweep.md); `ki git check-message`, [KI-TOOL-KI-CLI-161](KI-TOOL-KI-CLI-161-git-check-message.md); running conform against any repository.
 
 ## Discussion
+
+Adopted to Soon on 20 October 2026 under the coordinator's HOOK-ADOPT a). It stays a draft: nothing claims a hook line until KI-HARNESS-GOV-225 lands, and how repository-specific lines are kept is raised with the coordinator as HOOK-LOCAL rather than decided here.
 
 ### Repository-specific lines
 
