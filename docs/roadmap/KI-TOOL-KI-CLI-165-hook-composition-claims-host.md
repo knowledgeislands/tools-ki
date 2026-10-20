@@ -14,7 +14,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-19T22:46:17Z
-updated_at: 2026-10-20T00:34:00Z
+updated_at: 2026-10-20T00:51:03Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design section 4.2, HOOK-CAPTURE a), 2026-10-19
 ---
 
@@ -35,7 +35,7 @@ Kris took HOOK-CAPTURE a) at 23:21 BST: capture the scope now, plans refined by 
 ## Boundary
 
 - In: loading and validating hook-content claims from rubric catalogues beside `packageScripts`; aggregating them per repository in declared skill order; composing each hook as frame then claimed lines, at mode `0755`, idempotently; refusing, writing nothing, when an existing hook carries a line no claim or frame rule attributes; reusing the frame recogniser in `src/core/repository/hooks.ts`; dry-run reporting; tests through `run(args, context)` with ki-principal's and va-principal's converted hooks as fixtures; manual, guide and changelog lines.
-- Out: the claim declarations, the `ki-repo` frame template text and the shape criteria, which [KI-HARNESS-GOV-225](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-225-hook-content-claims.md) owns; the Husky conversion, which KI-TOOL-KI-CLI-163 delivered; the estate binding sweep, [KI-TOOL-KI-CLI-164](KI-TOOL-KI-CLI-164-estate-hook-binding-sweep.md); `ki git check-message`, [KI-TOOL-KI-CLI-161](KI-TOOL-KI-CLI-161-git-check-message.md); running conform against any repository.
+- Out: the claim declarations, the `ki-repo` frame template text and the shape criteria, which [KI-HARNESS-GOV-225](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-225-hook-content-claims.md) owns; the Husky conversion, which KI-TOOL-KI-CLI-163 delivered; the estate binding sweep, [KI-TOOL-KI-CLI-164 (pruned)](https://github.com/knowledgeislands/tools-ki/blob/ce905bee422605f2f7c7c4c2d94819582f0c56b8/docs/roadmap/KI-TOOL-KI-CLI-164-estate-hook-binding-sweep.md); `ki git check-message`, [KI-TOOL-KI-CLI-161 (pruned)](https://github.com/knowledgeislands/tools-ki/blob/ce905bee422605f2f7c7c4c2d94819582f0c56b8/docs/roadmap/KI-TOOL-KI-CLI-161-git-check-message.md); running conform against any repository.
 
 ## Shaping
 
