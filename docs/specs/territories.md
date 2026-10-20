@@ -74,6 +74,16 @@ _Verify:_ `src/core/territory/declaration.ts`, `src/core/territory/resolution.ts
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### TERRITORY-008 — Island condition
+
+`ki territory show` MUST report each selected island's declared maturity and its audit health, under the scale and decline rule the `ki-repo` standard's Island maturity section defines, and `--format json` MUST publish them as `ki/territory/v1`: the territory's `id` and `title`, each repository's `key`, `identity`, `root`, `kind`, `maturity` and `health`, and the `unregistered` members. Maturity MUST be `ki-repo.maturity` from the island's `.ki.toml` when it is one of `founding`, `growing`, `settled` or `thriving`, with declaration `declared`; otherwise its level MUST be `null` with declaration `absent`, `invalid` or `unreadable`, never a guessed level. A whole-repository `ki repo audit`, with no `--skill`, `--staged` or `--paths`, MUST replace that repository's record under `$XDG_STATE_HOME/ki/audit-health/` atomically with its observed time and either its FAIL and WARN counts, a local-registration failure counting as one failure, or that it could not complete; a narrowed audit MUST record nothing. Health MUST read `ruin` for an incomplete audit or any failure, otherwise `decline` for any warning, otherwise `sound`, and `unknown` with null evidence when no valid record exists. The text view MUST show both on each island's row, with their evidence under `--verbose`, and the exit status MUST stay that of [TERRITORY-003](#territory-003--complete-and-atomic-selection).
+
+_Conformance:_ conforming
+
+_Verify:_ `src/core/territory/condition.ts`, `src/core/repository/audit-health.ts`, `src/core/repository/operations/audit.ts`; `src/tests/cli/territory/condition.test.ts` exercises the JSON shape, every maturity declaration state, the four reader cases, a newer incomplete audit replacing a clean one, a registration failure, narrowed audits recording nothing, malformed records, and the text and verbose views.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 None.

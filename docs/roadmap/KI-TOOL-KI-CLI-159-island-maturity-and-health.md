@@ -9,12 +9,12 @@ component: territory
 priority: medium
 size: m
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: b4f8a100c0c4675d11a9b8ce7baaddee4afaafa3
 created_at: 2026-10-19T18:53:00Z
-updated_at: 2026-10-20T07:16:16Z
+updated_at: 2026-10-20T07:30:00Z
 transferred_from: ki-principal ki.observatory CONDITION-TOML, 2026-10-19
 ---
 
@@ -82,18 +82,19 @@ The `ki/territory/v1` shape:
 
 ## Steps
 
-- [ ] Add an island-condition core module: the scale, the maturity reader over `.ki.toml`, the audit-health record writer and reader, and the health rule.
-- [ ] Record the outcome from `auditRepositories` for a whole-repository audit, completed or incomplete, with `now` injected through `RepositoryOperationContext`.
-- [ ] Add `--format text|json` to `ki territory show`: JSON publishes `ki/territory/v1`; the text tree adds each island's maturity and health; exit status is unchanged.
-- [ ] CLI contract tests through `run(args, context)`: the four reader cases, an unrecorded island, declared, absent and invalid maturity, a filtered audit that records nothing, a newer incomplete attempt replacing an older clean one, and the JSON and text views.
-- [ ] Add TERRITORY-008 to `docs/specs/territories.md`, update the user territory-selection guide, the README example if needed, the generated command inventory and manual, and the changelog.
+- [x] Add an island-condition core module: the scale, the maturity reader over `.ki.toml`, the audit-health record writer and reader, and the health rule.
+- [x] Record the outcome from `auditRepositories` for a whole-repository audit, completed or incomplete, with `now` injected through `RepositoryOperationContext`.
+- [x] Add `--format text|json` to `ki territory show`: JSON publishes `ki/territory/v1`; the text tree adds each island's maturity and health; exit status is unchanged.
+- [x] CLI contract tests through `run(args, context)`: the four reader cases, an unrecorded island, declared, absent and invalid maturity, a filtered audit that records nothing, a newer incomplete attempt replacing an older clean one, and the JSON and text views.
+- [x] Add TERRITORY-008 to `docs/specs/territories.md`, update the user territory-selection guide, the README example if needed, the generated command inventory and manual, and the changelog.
 
 ## Files touched
 
 - `src/core/territory/condition.ts` (new) and `src/core/territory/index.ts`
+- `src/core/repository/audit-health.ts` (new)
 - `src/core/repository/operations/audit.ts`, `types.ts`; `src/commands/repo/operation-context.ts`
 - `src/commands/territory/index.ts`
-- `src/tests/cli/territory/condition.test.ts` (new)
+- `src/tests/cli/territory/condition.test.ts` (new) and `selection.test.ts`
 - `docs/specs/territories.md`, `docs/guides/user/territory-selection.md`, `man/ki.1`, `man/ki.commands.json`, `CHANGELOG.md`
 
 ## Verify
@@ -127,6 +128,45 @@ TERRITORY-008 in `docs/specs/territories.md`: the `ki territory show` condition 
 ### Roadmap
 
 None beyond this record.
+
+## Review
+
+### Delivered
+
+`ki territory show` now reports each island's declared maturity and its recorded audit health on its row, with the evidence under `--verbose`, and `--format json` publishes `ki/territory/v1`. A whole-repository `ki repo audit` records each repository's outcome under `$XDG_STATE_HOME/ki/audit-health/`, and the reader applies the `ki-repo` standard's decline rule to it. Delivered against baseline `b4f8a100`.
+
+### Change Summary
+
+- `src/core/repository/audit-health.ts`: the per-checkout record, written atomically through a temporary file and a rename, and its validating reader; failure first, so an incomplete audit or any failure is ruin, then any warning is decline, then sound; no valid record is unknown with null evidence.
+- `src/core/repository/operations/audit.ts`: an audit with no skill and no verdict scope records each repository's completed outcome, with a local-registration failure counted as one failure, or `incomplete` when the repository's audit throws. `now` reaches it through `RepositoryOperationContext`.
+- `src/core/territory/condition.ts`: the maturity scale, the `.ki.toml` reader returning `declared`, `absent`, `invalid` or `unreadable`, and `territoryReport`, which builds `ki/territory/v1`.
+- `src/commands/territory/index.ts`: `--format text|json`; the row label carries maturity and health; `--verbose` adds the declaration state and the audit evidence; the exit status is unchanged.
+- Tests: `condition.test.ts` (new, seven cases), and the show row in `selection.test.ts`.
+- Documentation: TERRITORY-008, the user guide's Read island condition section, both manual entries for `ki territory show`, the audit entry's recording note, the regenerated command inventory and the changelog.
+
+### Verification
+
+| Verify | Evidence |
+| --- | --- |
+| 1 | `publishes ki/territory/v1 with unknown maturity and health before any declaration or audit` asserts the whole shape; the unregistered exit 1 is unchanged and still covered by `selection.test.ts` |
+| 2 | `derives health from the latest whole-repository audit under the four reader cases`: clean `sound`, warning-only `decline`, failure plus warning `ruin`, incomplete `ruin`; the first case and the malformed-record case give `unknown` with null evidence |
+| 3 | The same four-case test replaces a clean record with a newer incomplete one; `a skill- or path-scoped audit records nothing` covers `--skill` and `--paths`, and `--staged` takes the same verdict-scope path |
+| 4 | `reads a declared level on the scale ...` covers all four levels, `"ruined"`, `3`, `"Settled"` and an unreadable declaration |
+| 5 | `bun run test:coverage` 1,405 tests in 86 files at 100% statements, branches, functions and lines; `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `bun run ki:tools:lint-man` and the command-inventory check pass; the pre-commit and commit-msg hooks ran on the delivery commit |
+
+### Outstanding concerns
+
+- A record exists only once a whole-repository audit has run on this machine and checkout; until then, and on every other machine, health reads unknown.
+- A hard interrupt, or a selection failure before a repository's audit starts, records nothing, so the older record stands. A failure to write the record fails the audit.
+- No repository declares `maturity` yet, and the installed harness lacks MATURITY-1 until KI-HARNESS-GOV-223 is pushed. The reader does not depend on either.
+
+### Post-change review
+
+The boundary held: the scale and rule are read from the harness standard and restated only as data, nothing declares a level in any repository, and the Observatory views stay with apps-observatory.local. Command code keeps grammar and rendering; recording and reading are core.
+
+### Mini recap
+
+Island condition is now readable through `ki territory show --format json` as `ki/territory/v1`, fed by whole-repository audits. Next: acceptance review, then the Observatory can consume the contract.
 
 ## Discussion
 

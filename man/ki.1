@@ -360,8 +360,15 @@ member is registered.
 Compare selected roots with one explicit local editor projection. Exit 0 for
 exact state, 1 for drift or unsupported source, and 2 for invalid selection.
 .TP
-.B ki territory show (--territory <handle>|--estate|--principals) [--filter <prefix>]... [--verbose]
-Show selected repositories, optionally with canonical identities and paths.
+.B ki territory show (--territory <handle>|--estate|--principals) [--filter <prefix>]... [--verbose] [--format <text|json>]
+Show selected repositories with each island's declared maturity and its
+recorded audit health, optionally with canonical identities, paths and the
+evidence behind both. Maturity is the \fBmaturity\fR key in
+\fB[skills.ki-repo]\fR, one of \fBfounding\fR, \fBgrowing\fR,
+\fBsettled\fR or \fBthriving\fR; health is sound, in decline or in ruin,
+read from the latest whole-repository \fBki repo audit\fR recorded on this
+machine. An absent, invalid or unreadable declaration and an unrecorded audit
+read as unknown. \fB--format json\fR publishes \fBki/territory/v1\fR.
 Declared members with no registry entry are listed under
 .B unregistered
 and the command exits 1.
@@ -943,6 +950,11 @@ leads with the scoped verdict and its \fBSCOPE:\fR counts before the
 whole-tree counts. A Knowledge Base pre-commit hook uses \fB--staged\fR so a
 commit is refused only for a finding it causes, while CI keeps the
 whole-tree verdict.
+A whole-repository audit, with no \fB--skill\fR, \fB--staged\fR or
+\fB--paths\fR, records each repository's outcome under
+\fB$XDG_STATE_HOME/ki/audit-health/\fR: its FAIL and WARN counts, or that it
+could not complete. \fBki territory show\fR reads that record as the island's
+health; a narrowed audit records nothing.
 .TP
 .B ki repo [repo-options] conform [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Stage the same capabilities' safe writes, then apply them and re-audit. All
@@ -1576,8 +1588,10 @@ Validate the complete selection and its physical checkouts without mutation.
 Compare selected roots with one explicit local editor projection. Exit 0 for
 exact state, 1 for drift or unsupported source, and 2 for invalid selection.
 .TP
-.B ki territory show (--territory <handle>|--estate|--principals) [--filter <prefix>]... [--verbose]
-Show selected repositories, optionally with canonical identities and paths.
+.B ki territory show (--territory <handle>|--estate|--principals) [--filter <prefix>]... [--verbose] [--format <text|json>]
+Show selected repositories with their declared maturity and recorded audit
+health, optionally with identities, paths and evidence, as text or
+\fBki/territory/v1\fR JSON.
 .TP
 .B ki territory roots (--territory <handle>|--estate|--principals) [--filter <prefix>]... [--null]
 Write deterministic absolute primary checkout roots. Use --null or -0 for NUL

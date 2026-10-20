@@ -100,7 +100,7 @@ describe('territory selection', () => {
     const show = await box.run(['ki', 'territory', 'show', '-t', 'ki'])
     expect(show.exitCode).toBe(1)
     expect(show.stdout).toBe(
-      `╭─ KI TERRITORY\n├─ ki: Example territory\n│  ╰─ capital-key\n├─ unregistered\n│  ╰─ ${member}\n╰─ summary: REPOSITORIES=1 UNREGISTERED=1\n`
+      `╭─ KI TERRITORY\n├─ ki: Example territory\n│  ╰─ capital-key · maturity unknown · health unknown\n├─ unregistered\n│  ╰─ ${member}\n╰─ summary: REPOSITORIES=1 UNREGISTERED=1\n`
     )
     const audit = await box.run(['ki', 'territory', 'audit', '-t', 'ki'])
     expect(audit.exitCode).toBe(1)

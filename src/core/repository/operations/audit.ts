@@ -1,5 +1,6 @@
 import { gatherSkillAuditEvidence, runGatheredSkillAudit } from '../../runtime/audit.ts'
 import type { AuditCriteria, Finding, PreparedSkill } from '../../runtime/types.ts'
+import { completedAudit, incompleteAudit, recordAuditHealth } from '../audit-health.ts'
 import { runWithEvidenceProgress } from '../progress/run.ts'
 import { localRepositoryRegistration, repositorySkillActivation } from './local-state.ts'
 import { selectRepositorySkills } from './selection.ts'
@@ -52,6 +53,8 @@ export const auditRepositories = async (
   observer: RepositoryAuditObserver
 ): Promise<RepositoryAuditOperationResult> => {
   const selected = await selectRepositorySkills(context, selection)
+  // Only an audit of every declared skill with an unscoped verdict is an island's audit health.
+  const recorded = !selection.skill && !selection.verdict
   const completed: RepositoryAuditResult[] = []
   let failed = false
   for (const [index, { repository, skills, resolvedSkills }] of selected.entries()) {
@@ -90,6 +93,13 @@ export const auditRepositories = async (
       )
       const findings = results.flatMap(({ audit }) => audit.findings)
       const registration = await localRepositoryRegistration(context, repository.root, skills)
+      if (recorded)
+        await recordAuditHealth(
+          context.stateDirectory,
+          repository.root,
+          context.now(),
+          completedAudit(findings, registration)
+        )
       const result: RepositoryAuditResult = {
         repository: repository.root,
         skills,
@@ -103,6 +113,7 @@ export const auditRepositories = async (
       failed ||= Boolean(registration) || blocking.some((finding) => finding.level === 'fail')
     } catch (error) {
       observer.repositoryFailed(repository.root)
+      if (recorded) await recordAuditHealth(context.stateDirectory, repository.root, context.now(), incompleteAudit)
       throw error
     }
   }

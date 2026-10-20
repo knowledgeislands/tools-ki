@@ -8,6 +8,10 @@ Use `ki territory show -t knowledge-islands --verbose` for one territory, `ki te
 
 Supported repository commands use the same selectors, for example `ki repo -t knowledge-islands -f tools- audit`. Filter alone narrows the existing current-repository or mGit workspace default. Primary territory, estate and explicit repository scopes cannot be combined.
 
+## Read island condition
+
+`ki territory show` gives each island's maturity and health on its row, for example `tools-ki · maturity settled · health in decline`. Maturity is what the island declares as `maturity` in `[skills.ki-repo]` of its `.ki.toml`: `founding`, `growing`, `settled` or `thriving`. Health comes from the latest whole-repository `ki repo audit` run on this machine: any failure, or an audit that could not complete, reads as in ruin; otherwise any warning reads as in decline; otherwise sound. Run `ki repo -t knowledge-islands audit` to refresh it; an audit narrowed with `--skill`, `--staged` or `--paths` leaves the last reading in place. An island with no valid declaration or no recorded audit shows unknown. Add `--verbose` for the declaration state and the audit's time and counts, or `--format json` for the versioned `ki/territory/v1` form that the Observatory reads.
+
 ## Open the Principals
 
 `--principals` selects every registered territory Capital and no other repository. The system Capital comes first: the one whose territory includes the canonical KI Harness, `knowledgeislands/ki-agentic-harness`, which in this estate is Knowledge Islands Principal. The other Capitals follow alphabetically by territory name, then by handle, unless you [rank your territories](#rank-your-territories). A Capital whose checkout is unavailable cannot be recognised as one and is left out.

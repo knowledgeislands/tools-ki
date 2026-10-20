@@ -59,7 +59,7 @@ This baseline describes the `v0.12.0` release. Domain imports and extracted type
 - `ki territory list`
 - `ki territory audit (--territory <handle>|--estate) [--filter <prefix>]...`
 - `ki territory inspect (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode> --workspace <selector>`
-- `ki territory show (--territory <handle>|--estate) [--filter <prefix>]... [--verbose]`
+- `ki territory show (--territory <handle>|--estate) [--filter <prefix>]... [--verbose] [--format <text|json>]`
 - `ki territory roots (--territory <handle>|--estate) [--filter <prefix>]... [--null]`
 - `ki territory open (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode|delta>`
 
@@ -180,6 +180,7 @@ This baseline describes the `v0.12.0` release. Domain imports and extracted type
 
 ### Behaviours
 
+- `ki territory show` reports each island's declared `ki-repo.maturity` and its health, sound, in decline or in ruin, read from the latest whole-repository `ki repo audit` recorded on this machine under `$XDG_STATE_HOME/ki/audit-health/`; anything undeclared or unrecorded reads as unknown, and `--format json` publishes `ki/territory/v1`.
 - `ki territory audit` and `ki territory show` name each declared member with no registry entry, filtered like the rest, and still check and list the registered members, exiting 1 until the territory is fully registered; `ki territory roots`, `open` and every `--territory` repository selection still refuse an unregistered member before doing anything.
 - `--repo <checkout>` follows a symbolic link to the repository's real location before the repository checks, so a linked checkout such as `~/workspaces/personal/dotfiles` is audited rather than refused.
 - `ki git check-message <file>` checks a commit message file against the deterministic `ki-git` rules, so that a committed `.githooks/commit-msg` needs no package: the type is one of `chore`, `docs`, `feat`, `fix`, `refactor` and `test`, a scope is lowercase kebab-case, and the subject is non-empty with no terminal full stop. Comment lines and everything from the scissors line are ignored, and Git-generated merge, revert, reapply and autosquash headers pass. A pass is silent; a failure exits 1 naming the rule and the remedy.

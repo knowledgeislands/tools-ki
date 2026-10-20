@@ -15,6 +15,7 @@ export const repositoryOperationContext = (
   environment: context.environment,
   lstat: context.lstat,
   runner: context.runner,
+  now: context.now,
   inspectUserConfiguration,
   createSkillActivation: (options) =>
     createRepositorySkillActivation({

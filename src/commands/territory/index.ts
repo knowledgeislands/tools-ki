@@ -2,16 +2,32 @@ import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
 import {
+  type AuditHealth,
   listTerritories,
   type OpenTargetName,
   openLocalTarget,
   openTargetNames,
-  resolveTerritory
+  resolveTerritory,
+  territoryReport
 } from '../../core/territory/index.ts'
 import type { TerritorySelection } from '../../core/territory/resolution.ts'
 import { renderTree } from '../presentation/index.ts'
 import { createTerritoryInspectCommand } from './inspect.ts'
 import { territoryOptions } from './selection.ts'
+
+const HEALTH: Readonly<Record<AuditHealth['state'], string>> = {
+  sound: 'sound',
+  decline: 'in decline',
+  ruin: 'in ruin',
+  unknown: 'unknown'
+}
+
+const auditEvidence = (health: AuditHealth): string =>
+  health.audit === 'completed'
+    ? `completed ${health.observedAt} FAIL=${health.failures} WARN=${health.warnings}`
+    : health.audit === 'incomplete'
+      ? `incomplete ${health.observedAt}`
+      : 'none recorded'
 
 type Options = TerritorySelection & {
   readonly filter: readonly string[]
@@ -43,14 +59,21 @@ export const createTerritoryCommand = (context: KiContext): Command => {
   )
   command.addCommand(
     territoryOptions(new Command('show').description('show selected territory or estate repositories'))
-      .option('-v, --verbose', 'show canonical identities and physical paths')
-      .action(async (options: Options) => {
+      .option('-v, --verbose', 'show canonical identities, physical paths and condition evidence')
+      .addOption(
+        new Option('--format <format>', 'text view or the versioned ki/territory/v1 JSON')
+          .choices(['text', 'json'])
+          .default('text')
+      )
+      .action(async (options: Options & { readonly format: 'text' | 'json' }) => {
         const profile = await resolve({ ...options, unregistered: 'report' })
-        const unregistered = profile.unregistered ?? []
+        const report = await territoryReport(profile, context.paths.state)
         context.stdout.write(
-          `${renderTree({ title: 'KI TERRITORY', entries: [{ label: `${profile.id}: ${profile.title}`, children: profile.roots.map((member) => ({ label: member.key, ...(options.verbose ? { children: [{ label: member.repository }, { label: member.root }] } : {}) })) }, ...(unregistered.length ? [{ label: 'unregistered', children: unregistered.map((identity) => ({ label: identity })) }] : []), { label: `summary: REPOSITORIES=${profile.roots.length}${unregistered.length ? ` UNREGISTERED=${unregistered.length}` : ''}` }] }).join('\n')}\n`
+          options.format === 'json'
+            ? `${JSON.stringify(report, null, 2)}\n`
+            : `${renderTree({ title: 'KI TERRITORY', entries: [{ label: `${report.territory.id}: ${report.territory.title}`, children: report.repositories.map((island) => ({ label: `${island.key} · maturity ${island.maturity.level ?? 'unknown'} · health ${HEALTH[island.health.state]}`, ...(options.verbose ? { children: [{ label: island.identity }, { label: island.root }, { label: `maturity: ${island.maturity.declaration}` }, { label: `audit: ${auditEvidence(island.health)}` }] } : {}) })) }, ...(report.unregistered.length ? [{ label: 'unregistered', children: report.unregistered.map((identity) => ({ label: identity })) }] : []), { label: `summary: REPOSITORIES=${report.repositories.length}${report.unregistered.length ? ` UNREGISTERED=${report.unregistered.length}` : ''}` }] }).join('\n')}\n`
         )
-        if (unregistered.length) throw new KiExit(1)
+        if (report.unregistered.length) throw new KiExit(1)
       })
   )
   command.addCommand(
