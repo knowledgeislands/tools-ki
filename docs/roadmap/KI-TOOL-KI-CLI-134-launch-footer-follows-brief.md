@@ -13,7 +13,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 0e48ca277d7e784affb7806d646df313345742c4
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-20T05:50:36Z
+updated_at: 2026-10-20T06:10:01Z
 ---
 
 # Launch Footer Follows Brief
@@ -165,3 +165,9 @@ Independent acceptance failed against the immutable delivery-evidence requiremen
 ### Baseline evidence repair, 20 October 2026
 
 The `burn2-tools-ki` run traced the unresolvable `baseline_ref`: its first eight characters match commit `0e48ca277d7e784affb7806d646df313345742c4`, but the remaining characters had been written incorrectly. That commit is the sole parent of `df1c24ed60342c2d9d194bebee9970ab3974bede`, the commit that delivered Decisions 1 and 2 and the first delivery commit for this record, so it is the immutable baseline of execution. `baseline_ref` and Delivered now name it in full, and Delivered names both delivery commits. No code changed. The three provisional choices remain for Kris under FOOTER-PROVISIONALS. The record returns to awaiting review.
+
+### Independent re-review, 20 October 2026
+
+The independent `accept4-tools-ki` review verified that the repaired full `baseline_ref` resolves to the sole parent of the first delivery commit, and that both delivery commits are ancestors of the reviewed primary checkout. The Review packet has exactly the required six headings, and every planned Step is complete. The independently run coverage gate passed all 1,398 tests in 85 files at 100% statements, branches, functions and lines; TypeScript, Biome, rumdl, Knip, manual lint, command inventory and both Syncpack checks passed. The complete repository audit passed with zero failures and seven warnings after running it sequentially with coverage; an earlier overlapping invocation refused the occupied coverage directory and was rerun without bypass. No technical defect was reproduced.
+
+The record remains awaiting review because Outstanding concerns expressly reserves three choices for Kris at acceptance: delivering the marker and report-path fixes before the grants, no warning for a bare report filename, and naming each differing report path once. The existing FOOTER-PROVISIONALS query in the [ways-of-working queries](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/queries.md) still carries that decision; the overnight grant excludes checks needing Kris personally. No acceptance or pruning is recorded for this item.

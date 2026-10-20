@@ -8,13 +8,12 @@ project: tools-burndown
 component: repo
 priority: medium
 size: m
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: ee40f26565fd3852a067164dab564e0f4745d23c
 created_at: 2026-10-19T22:46:17Z
-updated_at: 2026-10-20T05:50:36Z
+updated_at: 2026-10-20T06:10:01Z
 transferred_from: ki-principal ki.tools-burndown hooks-standard design section 4.2, HOOK-CAPTURE a), 2026-10-19
 ---
 
@@ -120,6 +119,10 @@ The correction addresses all three independent-review findings through the publi
 
 Canonical hook writing and binding now reject unsafe parents, Husky retirement rejects unknown descendants, and Knip repair requires a recognized exported object. The corrective gate is green, and the same three estate previews remain read-only. No new record was created; this record retains the correction evidence and remains Awaiting review.
 
+## Done
+
+Accepted 2026-10-20 by the independent reviewer under Kris Brown's standing grant on the review packet above.
+
 ## Discussion
 
 The owner settled the previous open questions: canonical text replaces repository-specific hook lines; no extension is preserved. The hook planner owns publication and binding, while the harness owns the text. No new design decision is required by this plan.
@@ -131,3 +134,13 @@ Independent acceptance failed the mandatory six-heading Review packet: the exact
 ### Review-packet correction, 20 October 2026
 
 The `burn2-tools-ki` run moved the four independent-review correction bullets from their extra third-level heading into Change Summary, so the Review packet carries exactly the six required headings in order; no evidence was dropped and no code changed. The record returns to awaiting review.
+
+### Independent re-review and acceptance, 20 October 2026
+
+The independent `accept4-tools-ki` review verified the immutable baseline and delivery commits, all completed Steps, the exact six-heading Review packet and the implementation against the approved canonical-hook boundary. The independently run coverage gate passed all 1,398 tests in 85 files at 100% statements, branches, functions and lines. TypeScript, Biome, rumdl, Knip, manual lint, command inventory and both Syncpack checks passed. The complete repository audit passed with zero failures and seven warnings after running it sequentially with coverage; an earlier overlapping invocation refused the occupied coverage directory and was rerun without bypass. No unresolved acceptance defect or attended check remains.
+
+Read-only conform previews repeated the delivered results: chezmoi exited 0 without hook operations, tools-mgit exited 0 proposing the two canonical hook writes, and paperclip exited 2 for its missing declaration. File contents and modes, Git status and hook bindings were unchanged for all three. No conform was applied, and no release or runtime configuration change was made.
+
+Closure authority is Kris's 20 October 2026 overnight grant, quoted by this run's brief and read back under OVERNIGHT-BURNDOWN in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md): "if you can quickly now accept ... accepting new things that are waiting with you and pruning those ... getting the roadmaps down to zero". This acceptance applies exactly to KI-TOOL-KI-CLI-165.
+
+Prune preflight searched this repository and 22 accessible Knowledge Islands peers, including registered and unregistered local checkouts. Live links remain in the harness hook-content record and Principal work designs and messages. The known archived ki-techne-principal checkout is unavailable, so this is not an exhaustive historical-peer scan. This Done record is retained pending receiver-owned reference repairs and any necessary archived-peer evidence; peer document edits are outside this repository's review grant. The follow-up is routed to the coordinating work through its `messages.md`, without creating a work record.
