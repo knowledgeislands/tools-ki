@@ -15,6 +15,8 @@ export interface TerritorySelection {
   readonly estate?: boolean
   readonly principals?: boolean
   readonly filters: readonly string[]
+  /** Report unregistered declared members on the profile instead of failing; for show and audit only. */
+  readonly unregistered?: 'report'
 }
 /** Where selection reads the local registry and the user's territory ranking. */
 export interface TerritoryDirectories {
@@ -171,14 +173,19 @@ export const resolveTerritory = async (
   if (selection.principals) return resolvePrincipals(ordered, filters)
   const capital = selection.territory === undefined ? undefined : selectedCapital(ordered, selection.territory)
   const identities = capital?.declaration.territory.members ?? entries.map((entry) => entry.repository)
-  // Registration completeness is authoritative before a basename filter can exclude anything.
-  const scoped = identities.map((identity) => {
+  // Registration completeness is authoritative before a basename filter can exclude anything,
+  // unless the caller reports the unregistered members itself.
+  const scoped: LocalRegistryEntry[] = []
+  const unregistered: string[] = []
+  for (const identity of identities) {
     const entry = entries.find((candidate) => candidate.repository === identity)
-    if (!entry) throw new KiError(`territory ${capital?.handle} member ${identity} is not registered`, 2)
-    return entry
-  })
+    if (entry) scoped.push(entry)
+    else if (selection.unregistered === 'report') unregistered.push(identity)
+    else throw new KiError(`territory ${capital?.handle} member ${identity} is not registered`, 2)
+  }
   const selected = scoped.filter((entry) => matchesDirectoryName(entry.path, filters))
-  if (!selected.length) throw noRepositoriesMatched()
+  const missing = unregistered.filter((identity) => matchesDirectoryName(identity, filters))
+  if (!selected.length && !missing.length) throw noRepositoriesMatched()
   const members: TerritoryMember[] = []
   for (const entry of selected) {
     const member = await memberAt(entry, entry === capital?.entry ? 'owner' : 'member')
@@ -214,7 +221,8 @@ export const resolveTerritory = async (
       : {}),
     members,
     roots: members,
-    system: !capital
+    system: !capital,
+    ...(missing.length ? { unregistered: missing } : {})
   }
 }
 export const listTerritories = async (

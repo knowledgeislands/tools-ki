@@ -13,4 +13,6 @@ export interface TerritoryProfile {
   readonly members: readonly TerritoryMember[]
   readonly roots: readonly TerritoryRoot[]
   readonly system: boolean
+  /** Declared member identities with no registry entry, reported only when the selection asks for them. */
+  readonly unregistered?: readonly string[]
 }

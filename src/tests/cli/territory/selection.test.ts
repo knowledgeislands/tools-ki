@@ -92,6 +92,30 @@ describe('territory selection', () => {
     expect(unavailable.exitCode).toBe(2)
     expect(unavailable.stdout).toBe('')
   })
+  test('show and audit name each unregistered member, check the rest and exit 1 while roots stay strict', async () => {
+    const { box, entries } = await fixture()
+    await registry(box, entries.slice(0, 1))
+    const member = home('example/member')
+
+    const show = await box.run(['ki', 'territory', 'show', '-t', 'ki'])
+    expect(show.exitCode).toBe(1)
+    expect(show.stdout).toBe(
+      `╭─ KI TERRITORY\n├─ ki: Example territory\n│  ╰─ capital-key\n├─ unregistered\n│  ╰─ ${member}\n╰─ summary: REPOSITORIES=1 UNREGISTERED=1\n`
+    )
+    const audit = await box.run(['ki', 'territory', 'audit', '-t', 'ki'])
+    expect(audit.exitCode).toBe(1)
+    expect(audit.stdout).toBe(
+      `╭─ KI TERRITORY AUDIT\n├─ ki: incomplete\n│  ╰─ ✗ member ${member} is not registered; register its checkout with ki registry add\n╰─ summary: REPOSITORIES=1 FINDINGS=1\n`
+    )
+    const onlyMissing = await box.run(['ki', 'territory', 'show', '-t', 'ki', '--filter', 'member'])
+    expect(onlyMissing.exitCode).toBe(1)
+    expect(onlyMissing.stdout).toContain('summary: REPOSITORIES=0 UNREGISTERED=1')
+    const filteredOut = await box.run(['ki', 'territory', 'audit', '-t', 'ki', '--filter', 'Capital'])
+    expect(filteredOut.exitCode).toBe(0)
+    expect(filteredOut.stdout).toContain('ki: healthy')
+    expect((await box.run(['ki', 'territory', 'audit', '-t', 'ki', '--filter', 'none'])).exitCode).toBe(2)
+    expect((await box.run(['ki', 'repo', 'audit', '-t', 'ki'])).stderr).toContain('is not registered')
+  })
   test('rejects ambiguous registry identities, duplicate handles, malformed Capitals and checkout disagreement', async () => {
     const { box, entries } = await fixture()
     await registry(box, [

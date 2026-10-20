@@ -352,6 +352,9 @@ in territory order.
 .TP
 .B ki territory audit (--territory <handle>|--estate|--principals) [--filter <prefix>]...
 Validate the complete selection and its physical checkouts without mutation.
+Each declared member with no registry entry is a finding naming its identity;
+the registered members are still checked, and the audit exits 1 until every
+member is registered.
 .TP
 .B ki territory inspect (--territory <handle>|--estate|--principals) [--filter <prefix>]... --target <zed|vscode> --workspace <selector>
 Compare selected roots with one explicit local editor projection. Exit 0 for
@@ -359,6 +362,9 @@ exact state, 1 for drift or unsupported source, and 2 for invalid selection.
 .TP
 .B ki territory show (--territory <handle>|--estate|--principals) [--filter <prefix>]... [--verbose]
 Show selected repositories, optionally with canonical identities and paths.
+Declared members with no registry entry are listed under
+.B unregistered
+and the command exits 1.
 .TP
 .B ki territory roots (--territory <handle>|--estate|--principals) [--filter <prefix>]... [--null]
 Write deterministic absolute primary checkout roots. Use --null or -0 for NUL
@@ -853,7 +859,8 @@ direct-CWD
 Repeat literal, case-sensitive non-empty directory-name prefixes with OR
 semantics
 to narrow any scope, including the native default. Filter before worktree
-expansion. Missing registration and ambiguous identity fail before filtering;
+expansion. Missing registration and ambiguous identity fail before filtering,
+except that territory show and audit report an unregistered member instead;
 unavailable selected roots or no matches fail before an operation. An excluded
 registered unavailable checkout does not prevent the remaining operations.
 .SS Repository management

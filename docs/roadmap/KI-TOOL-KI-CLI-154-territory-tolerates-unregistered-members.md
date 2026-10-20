@@ -9,12 +9,12 @@ component: territory
 priority: medium
 size: m
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: c5168f3e
 created_at: 2026-10-19T07:40:43Z
-updated_at: 2026-10-19T23:56:56Z
+updated_at: 2026-10-20T00:01:25Z
 ---
 
 # KI-TOOL-KI-CLI-154: Territory Tolerates Unregistered Members
@@ -55,11 +55,11 @@ Decided under HIGH-APPLY, 20 October, as the coordinator's TERRITORY-TECHMEDIX d
 
 ## Steps
 
-- [ ] Add the opt-in reporting mode to `resolveTerritory` and the profile.
-- [ ] Render the unregistered members and exit 1 in `show` and `audit`.
-- [ ] Add tests through `run(args, context)` in `src/tests/cli/territory/selection.test.ts`.
-- [ ] Update TERRITORY-003, `man/ki.1`, the regenerated command inventory and the changelog.
-- [ ] Run the gate and move the record to Awaiting review.
+- [x] Add the opt-in reporting mode to `resolveTerritory` and the profile.
+- [x] Render the unregistered members and exit 1 in `show` and `audit`.
+- [x] Add tests through `run(args, context)` in `src/tests/cli/territory/selection.test.ts`.
+- [x] Update TERRITORY-003, `man/ki.1`, the regenerated command inventory and the changelog.
+- [x] Run the gate and move the record to Awaiting review.
 
 ## Files touched
 
@@ -95,6 +95,42 @@ None beyond the manual.
 ### Roadmap
 
 None.
+
+## Review
+
+### Delivered
+
+The whole record, from baseline `c5168f3e` on 20 October 2026, by the `burnki` run in the tools-burndown Project.
+
+### Change Summary
+
+- `src/core/territory/resolution.ts`, `types.ts`: `resolveTerritory` takes `unregistered: 'report'` and returns the filtered unregistered identities on the profile instead of throwing; without it the strict behaviour is unchanged.
+- `src/commands/territory/index.ts`: `show` lists an `unregistered` branch and `UNREGISTERED=<m>`; `audit` reports `incomplete` with one finding per member and the `ki registry add` remedy; both exit 1 while any is reported.
+- `src/tests/cli/territory/selection.test.ts`: one new case covering show, audit, filtering in and out, an empty selection, and `ki repo audit -t` staying strict.
+- TERRITORY-003, `man/ki.1`, the regenerated command inventory and the changelog.
+
+### Verification
+
+| Goal | Evidence |
+| --- | --- |
+| show and audit name the member and check the rest | `show and audit name each unregistered member, check the rest and exit 1 while roots stay strict` |
+| exit non-zero while incomplete | the same case asserts exit 1 for both, and 0 once the filter excludes the member |
+| roots and operational selections stay strict | `validates full membership registration before filtering and selected roots afterwards`, unchanged, and the `ki repo audit -t` assertion |
+
+- Gate: `bun run test:coverage` passed, 83 files and 1,452 tests at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx rumdl check .`, `bunx knip`, `mandoc -T lint man/ki.1` and the command-inventory check passed; `ki repo audit --repo .` FAIL=0.
+- The source-built `ki territory audit -t techmedix` named `apps-childhealthyorkshire.co.uk`, checked the three registered members and exited 1; `show` listed them the same way; `roots` still exited 2.
+
+### Outstanding concerns
+
+- Techmedix stays at exit 1 until the archived member is registered or removed from `territory_members`; that is the owner's TERRITORY-TECHMEDIX choice in ki.baseline-rollout.
+
+### Post-change review
+
+A single unregistered member no longer hides the rest of a territory from `show` and `audit`, while every command that acts on the members still refuses an incomplete roster.
+
+### Mini recap
+
+`ki territory show` and `audit` report unregistered members and check the rest, exiting 1 until coverage is complete.
 
 ## Discussion
 

@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { KiError } from '../../core/errors.ts'
+import { KiError, KiExit } from '../../core/errors.ts'
 import {
   listTerritories,
   type OpenTargetName,
@@ -45,19 +45,23 @@ export const createTerritoryCommand = (context: KiContext): Command => {
     territoryOptions(new Command('show').description('show selected territory or estate repositories'))
       .option('-v, --verbose', 'show canonical identities and physical paths')
       .action(async (options: Options) => {
-        const profile = await resolve(options)
+        const profile = await resolve({ ...options, unregistered: 'report' })
+        const unregistered = profile.unregistered ?? []
         context.stdout.write(
-          `${renderTree({ title: 'KI TERRITORY', entries: [{ label: `${profile.id}: ${profile.title}`, children: profile.roots.map((member) => ({ label: member.key, ...(options.verbose ? { children: [{ label: member.repository }, { label: member.root }] } : {}) })) }, { label: `summary: REPOSITORIES=${profile.roots.length}` }] }).join('\n')}\n`
+          `${renderTree({ title: 'KI TERRITORY', entries: [{ label: `${profile.id}: ${profile.title}`, children: profile.roots.map((member) => ({ label: member.key, ...(options.verbose ? { children: [{ label: member.repository }, { label: member.root }] } : {}) })) }, ...(unregistered.length ? [{ label: 'unregistered', children: unregistered.map((identity) => ({ label: identity })) }] : []), { label: `summary: REPOSITORIES=${profile.roots.length}${unregistered.length ? ` UNREGISTERED=${unregistered.length}` : ''}` }] }).join('\n')}\n`
         )
+        if (unregistered.length) throw new KiExit(1)
       })
   )
   command.addCommand(
     territoryOptions(new Command('audit').description('validate a selected territory or estate')).action(
       async (options: Options) => {
-        const profile = await resolve(options)
+        const profile = await resolve({ ...options, unregistered: 'report' })
+        const unregistered = profile.unregistered ?? []
         context.stdout.write(
-          `${renderTree({ title: 'KI TERRITORY AUDIT', entries: [{ label: `${profile.id}: healthy` }, { label: `summary: REPOSITORIES=${profile.roots.length} FINDINGS=0` }] }).join('\n')}\n`
+          `${renderTree({ title: 'KI TERRITORY AUDIT', entries: [{ label: `${profile.id}: ${unregistered.length ? 'incomplete' : 'healthy'}`, children: unregistered.map((identity) => ({ label: `✗ member ${identity} is not registered; register its checkout with ki registry add` })) }, { label: `summary: REPOSITORIES=${profile.roots.length} FINDINGS=${unregistered.length}` }] }).join('\n')}\n`
         )
+        if (unregistered.length) throw new KiExit(1)
       }
     )
   )

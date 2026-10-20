@@ -165,7 +165,7 @@
         },
         {
           "invocation": "--filter <prefix>",
-          "description": "Repeat literal, case-sensitive non-empty directory-name prefixes with OR semantics to narrow any scope, including the native default. Filter before worktree expansion. Missing registration and ambiguous identity fail before filtering; unavailable selected roots or no matches fail before an operation. An excluded registered unavailable checkout does not prevent the remaining operations."
+          "description": "Repeat literal, case-sensitive non-empty directory-name prefixes with OR semantics to narrow any scope, including the native default. Filter before worktree expansion. Missing registration and ambiguous identity fail before filtering, except that territory show and audit report an unregistered member instead; unavailable selected roots or no matches fail before an operation. An excluded registered unavailable checkout does not prevent the remaining operations."
         }
       ]
     },

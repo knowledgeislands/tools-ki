@@ -26,11 +26,11 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### TERRITORY-003 — Complete and atomic selection
 
-KI MUST validate Capital metadata and full member registration before filtering. It MUST validate selected physical roots, canonical checkout identity and declared Capital afterwards. Missing registration MUST fail even when a filter would exclude the member; an excluded registered unavailable root MUST NOT fail the remaining operations. The roots endpoint MUST emit deterministic NUL-delimited absolute primary checkouts under `--null`, only after complete validation, with no partial stdout on error.
+KI MUST validate Capital metadata and full member registration before filtering. It MUST validate selected physical roots, canonical checkout identity and declared Capital afterwards. Missing registration MUST fail even when a filter would exclude the member, except in `ki territory show` and `ki territory audit`, which MUST instead name each unregistered declared member whose last identity segment the filters match, MUST still check and list the registered members, and MUST exit 1 while any is reported; an excluded registered unavailable root MUST NOT fail the remaining operations. The roots endpoint MUST emit deterministic NUL-delimited absolute primary checkouts under `--null`, only after complete validation, with no partial stdout on error.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/territory/selection.test.ts` exercises registration, unavailable roots, ambiguity, mismatch, literal filters and atomic output.
+_Verify:_ `src/tests/cli/territory/selection.test.ts` exercises registration, reported unregistered members in show and audit, unavailable roots, ambiguity, mismatch, literal filters and atomic output.
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
