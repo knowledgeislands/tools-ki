@@ -179,7 +179,7 @@ test.each(['duplicate', 'merged', 'superseded'])(
     const result = await box.run('ki repo --repo repo roadmap list --format json')
     expect(result.exitCode).toBe(0)
     expect(JSON.parse(result.output).items[0]).toMatchObject({ resolution })
-    expect(JSON.parse(result.output).items[0]).not.toHaveProperty('resolution_target')
+    expect(JSON.parse(result.output).items[0]).not.toHaveProperty('resolutionTarget')
     expect(await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-003-item.md')).toBe(external)
   }
 )
