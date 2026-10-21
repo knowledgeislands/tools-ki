@@ -20,7 +20,8 @@ interface Graph {
 const cruise = async (cwd = process.cwd()): Promise<Graph> => {
   try {
     const result = await execute(checker, ['--config', '.dependency-cruiser.ts', '--output-type', 'json', 'src'], {
-      cwd
+      cwd,
+      maxBuffer: 8 * 1024 * 1024
     })
     return JSON.parse(result.stdout) as Graph
   } catch (error) {
