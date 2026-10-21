@@ -9,12 +9,12 @@ component: dev
 priority: medium
 size: s
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: d6e8f369fac456de387298cae060058471970705
 created_at: 2026-10-19T08:04:00Z
-updated_at: 2026-10-21T03:45:10Z
+updated_at: 2026-10-21T03:51:18Z
 ---
 
 # KI-TOOL-KI-CLI-156: CI Uses Compatible KI
@@ -51,8 +51,8 @@ The coordinator designates wow-night-cli-156-d as the sole tools-ki writer; its 
 - [x] Verify the published replacement and its exact local release source/Harness against the unchanged green baseline.
 - [x] Pin CI to `v0.12.0` and guard its verified-install, single-audit, manual-lint shape with no repeated tool/test steps.
 - [x] Exercise the pinned native audit offline with representative Biome, TypeScript and test defects; require each owning criterion to fail.
-- [ ] Run the complete required gate, review the bounded diff, commit by explicit path, integrate fast-forward and publish only this run's own safe range; inspect exact-head CI or explicitly retain a pending candidate run.
-- [ ] Prepare the complete awaiting-review packet without acceptance or pruning.
+- [x] Run the complete required gate, review the bounded diff, commit by explicit path, integrate fast-forward and publish only this run's own safe range; inspect exact-head CI or explicitly retain a pending candidate run.
+- [x] Prepare the complete awaiting-review packet without acceptance or pruning.
 
 ## Files touched
 
@@ -91,6 +91,38 @@ None; contributor commands and release procedures are unchanged.
 ### Roadmap
 
 This existing record only. No new identifier, acceptance or pruning.
+
+## Review
+
+### Delivered
+
+The approved compatible-pin route is delivered from immutable baseline `d6e8f369fac456de387298cae060058471970705` in implementation commit `fcbaf5105eee4b6804a6e251781e454f2ff868d9`, fast-forwarded into main and pushed as this run's own range. CI installs published `v0.12.0` and its immutable Harness `f4d6c521ef4859dc8965579bc39a5575004e3ac5`, digest `004d7fa408e63036558879ef101207b7f71b6567b3a35383da4a570d0e6e07f9`. No warning/info policy change, duplicate gate, native audit implementation or release operation was introduced.
+
+### Change Summary
+
+- `.github/workflows/ci.yml` changes only the released KI version, from the incompatible `v0.11.3` to verified published `v0.12.0`.
+- `src/tests/ci-workflow.test.ts` guards the compatible version floor, installed-version verification before exactly one audit and manual lint, and absence of repeated Biome, TypeScript or test steps.
+- This record replaces the disproved missing-check hypothesis with immutable CI evidence, the coordinator-approved pin route, baseline, plan and delivery packet.
+
+### Verification
+
+The complete candidate test suite, TypeScript, Biome, manual lint and repository governance gates pass with installed dependencies. The full native audit executes and passes coverage. The exact released CLI source and pinned Harness also pass the unchanged baseline offline.
+
+A disposable combined negative fixture proves the published native audit returns failure for each corresponding criterion: BIO-1 for formatting, TSC-1 for an incompatible assignment, and TEST-5 for an intentional failed assertion. Its extra unused probe exports also fail Knip. Historical warning/info reproduction returns zero as expected; diagnostic policy is unchanged. External IP traffic was denied, with loopback permitted solely for local installer fixtures. No dependency installation occurred.
+
+[Implementation-head CI run 39540586660](https://github.com/knowledgeislands/tools-ki/actions/runs/39540586660) and [build job 119027163432](https://github.com/knowledgeislands/tools-ki/actions/runs/39540586660/job/119027163432) pass at exact head `fcbaf5105eee4b6804a6e251781e454f2ff868d9`. Installation, Audit and manual lint succeed. Saved logs verify `KI_VERSION=v0.12.0` and the pinned Harness digest above. The documentation-only review-packet follow-up's exact-head Actions result is recorded in the run report.
+
+### Outstanding concerns
+
+The published Harness retains baseline PKG-6, CI-1 and HOOK-4 warnings. Package and hook files are unchanged; CI-1 is the existing inline-pin location warning, with only the release value changed under the approved repair. No warning was suppressed or new exception invented. Linux CI also retains Capital/Project availability warnings TERR-3, ROUTE-1 and ITEM-2 because its isolated registry has no Capital checkouts; their source declarations and Project references are unchanged. The newer offline baseline Harness separately reports pre-existing CI-1 and MATURITY-1 warnings. Biome retains one informational finding. Independent acceptance remains outside this run.
+
+### Post-change review
+
+The repaired workflow now completes the native gate against the current repository using the verified published release. The earlier green audit did run Biome; its 41 non-failing warnings and infos explain the apparent missed gate. The pin-only workflow diff preserves verified acquisition, Biome-first native execution, TypeScript, coverage, CI-2 and manual lint. Product code and public grammar are unchanged. The bounded diff and post-hook commit paths were inspected; the record is ready for independent review, not accepted.
+
+### Mini recap
+
+The release/Harness mismatch is repaired and exact implementation-head CI passes. Both the baseline and deliberate failures support the chosen route. Historical diagnostic semantics and inherited warnings are recorded here; no new record or cross-repository policy change was created.
 
 ## Discussion
 
