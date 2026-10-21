@@ -213,9 +213,14 @@ export const resolveSelection = async (
   context: AgentContext,
   request: SelectionRequest
 ): Promise<EffectiveSelection> => {
+  const unusedRefusals: string[] = []
+  if (request.acceptance !== undefined && request.role !== 'accept')
+    unusedRefusals.push('acceptance-unverified: --acceptance requires --role accept')
+  if (request.authority !== undefined && request.role === undefined)
+    unusedRefusals.push('authority-unverified: --authority requires a role')
   const frozen = request.selection
   if (frozen) {
-    const refusals: string[] = []
+    const refusals: string[] = [...unusedRefusals]
     if (frozen.schema !== 'ki/agent-launch/v1' || frozen.role !== request.role)
       refusals.push('selection-invalid: frozen request identity changed')
     if (frozen.role !== undefined) {
@@ -243,6 +248,8 @@ export const resolveSelection = async (
         refusals.push('model-runtime-mismatch: frozen role requires its accepted runtime binding')
       if ((frozen.role === 'prune' || frozen.role === 'release') && frozen.rules !== frozen.role)
         refusals.push('footer-mismatch: frozen role requires its matching footer')
+      if ((frozen.rules === 'prune' || frozen.rules === 'release') && frozen.role !== frozen.rules)
+        refusals.push('footer-mismatch: destructive footer requires its matching role')
       if (frozen.role === 'accept' && frozen.rules !== 'none') refusals.push('footer-mismatch: accept requires none')
       if (!frozen.authority) refusals.push('authority-unverified: frozen role has no authority')
       else {
@@ -273,7 +280,7 @@ export const resolveSelection = async (
   }
   const role = request.role
   const profile = role !== undefined && Object.hasOwn(profiles, role) ? profiles[role] : undefined
-  const refusals: string[] = []
+  const refusals: string[] = [...unusedRefusals]
   if (role !== undefined && !profile) throw new KiError(`unknown role: ${role}`, 2)
   const runtime = request.explicitRuntime || !profile ? request.runtime : profile.runtime
   const effort = request.effort ?? profile?.effort
@@ -296,6 +303,8 @@ export const resolveSelection = async (
     }
     if ((role === 'prune' || role === 'release') && rules !== role)
       refusals.push(`footer-mismatch: ${role} requires --rules ${role}`)
+    if ((rules === 'prune' || rules === 'release') && role !== rules)
+      refusals.push('footer-mismatch: destructive footer requires its matching role')
     if (role === 'accept' && rules !== 'none') refusals.push('footer-mismatch: accept requires --rules none')
     const pin = context.launchEvidence?.profiles[profile.profile]
     if (runtime === profile.runtime && pin?.runtime === runtime && (model === undefined || model === pin.model))

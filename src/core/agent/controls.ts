@@ -159,7 +159,7 @@ export const stopAgent = async (context: AgentContext, request: StopRequest): Pr
         eventSequence
       })
     if (attempt.state === 'stopped')
-      return operation.previousState === 'stopped'
+      return attempt.stoppedBy !== operation.id
         ? finish('already-stopped', request.reason, 0)
         : finish(
             'stopped',
@@ -253,6 +253,7 @@ export const stopAgent = async (context: AgentContext, request: StopRequest): Pr
           return finish('already-terminal', attempt.state, 0)
         }
         attempt.state = 'stopped'
+        attempt.stoppedBy = operation.id
         await saveControl(directory, store)
         return finish(
           'stopped',
@@ -311,7 +312,10 @@ export const dequeueAgent = async (context: AgentContext, request: DequeueReques
         reason: request.reason,
         exitCode,
         eventSequence,
-        ...(outcome === 'already-started' && attempt ? { stopCommand: stopCommand(attempt) } : {})
+        ...(outcome === 'already-started' && attempt ? { stopCommand: stopCommand(attempt) } : {}),
+        ...(outcome === 'claim-unconfirmed'
+          ? { recoveryCommand: `ki agent recover inspect ${request.run} --operation ${entry.operation}` }
+          : {})
       })
     if (entry.state === 'cancelled') {
       if (entry.disposition !== 'dequeued') return finish('already-terminal', 0)
@@ -358,7 +362,9 @@ export const inspectRecovery = async (context: AgentContext, run: string, id: st
   const operation = store.operations[id]
   if (!operation) throw new KiError('unknown-operation', 1)
   const path = join(runDirectory(context, run), 'control.journal.jsonl')
-  const journal = ((await read(path)) as string)
+  const text = await read(path)
+  if (text === undefined) throw new KiError('control-state-unverified: operation journal is unavailable', 1)
+  const journal = text
     .trim()
     .split('\n')
     .map((line) => JSON.parse(line) as { phase: string; id?: string })

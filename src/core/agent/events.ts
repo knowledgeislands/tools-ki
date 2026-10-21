@@ -1,8 +1,8 @@
-import { appendFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readdir, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
-import { setTimeout as delay } from 'node:timers/promises'
 import { type AgentContext, git, instant, read } from './context.ts'
 import { loadControl } from './control-store.ts'
+import { withRunLock } from './locking.ts'
 import { ownsScope } from './scope.ts'
 import { followThread, heldAs, readThread, reportPath } from './thread.ts'
 
@@ -56,30 +56,10 @@ const stateFile = (directory: string): string => join(directory, 'events.state.j
 /** The file's modification time, or 0 when it is absent. */
 const modified = async (path: string): Promise<number> => (await stat(path).catch(() => ({ mtimeMs: 0 }))).mtimeMs
 
-/** Milliseconds after which another observer's lock is taken over. */
-const lockStale = 30_000
+/** Observers use bounded ownership-safe exclusion; age never transfers ownership. */
+const withLock = <T>(_context: AgentContext, directory: string, work: () => Promise<T>): Promise<T> =>
+  withRunLock(directory, 'events', work)
 
-/** Runs `work` holding the run's `events.lock`, so two observers never append the same event. */
-const withLock = async <T>(context: AgentContext, directory: string, work: () => Promise<T>): Promise<T> => {
-  const lock = join(directory, 'events.lock')
-  while (
-    !(await writeFile(lock, `${process.pid}\n`, { flag: 'wx' }).then(
-      () => true,
-      () => false
-    ))
-  ) {
-    // A lock that vanished since the failed create counts as stale, so the next pass takes it.
-    if (context.now() - (await modified(lock)) > lockStale) await rm(lock, { force: true })
-    else await delay(20)
-  }
-  try {
-    return await work()
-  } finally {
-    await rm(lock, { force: true })
-  }
-}
-
-/** The events after sequence number `after`, in order. */
 export const readEvents = async (directory: string, after = 0): Promise<RunEvent[]> =>
   ((await read(eventsFile(directory))) ?? '')
     .split('\n')
@@ -321,6 +301,7 @@ export const deriveEvents = (context: AgentContext, directory: string, observed:
         const attempt = store?.history[target.token]
         if (
           attempt?.state === 'stopped' &&
+          attempt.stoppedBy === operation.id &&
           (!operation.receipt || operation.receipt.outcome === 'stopped') &&
           !recorded.has(`${operation.id}/stopped`)
         ) {

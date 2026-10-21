@@ -4,6 +4,8 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 
 ## Pre-1.0 baseline
 
+- Agent first-stage compatibility: role-free launch and queue text receipts now add the effective `selection:` values; supplied `--authority` requires a role and `--acceptance` requires `--role accept`. A non-empty queue keeps a run live without a dispatcher; closed held gates render `failed` with the reason retained in status and events. Uncertain dispatcher spawn failures remain fenced as `claim-unconfirmed`, including on native adapters that cannot yet resolve them. Busy holds and dispatchers keep waiting; event observers refuse bounded contention without age-based lock takeover, and unreadable or missing control evidence never resets history. [The user guide](docs/guides/user/background-agents.md#role-free-compatibility) records the compatibility changes and explicit abandoned-lock recovery route.
+
 This baseline describes the `v0.13.0` release. Domain imports and extracted type leaves keep the dependency graph acyclic, enforced by a resolved-graph boundary gate with a supported isolated compiler and deliberate failure fixtures.
 
 ### Compatibility and migration

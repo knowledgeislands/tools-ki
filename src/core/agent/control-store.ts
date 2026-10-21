@@ -1,11 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { appendFile, mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readdir, readFile, realpath, rename, writeFile } from 'node:fs/promises'
 import { hostname } from 'node:os'
 import { join } from 'node:path'
-import { setTimeout as delay } from 'node:timers/promises'
 import { KiError } from '../errors.ts'
-import { type AgentContext, checkName, instant, read, runDirectory } from './context.ts'
+import { type AgentContext, checkName, instant, runDirectory } from './context.ts'
 import type { AgentEffectIdentity, AttemptIdentity, DependencyIdentity, ProcessIdentity } from './identities.ts'
+import { withRunLock } from './locking.ts'
 import { readThread, type ThreadHome, threadPath } from './thread.ts'
 
 export type { AttemptIdentity } from './identities.ts'
@@ -43,6 +43,7 @@ export interface ControlReceipt {
   readonly evidence?: unknown
   readonly stopCommand?: string | undefined
   readonly dequeueCommand?: string | undefined
+  readonly recoveryCommand?: string | undefined
 }
 
 export interface ControlOperation {
@@ -69,6 +70,14 @@ export interface ControlStore {
 }
 
 const activeTransactions = new Map<string, ControlStore | undefined>()
+const controlRead = async (path: string): Promise<string | undefined> => {
+  try {
+    return await readFile(path, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw new KiError(`control-state-unverified: cannot read ${path}: ${String(error)}`, 1)
+  }
+}
 
 export const canonical = (value: unknown): string =>
   JSON.stringify(value, (_key, item: unknown) =>
@@ -109,7 +118,7 @@ const immutableIdentity = (attempt: AttemptIdentity): string =>
 
 /** Replay completed writes and fence unfinished effects; a projection is never the sole journal authority. */
 const replay = async (directory: string, store: ControlStore): Promise<ControlStore> => {
-  const journal = await read(join(directory, 'control.journal.jsonl'))
+  const journal = await controlRead(join(directory, 'control.journal.jsonl'))
   if (journal === undefined && Object.keys(store.operations).length > 0)
     throw new KiError('control-state-unverified: the operation journal is unavailable', 1)
   const intents = new Set<string>()
@@ -137,7 +146,7 @@ const replay = async (directory: string, store: ControlStore): Promise<ControlSt
   for (const operation of Object.values(store.operations)) {
     if (!intents.has(operation.id)) throw new KiError('control-state-unverified: operation has no journal intent', 1)
     if (!operation.receipt) {
-      const text = await read(join(directory, 'control-receipts', `${operation.id}.json`))
+      const text = await controlRead(join(directory, 'control-receipts', `${operation.id}.json`))
       if (text !== undefined) operation.receipt = JSON.parse(text) as ControlReceipt
     }
     const receipt = operation.receipt
@@ -152,10 +161,17 @@ const replay = async (directory: string, store: ControlStore): Promise<ControlSt
     const target = operation.target as AttemptIdentity & QueueIdentity
     const attempt = typeof target.agent === 'string' ? store.attempts[target.agent] : undefined
     const entry = store.entries[operation.operation === 'dequeue' ? target.id : (target.entry ?? '')]
-    if (operation.operation === 'spawn' && receipt.outcome === 'started' && attempt?.token === target.token)
+    if (
+      operation.operation === 'spawn' &&
+      receipt.outcome === 'started' &&
+      attempt?.token === target.token &&
+      !attempt.stoppedBy
+    )
       attempt.state = 'running'
-    if (operation.operation === 'stop' && attempt?.token === target.token)
+    if (operation.operation === 'stop' && attempt?.token === target.token && !attempt.stoppedBy) {
       attempt.state = receipt.resultingState as AttemptIdentity['state']
+      if (receipt.outcome === 'stopped') attempt.stoppedBy = operation.id
+    }
     if (operation.operation === 'dequeue' && entry) {
       entry.state = receipt.resultingState as QueueIdentity['state']
       if (receipt.outcome === 'cancelled-before-start') {
@@ -177,7 +193,10 @@ const replay = async (directory: string, store: ControlStore): Promise<ControlSt
       const attempt = store.attempts[target.agent]
       if (attempt?.token === target.token) attempt.state = 'unconfirmed'
       const entry = store.entries[target.entry ?? '']
-      if (entry && entry.state !== 'cancelled') entry.state = 'unconfirmed'
+      if (entry) {
+        entry.operation = operation.id
+        if (entry.state !== 'cancelled') entry.state = 'unconfirmed'
+      }
     }
     if (
       operation.operation === 'stop' &&
@@ -189,6 +208,7 @@ const replay = async (directory: string, store: ControlStore): Promise<ControlSt
     }
   }
   bindDependants(store)
+  for (const attempt of Object.values(store.attempts)) store.history[attempt.token] = structuredClone(attempt)
   return store
 }
 
@@ -197,8 +217,29 @@ export const loadControl = async (directory: string): Promise<ControlStore | und
     const active = activeTransactions.get(directory)
     return active === undefined ? undefined : dictionaries(structuredClone(active))
   }
-  const text = await read(join(directory, 'control.json'))
-  if (text === undefined) return undefined
+  const text = await controlRead(join(directory, 'control.json'))
+  if (text === undefined) {
+    const evidence = await readdir(directory).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return []
+      throw new KiError(`control-state-unverified: cannot inspect prior evidence: ${String(error)}`, 1)
+    })
+    if (
+      evidence.some(
+        (name) =>
+          name === 'control.journal.jsonl' ||
+          name === 'control-receipts' ||
+          (name.startsWith('control-') && name.endsWith('.tmp'))
+      )
+    )
+      throw new KiError('control-state-unverified: projection missing beside prior control evidence', 1)
+    for (const name of evidence.filter((name) => name.endsWith('.launch.json'))) {
+      const launchText = await controlRead(join(directory, name))
+      if (launchText === undefined) throw new KiError('control-state-unverified: launch evidence disappeared', 1)
+      const launch = JSON.parse(launchText) as { identity?: unknown }
+      if (launch.identity) throw new KiError('control-state-unverified: immutable launch evidence has no projection', 1)
+    }
+    return undefined
+  }
   try {
     const parsed = JSON.parse(text) as ControlStore
     if (
@@ -242,7 +283,8 @@ export const verifyWorkHome = async (thread: ThreadHome): Promise<{ home: string
   const work = thread.folder.startsWith('+/_WORK/') ? thread.folder.slice('+/_WORK/'.length) : undefined
   const text = await readFile(join(home, 'work.md'), 'utf8').catch(() => undefined)
   if (text === undefined) throw new KiError('control-home-unverified: work record is unavailable', 1)
-  const recorded = /^id:\s*([^\s]+)\s*$/m.exec(text)?.[1]
+  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text)?.[1]
+  const recorded = /^id:\s*([^\s]+)\s*$/m.exec(frontmatter ?? '')?.[1]
   if (!work || (recorded !== undefined && recorded !== work) || !home.endsWith(`/${work}`))
     throw new KiError('control-home-unverified: mismatched work identity', 1)
   return { home, work }
@@ -266,7 +308,10 @@ export const newStore = async (context: AgentContext, run: string): Promise<Cont
 export const verifyStore = async (context: AgentContext, run: string, store: ControlStore): Promise<void> => {
   const { home, work } = await controlHome(context, run)
   if (store.machine !== hostname() || store.workHome !== home || store.work !== work)
-    throw new KiError('control-home-unverified: foreign machine or changed work home', 1)
+    throw new KiError(
+      `control-home-unverified: foreign machine or changed work home (stored machine ${store.machine}; current machine ${hostname()})`,
+      1
+    )
   if (
     [...Object.values(store.attempts), ...Object.values(store.history)].some(
       (attempt) =>
@@ -315,32 +360,31 @@ export const controlTransaction = async <T>(
 ): Promise<T> => {
   const directory = runDirectory(context, run)
   await mkdir(directory, { recursive: true })
-  const lock = join(directory, 'control.lock')
-  let acquired = false
-  for (let retry = 0; retry < 100; retry += 1) {
+  return withRunLock(directory, 'control', async () => {
     try {
-      await writeFile(lock, `${JSON.stringify({ pid: process.pid, token: randomUUID() })}\n`, { flag: 'wx' })
-      acquired = true
-      break
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST')
-        throw new KiError(`control-transaction-unavailable: ${String(error)}`, 1)
-      await delay(20)
+      const recovered = await loadControl(directory)
+      if (recovered) await verifyStore(context, run, recovered)
+      activeTransactions.set(directory, recovered)
+      return await action(directory)
+    } finally {
+      activeTransactions.delete(directory)
     }
-  }
-  if (!acquired)
-    throw new KiError(
-      'control-transaction-busy: retry after the active transaction; an abandoned lock requires verified local recovery',
-      1
-    )
-  try {
-    const recovered = await loadControl(directory)
-    if (recovered) await verifyStore(context, run, recovered)
-    activeTransactions.set(directory, recovered)
-    return await action(directory)
-  } finally {
-    activeTransactions.delete(directory)
-    await rm(lock)
+  })
+}
+
+/** Background loops keep their lease request pending while another owner completes an effect. */
+export const pendingControl = async <T>(
+  context: AgentContext,
+  run: string,
+  action: (directory: string) => Promise<T>
+): Promise<T> => {
+  for (;;) {
+    try {
+      return await controlTransaction(context, run, action)
+    } catch (error) {
+      if (!(error instanceof KiError) || !error.message.startsWith('control-transaction-busy:')) throw error
+      await context.processes.sleep(1000)
+    }
   }
 }
 

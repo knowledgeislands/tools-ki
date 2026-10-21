@@ -15,6 +15,7 @@ export interface AttemptIdentity {
   readonly scope: string
   readonly entry?: string | undefined
   owner?: ProcessIdentity | undefined
+  stoppedBy?: string | undefined
   state: 'held' | 'running' | 'stop-requested' | 'stopped' | 'stop-timeout' | 'done' | 'failed' | 'unconfirmed'
 }
 

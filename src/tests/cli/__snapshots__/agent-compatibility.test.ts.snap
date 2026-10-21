@@ -1,0 +1,1003 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`baseline decision reconciliation for run inspect 1`] = `
+[
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/a.md
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:00 UTC - ALPHA' home docs/a.md recorded in <fixture>/project/+/_WORK/ki.inspect/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:00 UTC - ALPHA' home docs/b.md recorded in <fixture>/project/+/_WORK/ki.inspect/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/a.md
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:01' home docs/a.md recorded in <fixture>/project/+/_WORK/ki.inspect/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/a.md
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:00 UTC - ALPHA' class standalone recorded in <fixture>/project/+/_WORK/ki.inspect/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/b.md
+class: operational
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:01 UTC - BETA' home docs/b.md class operational recorded in <fixture>/project/+/_WORK/ki.inspect/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/b.md
+class: operational
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: no entry 'missing' in <fixture>/project/+/_WORK/ki.inspect/decisions.md
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/b.md
+class: operational
+
+Second.
+",
+    "exitCode": 2,
+    "stderr": "error: option '--class <class>' argument 'invalid' is invalid. Allowed choices are operational, rule, standalone, held.
+
+Usage: ki agent reconcile [options] <run> <entry> [home]
+
+write or replace one decision's durable home or class in the work's tracked
+decisions log
+
+Arguments:
+  run              run name
+  entry            the entry's heading or its leading timestamp, or a number in
+                   a numbered log
+  home             a committed path or a work-record identifier
+
+Options:
+  --class <class>  the decision's ki-coordination class; the close gate reads it
+                   (choices: "operational", "rule", "standalone", "held")
+  -h, --help       display help for command
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/b.md
+class: operational
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: 2 entries in <fixture>/project/+/_WORK/ki.inspect/decisions.md match '2026-10-21'; give more of the heading
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "# 1 (2026-10-01)
+
+First.
+
+## 12 (2026-10-02)
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: no entry '1' in <fixture>/project/+/_WORK/ki.inspect/decisions.md
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "# 1 (2026-10-01)
+
+First.
+
+## 12 (2026-10-02)
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: no entry '1' in <fixture>/project/+/_WORK/ki.inspect/decisions.md
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "# 1 (2026-10-01)
+
+First.
+
+## 12 (2026-10-02)
+
+class: held
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '12' class held recorded in <fixture>/project/+/_WORK/ki.inspect/decisions.md
+",
+  },
+  {
+    "decisions": "# 1 (2026-10-01)
+
+First.
+
+## 12 (2026-10-02)
+
+class: held
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: no entry '9' in <fixture>/project/+/_WORK/ki.inspect/decisions.md
+",
+    "stdout": "",
+  },
+]
+`;
+
+exports[`baseline decision reconciliation for run r 1`] = `
+[
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/a.md
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:00 UTC - ALPHA' home docs/a.md recorded in <fixture>/project/+/_WORK/ki.r/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:00 UTC - ALPHA' home docs/b.md recorded in <fixture>/project/+/_WORK/ki.r/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/a.md
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:01' home docs/a.md recorded in <fixture>/project/+/_WORK/ki.r/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/a.md
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:00 UTC - ALPHA' class standalone recorded in <fixture>/project/+/_WORK/ki.r/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/b.md
+class: operational
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:01 UTC - BETA' home docs/b.md class operational recorded in <fixture>/project/+/_WORK/ki.r/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/b.md
+class: operational
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: no entry 'missing' in <fixture>/project/+/_WORK/ki.r/decisions.md
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/b.md
+class: operational
+
+Second.
+",
+    "exitCode": 2,
+    "stderr": "error: option '--class <class>' argument 'invalid' is invalid. Allowed choices are operational, rule, standalone, held.
+
+Usage: ki agent reconcile [options] <run> <entry> [home]
+
+write or replace one decision's durable home or class in the work's tracked
+decisions log
+
+Arguments:
+  run              run name
+  entry            the entry's heading or its leading timestamp, or a number in
+                   a numbered log
+  home             a committed path or a work-record identifier
+
+Options:
+  --class <class>  the decision's ki-coordination class; the close gate reads it
+                   (choices: "operational", "rule", "standalone", "held")
+  -h, --help       display help for command
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/b.md
+class: operational
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: 2 entries in <fixture>/project/+/_WORK/ki.r/decisions.md match '2026-10-21'; give more of the heading
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "# 1 (2026-10-01)
+
+First.
+
+## 12 (2026-10-02)
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: no entry '1' in <fixture>/project/+/_WORK/ki.r/decisions.md
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "# 1 (2026-10-01)
+
+First.
+
+## 12 (2026-10-02)
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: no entry '1' in <fixture>/project/+/_WORK/ki.r/decisions.md
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "# 1 (2026-10-01)
+
+First.
+
+## 12 (2026-10-02)
+
+class: held
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '12' class held recorded in <fixture>/project/+/_WORK/ki.r/decisions.md
+",
+  },
+  {
+    "decisions": "# 1 (2026-10-01)
+
+First.
+
+## 12 (2026-10-02)
+
+class: held
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: no entry '9' in <fixture>/project/+/_WORK/ki.r/decisions.md
+",
+    "stdout": "",
+  },
+]
+`;
+
+exports[`baseline decision reconciliation for run resolve 1`] = `
+[
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/a.md
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:00 UTC - ALPHA' home docs/a.md recorded in <fixture>/project/+/_WORK/ki.resolve/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:00 UTC - ALPHA' home docs/b.md recorded in <fixture>/project/+/_WORK/ki.resolve/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/a.md
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:01' home docs/a.md recorded in <fixture>/project/+/_WORK/ki.resolve/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/a.md
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:00 UTC - ALPHA' class standalone recorded in <fixture>/project/+/_WORK/ki.resolve/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/b.md
+class: operational
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '2026-10-21 12:01 UTC - BETA' home docs/b.md class operational recorded in <fixture>/project/+/_WORK/ki.resolve/decisions.md
+",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/b.md
+class: operational
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: no entry 'missing' in <fixture>/project/+/_WORK/ki.resolve/decisions.md
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/b.md
+class: operational
+
+Second.
+",
+    "exitCode": 2,
+    "stderr": "error: option '--class <class>' argument 'invalid' is invalid. Allowed choices are operational, rule, standalone, held.
+
+Usage: ki agent reconcile [options] <run> <entry> [home]
+
+write or replace one decision's durable home or class in the work's tracked
+decisions log
+
+Arguments:
+  run              run name
+  entry            the entry's heading or its leading timestamp, or a number in
+                   a numbered log
+  home             a committed path or a work-record identifier
+
+Options:
+  --class <class>  the decision's ki-coordination class; the close gate reads it
+                   (choices: "operational", "rule", "standalone", "held")
+  -h, --help       display help for command
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "## 2026-10-21 12:00 UTC - ALPHA
+
+home: docs/b.md
+class: standalone
+
+First.
+
+## 2026-10-21 12:01 UTC - BETA
+
+home: docs/b.md
+class: operational
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: 2 entries in <fixture>/project/+/_WORK/ki.resolve/decisions.md match '2026-10-21'; give more of the heading
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "# 1 (2026-10-01)
+
+First.
+
+## 12 (2026-10-02)
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: no entry '1' in <fixture>/project/+/_WORK/ki.resolve/decisions.md
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "# 1 (2026-10-01)
+
+First.
+
+## 12 (2026-10-02)
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: no entry '1' in <fixture>/project/+/_WORK/ki.resolve/decisions.md
+",
+    "stdout": "",
+  },
+  {
+    "decisions": "# 1 (2026-10-01)
+
+First.
+
+## 12 (2026-10-02)
+
+class: held
+
+Second.
+",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "Decision '12' class held recorded in <fixture>/project/+/_WORK/ki.resolve/decisions.md
+",
+  },
+  {
+    "decisions": "# 1 (2026-10-01)
+
+First.
+
+## 12 (2026-10-02)
+
+class: held
+
+Second.
+",
+    "exitCode": 1,
+    "stderr": "ki: error: no entry '9' in <fixture>/project/+/_WORK/ki.resolve/decisions.md
+",
+    "stdout": "",
+  },
+]
+`;
+
+exports[`baseline role-free footer none 1`] = `
+{
+  "effect": {
+    "arguments": [
+      "exec",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "--skip-git-repo-check",
+      "--cd",
+      "/private<fixture>/project",
+      "--add-dir",
+      "<fixture>/state/ki/agents/r",
+      "--add-dir",
+      "<fixture>/tmp/ki-agents/r/worker",
+      "-m",
+      "explicit-model",
+      "-c",
+      "model_reasoning_effort=high",
+      "# Bounded task
+
+## Rules
+
+Tier none.
+
+## Grant: fetch
+
+Explicit fetch.
+
+---
+
+Progress protocol. Overwrite <fixture>/state/ki/agents/r/worker.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: TZ=UTC date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to <fixture>/state/ki/agents/r/worker.report.md as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries), then write DONE as the last line of <fixture>/state/ki/agents/r/worker.status. This is the only report path; it governs any other the brief names. Temporary output goes in <fixture>/tmp/ki-agents/r/worker/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.
+",
+    ],
+    "command": "codex",
+    "workingDirectory": "/private<fixture>/project",
+  },
+  "effort": "high",
+  "launch": {
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "launched r/worker (pid 4001) in <fixture>/state/ki/agents/r
+",
+  },
+  "model": "explicit-model",
+  "prompt": "# Bounded task
+
+## Rules
+
+Tier none.
+
+## Grant: fetch
+
+Explicit fetch.
+
+---
+
+Progress protocol. Overwrite <fixture>/state/ki/agents/r/worker.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: TZ=UTC date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to <fixture>/state/ki/agents/r/worker.report.md as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries), then write DONE as the last line of <fixture>/state/ki/agents/r/worker.status. This is the only report path; it governs any other the brief names. Temporary output goes in <fixture>/tmp/ki-agents/r/worker/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.
+",
+  "queue": {
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "queued r/later at position 1
+",
+  },
+  "queuedBrief": "# Bounded task
+",
+  "queuedRequest": {
+    "allow": [
+      "fetch",
+    ],
+    "effort": "high",
+    "model": "explicit-model",
+    "rules": "none",
+    "runtime": "codex",
+  },
+  "runtime": "codex",
+}
+`;
+
+exports[`baseline role-free footer prune 1`] = `
+{
+  "effect": {
+    "arguments": [
+      "exec",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "--skip-git-repo-check",
+      "--cd",
+      "/private<fixture>/project",
+      "--add-dir",
+      "<fixture>/state/ki/agents/r",
+      "--add-dir",
+      "<fixture>/tmp/ki-agents/r/worker",
+      "-m",
+      "explicit-model",
+      "-c",
+      "model_reasoning_effort=high",
+      "# Bounded task
+
+## Rules
+
+Tier prune.
+
+## Grant: fetch
+
+Explicit fetch.
+
+---
+
+Progress protocol. Overwrite <fixture>/state/ki/agents/r/worker.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: TZ=UTC date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to <fixture>/state/ki/agents/r/worker.report.md as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries), then write DONE as the last line of <fixture>/state/ki/agents/r/worker.status. This is the only report path; it governs any other the brief names. Temporary output goes in <fixture>/tmp/ki-agents/r/worker/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.
+",
+    ],
+    "command": "codex",
+    "workingDirectory": "/private<fixture>/project",
+  },
+  "effort": "high",
+  "launch": {
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "launched r/worker (pid 4001) in <fixture>/state/ki/agents/r
+",
+  },
+  "model": "explicit-model",
+  "prompt": "# Bounded task
+
+## Rules
+
+Tier prune.
+
+## Grant: fetch
+
+Explicit fetch.
+
+---
+
+Progress protocol. Overwrite <fixture>/state/ki/agents/r/worker.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: TZ=UTC date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to <fixture>/state/ki/agents/r/worker.report.md as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries), then write DONE as the last line of <fixture>/state/ki/agents/r/worker.status. This is the only report path; it governs any other the brief names. Temporary output goes in <fixture>/tmp/ki-agents/r/worker/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.
+",
+  "queue": {
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "queued r/later at position 1
+",
+  },
+  "queuedBrief": "# Bounded task
+",
+  "queuedRequest": {
+    "allow": [
+      "fetch",
+    ],
+    "effort": "high",
+    "model": "explicit-model",
+    "rules": "prune",
+    "runtime": "codex",
+  },
+  "runtime": "codex",
+}
+`;
+
+exports[`baseline role-free footer push 1`] = `
+{
+  "effect": {
+    "arguments": [
+      "exec",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "--skip-git-repo-check",
+      "--cd",
+      "/private<fixture>/project",
+      "--add-dir",
+      "<fixture>/state/ki/agents/r",
+      "--add-dir",
+      "<fixture>/tmp/ki-agents/r/worker",
+      "-m",
+      "explicit-model",
+      "-c",
+      "model_reasoning_effort=high",
+      "# Bounded task
+
+## Rules
+
+Tier push.
+
+## Grant: fetch
+
+Explicit fetch.
+
+---
+
+Progress protocol. Overwrite <fixture>/state/ki/agents/r/worker.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: TZ=UTC date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to <fixture>/state/ki/agents/r/worker.report.md as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries), then write DONE as the last line of <fixture>/state/ki/agents/r/worker.status. This is the only report path; it governs any other the brief names. Temporary output goes in <fixture>/tmp/ki-agents/r/worker/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.
+",
+    ],
+    "command": "codex",
+    "workingDirectory": "/private<fixture>/project",
+  },
+  "effort": "high",
+  "launch": {
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "launched r/worker (pid 4001) in <fixture>/state/ki/agents/r
+",
+  },
+  "model": "explicit-model",
+  "prompt": "# Bounded task
+
+## Rules
+
+Tier push.
+
+## Grant: fetch
+
+Explicit fetch.
+
+---
+
+Progress protocol. Overwrite <fixture>/state/ki/agents/r/worker.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: TZ=UTC date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to <fixture>/state/ki/agents/r/worker.report.md as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries), then write DONE as the last line of <fixture>/state/ki/agents/r/worker.status. This is the only report path; it governs any other the brief names. Temporary output goes in <fixture>/tmp/ki-agents/r/worker/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.
+",
+  "queue": {
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "queued r/later at position 1
+",
+  },
+  "queuedBrief": "# Bounded task
+",
+  "queuedRequest": {
+    "allow": [
+      "fetch",
+    ],
+    "effort": "high",
+    "model": "explicit-model",
+    "rules": "push",
+    "runtime": "codex",
+  },
+  "runtime": "codex",
+}
+`;
+
+exports[`baseline role-free footer release 1`] = `
+{
+  "effect": {
+    "arguments": [
+      "exec",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "--skip-git-repo-check",
+      "--cd",
+      "/private<fixture>/project",
+      "--add-dir",
+      "<fixture>/state/ki/agents/r",
+      "--add-dir",
+      "<fixture>/tmp/ki-agents/r/worker",
+      "-m",
+      "explicit-model",
+      "-c",
+      "model_reasoning_effort=high",
+      "# Bounded task
+
+## Rules
+
+Tier release.
+
+## Grant: fetch
+
+Explicit fetch.
+
+---
+
+Progress protocol. Overwrite <fixture>/state/ki/agents/r/worker.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: TZ=UTC date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to <fixture>/state/ki/agents/r/worker.report.md as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries), then write DONE as the last line of <fixture>/state/ki/agents/r/worker.status. This is the only report path; it governs any other the brief names. Temporary output goes in <fixture>/tmp/ki-agents/r/worker/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.
+",
+    ],
+    "command": "codex",
+    "workingDirectory": "/private<fixture>/project",
+  },
+  "effort": "high",
+  "launch": {
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "launched r/worker (pid 4001) in <fixture>/state/ki/agents/r
+",
+  },
+  "model": "explicit-model",
+  "prompt": "# Bounded task
+
+## Rules
+
+Tier release.
+
+## Grant: fetch
+
+Explicit fetch.
+
+---
+
+Progress protocol. Overwrite <fixture>/state/ki/agents/r/worker.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: TZ=UTC date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to <fixture>/state/ki/agents/r/worker.report.md as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries), then write DONE as the last line of <fixture>/state/ki/agents/r/worker.status. This is the only report path; it governs any other the brief names. Temporary output goes in <fixture>/tmp/ki-agents/r/worker/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.
+",
+  "queue": {
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "queued r/later at position 1
+",
+  },
+  "queuedBrief": "# Bounded task
+",
+  "queuedRequest": {
+    "allow": [
+      "fetch",
+    ],
+    "effort": "high",
+    "model": "explicit-model",
+    "rules": "release",
+    "runtime": "codex",
+  },
+  "runtime": "codex",
+}
+`;

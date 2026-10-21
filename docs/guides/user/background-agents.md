@@ -69,6 +69,24 @@ Pass `--worktree <repo>` to `launch` or `queue` to start from that repository's 
 
 `ki agent close` checks the same worktree directory that launch records. Integrate verified work under `ki-git` and remove the run's merged worktrees before closing. A failed preparation retains its stranded checkout for inspection.
 
+## Recover an abandoned lock
+
+`control.lock` serialises queue and launch changes; `events.lock` serialises event publication. A foreground control or observer refuses after bounded contention and names this recovery route. A held launch or dispatcher keeps waiting through a busy control transaction. Neither lock is taken over because it is old or because a PID looks unused. New locks record the holder's machine, PID, process birth timestamp and random token. An exception releases the unchanged holder's lock; abrupt process termination can leave it behind.
+
+Recovery is an explicit offline coordinator action under a cited owner decision. First prevent new invocations for this run and quiesce every dispatcher, held launcher and event observer that could contend for either lock. Verify those invocations have ended through their owning supervisors' exit acknowledgements; a quiet terminal, an old modification time or a failed PID lookup is insufficient. Do not signal workers or remove their containment fences to recover a lock.
+
+Read and preserve the lock bytes. On the recorded machine, compare its process birth timestamp, executable and launch record with the operating system's process inventory and the owning supervisor's recorded exit. A reused PID belongs to a different birth identity and must never be signalled. Require positive evidence that the original holder has exited, together with verified quiescence of all contenders. If that evidence is unavailable, leave the lock in place. A verified machine restart after the recorded holder's birth is an alternative proof that the original holder has gone, provided no new run invocations have started. A legacy PID-only lock requires supervisor exit evidence or that verified restart, never a PID-only guess.
+
+With exclusive local access established, re-read the lock and confirm its bytes and token still match the preserved copy. Rename it within the same run directory to an unused evidence name such as `control.lock.recovered-<token>` or `events.lock.recovered-<token>`; never overwrite or delete evidence. Record the owner decision, machine, holder identity, exit or restart proof, quiescence checks and preserved path in the recovery report. Then retry the refused command. If any identity, contender or file changes during verification, stop and repeat the inspection. This route moves only the abandoned exclusion file: it does not settle a spawn, clear a cancellation tombstone or authorise a replacement worker.
+
+A `claim-unconfirmed` entry remains fenced on today's native adapters: they cannot prove `spawn-started` or `spawn-not-started`. Use `ki agent recover inspect <run> --operation <id>` to collect the frozen operation and evidence requirements, then bring the operation and local evidence to the owner. There is no supported command to clear that entry by assertion, deleting a lock, editing the queue or launching a replacement. Verified adapter evidence remains a separate enablement gate.
+
+## Role-free compatibility
+
+Role-free `launch` and `queue` still accept `--rules push|prune|release` without `--authority`, preserve explicit runtime, model, effort and grants, and label the selection `legacy`. Text launch and queue receipts add a `selection:` line with the effective values; JSON receipts retain their structured selection. A supplied `--authority` now requires a role, and `--acceptance` requires `--role accept`, so neither option is silently ignored.
+
+A non-empty queue keeps the run live even without a dispatcher. A held attempt whose gate closes is rendered `failed`; its gate reason remains in the status file and event log. A dispatcher spawn failure whose outcome cannot be proved leaves the queue entry `claim-unconfirmed`, rather than dropping it as failed. The recovery limit above applies to these role-free entries too. Busy control transactions keep held launches and dispatchers pending; bounded observer contention returns a refusal without taking another observer's lock. Unreadable or missing control evidence fails closed without resetting history.
+
 ## Keep a queue moving
 
 1. Queue ready-made prompts in priority order: `ki agent queue <run> <name> <prompt-file> --workdir <dir> --rules push`.

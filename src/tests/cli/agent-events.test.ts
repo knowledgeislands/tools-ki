@@ -243,7 +243,7 @@ describe('ki agent run events', () => {
     ])
   })
 
-  test('appends each event once when observers race, and takes over a stale lock', async () => {
+  test('appends each event once when observers race, and refuses an old owned lock', async () => {
     const box = await sandbox()
     await setupRun(box)
     // Changed in the same instant, the two agents are ordered by name.
@@ -267,8 +267,8 @@ describe('ki agent run events', () => {
 
     await written(box, 'events.lock', '1\n', 29)
     await box.state.write('ki/agents/r/d.pid', '8\n')
-    expect((await box.run('ki agent status r', { now })).exitCode).toBe(0)
-    expect(await kinds(box)).toHaveLength(4)
+    expect((await box.run('ki agent status r', { now })).exitCode).toBe(1)
+    expect(await kinds(box)).toHaveLength(3)
   })
 
   test('treats the agents an older run had already ended as seen on its first read', async () => {

@@ -22,7 +22,7 @@ import {
   watchRun
 } from '../../core/agent/runs.ts'
 import { type AgentEffort, type AgentRuntime, agentEfforts, agentRuntimes } from '../../core/agent/runtimes.ts'
-import { type AgentRole, agentRoles, resolveSelection } from '../../core/agent/selection.ts'
+import { type AgentRole, agentRoles, type EffectiveSelection, resolveSelection } from '../../core/agent/selection.ts'
 import { archiveKept, sweepAgents } from '../../core/agent/sweep.ts'
 import {
   appendDecision,
@@ -153,6 +153,11 @@ export const createAgentCommand = (context: KiContext): Command => {
   const write = (line: string): void => {
     context.stdout.write(`${line}\n`)
   }
+  const selectionLine = (selection: EffectiveSelection): void => {
+    write(
+      `selection: ${selection.path} runtime=${selection.runtime} model=${selection.model ?? 'default'} effort=${selection.effort ?? 'default'} rules=${selection.rules} grants=${selection.grants.join(',') || 'none'}`
+    )
+  }
   const command = new Command('agent').description(
     'launch and coordinate detached background agents under the ki-delegation run contract'
   )
@@ -200,6 +205,7 @@ export const createAgentCommand = (context: KiContext): Command => {
             ? `held ${run}/${name} until ${result.held.join(', ')} finish (pid ${result.pid}) in ${result.directory}`
             : `launched ${run}/${name} (pid ${result.pid}) in ${result.directory}`
         )
+        selectionLine(result.selection as EffectiveSelection)
       }
     )
   )
@@ -224,6 +230,7 @@ export const createAgentCommand = (context: KiContext): Command => {
       if (options.json) return write(JSON.stringify(queued))
       for (const warning of queued.warnings) context.stderr.write(`ki: warning: ${warning}\n`)
       write(`queued ${run}/${name} at position ${queued.position}`)
+      selectionLine(queued.selection as EffectiveSelection)
     })
   )
 

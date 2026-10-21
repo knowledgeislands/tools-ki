@@ -87,7 +87,9 @@ describe('ki agent launch', () => {
     const result = await box.run('ki agent launch r one . task.md --rules push --add-dir extra', { now })
 
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toBe(`launched r/one (pid 1001) in ${box.state.path}/ki/agents/r\n`)
+    expect(result.stdout.replace(/^selection:.*\n/gm, '')).toBe(
+      `launched r/one (pid 1001) in ${box.state.path}/ki/agents/r\n`
+    )
     const prompt = await box.state.read('ki/agents/r/one.prompt.md')
     expect(prompt).toContain('# Task: do it\n\n1. Step.\n\n## Rules')
     expect(prompt).toContain(
@@ -458,7 +460,7 @@ describe('ki agent launch of a name that has already run', () => {
 
     const relaunched = await box.run('ki agent launch r fix . task.md --relaunch', { now })
     expect(relaunched.exitCode).toBe(0)
-    expect(relaunched.stdout).toBe(`launched r/fix (pid 1002) in ${runDir(box)}\n`)
+    expect(relaunched.stdout.replace(/^selection:.*\n/gm, '')).toBe(`launched r/fix (pid 1002) in ${runDir(box)}\n`)
     expect(await box.state.read('ki/agents/r/fix.prev-1/fix.prompt.md')).toBe(before)
     expect(await box.state.read('ki/agents/r/fix.prev-1/fix.status')).toBe('21:31 CET - done\nDONE\n')
     expect(await box.state.read('ki/agents/r/fix.prev-1/fix.log')).toBe('first run\n')
@@ -506,7 +508,7 @@ describe('ki agent launch --wait-for', () => {
     await box.state.write('ki/agents/r/zero.status', '21:00 CEST - reported\nDONE\n')
 
     const result = await box.run('ki agent launch r one . task.md --wait-for zero', { now })
-    expect(result.stdout).toBe(`launched r/one (pid 1001) in ${runDirectory(box)}\n`)
+    expect(result.stdout.replace(/^selection:.*\n/gm, '')).toBe(`launched r/one (pid 1001) in ${runDirectory(box)}\n`)
     expect((processes.launches[0] as AgentLaunch).command).toBe('claude')
   })
 
@@ -527,7 +529,9 @@ describe('ki agent launch --wait-for', () => {
       { now }
     )
 
-    expect(result.stdout).toBe(`held r/one until first, later finish (pid 1001) in ${runDirectory(box)}\n`)
+    expect(result.stdout.replace(/^selection:.*\n/gm, '')).toBe(
+      `held r/one until first, later finish (pid 1001) in ${runDirectory(box)}\n`
+    )
     const prompt = await box.state.read('ki/agents/r/one.prompt.md')
     expect(prompt).toContain('- Tier push rule.\n\n## Grant: fetch\n')
     expect(prompt).not.toContain('Wait gate.')
@@ -1635,8 +1639,12 @@ describe('ki agent queue, dispatch and wait', () => {
 
     expect(
       (await box.run('ki agent queue r one task.md --rules push --allow machine --wait-for zero', { now })).stdout
-    ).toBe('queued r/one at position 1\n')
-    expect((await box.run('ki agent queue r two task.md', { now })).stdout).toBe('queued r/two at position 2\n')
+    ).toBe(
+      'queued r/one at position 1\nselection: legacy runtime=claude model=default effort=default rules=push grants=machine\n'
+    )
+    expect((await box.run('ki agent queue r two task.md', { now })).stdout).toBe(
+      'queued r/two at position 2\nselection: legacy runtime=claude model=default effort=default rules=none grants=none\n'
+    )
     await box.project.write('task.md', '# Changed\n')
     expect(await box.state.read('ki/agents/r/one.queued.md')).toBe('# Task\n')
     const [first] = (await box.state.read('ki/agents/r/queue.jsonl')).split('\n')

@@ -30,6 +30,7 @@ import {
   loadControl,
   newStore,
   nextIdentity,
+  pendingControl,
   type QueueIdentity,
   saveControl,
   verifyStore,
@@ -406,7 +407,9 @@ const startRuntime = async (
   const base = join(directory, request.name)
   // Both callers validate the reservation and cancellation fence inside this transaction.
   const entry = request.entry === undefined ? undefined : (store.entries[request.entry] as QueueIdentity)
+  await validated(context, request)
   const tree = await prepareAgentWorktree(context, request)
+  await validated(context, request)
   if ((await realpath(tree?.path ?? request.workdir)) !== attempt.workdir)
     throw new KiError('workdir-identity-changed: physical working directory differs from the reserved attempt', 1)
   await writeFile(`${base}.status`, `${stamp(context)} - launched\n`)
@@ -512,6 +515,8 @@ const startHold = async (
     environment: context.environment,
     log: `${base}.log`
   }
+  const entry = request.entry === undefined ? undefined : store.entries[request.entry]
+  if (entry) entry.state = 'claimed'
   const operation = await beginOperation(
     context,
     directory,
@@ -535,6 +540,10 @@ const startHold = async (
     } else pid = await context.processes.launch(launch)
   } catch {
     attempt.state = 'unconfirmed'
+    if (entry) {
+      entry.state = 'unconfirmed'
+      entry.operation = operation.id
+    }
     await saveControl(directory, store)
     await recordEvent(
       context,
@@ -686,8 +695,6 @@ export const launchAgent = async (
       ),
       temporary
     )
-    pending.state = 'claimed'
-    await saveControl(directory, prior)
   }
   const old = prior?.attempts[request.name]
   let scopeEmpty = false
@@ -743,65 +750,91 @@ export const launchAgent = async (
     }
   }
   if (request.relaunch) await setAside(context, directory, thread, request)
-  store.attempts[request.name] = reserved
-  await saveControl(directory, store)
-  request = { ...request, launchToken: reserved.token }
+  try {
+    store.attempts[request.name] = reserved
+    await saveControl(directory, store)
+    request = { ...request, launchToken: reserved.token }
 
-  // The launcher copies the agent's report into the tracked thread folder, so the folder must exist.
-  await mkdir(threadPath(thread), { recursive: true })
-  await mkdir(temporary, { recursive: true })
-  const warnings = reportConflicts(body, directory, request.name)
-  const prompt = await composePrompt(context, directory, request, stateReport(directory, request.name), temporary, body)
-  await writeFile(`${base}.prompt.md`, prompt)
-  await writeFile(`${base}.launch.json`, await launchDetails(context, request))
-  // Once started, `<name>.prompt.md` holds the brief, so the run's queued or draft copy goes.
-  const spent = [`${base}.queued.md`, `${base}.draft.md`].find(
-    (path) => path === resolve(context.workingDirectory, request.prompt)
-  )
-  if (state.kind === 'open') {
-    const pid = await startRuntime(context, directory, request, prompt, store, reserved)
+    // The launcher copies the agent's report into the tracked thread folder, so the folder must exist.
+    await mkdir(threadPath(thread), { recursive: true })
+    await mkdir(temporary, { recursive: true })
+    const warnings = reportConflicts(body, directory, request.name)
+    const prompt = await composePrompt(
+      context,
+      directory,
+      request,
+      stateReport(directory, request.name),
+      temporary,
+      body
+    )
+    await writeFile(`${base}.prompt.md`, prompt)
+    await writeFile(`${base}.launch.json`, await launchDetails(context, request))
+    // Once started, `<name>.prompt.md` holds the brief, so the run's queued or draft copy goes.
+    const spent = [`${base}.queued.md`, `${base}.draft.md`].find(
+      (path) => path === resolve(context.workingDirectory, request.prompt)
+    )
+    if (state.kind === 'open') {
+      const pid = await startRuntime(context, directory, request, prompt, store, reserved)
+      if (spent) await rm(spent, { force: true })
+      await recordEvent(
+        context,
+        directory,
+        await observed(context, directory),
+        request.name,
+        'launch',
+        `launched (pid ${pid})`
+      )
+      return {
+        schema: 'ki/agent-launch/v1',
+        exitCode: 0,
+        pid,
+        directory,
+        held: [],
+        warnings,
+        selection: request.selection,
+        identity: (await loadControl(directory))?.attempts[request.name]
+      }
+    }
+    await writeFile(`${base}.status`, heldLine(context, state.names))
+    const pid = await startHold(context, directory, request, store, reserved)
+    await writeFile(`${base}.pid`, `${pid}\n`)
+    await writeFile(`${base}.launch.json`, await launchDetails(context, request))
     if (spent) await rm(spent, { force: true })
     await recordEvent(
       context,
       directory,
       await observed(context, directory),
       request.name,
-      'launch',
-      `launched (pid ${pid})`
+      'held',
+      `held until ${state.names.join(', ')} finish`
     )
     return {
       schema: 'ki/agent-launch/v1',
       exitCode: 0,
       pid,
       directory,
-      held: [],
+      held: state.names,
       warnings,
       selection: request.selection,
       identity: (await loadControl(directory))?.attempts[request.name]
     }
-  }
-  await writeFile(`${base}.status`, heldLine(context, state.names))
-  const pid = await startHold(context, directory, request, store, reserved)
-  await writeFile(`${base}.pid`, `${pid}\n`)
-  await writeFile(`${base}.launch.json`, await launchDetails(context, request))
-  if (spent) await rm(spent, { force: true })
-  await recordEvent(
-    context,
-    directory,
-    await observed(context, directory),
-    request.name,
-    'held',
-    `held until ${state.names.join(', ')} finish`
-  )
-  return {
-    schema: 'ki/agent-launch/v1',
-    exitCode: 0,
-    pid,
-    directory,
-    held: state.names,
-    warnings,
-    selection: request.selection,
-    identity: (await loadControl(directory))?.attempts[request.name]
+  } catch (error) {
+    const current = await loadControl(directory)
+    if (
+      current &&
+      !Object.values(current.operations).some(
+        (operation) =>
+          (operation.operation === 'spawn' || operation.operation === 'spawn-supervisor') &&
+          (operation.target as AttemptIdentity).token === reserved.token
+      )
+    ) {
+      reserved.state = 'failed'
+      current.history[reserved.token] = structuredClone(reserved)
+      current.attempts[request.name] = earlier ?? reserved
+      if (entry) current.entries[entry.id] = { ...entry, state: 'queued' }
+      await saveControl(directory, current)
+    }
+    throw error
   }
 }
 
@@ -826,7 +859,7 @@ export const holdAgent = async (context: AgentContext, candidate: LaunchRequest)
   for (;;) {
     // The launcher has just seen the gate shut, so the first check waits a full interval.
     await context.processes.sleep(holdSeconds * 1000)
-    const result = await controlTransaction(context, request.run, async () => {
+    const result = await pendingControl(context, request.run, async () => {
       const store = await loadControl(directory)
       const attempt = store?.attempts[request.name]
       if (
@@ -1273,7 +1306,7 @@ export const dispatchRun = async (
 ): Promise<void> => {
   const directory = await existingRun(context, request.run)
   for (;;) {
-    const result = await controlTransaction(context, request.run, async () => {
+    const result = await pendingControl(context, request.run, async () => {
       const store = await loadControl(directory)
       if (store) {
         await verifyStore(context, request.run, store)
@@ -1347,27 +1380,6 @@ export const dispatchRun = async (
             )
               throw new KiError('selection-changed: the queue differs from its frozen request', 1)
             next = { ...frozen, entry: entry.id }
-            entry.state = 'claimed'
-            const target = identity(
-              context,
-              store,
-              request.run,
-              next.name,
-              next.runtime,
-              await physicalWorkdir(context, directory, next),
-              entry
-            )
-            const operation = await beginOperation(
-              context,
-              directory,
-              store,
-              'spawn',
-              { token: target.token, scope: target.scope, selection: next.selection },
-              target,
-              'held'
-            )
-            entry.operation = operation.id
-            await saveControl(directory, store)
           }
           await launchAgent(context, next, true)
           await writeQueue(directory, queue.toSpliced(index, 1))

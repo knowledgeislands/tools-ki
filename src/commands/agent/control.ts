@@ -14,7 +14,7 @@ const positive = (value: string): number => {
 export const controlCommands = (context: KiContext, agent: AgentContext): readonly Command[] => {
   const output = (receipt: ControlReceipt, json?: boolean): void => {
     context.stdout.write(
-      `${json ? JSON.stringify(receipt) : `${localTime(agent)} - ${receipt.outcome}: ${receipt.reason} (${receipt.operationId})`}\n`
+      `${json ? JSON.stringify(receipt) : `${localTime(agent)} - ${receipt.outcome}: ${receipt.reason} (${receipt.operationId})${receipt.recoveryCommand ? `\nnext: ${receipt.recoveryCommand}` : ''}`}\n`
     )
     if (receipt.exitCode !== 0) throw new KiExit(receipt.exitCode)
   }
