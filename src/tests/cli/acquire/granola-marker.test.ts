@@ -42,7 +42,7 @@ const fixture = async (settings: Settings = {}) => {
       'name: ki-acquire-granola',
       'ki-depends-on: []',
       'ki-acquire-adapter: granola',
-      'ki-acquire-actions: [import, status, reconcile, reset, mark]',
+      'ki-acquire-actions: [import, mark]',
       'ki-acquire-repository-properties: [folder_ids, duplicate_folder_ids, unfoldered, residual, capture_root, folder_territories, acquired_folder_id]',
       'ki-acquire-invocation-properties: [refresh-transcripts, refresh-acquired]',
       'ki-acquire-capabilities: [account, folders, meetings, details, transcripts, attachments]',

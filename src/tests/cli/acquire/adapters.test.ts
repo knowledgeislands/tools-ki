@@ -71,10 +71,22 @@ const chatgpt: AdapterSkill = {
 const granola: AdapterSkill = {
   name: 'ki-acquire-granola',
   adapter: 'granola',
-  actions: ['import', 'status', 'reconcile', 'reset'],
+  actions: ['import'],
   repositoryProperties: ['folder_ids', 'duplicate_folder_ids', 'unfoldered', 'residual'],
   invocationProperties: ['refresh-transcripts']
 }
+
+test.each(['status', 'reconcile', 'reset'])(
+  'rejects retired acquisition action %s in adapter metadata',
+  async (action) => {
+    const box = await sandbox()
+    await installSkills(box, [{ ...granola, actions: ['import', action] }])
+    await repository(box, [{ name: granola.name, configuration: ['unfoldered = true'] }])
+    const result = await box.run('ki acquire list')
+    expect(result.output).toContain('granola · invalid')
+    expect(result.output).toContain('actions must be a non-empty list of import, mark')
+  }
+)
 
 describe('[ki acquire adapter selection]', () => {
   test('lists zero, available, enabled, and missing-executable adapters', async () => {
@@ -179,9 +191,9 @@ describe('[ki acquire adapter selection]', () => {
     expect(inferredOverride.output).toContain('requires explicit --adapter <name>')
   })
 
-  test('validates ChatGPT persistent configuration and claimed unsupported actions', async () => {
+  test('validates ChatGPT persistent configuration', async () => {
     const missing = await sandbox()
-    await installSkills(missing, [{ ...chatgpt, actions: ['import', 'status', 'reset'] }])
+    await installSkills(missing, [chatgpt])
     await repository(missing, [{ name: 'ki-acquire-chatgpt' }])
     expect((await missing.run('ki acquire import --adapter chatgpt')).output).toContain(
       'requires --capture and --output'
@@ -236,26 +248,22 @@ describe('[ki acquire adapter selection]', () => {
     },
     {
       name: 'malformed list',
-      mutate: (value: string) =>
-        value.replace('ki-acquire-actions: [import, status, reconcile, reset]', 'ki-acquire-actions: import'),
+      mutate: (value: string) => value.replace('ki-acquire-actions: [import]', 'ki-acquire-actions: import'),
       expected: 'list fields must use flow-list syntax'
     },
     {
       name: 'repeated list value',
-      mutate: (value: string) =>
-        value.replace('ki-acquire-actions: [import, status, reconcile, reset]', 'ki-acquire-actions: [import, import]'),
+      mutate: (value: string) => value.replace('ki-acquire-actions: [import]', 'ki-acquire-actions: [import, import]'),
       expected: 'list fields must not repeat values'
     },
     {
       name: 'empty actions',
-      mutate: (value: string) =>
-        value.replace('ki-acquire-actions: [import, status, reconcile, reset]', 'ki-acquire-actions: []'),
+      mutate: (value: string) => value.replace('ki-acquire-actions: [import]', 'ki-acquire-actions: []'),
       expected: 'actions must be a non-empty list'
     },
     {
       name: 'unknown action',
-      mutate: (value: string) =>
-        value.replace('ki-acquire-actions: [import, status, reconcile, reset]', 'ki-acquire-actions: [publish]'),
+      mutate: (value: string) => value.replace('ki-acquire-actions: [import]', 'ki-acquire-actions: [publish]'),
       expected: 'actions must be a non-empty list'
     },
     {

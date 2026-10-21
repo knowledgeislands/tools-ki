@@ -14,7 +14,7 @@ export const HARNESS_DECLARATION_FILE = '.ki.toml'
 export const supportedRuntimes = ['claude-code', 'claude-desktop', 'chatgpt-codex'] as const
 export type SupportedRuntime = (typeof supportedRuntimes)[number]
 
-export const acquisitionActions = ['import', 'status', 'reconcile', 'reset', 'mark'] as const
+export const acquisitionActions = ['import', 'mark'] as const
 export type AcquisitionAction = (typeof acquisitionActions)[number]
 
 export interface AcquisitionAdapterDeclaration {
@@ -182,7 +182,7 @@ const acquisitionMetadata = (metadata: Readonly<Record<string, string>>): Acquis
     !verifiedActions?.length ||
     verifiedActions.some((action) => !acquisitionActions.includes(action as AcquisitionAction))
   ) {
-    return { state: 'invalid', reason: 'actions must be a non-empty list of import, status, reconcile, reset, mark' }
+    return { state: 'invalid', reason: 'actions must be a non-empty list of import, mark' }
   }
   const mutationBoundary = metadata['ki-acquire-mutation-boundary']
   if (mutationBoundary !== 'read-only' && mutationBoundary !== 'explicit-marker')

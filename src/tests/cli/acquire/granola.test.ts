@@ -61,7 +61,7 @@ const setupReceivers = async (box: Sandbox, receivers: readonly ReceiverFixture[
       'name: ki-acquire-granola',
       'ki-depends-on: []',
       'ki-acquire-adapter: granola',
-      'ki-acquire-actions: [import, status, reconcile, reset]',
+      'ki-acquire-actions: [import]',
       'ki-acquire-repository-properties: [folder_ids, duplicate_folder_ids, unfoldered, residual, capture_root, folder_territories]',
       'ki-acquire-invocation-properties: [refresh-transcripts]',
       'ki-acquire-capabilities: [account, folders, meetings, details, transcripts]',
