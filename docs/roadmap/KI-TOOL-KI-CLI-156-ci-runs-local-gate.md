@@ -1,51 +1,96 @@
 ---
 id: KI-TOOL-KI-CLI-156
 area: CLI
-title: CI runs local gate
+title: CI uses compatible KI
 kind: deliver
 purpose: corrective
 project: tools-burndown
 component: dev
 priority: medium
 size: s
-horizon: soon
-status: draft
+horizon: now
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: d6e8f369fac456de387298cae060058471970705
 created_at: 2026-10-19T08:04:00Z
-updated_at: 2026-10-19T22:49:04Z
+updated_at: 2026-10-21T03:45:10Z
 ---
 
-# KI-TOOL-KI-CLI-156: CI Runs Local Gate
+# KI-TOOL-KI-CLI-156: CI Uses Compatible KI
 
 ## Goal
 
-Every push and pull request to tools-ki runs the same gate a contributor runs locally, so that a Biome, type or test failure stops CI on the commit that introduces it rather than building up until a release. `biome check .` runs first, then `tsc` and `bun run test`.
+Push and pull-request CI audit the current repository with a compatible published KI release and its immutable Harness, keeping the native audit as the sole Biome, TypeScript and coverage gate.
 
 ## Context
 
-Biome drift built up across the repository until [KI-TOOL-KI-CLI-153](KI-TOOL-KI-CLI-153-biome-schema-drift.md) cleared 41 findings and moved `biome.json` to the 2.5.15 schema. Only lint-staged runs Biome, and only on staged files, so a schema change or a finding in an unstaged file went unseen.
+The original hypothesis that CI omitted Biome was disproved by the read-only Actions investigation. The successful pre-cleanup run at `949ff51267ab7ef8714ba8c693b185512138d3c5` already used the native audit. Offline Biome 2.5.15 reproduction of that exact source produces 26 warnings and 15 infos, with exit zero for both the local and audit commands. Repeating those commands would still pass.
 
-`.github/workflows/ci.yml` runs `ki repo audit --repo .` and `bun run ki:tools:lint-man`. The suite runs in CI only in `release.yml`, at release time.
+Current-head CI at `d6e8f369fac456de387298cae060058471970705` instead fails because `KI_VERSION=v0.11.3` installs Harness revision `fdbb73d883db75a9f42a7aaa77a5b609dc3d38a9`: its Husky requirements and roadmap field vocabulary precede the current repository. Installation succeeds, Audit fails, and manual lint is skipped.
 
-Kris chose BIOME-CI a) on 2026-10-19, in the ways-of-working thread: capture one record that makes CI run the local gate, with `biome check .` first and `bun run test` and `tsc` in the same record.
-
-Intended priority `medium` and size `s`. The installed `ki` rejects `priority` and `size` on a roadmap record until [KI-TOOL-KI-CLI-155](KI-TOOL-KI-CLI-155-priority-and-size-fields.md) ships, so under the harness migration tolerance they stay out of the front matter until then.
+The coordinator's 21 October 04:36 BST decision selected the observed-pin repair and delivery, preserving CI-2. Warning/info strictness remains unchanged; no Harness policy change or duplicate-check exception is authorised.
 
 ## Boundary
 
-This record changes `.github/workflows/ci.yml` only, with any test that guards its shape. It does not change `release.yml`, the lint-staged or Husky hooks, the Biome configuration or the ki-engineering standard and checker.
+Change the released KI pin in `.github/workflows/ci.yml`, add a workflow shape guard, and update this existing record. Preserve the verified installation, native audit and manual lint sequence. No `release.yml`, native audit implementation, Harness policy, bootstrap archive/digest, dependency, hook, Biome rule, diagnostic severity or public grammar changes.
 
-## Shaping
+## Current state
 
-**Approach:** read the latest CI runs first; if the audit gate is broken, fix it rather than repeat its checks in `ci.yml`, as BIOME-CI-STANDARD a) chose; only if the gate is sound and still let the drift through, add `biome check .`, `tsc` and `bun run test` steps.
+Immutable execution baseline: `d6e8f369fac456de387298cae060058471970705`. The unchanged local test, TypeScript, Biome and complete governance gates pass using the installed dependency set and isolated offline home. Existing local CI-1 and MATURITY-1 warnings are recorded without editing their files; Biome has one informational finding.
 
-**Dependencies:** none. The commit gate now lives in `.githooks/`, after [KI-TOOL-KI-CLI-163](KI-TOOL-KI-CLI-163-githooks-conversion.md), so the Husky mention in Boundary reads as the committed hooks.
+Published `v0.12.0` is backed by [Release run 39343624861](https://github.com/knowledgeislands/tools-ki/actions/runs/39343624861), including [successful clean Linux installation](https://github.com/knowledgeislands/tools-ki/actions/runs/39343624861/job/118371734807), at release source `056ef85f825edf4a4de7d79bb1d8c025e752af03`. Its immutable Harness is `f4d6c521ef4859dc8965579bc39a5575004e3ac5`, archive digest `004d7fa408e63036558879ef101207b7f71b6567b3a35383da4a570d0e6e07f9`. Both release lockfiles match the installed dependency set. The exact released CLI source and pinned Harness pass a full offline audit of the unchanged execution baseline, with existing PKG-6, CI-1 and HOOK-4 warnings and no failures. No archive or toolchain was downloaded.
 
-**Decisions still needed:** none before the CI evidence is read; the route follows from it.
+The [failed current-head run](https://github.com/knowledgeislands/tools-ki/actions/runs/39538420966) and [build job](https://github.com/knowledgeislands/tools-ki/actions/runs/39538420966/job/119020343906) are prior-head evidence, not candidate proof. The [successful historical run](https://github.com/knowledgeislands/tools-ki/actions/runs/39213075868) and [build job](https://github.com/knowledgeislands/tools-ki/actions/runs/39213075868/job/117930615450) establish that non-failing diagnostics passed the existing audit.
 
-**Promotion to Next:** when the CI run evidence is read, which needs a connected session.
+The coordinator designates wow-night-cli-156-d as the sole tools-ki writer; its mandated isolated worktree is the roadmap writing checkout for this run. The predecessor's committed outcome and Ready offline planning record were inspected before relying on the launch gate.
+
+## Steps
+
+- [x] Read exact Actions heads, jobs, logs, installed release and Harness evidence; reproduce the historical diagnostics offline.
+- [x] Verify the published replacement and its exact local release source/Harness against the unchanged green baseline.
+- [x] Pin CI to `v0.12.0` and guard its verified-install, single-audit, manual-lint shape with no repeated tool/test steps.
+- [x] Exercise the pinned native audit offline with representative Biome, TypeScript and test defects; require each owning criterion to fail.
+- [ ] Run the complete required gate, review the bounded diff, commit by explicit path, integrate fast-forward and publish only this run's own safe range; inspect exact-head CI or explicitly retain a pending candidate run.
+- [ ] Prepare the complete awaiting-review packet without acceptance or pruning.
+
+## Files touched
+
+- `.github/workflows/ci.yml`: the published KI version pin only.
+- `src/tests/ci-workflow.test.ts`: preserve the verified native-audit workflow contract.
+- `docs/roadmap/KI-TOOL-KI-CLI-156-ci-runs-local-gate.md`: evidence, approved plan and review packet.
+
+## Verify
+
+Run `bun run test`, `bunx tsc --noEmit`, `bunx biome check`, and `ki repo audit --repo .` with the already installed dependencies and the isolated offline audit home. Run the chosen published runtime against its exact pinned Harness; record inherited warnings separately. Prove BIO-1, TSC-1 and TEST-5 each reject an intentional corresponding defect in disposable offline source fixtures. Preserve CI-2 without a new exception. No grammar, manual or product behaviour changes require regeneration or additional standalone coverage; the native full audit executes coverage.
+
+Inspect the candidate's exact-head Actions workflow, job outcome and runtime/Harness identity after an authorised own-range push. A prior-head run never substitutes for an unrun candidate.
+
+## Dependencies / blocks
+
+None. Compatible published `v0.12.0`, its local source objects, the pinned Harness source and the matching installed dependencies exist. No network installation, Harness policy change or cross-repository implementation is required.
+
+## Delegation
+
+No background agents. The run performs this bounded delivery locally under the supplied read-only Actions and own-commit push grants.
+
+## Documentation impact
+
+### Decision Records
+
+None; the coordinator's existing decision supplies the route.
+
+### Specifications
+
+None; native gate semantics are unchanged.
+
+### Guides
+
+None; contributor commands and release procedures are unchanged.
+
+### Roadmap
+
+This existing record only. No new identifier, acceptance or pruning.
 
 ## Discussion
 
