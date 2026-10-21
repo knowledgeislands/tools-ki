@@ -1,5 +1,7 @@
-import { appendFile, mkdir, readdir, stat, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { appendFile, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
+import { KiError } from '../errors.ts'
 import { type AgentContext, git, instant, read } from './context.ts'
 import { loadControl } from './control-store.ts'
 import { withRunLock } from './locking.ts'
@@ -29,6 +31,7 @@ export interface RunEvent {
   readonly text: string
   readonly tag?: string
   readonly operation?: string | undefined
+  readonly publication?: string | undefined
 }
 
 /** What the last derivation saw of one agent's attempt, so nothing is emitted twice. */
@@ -50,22 +53,70 @@ export interface Observed {
   readonly alive: (name: string) => Promise<boolean>
 }
 
+const eventKinds = [
+  'launch',
+  'held',
+  'progress',
+  'done',
+  'failed',
+  'blocked',
+  'needs-owner',
+  'stop-requested',
+  'stopped',
+  'dequeued'
+]
 const eventsFile = (directory: string): string => join(directory, 'events.jsonl')
 const stateFile = (directory: string): string => join(directory, 'events.state.json')
 
 /** The file's modification time, or 0 when it is absent. */
 const modified = async (path: string): Promise<number> => (await stat(path).catch(() => ({ mtimeMs: 0 }))).mtimeMs
 
-/** Observers use bounded ownership-safe exclusion; age never transfers ownership. */
-const withLock = <T>(_context: AgentContext, directory: string, work: () => Promise<T>): Promise<T> =>
-  withRunLock(directory, 'events', work)
+const evidenceRecovery = 'see docs/guides/user/background-agents.md#recover-event-evidence'
+const evidenceError = (path: string, error: unknown): KiError =>
+  new KiError(`events-evidence-unverified: ${path}: ${String(error)}`, 1, evidenceRecovery)
+/** Only ENOENT is absence; unreadable evidence must never reset event identities. */
+const evidenceRead = async (path: string): Promise<string | undefined> => {
+  try {
+    return await readFile(path, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw evidenceError(path, error)
+  }
+}
+const parseEvidence = <T>(path: string, source: string, valid: (value: T) => boolean): T => {
+  try {
+    const value = JSON.parse(source) as T
+    if (!valid(value)) throw new Error('invalid evidence shape')
+    return value
+  } catch (error) {
+    throw evidenceError(path, error)
+  }
+}
+/** Single-shot observers refuse boundedly. Pending publications survive this refusal. */
+const withLock = <T>(context: AgentContext, directory: string, work: () => Promise<T>): Promise<T> =>
+  withRunLock(directory, 'events', work, context.processes.onExit)
 
-export const readEvents = async (directory: string, after = 0): Promise<RunEvent[]> =>
-  ((await read(eventsFile(directory))) ?? '')
+export const readEvents = async (directory: string, after = 0): Promise<RunEvent[]> => {
+  const path = eventsFile(directory)
+  return ((await evidenceRead(path)) ?? '')
     .split('\n')
     .filter((line) => line.trim())
-    .map((line) => JSON.parse(line) as RunEvent)
+    .map((line, index) =>
+      parseEvidence<RunEvent>(
+        path,
+        line,
+        (event) =>
+          event !== null &&
+          event.seq === index + 1 &&
+          typeof event.agent === 'string' &&
+          Number.isInteger(event.attempt) &&
+          event.attempt > 0 &&
+          typeof event.text === 'string' &&
+          eventKinds.includes(event.kind)
+      )
+    )
     .filter((event) => event.seq > after)
+}
 
 /** One more than the agent's `<name>.prev-<n>` folders, which a relaunch leaves behind. */
 const attemptOf = async (directory: string, name: string): Promise<number> =>
@@ -82,9 +133,9 @@ const append = async (
   let seq = (await readEvents(directory)).length
   const lines = pending.map((event) => {
     seq += 1
-    const { agent, kind, text, tag, operation } = event
+    const { agent, kind, text, tag, operation, publication } = event
     const attempt = event.attempt ?? (attempts.get(agent) as number)
-    return `${JSON.stringify({ seq, at: instant(context), run: basename(directory), agent, attempt, kind, text, ...(tag === undefined ? {} : { tag }), ...(operation === undefined ? {} : { operation }) })}\n`
+    return `${JSON.stringify({ seq, at: instant(context), run: basename(directory), agent, attempt, kind, text, ...(tag === undefined ? {} : { tag }), ...(operation === undefined ? {} : { operation }), ...(publication === undefined ? {} : { publication }) })}\n`
   })
   await appendFile(eventsFile(directory), lines.join(''))
   await writeFile(stateFile(directory), `${JSON.stringify(snapshot)}\n`)
@@ -95,7 +146,7 @@ const append = async (
  * on a held agent, or a queued agent the dispatcher cannot launch. A gate or launch failure
  * ends that attempt, so derivation reports no exit after it.
  */
-export const recordEvent = (
+export const recordEvent = async (
   context: AgentContext,
   directory: string,
   observed: Observed | undefined,
@@ -104,25 +155,110 @@ export const recordEvent = (
   text: string,
   operation?: string,
   explicitAttempt?: number
-): Promise<void> =>
-  withLock(context, directory, async () => {
-    if (
-      operation &&
-      (await readEvents(directory)).some((event) => event.operation === operation && event.kind === kind)
-    )
-      return
-    const attempt = explicitAttempt ?? (await attemptOf(directory, agent))
-    const others = observed && { ...observed, agents: observed.agents.filter((name) => name !== agent) }
-    const snapshot = await readSnapshot(context, directory, others)
-    const seen = snapshot[agent]?.attempt === attempt ? (snapshot[agent] as Seen) : { attempt }
-    snapshot[agent] =
-      (kind === 'blocked' && operation === undefined) || kind === 'failed' || kind === 'stopped' || kind === 'dequeued'
-        ? { ...seen, ended: true }
-        : kind === 'launch'
-          ? { ...seen, ended: false }
-          : seen
-    await append(context, directory, snapshot, new Map([[agent, attempt]]), [{ agent, kind, text, operation }])
+): Promise<void> => {
+  try {
+    const publication = randomUUID()
+    const pending = join(directory, 'events.pending')
+    await mkdir(pending, { recursive: true })
+    const path = join(pending, `${publication}.json`)
+    const event: Pending = {
+      agent,
+      kind,
+      text,
+      operation,
+      publication,
+      attempt: explicitAttempt ?? (await attemptOf(directory, agent))
+    }
+    await writeFile(`${path}.tmp`, `${JSON.stringify(event)}\n`)
+    await rename(`${path}.tmp`, path)
+    // The durable pending record is already publication evidence. A busy observer or
+    // damaged projection cannot turn a worker-start acknowledgement into a failure.
+    try {
+      await withLock(context, directory, () => publishPending(context, directory, observed))
+    } catch (error) {
+      // Busy publication remains durable and pending. Evidence failures refuse,
+      // except when a start receipt already proves the effect crossed the boundary.
+      if (
+        !(error instanceof KiError && error.message.startsWith('events-transaction-busy:')) &&
+        kind !== 'launch' &&
+        kind !== 'held'
+      )
+        throw error
+    }
+  } catch (error) {
+    // Worker-start receipts are already durable. Even a pending-directory write
+    // failure must not contradict them; deriveEvents reconstructs missing launches.
+    if (kind !== 'launch' && kind !== 'held') throw evidenceError(join(directory, 'events.pending'), error)
+  }
+}
+
+const publishPending = async (
+  context: AgentContext,
+  directory: string,
+  observed: Observed | undefined
+): Promise<void> => {
+  const pendingDirectory = join(directory, 'events.pending')
+  const files = await readdir(pendingDirectory).catch((error: unknown) => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
+    throw evidenceError(pendingDirectory, error)
   })
+  const paths = files
+    .filter((file) => file.endsWith('.json'))
+    .sort()
+    .map((file) => join(pendingDirectory, file))
+  if (paths.length === 0) return
+  const journal = await readEvents(directory)
+  const snapshot = await readSnapshot(context, directory, observed)
+  const startedKey = (event: Pending): string => `${event.agent}/${event.attempt}/${event.kind}`
+  const started = new Set(journal.filter((event) => ['launch', 'held'].includes(event.kind)).map(startedKey))
+  const publications = new Set(journal.map((event) => event.publication))
+  const operations = new Set(journal.map((event) => `${event.operation}/${event.kind}`))
+  const pending: Pending[] = []
+  for (const path of paths) {
+    const event = parseEvidence<Pending>(
+      path,
+      (await evidenceRead(path)) ?? '',
+      (value) =>
+        value !== null &&
+        typeof value.publication === 'string' &&
+        typeof value.agent === 'string' &&
+        eventKinds.includes(value.kind) &&
+        typeof value.text === 'string' &&
+        Number.isInteger(value.attempt) &&
+        (value.attempt as number) > 0
+    )
+    if (
+      publications.has(event.publication) ||
+      (event.operation && operations.has(`${event.operation}/${event.kind}`)) ||
+      (['launch', 'held'].includes(event.kind) && started.has(startedKey(event)))
+    )
+      continue
+    started.add(startedKey(event))
+    publications.add(event.publication)
+    operations.add(`${event.operation}/${event.kind}`)
+    const attempt = event.attempt as number
+    const seen = snapshot[event.agent]?.attempt === attempt ? (snapshot[event.agent] as Seen) : { attempt }
+    snapshot[event.agent] = publicationSeen(seen, event)
+    pending.push(event)
+  }
+  await append(context, directory, snapshot, new Map(), pending)
+  for (const path of paths) await rm(path)
+}
+
+/** The append-only journal is authoritative if snapshot persistence was interrupted. */
+const publicationSeen = (seen: Seen, event: Pending): Seen => {
+  if (
+    (event.kind === 'blocked' && event.operation === undefined) ||
+    event.kind === 'failed' ||
+    event.kind === 'stopped'
+  )
+    return { ...seen, failed: true, ended: true }
+  if (event.kind === 'done') return { ...seen, ended: true }
+  if (event.kind === 'launch') return { ...seen, ended: false }
+  if (event.kind === 'needs-owner')
+    return { ...seen, queries: [...new Set([...(seen.queries ?? []), `${event.tag} - ${event.text}`])] }
+  return seen
+}
 
 /** `HH:MM TZ - milestone: <text>`, and the `blocked:` and `failed:` forms of the progress protocol. */
 const statusForm = /^\d{2}:\d{2} \S+ - (milestone|blocked|failed): (.+)$/
@@ -194,17 +330,49 @@ const queryKeys = (report: string): string[] => reportQueries(report).map((query
  * events, so each agent that had already ended starts seen: its finish, status line and queries
  * are never replayed, and a report in an older place gives no `failed: no report`. A live agent
  * keeps ordinary derivation. A run with events but no snapshot lost its state, not its history,
- * and derives from empty.
+ * and reconstructs terminal ownership from its journal.
  */
 const readSnapshot = async (
   context: AgentContext,
   directory: string,
   observed: Observed | undefined
 ): Promise<Snapshot> => {
-  const state = await read(stateFile(directory))
-  if (state !== undefined) return Object.assign(Object.create(null), JSON.parse(state)) as Snapshot
-  const snapshot: Snapshot = Object.create(null)
-  if ((await readEvents(directory)).length > 0) return snapshot
+  const path = stateFile(directory)
+  const state = await evidenceRead(path)
+  const snapshot: Snapshot =
+    state === undefined
+      ? Object.create(null)
+      : Object.assign(
+          Object.create(null),
+          parseEvidence<Snapshot>(
+            path,
+            state,
+            (value) =>
+              value !== null &&
+              typeof value === 'object' &&
+              !Array.isArray(value) &&
+              Object.values(value).every(
+                (seen) =>
+                  seen !== null &&
+                  typeof seen === 'object' &&
+                  Number.isInteger(seen.attempt) &&
+                  seen.attempt > 0 &&
+                  (seen.line === undefined || typeof seen.line === 'string') &&
+                  (seen.ended === undefined || typeof seen.ended === 'boolean') &&
+                  (seen.failed === undefined || typeof seen.failed === 'boolean') &&
+                  (seen.queries === undefined ||
+                    (Array.isArray(seen.queries) && seen.queries.every((query) => typeof query === 'string')))
+              )
+          )
+        )
+  const journal = await readEvents(directory)
+  for (const event of journal) {
+    const previous = snapshot[event.agent]
+    if (previous && previous.attempt > event.attempt) continue
+    const seen = previous?.attempt === event.attempt ? previous : { attempt: event.attempt }
+    snapshot[event.agent] = publicationSeen(seen, event)
+  }
+  if (state !== undefined || journal.length > 0) return snapshot
   if (observed)
     for (const name of observed.agents) {
       const { done, line } = await statusOf(directory, name)
@@ -260,7 +428,7 @@ const agentChanges = async (
     await modified(join(directory, `${name}.status`)),
     await modified(join(directory, `${name}.pid`))
   )
-  if (!seen.ended && done) await homeReport(context, directory, name)
+  if (done) await homeReport(context, directory, name)
   const report = done ? await reportOf(context, directory, name) : undefined
   if (!seen.ended && done) {
     events.push(
@@ -290,12 +458,38 @@ const agentChanges = async (
  */
 export const deriveEvents = (context: AgentContext, directory: string, observed: Observed): Promise<void> =>
   withLock(context, directory, async () => {
+    await publishPending(context, directory, observed)
     const snapshot = await readSnapshot(context, directory, observed)
     const attempts = new Map<string, number>()
     const changes: { readonly when: number; readonly name: string; readonly events: Pending[] }[] = []
     const store = await loadControl(directory)
-    const recorded = new Set((await readEvents(directory)).map((event) => `${event.operation}/${event.kind}`))
+    const journal = await readEvents(directory)
+    const recorded = new Set(journal.map((event) => `${event.operation}/${event.kind}`))
     for (const operation of Object.values(store?.operations ?? {})) {
+      if (
+        (operation.operation === 'spawn' && operation.receipt?.outcome === 'started') ||
+        (operation.operation === 'spawn-supervisor' && operation.receipt?.outcome === 'held')
+      ) {
+        const target = operation.target as { agent: string; attempt: number }
+        const kind = operation.operation === 'spawn' ? 'launch' : 'held'
+        const published = journal.some(
+          (event) => event.agent === target.agent && event.attempt === target.attempt && event.kind === kind
+        )
+        if (!published)
+          changes.push({
+            when: Date.parse(operation.timestamp),
+            name: target.agent,
+            events: [
+              {
+                agent: target.agent,
+                attempt: target.attempt,
+                kind,
+                operation: operation.id,
+                text: `${kind === 'launch' ? 'worker started' : 'hold process started'}; control receipt ${operation.id}`
+              }
+            ]
+          })
+      }
       if (operation.operation === 'stop' && operation.previousState !== 'stopped') {
         const target = operation.target as { token: string; agent: string; attempt: number }
         const attempt = store?.history[target.token]

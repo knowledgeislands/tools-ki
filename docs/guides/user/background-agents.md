@@ -69,7 +69,19 @@ Pass `--worktree <repo>` to `launch` or `queue` to start from that repository's 
 
 `ki agent close` checks the same worktree directory that launch records. Integrate verified work under `ki-git` and remove the run's merged worktrees before closing. A failed preparation retains its stranded checkout for inspection.
 
+## Recover event evidence
+
+`events.jsonl` is the authoritative append-only event journal; `events.state.json` is its observation snapshot. Only a missing file counts as absent. An unreadable, malformed or inconsistent journal or snapshot refuses with `events-evidence-unverified`, preserving the journal and waiter cursor. A missing or stale snapshot replays terminal identities from the journal without repeating notifications.
+
+Stop observers before repairing evidence, preserve byte-for-byte copies of the journal, snapshot, pending publications and cursors, and correct permissions or restore a verified backup. Do not truncate a corrupt journal or initialise empty replacement evidence. If the journal cannot be verified, retain the refusal for owner-assisted recovery. A verified journal can reconstruct a missing snapshot; preserve the old snapshot by renaming it before the next observation.
+
+Launch observations are first persisted under `events.pending/` with immutable publication IDs. A busy event transaction leaves publication pending and still reports a started worker as started. The next `status`, `watch` or `wait` reconciles these records once, including an interrupted journal append. If a pending record cannot be written after start, the next observer reconstructs the launch from its confirmed control receipt. Preserve pending records during recovery.
+
 ## Recover an abandoned lock
+
+Both `control.lock` and `events.lock` are released by their own holder on SIGINT, SIGTERM and normal exit, only while the recorded holder token and bytes still match. A crash or an unverifiable release preserves the lock for the manual route below. No lock transfers ownership by age or PID.
+
+Foreground launch and queue, held launches and dispatch wait up to 120 seconds through a busy control transaction. If that bound expires, the refusal names the holder's machine, PID, birth and token and points to recovery. Long-running `watch` and `wait` retry a busy event transaction; single-shot status refuses boundedly with the holder identity.
 
 `control.lock` serialises queue and launch changes; `events.lock` serialises event publication. A foreground control or observer refuses after bounded contention and names this recovery route. A held launch or dispatcher keeps waiting through a busy control transaction. Neither lock is taken over because it is old or because a PID looks unused. New locks record the holder's machine, PID, process birth timestamp and random token. An exception releases the unchanged holder's lock; abrupt process termination can leave it behind.
 

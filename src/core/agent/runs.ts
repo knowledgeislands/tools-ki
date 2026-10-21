@@ -22,7 +22,6 @@ import {
   beginOperation,
   type ControlStore,
   canonical,
-  controlTransaction,
   dependencyTargets,
   effectIdentity,
   finishOperation,
@@ -661,7 +660,7 @@ export const launchAgent = async (
 ): Promise<LaunchResult> => {
   if (!locked) {
     const accepted = await preflight(context, candidate)
-    return controlTransaction(context, candidate.run, () => launchAgent(context, accepted, true))
+    return pendingControl(context, candidate.run, () => launchAgent(context, accepted, true))
   }
   const accepted = await validated(context, candidate)
   const body = await promptText(context, accepted.prompt)
@@ -958,7 +957,7 @@ export const queueAgent = async (
 ): Promise<QueueResult> => {
   if (!locked) {
     const accepted = await preflight(context, candidate)
-    return controlTransaction(context, candidate.run, () => queueAgent(context, accepted, true))
+    return pendingControl(context, candidate.run, () => queueAgent(context, accepted, true))
   }
   const request = await validated(context, candidate)
   const body = await promptText(context, request.prompt)
@@ -1074,6 +1073,16 @@ const summary = async (context: AgentContext, directory: string): Promise<AgentS
 const observe = async (context: AgentContext, directory: string): Promise<void> =>
   deriveEvents(context, directory, await observed(context, directory))
 
+const pendingObservation = async (context: AgentContext, directory: string): Promise<void> => {
+  for (;;) {
+    try {
+      return await observe(context, directory)
+    } catch (error) {
+      if (!(error instanceof KiError) || !error.message.startsWith('events-transaction-busy:')) throw error
+      await context.processes.sleep(1000)
+    }
+  }
+}
 const eventText = (event: RunEvent): string =>
   `${event.agent} ${event.kind}: ${event.tag === undefined ? '' : `${event.tag} - `}${event.text}`
 
@@ -1225,7 +1234,7 @@ export const watchRun = async (
   let cursor = (await readEvents(directory)).length
   for (;;) {
     const current = await summary(context, directory)
-    await observe(context, directory)
+    await pendingObservation(context, directory)
     for (const event of await readEvents(directory, cursor)) {
       emit(`${stamp(context)} | ${eventText(event)}`)
       cursor = event.seq
@@ -1385,10 +1394,23 @@ export const dispatchRun = async (
           await writeQueue(directory, queue.toSpliced(index, 1))
           emit(`${stamp(context)} launched ${next.name}`)
         } catch (error) {
+          const current = await loadControl(directory)
+          const entryId = next.entry
+          if (next.entry && current?.entries[next.entry]?.state === 'started') {
+            emit(`${stamp(context)} launched ${next.name}; follow-up requires inspection: ${String(error)}`)
+            return 'again'
+          }
           if (!(error instanceof KiError)) throw error
           if (error.message.startsWith('selection-changed:')) throw error
-          const current = await loadControl(directory)
-          if (next.entry && current?.entries[next.entry]?.state === 'unconfirmed') {
+          if (
+            next.entry &&
+            (Object.values((current as ControlStore).operations).some(
+              (operation) =>
+                ['spawn', 'spawn-supervisor'].includes(operation.operation) &&
+                (operation.target as AttemptIdentity).entry === entryId
+            ) ||
+              current?.entries[next.entry]?.state === 'unconfirmed')
+          ) {
             emit(`${stamp(context)} claim-unconfirmed: ${error.message}`)
             return 'uncertain'
           }
@@ -1437,7 +1459,7 @@ export const waitForRun = async (
   for (;;) {
     // Liveness first, so an agent that stops during this pass still has its events derived.
     const { live } = await summary(context, directory)
-    await observe(context, directory)
+    await pendingObservation(context, directory)
     if (options.next) {
       const cursor = Number.parseInt((await read(seenFile)) ?? '0', 10)
       const event = (await readEvents(directory, cursor)).find((candidate) => waitedKinds.has(candidate.kind))

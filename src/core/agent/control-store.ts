@@ -356,33 +356,41 @@ export const saveControl = async (directory: string, store: ControlStore): Promi
 export const controlTransaction = async <T>(
   context: AgentContext,
   run: string,
-  action: (directory: string) => Promise<T>
+  action: (directory: string) => Promise<T>,
+  retries = 100
 ): Promise<T> => {
   const directory = runDirectory(context, run)
   await mkdir(directory, { recursive: true })
-  return withRunLock(directory, 'control', async () => {
-    try {
-      const recovered = await loadControl(directory)
-      if (recovered) await verifyStore(context, run, recovered)
-      activeTransactions.set(directory, recovered)
-      return await action(directory)
-    } finally {
-      activeTransactions.delete(directory)
-    }
-  })
+  return withRunLock(
+    directory,
+    'control',
+    async () => {
+      try {
+        const recovered = await loadControl(directory)
+        if (recovered) await verifyStore(context, run, recovered)
+        activeTransactions.set(directory, recovered)
+        return await action(directory)
+      } finally {
+        activeTransactions.delete(directory)
+      }
+    },
+    context.processes.onExit,
+    retries
+  )
 }
-
-/** Background loops keep their lease request pending while another owner completes an effect. */
+/** Wait through the longest supported stop grace; never silently wait forever on an abandoned lock. */
 export const pendingControl = async <T>(
   context: AgentContext,
   run: string,
   action: (directory: string) => Promise<T>
 ): Promise<T> => {
+  const started = context.now()
   for (;;) {
     try {
-      return await controlTransaction(context, run, action)
+      return await controlTransaction(context, run, action, 2)
     } catch (error) {
       if (!(error instanceof KiError) || !error.message.startsWith('control-transaction-busy:')) throw error
+      if (context.now() - started >= 120_000) throw new KiError(`${error.message}; waited 120 seconds`, 1, error.next)
       await context.processes.sleep(1000)
     }
   }

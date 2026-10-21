@@ -54,6 +54,8 @@ export interface AgentLaunch {
  * `launch` returns the detached process identifier.
  */
 export interface AgentProcesses {
+  /** Synchronous cleanup before SIGINT, SIGTERM or normal process exit. */
+  readonly onExit?: ((cleanup: () => void) => () => void) | undefined
   readonly control?: AgentControlProcesses | undefined
   readonly launch: (launch: AgentLaunch) => Promise<number>
   readonly alive: (pid: number) => boolean
@@ -92,7 +94,38 @@ const alive = (pid: number): boolean => {
   }
 }
 
+// One signal handler releases every held lock before re-delivering the signal. The
+// presentation interrupt handler may also re-deliver SIGINT; cleanup always runs first.
+const exitCleanups = new Set<() => void>()
+const cleanupLocks = (): void => {
+  for (const cleanup of exitCleanups) cleanup()
+}
+const terminate = (signal: NodeJS.Signals): void => {
+  cleanupLocks()
+  process.off('SIGINT', interruptLocks)
+  process.off('SIGTERM', terminateLocks)
+  process.kill(process.pid, signal)
+}
+const interruptLocks = (): void => terminate('SIGINT')
+const terminateLocks = (): void => terminate('SIGTERM')
+const onExit = (cleanup: () => void): (() => void) => {
+  if (exitCleanups.size === 0) {
+    process.prependListener('SIGINT', interruptLocks)
+    process.prependListener('SIGTERM', terminateLocks)
+    process.on('exit', cleanupLocks)
+  }
+  exitCleanups.add(cleanup)
+  return () => {
+    exitCleanups.delete(cleanup)
+    if (exitCleanups.size === 0) {
+      process.off('SIGINT', interruptLocks)
+      process.off('SIGTERM', terminateLocks)
+      process.off('exit', cleanupLocks)
+    }
+  }
+}
 export const hostAgentProcesses: AgentProcesses = {
+  onExit,
   launch,
   alive,
   sleep: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds))

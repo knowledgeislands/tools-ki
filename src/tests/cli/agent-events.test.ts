@@ -156,7 +156,7 @@ describe('ki agent run events', () => {
     expect(await box.project.read('+/_WORK/ki.r/again.report.md')).toBe('# again\n')
   })
 
-  test('leaves a report the thread retired when a lost snapshot replays its agent, homing a fresh one', async () => {
+  test('leaves a retired report on snapshot recovery, homing a fresh one without replaying terminal events', async () => {
     const box = await sandbox()
     await setupRun(box)
     await box.run('ki agent launch r one . task.md', { now })
