@@ -37,6 +37,14 @@ Use `--wait-for <other>` when an agent must not start until another agent in the
 
 A name not yet launched keeps the gate waiting, so you may launch the dependent agent first. Parallel agents in one repository each need their own Git worktree as `<workdir>`.
 
+## Launch in a worktree
+
+Pass `--worktree <repo>` to `launch` or `queue` to start from that repository's committed HEAD in `<state>/agents/<run>/worktrees/<name>.<repo>`, on branch `run/<run>/<name>`. The launcher clones already installed dependencies and retains managed project skill links without installing anything. The launch record includes the source repository, branch, path and actual working directory. A held or queued agent creates its worktree when it starts.
+
+`ki agent status <run>` and the run listing show each recorded worktree's ahead and behind counts, uncommitted count and last-commit age. A stopped agent's worktree is marked `stranded`. `ki agent status --worktrees` inventories all linked worktrees and non-default local branches in the registered estate, including stranded checkouts; unavailable Git facts stay unknown. This option takes no run name or `--all`.
+
+`ki agent close` checks the same worktree directory that launch records. Integrate verified work under `ki-git` and remove the run's merged worktrees before closing. A failed preparation retains its stranded checkout for inspection.
+
 ## Keep a queue moving
 
 1. Queue ready-made prompts in priority order: `ki agent queue <run> <name> <prompt-file> --workdir <dir> --rules push`.

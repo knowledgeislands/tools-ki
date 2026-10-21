@@ -146,11 +146,11 @@ This baseline describes the `v0.12.0` release. Domain imports and extracted type
 
 #### Background agents
 
-- `ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]`
+- `ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>]`
 - `ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [launch options]`
 - `ki agent dispatch <run> --max <count> [--interval <seconds>]`
 - `ki agent wait <run> [--next] [--interval <seconds>]`
-- `ki agent status [<run>] [--all]`
+- `ki agent status [<run>] [--all] [--worktrees]`
 - `ki agent send <run> <line...> [--from <run>]`
 - `ki agent watch <run> [seconds]`
 - `ki agent home <run> [--work <id>] [--repo <dir>]`
@@ -271,3 +271,4 @@ This baseline describes the `v0.12.0` release. Domain imports and extracted type
 - `install.sh`
 - `ki(1)`
 - Linked worktrees inherit registration and missing runtime activations from their verified registered primary checkout, retaining every activation check and rejecting unrelated repositories or changed identities. Development skill generation reads and writes the caller's linked Harness worktree.
+- Agent worktree launches create and record one path and branch, reuse installed dependencies and project skill links, and agree with the close gate. Status shows worktrees and stranded checkouts; `--worktrees` inventories linked checkouts and non-default branches across the registered estate.

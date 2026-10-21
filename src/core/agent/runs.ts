@@ -20,6 +20,8 @@ import { deriveEvents, type Observed, type RunEvent, readEvents, recordEvent } f
 import { type AgentEffort, type AgentRuntime, runtimeLaunch } from './runtimes.ts'
 import { readThread, reportPath, type ThreadHome, threadHome, threadPath } from './thread.ts'
 
+import { agentWorktree, agentWorktreeLines, prepareAgentWorktree, worktreeRepository } from './worktrees.ts'
+
 export type { AgentContext, AuthorityTier, GrantName } from './context.ts'
 export { authorityTiers, grantNames } from './context.ts'
 
@@ -39,6 +41,7 @@ export interface LaunchRequest {
   readonly effort?: AgentEffort | undefined
   /** The repository owning the run's thread; omitted, the Git repository of the working directory. */
   readonly repo?: string | undefined
+  readonly worktree?: string | undefined
   /** Start a name that has already run, setting its earlier packet aside in `<name>.prev-<n>/`. */
   readonly relaunch?: boolean | undefined
 }
@@ -216,6 +219,10 @@ const validated = async (context: AgentContext, request: LaunchRequest): Promise
   return {
     ...request,
     workdir: await resolveDirectory(context, request.workdir, 'workdir'),
+    worktree:
+      request.worktree === undefined
+        ? undefined
+        : await worktreeRepository(context, await resolveDirectory(context, request.worktree, 'worktree repository')),
     addDirs: await Promise.all(request.addDirs.map((path) => resolveDirectory(context, path, 'directory'))),
     repo: request.repo === undefined ? undefined : await resolveDirectory(context, request.repo, 'repository')
   }
@@ -261,12 +268,13 @@ const startRuntime = async (
   prompt: string
 ): Promise<number> => {
   const base = join(directory, request.name)
+  const tree = await prepareAgentWorktree(context, request)
   await writeFile(`${base}.status`, `${stamp(context)} - launched\n`)
   const pid = await context.processes.launch(
     runtimeLaunch(request.runtime, {
       run: request.run,
       prompt,
-      workingDirectory: request.workdir,
+      workingDirectory: tree?.path ?? request.workdir,
       directories: [directory, ...request.addDirs],
       environment: context.environment,
       log: `${base}.log`,
@@ -297,6 +305,7 @@ const startHold = (context: AgentContext, directory: string, request: LaunchRequ
       ...request.waitFor.flatMap((name) => ['--wait-for', name]),
       ...(request.model === undefined ? [] : ['--model', request.model]),
       ...(request.effort === undefined ? [] : ['--effort', request.effort]),
+      ...(request.worktree === undefined ? [] : ['--worktree', request.worktree]),
       '--foreground'
     ],
     workingDirectory: directory,
@@ -309,8 +318,10 @@ const startHold = (context: AgentContext, directory: string, request: LaunchRequ
  * The runtime, model and effort an agent starts with, a default left out, and its working
  * directory, from which a later command may fix the thread home.
  */
-const launchDetails = (request: LaunchRequest): string =>
-  `${JSON.stringify({ runtime: request.runtime, model: request.model, effort: request.effort, workdir: request.workdir })}\n`
+const launchDetails = (context: AgentContext, request: LaunchRequest): string => {
+  const worktree = agentWorktree(context, request)
+  return `${JSON.stringify({ runtime: request.runtime, model: request.model, effort: request.effort, workdir: worktree?.path ?? request.workdir, ...(worktree ? { worktree } : {}) })}\n`
+}
 
 /** State-folder files that mark a name as having run; `.queued.md` and `.draft.md` do not. */
 const packetFiles = ['pid', 'status', 'prompt.md', 'launch.json', 'report.md'] as const
@@ -410,7 +421,7 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
   const warnings = reportConflicts(body, directory, request.name)
   const prompt = await composePrompt(context, directory, request, stateReport(directory, request.name), temporary, body)
   await writeFile(`${base}.prompt.md`, prompt)
-  await writeFile(`${base}.launch.json`, launchDetails(request))
+  await writeFile(`${base}.launch.json`, launchDetails(context, request))
   // Once started, `<name>.prompt.md` holds the brief, so the run's queued or draft copy goes.
   const spent = [`${base}.queued.md`, `${base}.draft.md`].find(
     (path) => path === resolve(context.workingDirectory, request.prompt)
@@ -536,6 +547,7 @@ const summary = async (context: AgentContext, directory: string): Promise<AgentS
     const state = await agentState(context, directory, name)
     live ||= state.kind === 'running'
     result.push(`${name}: ${describe(state)}`)
+    result.push(...(await agentWorktreeLines(context, directory, name, state.kind !== 'running')))
   }
   const queue = await readQueue(directory)
   if (queue.length) {
@@ -587,15 +599,18 @@ export interface RunOverview {
   readonly home: string | undefined
   /** Running or held agents, then queued ones; empty for a run at rest. */
   readonly items: readonly RunItem[]
+  readonly worktrees: readonly string[]
 }
 
 /** A run's running or held agents and its queue, read from packet files alone. */
 export const runOverview = async (context: AgentContext, run: string): Promise<RunOverview> => {
   const directory = runDirectory(context, run)
   const items: RunItem[] = []
+  const worktrees: string[] = []
   for (const name of await agents(directory)) {
     const state = await agentState(context, directory, name)
     if (state.kind === 'running') items.push({ kind: 'running', agent: name, what: describe(state) })
+    worktrees.push(...(await agentWorktreeLines(context, directory, name, state.kind !== 'running')))
   }
   for (const [position, request] of (await readQueue(directory)).entries())
     items.push({
@@ -604,7 +619,7 @@ export const runOverview = async (context: AgentContext, run: string): Promise<R
       what: `position ${position + 1}${request.waitFor.length ? `, waiting for ${request.waitFor.join(', ')}` : ''}`
     })
   const thread = await readThread(context, run)
-  return { run, home: thread && threadPath(thread), items }
+  return { run, home: thread && threadPath(thread), items, worktrees }
 }
 
 /**
@@ -617,7 +632,7 @@ export const listRuns = async (context: AgentContext, all: boolean): Promise<Run
   const overviews: RunOverview[] = []
   for (const run of runs.sort()) {
     const overview = await runOverview(context, run)
-    if (all || overview.items.length) overviews.push(overview)
+    if (all || overview.items.length || overview.worktrees.length) overviews.push(overview)
   }
   return overviews
 }

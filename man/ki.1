@@ -1,4 +1,4 @@
-.TH KI 1 "2026-10-18" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-10-21" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -404,10 +404,10 @@ A progress marker grants no source retirement or reconciliation authority.
 .SS Background agents
 \&
 .TP
-.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>]
 Launch one detached agent and write its run packet.
 .TP
-.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>]
 Append a ready-made agent to the run queue.
 .TP
 .B ki agent dispatch <run> --max <count> [--interval <seconds>]
@@ -416,7 +416,7 @@ Keep up to the given number of queued agents running, detached.
 .B ki agent wait <run> [--next] [--interval <seconds>]
 Block until the next unseen run event, or until the whole run finishes.
 .TP
-.B ki agent status [<run>] [--all]
+.B ki agent status [<run>] [--all] [--worktrees]
 Print each agent's latest status, or with no run every live thread.
 .TP
 .B ki agent send <run> <line...> [--from <run>]
@@ -1722,7 +1722,7 @@ Claude Code or Codex in their own session with standard input from
 .IR /dev/null ,
 so an interrupt of the launching session cannot stop them.
 .TP
-.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>]
 Launch one detached agent. The prompt gains the authority footer the pinned
 Harness's
 .B ki-delegation
@@ -1821,8 +1821,20 @@ moves into the first free
 .I <name>.prev-<n>/
 and nothing is deleted, but the relaunch is refused while the thread-folder
 report has uncommitted changes.
+.PP
+.B --worktree <repo>
+Create a linked worktree from the repository's committed HEAD at
+.I <state>/agents/<run>/worktrees/<name>.<repo>
+on branch
+.IR run/<run>/<name> .
+Clone already installed dependencies without an install and retain managed
+project skill links. The runtime starts there; the launch record names its
+path, branch and source repository. Held and queued launches prepare the
+worktree only when their start gate opens. A failed preparation retains the
+stranded checkout for inspection. The close gate checks this same worktrees
+directory and refuses until it is empty.
 .TP
-.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>]
 Append a ready-made agent to the run queue, copying its prompt. A name already
 queued or already run is refused as for
 .BR launch ;
@@ -1877,14 +1889,16 @@ wait for the whole run. Either form prints
 .B ALL FINISHED
 when nothing is left to wait for.
 .TP
-.B ki agent status [<run>] [--all]
-Print each agent's latest status, flag any agent whose process exited
+.B ki agent status [<run>] [--all] [--worktrees]
+Print each agent's latest status and worktree, flag any agent whose process
+exited
 without DONE, list the queue, and print each
 .I inbox:
 line sent since the run's last
 .BR status .
 With no run, list every run on this
-machine with an agent running or held or a non-empty queue: a
+machine with an agent running or held, a non-empty queue, or a stranded
+worktree: a
 .I "<run> (<work folder>)"
 line, then one
 .I "- [running] <agent> - <status>"
@@ -1898,6 +1912,15 @@ banner quotes. A run that predates its work folder shows
 adds the runs at rest, marked
 .IR "- [at rest]" ;
 archived runs are never listed, and the listing writes nothing.
+Each recorded worktree appears below its agent with repository, branch,
+ahead and behind counts, uncommitted count and last-commit age. A stopped
+agent's checkout is marked
+.BR stranded .
+.B --worktrees
+instead inventories every linked worktree and non-default local branch in
+the registered estate; it takes no run name or
+.BR --all .
+Unavailable Git facts are reported as unknown.
 .TP
 .B ki agent send <run> <line...> [--from <run>]
 Append

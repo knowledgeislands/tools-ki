@@ -32,6 +32,7 @@ import {
   threadHome,
   threadPath
 } from '../../core/agent/thread.ts'
+import { estateWorktreeLines } from '../../core/agent/worktrees.ts'
 import { DEFAULT_HARNESS } from '../../core/configuration/declaration.ts'
 import { grammarError, KiError } from '../../core/errors.ts'
 import { harnessDirectory } from '../../core/storage/harness-paths.ts'
@@ -73,6 +74,7 @@ interface LaunchOptions {
   readonly model?: string
   readonly effort?: AgentEffort
   readonly repo?: string
+  readonly worktree?: string
   readonly relaunch?: boolean
 }
 
@@ -98,6 +100,7 @@ const withLaunchOptions = (command: Command): Command =>
     .option('--model <model>', "runtime model, passed through verbatim; omitted, the runtime's default")
     .addOption(new Option('--effort <level>', "reasoning effort; omitted, the runtime's default").choices(agentEfforts))
     .option('--relaunch', 'start a name that has already run, keeping its earlier packet in <name>.prev-<n>/')
+    .option('--worktree <repo>', 'launch from a linked worktree with installed dependencies and project skills')
     .addOption(repoOption)
 
 const request = (
@@ -119,6 +122,7 @@ const request = (
   model: options.model,
   effort: options.effort,
   repo: options.repo,
+  worktree: options.worktree,
   relaunch: options.relaunch
 })
 
@@ -201,10 +205,16 @@ export const createAgentCommand = (context: KiContext): Command => {
 
   command.addCommand(
     new Command('status')
-      .description("print each agent's latest status, or with no run every live run's")
+      .description('print agent status and worktrees, or with no run every live or stranded run')
       .argument('[run]', 'run name; omitted, every run with an agent running or queued')
       .option('--all', 'with no run, also list the runs at rest')
-      .action(async (run: string | undefined, options: { all?: boolean }) => {
+      .option('--worktrees', 'list linked worktrees and non-default branches across the registered estate')
+      .action(async (run: string | undefined, options: { all?: boolean; worktrees?: boolean }) => {
+        if (options.worktrees) {
+          if (run !== undefined || options.all) throw grammarError('--worktrees takes no run name or --all')
+          const lines = await estateWorktreeLines(agentContext(context))
+          return write(lines.length ? lines.join('\n') : 'no linked worktrees or non-default branches')
+        }
         if (run !== undefined) {
           if (options.all) throw grammarError('--all lists every run; give it without a run name')
           for (const line of (await runStatus(agentContext(context), run)).lines) write(line)
@@ -219,7 +229,8 @@ export const createAgentCommand = (context: KiContext): Command => {
                 `${overview.run} (${overview.home ?? 'no work folder'})`,
                 ...(overview.items.length
                   ? overview.items.map((item) => `- [${item.kind}] ${item.agent} - ${item.what}`)
-                  : ['- [at rest]'])
+                  : ['- [at rest]']),
+                ...overview.worktrees
               ].join('\n')
             )
             .join('\n\n')
