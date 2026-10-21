@@ -18,7 +18,9 @@ import {
   temporaryDirectory
 } from './context.ts'
 import {
+  type AttemptIdentity,
   beginOperation,
+  type ControlStore,
   canonical,
   controlTransaction,
   dependencyTargets,
@@ -28,6 +30,7 @@ import {
   loadControl,
   newStore,
   nextIdentity,
+  type QueueIdentity,
   saveControl,
   verifyStore,
   verifyWorkHome
@@ -84,7 +87,7 @@ const lines = (text: string | undefined): string[] => (text ?? '').split('\n').f
 
 /** Legacy packet history consumes attempt numbers without conferring process ownership. */
 const minimumAttempt = async (directory: string, name: string): Promise<number> => {
-  const files = await readdir(directory).catch(() => [] as string[])
+  const files = await readdir(directory)
   const archives = files.filter(
     (file) => file.startsWith(`${name}.prev-`) && /^\d+$/.test(file.slice(`${name}.prev-`.length))
   )
@@ -96,7 +99,7 @@ const minimumAttempt = async (directory: string, name: string): Promise<number> 
     if (text === undefined) continue
     const packet = JSON.parse(text) as { identity?: { attempt?: number } }
     const attempt = packet.identity?.attempt
-    if (Number.isSafeInteger(attempt) && (attempt ?? 0) > 0) minimum = Math.max(minimum, (attempt as number) + 1)
+    if (Number.isSafeInteger(attempt) && (attempt as number) > 0) minimum = Math.max(minimum, (attempt as number) + 1)
   }
   return minimum
 }
@@ -205,14 +208,6 @@ export const agentState = async (context: AgentContext, directory: string, name:
     return { kind: 'running', last: 'held; launch acknowledgement unavailable' }
   if (attempt && ['unconfirmed', 'stop-requested', 'stop-timeout'].includes(attempt.state))
     return { kind: 'running', last: attempt.state }
-  if (!attempt && pid === undefined) {
-    const latest = Object.values(store?.entries ?? {})
-      .filter((entry) => entry.name === name)
-      .sort((left, right) => right.attempt - left.attempt)[0]
-    if (latest?.state === 'cancelled')
-      return { kind: latest.disposition === 'dequeued' ? 'dequeued' : 'failed', last: latest.disposition }
-    if (latest?.state === 'queued') return { kind: 'queued', last: 'queued' }
-  }
   const status = lines(await read(join(directory, `${name}.status`)))
   if (status.at(-1)?.trim() === 'DONE') {
     if (attempt?.owner && context.processes.control) {
@@ -263,8 +258,7 @@ const gate = async (
         const entry = store.entries[target.entry]
         if (!entry || entry.token !== target.token || entry.attempt !== target.attempt)
           return { kind: 'closed', reason: `${name} queue identity is unverified` }
-        if (entry.state === 'cancelled')
-          return { kind: 'closed', reason: `${name} was ${entry.disposition ?? 'cancelled'}` }
+        if (entry.state === 'cancelled') return { kind: 'closed', reason: `${name} was ${entry.disposition}` }
         if (entry.state !== 'started') {
           waiting.push(name)
           continue
@@ -285,8 +279,6 @@ const gate = async (
       return { kind: 'closed', reason: `${name} has an unbound predecessor identity` }
     const state = await agentState(context, directory, name)
     if (state.kind === 'finished') continue
-    if (state.kind === 'stopped' || state.kind === 'dequeued' || state.kind === 'failed')
-      return { kind: 'closed', reason: `${name} was ${state.kind}` }
     if (state.kind === 'exited' && (await pidOf(join(directory, `${name}.pid`))) !== undefined)
       return { kind: 'closed', reason: `${name} exited without DONE` }
     waiting.push(name)
@@ -407,20 +399,13 @@ const startRuntime = async (
   context: AgentContext,
   directory: string,
   request: LaunchRequest,
-  prompt: string
+  prompt: string,
+  store: ControlStore,
+  attempt: AttemptIdentity
 ): Promise<number> => {
   const base = join(directory, request.name)
-  const store = await loadControl(directory)
-  const attempt = store?.attempts[request.name]
-  if (
-    !store ||
-    !attempt ||
-    (request.launchToken !== undefined && attempt.token !== request.launchToken) ||
-    !['held', 'running'].includes(attempt.state)
-  )
-    throw new KiError('launch-fenced: attempt cannot start', 1)
-  if (request.entry && store.entries[request.entry]?.state === 'cancelled')
-    throw new KiError('launch-fenced: queue entry cancelled', 1)
+  // Both callers validate the reservation and cancellation fence inside this transaction.
+  const entry = request.entry === undefined ? undefined : (store.entries[request.entry] as QueueIdentity)
   const tree = await prepareAgentWorktree(context, request)
   if ((await realpath(tree?.path ?? request.workdir)) !== attempt.workdir)
     throw new KiError('workdir-identity-changed: physical working directory differs from the reserved attempt', 1)
@@ -434,15 +419,11 @@ const startRuntime = async (
     { token: attempt.token, scope: attempt.scope, selection: request.selection },
     { ...attempt },
     'held',
-    request.entry === undefined ? undefined : store.entries[request.entry]?.operation
+    entry?.operation
   )
-  if (operation.receipt) throw new KiError('launch-fenced: spawn operation already has a confirmed outcome', 1)
-  if (request.entry) {
-    const entry = store.entries[request.entry]
-    if (entry) {
-      entry.state = 'unconfirmed'
-      entry.operation = operation.id
-    }
+  if (entry) {
+    entry.state = 'unconfirmed'
+    entry.operation = operation.id
   }
   await saveControl(directory, store)
   const launch = runtimeLaunch(request.runtime, {
@@ -483,10 +464,7 @@ const startRuntime = async (
     )
   }
   attempt.state = 'running'
-  if (request.entry) {
-    const entry = store.entries[request.entry]
-    if (entry) entry.state = 'started'
-  }
+  if (entry) entry.state = 'started'
   await writeFile(`${base}.pid`, `${pid}\n`)
   await finishOperation(context, directory, store, operation, {
     resultingState: 'running',
@@ -501,7 +479,13 @@ const startRuntime = async (
 }
 
 /** Detaches the hold process: `ki agent launch --foreground` on the composed prompt. */
-const startHold = async (context: AgentContext, directory: string, request: LaunchRequest): Promise<number> => {
+const startHold = async (
+  context: AgentContext,
+  directory: string,
+  request: LaunchRequest,
+  store: ControlStore,
+  attempt: AttemptIdentity
+): Promise<number> => {
   const base = join(directory, request.name)
   const launch = {
     command: context.launcher[0],
@@ -528,10 +512,6 @@ const startHold = async (context: AgentContext, directory: string, request: Laun
     environment: context.environment,
     log: `${base}.log`
   }
-  const store = await loadControl(directory)
-  const attempt = store?.attempts[request.name]
-  if (!store || !attempt || attempt.token !== request.launchToken || attempt.state !== 'held')
-    throw new KiError('launch-fenced: held attempt identity changed', 1)
   const operation = await beginOperation(
     context,
     directory,
@@ -739,10 +719,9 @@ export const launchAgent = async (
   if (earlier && ['unconfirmed', 'stop-requested', 'stop-timeout'].includes(earlier.state))
     throw new KiError('claim-unconfirmed: reconcile the prior attempt before replacement', 1)
   const entry = request.entry === undefined ? undefined : store.entries[request.entry]
-  if (request.entry && entry?.state !== 'claimed') throw new KiError('launch-fenced: queue claim is no longer valid', 1)
   const reserved =
     earlier && request.entry !== undefined && earlier.entry === request.entry
-      ? { ...earlier, state: 'held' as const, owner: resuming ? undefined : earlier.owner }
+      ? { ...earlier, state: 'held' as const, owner: undefined }
       : identity(
           context,
           store,
@@ -780,7 +759,7 @@ export const launchAgent = async (
     (path) => path === resolve(context.workingDirectory, request.prompt)
   )
   if (state.kind === 'open') {
-    const pid = await startRuntime(context, directory, request, prompt)
+    const pid = await startRuntime(context, directory, request, prompt, store, reserved)
     if (spent) await rm(spent, { force: true })
     await recordEvent(
       context,
@@ -802,7 +781,7 @@ export const launchAgent = async (
     }
   }
   await writeFile(`${base}.status`, heldLine(context, state.names))
-  const pid = await startHold(context, directory, request)
+  const pid = await startHold(context, directory, request, store, reserved)
   await writeFile(`${base}.pid`, `${pid}\n`)
   await writeFile(`${base}.launch.json`, await launchDetails(context, request))
   if (spent) await rm(spent, { force: true })
@@ -848,17 +827,21 @@ export const holdAgent = async (context: AgentContext, candidate: LaunchRequest)
     // The launcher has just seen the gate shut, so the first check waits a full interval.
     await context.processes.sleep(holdSeconds * 1000)
     const result = await controlTransaction(context, request.run, async () => {
-      const attempt = (await loadControl(directory))?.attempts[request.name]
-      if (!attempt || !request.launchToken || attempt.token !== request.launchToken || attempt.state !== 'held')
+      const store = await loadControl(directory)
+      const attempt = store?.attempts[request.name]
+      if (
+        !store ||
+        !request.launchToken ||
+        !attempt ||
+        attempt.token !== request.launchToken ||
+        attempt.state !== 'held'
+      )
         return 'launch-fenced: held attempt cannot start'
-      const cancelled = attempt.entry && (await loadControl(directory))?.entries[attempt.entry]?.state === 'cancelled'
-      if (cancelled) {
-        const store = await loadControl(directory)
-        if (store) {
-          attempt.state = 'failed'
-          store.attempts[request.name] = attempt
-          await saveControl(directory, store)
-        }
+      if (request.entry !== attempt.entry || (attempt.entry && !store.entries[attempt.entry]))
+        return `${stamp(context)} - launch-fenced: queue identity changed`
+      if (attempt.entry && store.entries[attempt.entry]?.state === 'cancelled') {
+        attempt.state = 'failed'
+        await saveControl(directory, store)
         return 'launch-fenced: held queue entry was cancelled'
       }
       const state = await gate(context, directory, request.waitFor, attempt.dependencies)
@@ -867,12 +850,8 @@ export const holdAgent = async (context: AgentContext, candidate: LaunchRequest)
         return undefined
       }
       if (state.kind === 'closed') {
-        const store = await loadControl(directory)
-        if (store?.attempts[request.name]) {
-          const current = store.attempts[request.name]
-          if (current) current.state = 'failed'
-          await saveControl(directory, store)
-        }
+        attempt.state = 'failed'
+        await saveControl(directory, store)
         const line = `${stamp(context)} - gate cannot open: ${state.reason}`
         await writeFile(`${base}.status`, `${line}\n`)
         await recordEvent(
@@ -885,7 +864,7 @@ export const holdAgent = async (context: AgentContext, candidate: LaunchRequest)
         )
         return line
       }
-      const pid = await startRuntime(context, directory, request, prompt)
+      const pid = await startRuntime(context, directory, request, prompt, store, attempt)
       await recordEvent(
         context,
         directory,
@@ -1053,7 +1032,7 @@ const summary = async (context: AgentContext, directory: string): Promise<AgentS
       live = true
       result.push(`${entry.name}: claim-unconfirmed [${entry.id}]`)
     }
-    if (entry.state === 'cancelled') result.push(`${entry.name}: ${entry.disposition ?? 'cancelled'} [${entry.id}]`)
+    if (entry.state === 'cancelled') result.push(`${entry.name}: ${entry.disposition} [${entry.id}]`)
   }
   return { lines: result, live }
 }
@@ -1322,13 +1301,9 @@ export const dispatchRun = async (
       const state = gates[index]
       const drop = async (queued: LaunchRequest, kind: 'blocked' | 'failed', reason: string): Promise<void> => {
         if (store && queued.entry && store.entries[queued.entry]) {
-          const entry = store.entries[queued.entry]
-          if (entry) {
-            entry.state = 'cancelled'
-            entry.disposition = kind
-          }
-          const attempt = store.attempts[queued.name]
-          if (attempt?.entry === queued.entry && attempt.state === 'held') attempt.state = 'failed'
+          const entry = store.entries[queued.entry] as QueueIdentity
+          entry.state = 'cancelled'
+          entry.disposition = kind
           await saveControl(directory, store)
           const pending = lines(await read(queueFile(directory))).map((line) => JSON.parse(line) as LaunchRequest)
           await writeQueue(
@@ -1360,8 +1335,7 @@ export const dispatchRun = async (
         try {
           await preflight(context, next)
           if (store && next.entry) {
-            const entry = store.entries[next.entry]
-            if (entry?.state !== 'queued') return 'again'
+            const entry = store.entries[next.entry] as QueueIdentity
             const frozen = entry.request as LaunchRequest
             if (
               canonical(next.selection) !== canonical(frozen.selection) ||

@@ -52,7 +52,8 @@ export const authorityReference = async (context: AgentContext, reference: strin
   const found = matches[0] as RegExpExecArray
   const end =
     headings.find(
-      (match) => (match.index as number) > (found.index as number) && (match[1]?.length ?? 0) <= (found[1]?.length ?? 0)
+      (match) =>
+        (match.index as number) > (found.index as number) && (match[1] as string).length <= (found[1] as string).length
     )?.index ?? text.length
   return { reference, path: await realpath(path), heading, sha256: sha256(text.slice(found.index, end)) }
 }

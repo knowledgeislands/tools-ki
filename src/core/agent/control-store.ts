@@ -126,7 +126,7 @@ const replay = async (directory: string, store: ControlStore): Promise<ControlSt
       )
         throw new KiError('control-state-unverified: frozen operation differs from the journal', 1)
       if (!old) store.operations[entry.id] = entry
-    } else if (entry.phase === 'observed') {
+    } else {
       const receipt = entry.receipt
       const operation = receipt && store.operations[receipt.operationId]
       if (!receipt || !operation || (operation.receipt && canonical(operation.receipt) !== canonical(receipt)))

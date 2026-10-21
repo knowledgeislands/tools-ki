@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { chmod, readdir, readFile, rename } from 'node:fs/promises'
+import { chmod, readdir, readFile, rename, symlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { type AgentLaunch, type AgentLaunchEvidence, type AgentProcesses, runCommand, sandbox } from './_cli_helper.ts'
 
@@ -100,7 +100,7 @@ const fixture = async (managed = true) => {
     owner: owner(identity),
     terminal
   })
-  box.setAgentProcesses({
+  const processes: AgentProcesses = {
     launch: async (launch) => {
       launches.push(launch)
       launched += 1
@@ -161,7 +161,8 @@ const fixture = async (managed = true) => {
           } satisfies Controller
         }
       : {})
-  })
+  }
+  box.setAgentProcesses(processes)
   const run = (command: string | readonly string[]) => box.run(command, { now: () => time })
   const launch = () => run('ki agent launch r worker . brief.md --json')
   const stop = (extra = '') => run(`ki agent stop r worker --attempt 1 --reason owner --json ${extra}`)
@@ -174,6 +175,7 @@ const fixture = async (managed = true) => {
   const queue = async (name = 'worker') => JSON.parse((await run(`ki agent queue r ${name} brief.md --json`)).stdout)
   return {
     box,
+    processes,
     run,
     launch,
     stop,
@@ -277,6 +279,773 @@ const uncertain = async () => {
 }
 
 describe('agent control contract', () => {
+  test('a confirmed natural completion remains done in subsequent status reads', async () => {
+    const f = await fixture()
+    await f.launch()
+    await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
+    await f.box.state.write('ki/agents/r/worker.report.md', '# Complete\n')
+    f.set({ empty: true })
+    expect((await f.stop()).exitCode).toBe(0)
+    const result = await f.run('ki agent status r')
+    expect(result.exitCode, result.output).toBe(0)
+    expect(result.stdout).toContain('worker: finished')
+    expect(f.signals).toHaveLength(0)
+  })
+
+  test('a foreground launch without a frozen packet cannot start a worker', async () => {
+    const f = await fixture()
+    const result = await f.run('ki agent launch r worker . brief.md --foreground')
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('selection-unverified')
+    expect(f.launched()).toBe(0)
+  })
+
+  test('legacy queued requests coexist with identity-backed entries', async () => {
+    const f = await fixture(false)
+    await f.queue('new')
+    const line = await f.box.state.read('ki/agents/r/queue.jsonl')
+    const legacy = JSON.parse(line.trim())
+    delete legacy.entry
+    delete legacy.selection
+    legacy.name = 'legacy'
+    legacy.prompt = `${f.box.project.path}/brief.md`
+    await f.box.state.write('ki/agents/r/queue.jsonl', `${JSON.stringify(legacy)}\n${line}`)
+    f.onSleep(async () => {
+      f.set({ empty: true })
+    })
+    const result = await f.run('ki agent dispatch r --max 2 --foreground')
+    expect(result.exitCode, result.output).toBe(0)
+    expect(f.launched()).toBe(2)
+  })
+
+  test('an omitted optional frozen grant list retains empty grants on dispatch', async () => {
+    const f = await fixture(false)
+    const queued = await f.queue()
+    const store = await f.state()
+    delete store.entries[queued.entry].request.allow
+    await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+    f.onSleep(async () => {
+      f.set({ empty: true })
+    })
+    const result = await f.run('ki agent dispatch r --max 1 --foreground')
+    expect(result.exitCode, result.output).toBe(0)
+    expect(f.launched()).toBe(1)
+    expect(JSON.parse(await f.box.state.read('ki/agents/r/worker.launch.json')).grants).toEqual([])
+  })
+
+  test('a worktree replaced during preparation cannot receive the reserved attempt', async () => {
+    const f = await fixture()
+    f.box.setRunner(async (command, args, environment) => {
+      const result = await runCommand(command, args, environment)
+      if (command === 'git' && args.includes('worktree') && args.includes('add') && result.exitCode === 0) {
+        const path = present(args.at(-2))
+        await rename(path, `${path}-retained`)
+        await symlink(f.box.project.path, path)
+      }
+      return result
+    })
+    const result = await f.run('ki agent launch r worker . brief.md --worktree . --json')
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('workdir-identity-changed')
+    expect(f.launched()).toBe(0)
+  })
+
+  test('a foreign recovery reference cannot clear the original spawn fence', async () => {
+    const { f, evidence, command, operation } = await uncertain()
+    await f.box.project.write('evidence.json', JSON.stringify(evidence))
+    f.set({ verified: false })
+    const result = await f.run(`${command} --request unverified-resolution`)
+    expect(result.exitCode).toBe(1)
+    const store = await f.state()
+    const receipt = store.operations['unverified-resolution'].receipt
+    receipt.exitCode = 0
+    receipt.evidence.originalOperation = 'foreign-operation'
+    await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+    await f.box.state.write('ki/agents/r/control-receipts/unverified-resolution.json', JSON.stringify(receipt))
+    const rows = (await f.box.state.read('ki/agents/r/control.journal.jsonl'))
+      .trim()
+      .split('\n')
+      .map((row) => JSON.parse(row))
+    for (const row of rows)
+      if (row.phase === 'observed' && row.receipt.operationId === 'unverified-resolution') row.receipt = receipt
+    await f.box.state.write(
+      'ki/agents/r/control.journal.jsonl',
+      `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`
+    )
+    const inspected = await f.run(`ki agent recover inspect r --operation ${operation.id} --json`)
+    expect(inspected.exitCode, inspected.output).toBe(0)
+    expect(JSON.parse(inspected.stdout).reason).toBe('unconfirmed')
+    expect((await f.run('ki agent launch r worker . brief.md --relaunch --json')).exitCode).toBe(1)
+    expect(f.launched()).toBe(1)
+  })
+
+  test('an unknown journal phase is refused before any signal', async () => {
+    const f = await fixture()
+    await f.launch()
+    const journal = await f.box.state.read('ki/agents/r/control.journal.jsonl')
+    await f.box.state.write('ki/agents/r/control.journal.jsonl', `${journal}{"phase":"foreign"}\n`)
+    const result = await f.stop()
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('control-state-unverified')
+    expect(f.signals).toHaveLength(0)
+  })
+
+  test('claimed attempts share the live inventory without hiding other agents', async () => {
+    const f = await fixture()
+    await f.box.state.write('ki/agents/r/before.pid', '900\n')
+    await f.run('ki agent queue r worker brief.md --wait-for before --json')
+    await f.run(`ki agent launch r worker . ${f.box.state.path}/ki/agents/r/worker.queued.md --json`)
+    const overview = await f.run('ki agent status')
+    expect(overview.exitCode).toBe(0)
+    expect(overview.stdout).toContain('worker')
+    expect(overview.stdout).toContain('before')
+  })
+
+  test('a later confirmed stop lets an interrupted earlier request replay its stopped receipt', async () => {
+    const f = await fixture()
+    await f.launch()
+    await f.stop('--request interrupted-stop')
+    const store = await f.state()
+    delete store.operations['interrupted-stop'].receipt
+    await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+    await rename(
+      `${f.box.state.path}/ki/agents/r/control-receipts/interrupted-stop.json`,
+      `${f.box.state.path}/ki/agents/r/control-receipts/interrupted-stop.saved`
+    )
+    const rows = (await f.box.state.read('ki/agents/r/control.journal.jsonl'))
+      .trim()
+      .split('\n')
+      .map((row) => JSON.parse(row))
+      .filter((row) => row.phase !== 'observed' || row.receipt.operationId !== 'interrupted-stop')
+    await f.box.state.write(
+      'ki/agents/r/control.journal.jsonl',
+      `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`
+    )
+    expect((await f.stop('--request confirmed-stop')).exitCode).toBe(0)
+    const result = await f.stop('--request interrupted-stop')
+    expect(result.exitCode, result.output).toBe(0)
+    expect(JSON.parse(result.stdout).outcome).toBe('stopped')
+    expect(f.signals).toHaveLength(1)
+  })
+
+  test('a missing queue projection retains the original unconfirmed stop target', async () => {
+    const f = await fixture()
+    const queued = await f.queue()
+    await f.stop('--request interrupted-queue-stop')
+    const store = await f.state()
+    delete store.operations['interrupted-queue-stop'].receipt
+    delete store.entries[queued.entry]
+    await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+    await rename(
+      `${f.box.state.path}/ki/agents/r/control-receipts/interrupted-queue-stop.json`,
+      `${f.box.state.path}/ki/agents/r/control-receipts/interrupted-queue-stop.saved`
+    )
+    const rows = (await f.box.state.read('ki/agents/r/control.journal.jsonl'))
+      .trim()
+      .split('\n')
+      .map((row) => JSON.parse(row))
+      .filter((row) => row.phase !== 'observed' || row.receipt.operationId !== 'interrupted-queue-stop')
+    await f.box.state.write(
+      'ki/agents/r/control.journal.jsonl',
+      `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`
+    )
+    const result = await f.stop('--request interrupted-queue-stop')
+    expect(result.exitCode, result.output).toBe(1)
+    expect(JSON.parse(result.stdout)).toMatchObject({ outcome: 'queued-use-dequeue', target: { id: queued.entry } })
+    expect(f.launched()).toBe(0)
+  })
+
+  test('an interrupted dequeue receipt reconstructs one cancellation event', async () => {
+    const f = await fixture()
+    const queued = await f.queue()
+    const command = `ki agent dequeue r worker --entry ${queued.entry} --reason owner --request interrupted-dequeue --json`
+    await f.run(command)
+    const store = await f.state()
+    delete store.operations['interrupted-dequeue'].receipt
+    await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+    await rename(
+      `${f.box.state.path}/ki/agents/r/control-receipts/interrupted-dequeue.json`,
+      `${f.box.state.path}/ki/agents/r/control-receipts/interrupted-dequeue.saved`
+    )
+    const rows = (await f.box.state.read('ki/agents/r/control.journal.jsonl'))
+      .trim()
+      .split('\n')
+      .map((row) => JSON.parse(row))
+      .filter((row) => row.phase !== 'observed' || row.receipt.operationId !== 'interrupted-dequeue')
+    await f.box.state.write(
+      'ki/agents/r/control.journal.jsonl',
+      `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`
+    )
+    const result = await f.run(command)
+    expect(result.exitCode, result.output).toBe(0)
+    expect(JSON.parse(result.stdout).outcome).toBe('cancelled-before-start')
+    expect((await f.events()).filter((event) => event.kind === 'dequeued')).toHaveLength(1)
+  })
+
+  test('an acknowledged queue entry with a lost attempt projection stays unconfirmed', async () => {
+    const f = await fixture()
+    const queued = await f.queue()
+    f.onSleep(async () => {
+      f.set({ empty: true })
+    })
+    expect((await f.run('ki agent dispatch r --max 1 --foreground')).exitCode).toBe(0)
+    const store = await f.state()
+    delete store.history[store.attempts.worker.token]
+    delete store.attempts.worker
+    await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+    const result = await f.run(`ki agent dequeue r worker --entry ${queued.entry} --reason owner --json`)
+    expect(result.exitCode, result.output).toBe(1)
+    expect(JSON.parse(result.stdout).outcome).toBe('claim-unconfirmed')
+    expect(f.signals).toHaveLength(0)
+  })
+
+  test('failed attempt events are derived only once across repeated observers', async () => {
+    const f = await fixture(false)
+    await f.launch()
+    await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
+    await f.stop()
+    await f.run('ki agent status r')
+    await f.run('ki agent status r')
+    expect((await f.events()).filter((event) => event.kind === 'failed')).toHaveLength(1)
+  })
+
+  test('a missing acceptance record is refused even with a correctly shaped digest', async () => {
+    const f = await fixture()
+    const { declaration, authority } = await declarationFixture(f)
+    present(declaration.records[0]).path = `${f.box.project.path}/missing.md`
+    await f.box.project.write('acceptance.json', JSON.stringify(declaration))
+    f.box.setAgentLaunchEvidence(evidenced())
+    const result = await f.run(
+      `ki agent launch r acceptor . brief.md --role accept --authority ${authority} --acceptance acceptance.json --dry-run --json`
+    )
+    expect(result.exitCode).toBe(1)
+    expect(JSON.parse(result.stdout).refusals.join(' ')).toContain('changed or missing record/review')
+    expect(f.launched()).toBe(2)
+  })
+
+  test('a missing held PID cannot be replaced even when its managed scope is empty', async () => {
+    const f = await fixture()
+    await f.box.state.write('ki/agents/r/before.pid', '900\n')
+    await f.run('ki agent launch r worker . brief.md --wait-for before --json')
+    await rename(`${f.box.state.path}/ki/agents/r/worker.pid`, `${f.box.state.path}/ki/agents/r/worker.saved-pid`)
+    f.set({ empty: true })
+    const result = await f.run('ki agent launch r worker . brief.md --relaunch --json')
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('held process acknowledgement is unavailable')
+    expect(f.launched()).toBe(1)
+  })
+
+  test.each(['foreign-entry', 'missing-entry'])('held metadata cannot change its %s', async (variant) => {
+    const f = await fixture()
+    await f.box.state.write('ki/agents/r/before.pid', '900\n')
+    const queued = JSON.parse((await f.run('ki agent queue r worker brief.md --wait-for before --json')).stdout)
+    await f.run(`ki agent launch r worker . ${f.box.state.path}/ki/agents/r/worker.queued.md --json`)
+    if (variant === 'foreign-entry') {
+      const metadata = JSON.parse(await f.box.state.read('ki/agents/r/worker.launch.json'))
+      metadata.request.entry = 'foreign'
+      await f.box.state.write('ki/agents/r/worker.launch.json', JSON.stringify(metadata))
+    } else {
+      const store = await f.state()
+      delete store.entries[queued.entry]
+      await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+    }
+    const result = await f.run(['ki', ...present(f.launches[0]).arguments])
+    expect(result.exitCode, result.output).toBe(0)
+    expect(result.stdout).toContain('launch-fenced: queue identity changed')
+    expect(f.launched()).toBe(1)
+  })
+
+  test.each(['open', 'blocked', 'foreign-run'])(
+    'legacy queue handles %s without inventing an identity',
+    async (variant) => {
+      const f = await fixture(false)
+      await f.queue()
+      const row = JSON.parse((await f.box.state.read('ki/agents/r/queue.jsonl')).trim())
+      delete row.entry
+      delete row.selection
+      delete row.allow
+      if (variant === 'blocked') row.waitFor = ['before']
+      if (variant === 'foreign-run') row.run = 'foreign'
+      await f.box.state.write('ki/agents/r/queue.jsonl', `${JSON.stringify(row)}\n`)
+      await rename(`${f.box.state.path}/ki/agents/r/control.json`, `${f.box.state.path}/ki/agents/r/control.saved`)
+      if (variant === 'blocked') {
+        await f.box.state.write('ki/agents/r/before.pid', '900\n')
+        f.set({ empty: true })
+      }
+      f.onSleep(async () => {
+        f.set({ empty: true })
+      })
+      const result = await f.run('ki agent dispatch r --max 1 --foreground')
+      expect(result.exitCode, result.output).toBe(variant === 'foreign-run' ? 1 : 0)
+      if (variant === 'open') expect(f.launched()).toBe(1)
+      if (variant === 'blocked') expect(result.stdout).toContain('gate cannot open')
+      if (variant === 'foreign-run') expect(result.stderr).toContain('queue-home-unverified')
+    }
+  )
+
+  test('a completed historical predecessor still opens the exact bound gate after relaunch', async () => {
+    const f = await fixture()
+    await f.launch()
+    await f.run('ki agent queue r after brief.md --wait-for worker --json')
+    await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
+    await f.box.state.write('ki/agents/r/worker.report.md', '# Complete\n')
+    f.set({ empty: true })
+    expect((await f.run('ki agent launch r worker . brief.md --relaunch --json')).exitCode).toBe(0)
+    f.set({ empty: false })
+    f.onSleep(async () => {
+      f.set({ empty: true })
+    })
+    const result = await f.run('ki agent dispatch r --max 2 --foreground')
+    expect(result.exitCode, result.output).toBe(0)
+    expect(f.launched()).toBe(3)
+  })
+
+  test('an interrupted stop receipt preserves a stopped scope and derives its event once', async () => {
+    const f = await fixture()
+    await f.launch()
+    await f.stop('--request stopped-before-receipt')
+    const store = await f.state()
+    delete store.operations['stopped-before-receipt'].receipt
+    await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+    await rename(
+      `${f.box.state.path}/ki/agents/r/control-receipts/stopped-before-receipt.json`,
+      `${f.box.state.path}/ki/agents/r/control-receipts/stopped-before-receipt.saved`
+    )
+    const rows = (await f.box.state.read('ki/agents/r/control.journal.jsonl'))
+      .trim()
+      .split('\n')
+      .map((row) => JSON.parse(row))
+      .filter((row) => row.phase !== 'observed' || row.receipt.operationId !== 'stopped-before-receipt')
+    await f.box.state.write(
+      'ki/agents/r/control.journal.jsonl',
+      `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`
+    )
+    const inspected = await f.run('ki agent recover inspect r --operation stopped-before-receipt --json')
+    expect(JSON.parse(inspected.stdout).requiredEvidence.observations).toEqual([])
+    const result = await f.stop('--request stopped-before-receipt')
+    expect(result.exitCode, result.output).toBe(0)
+    expect(JSON.parse(result.stdout).outcome).toBe('stopped')
+    expect(f.signals).toHaveLength(1)
+    expect((await f.events()).filter((event) => event.kind === 'stopped')).toHaveLength(1)
+  })
+
+  test('an interrupted queued-stop receipt retries the original queue identity after cancellation', async () => {
+    const f = await fixture()
+    const queued = await f.queue()
+    await f.stop('--request queued-stop')
+    const store = await f.state()
+    delete store.operations['queued-stop'].receipt
+    await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+    await rename(
+      `${f.box.state.path}/ki/agents/r/control-receipts/queued-stop.json`,
+      `${f.box.state.path}/ki/agents/r/control-receipts/queued-stop.saved`
+    )
+    const rows = (await f.box.state.read('ki/agents/r/control.journal.jsonl'))
+      .trim()
+      .split('\n')
+      .map((row) => JSON.parse(row))
+      .filter((row) => row.phase !== 'observed' || row.receipt.operationId !== 'queued-stop')
+    await f.box.state.write(
+      'ki/agents/r/control.journal.jsonl',
+      `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`
+    )
+    await f.run(`ki agent dequeue r worker --entry ${queued.entry} --reason owner --json`)
+    const result = await f.stop('--request queued-stop')
+    expect(result.exitCode, result.output).toBe(1)
+    expect(JSON.parse(result.stdout)).toMatchObject({ outcome: 'queued-use-dequeue', resultingState: 'cancelled' })
+    expect(f.launched()).toBe(0)
+  })
+
+  test('a queue entry dropped by a closed gate is already terminal when dequeued', async () => {
+    const f = await fixture()
+    const first = await f.queue('before')
+    const queued = JSON.parse((await f.run('ki agent queue r worker brief.md --wait-for before --json')).stdout)
+    await f.run(`ki agent dequeue r before --entry ${first.entry} --reason owner --json`)
+    await f.run('ki agent dispatch r --max 1 --foreground')
+    const result = await f.run(`ki agent dequeue r worker --entry ${queued.entry} --reason owner --json`)
+    expect(result.exitCode, result.output).toBe(0)
+    expect(JSON.parse(result.stdout).outcome).toBe('already-terminal')
+  })
+
+  test('a missing worker acknowledgement keeps dequeue and requeue fenced', async () => {
+    const { f, queued } = await uncertain()
+    const result = await f.run(`ki agent dequeue r worker --entry ${queued.entry} --reason owner --json`)
+    expect(result.exitCode, result.output).toBe(1)
+    expect(JSON.parse(result.stdout).outcome).toBe('claim-unconfirmed')
+    expect((await f.run('ki agent queue r worker brief.md --json')).stderr).toContain('claim-unconfirmed')
+  })
+
+  test('recovery cannot report a cancelled entry as started', async () => {
+    const { f, queued, evidence, command } = await uncertain()
+    const store = await f.state()
+    store.entries[queued.entry].state = 'cancelled'
+    store.entries[queued.entry].disposition = 'dequeued'
+    await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+    evidence.observation = 'spawn-started'
+    await f.box.project.write('evidence.json', JSON.stringify(evidence))
+    f.set({ workerStarted: true, consumed: true })
+    const result = await f.run(command)
+    expect(result.exitCode, result.output).toBe(1)
+    expect(JSON.parse(result.stdout).outcome).toBe('reconciliation-unconfirmed')
+    expect((await f.state()).entries[queued.entry].state).toBe('cancelled')
+  })
+
+  test('dependency projection cannot change its already frozen binding', async () => {
+    const f = await fixture()
+    await f.queue('before')
+    const queued = JSON.parse((await f.run('ki agent queue r worker brief.md --wait-for before --json')).stdout)
+    const store = await f.state()
+    store.entries[queued.entry].dependencies.before.token = 'foreign'
+    await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+    const result = await f.run('ki agent dispatch r --max 1 --foreground')
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('control-state-unverified')
+    expect(f.launched()).toBe(0)
+  })
+
+  test('a legacy thread home never acquires control authority', async () => {
+    const f = await fixture()
+    await f.launch()
+    await f.box.project.write('+/_THREADS/r/work.md', '---\nid: ki.r\n---\n')
+    await f.box.state.write(
+      'ki/agents/r/thread.json',
+      JSON.stringify({ repository: f.box.project.path, folder: '+/_THREADS/r' })
+    )
+    expect((await f.stop()).exitCode).toBe(1)
+    expect(f.signals).toHaveLength(0)
+  })
+
+  test('a foreign queue projection cannot create a claim', async () => {
+    const f = await fixture()
+    await f.queue()
+    const row = JSON.parse((await f.box.state.read('ki/agents/r/queue.jsonl')).trim())
+    row.entry = 'unknown-entry'
+    await f.box.state.write('ki/agents/r/queue.jsonl', `${JSON.stringify(row)}\n`)
+    const result = await f.run('ki agent dispatch r --max 1 --foreground')
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('queue-identity-unverified')
+    expect(f.launched()).toBe(0)
+  })
+
+  test.each(['runtime', 'model', 'effort', 'rules', 'allow'])('dispatch refuses a changed queue %s', async (key) => {
+    const f = await fixture()
+    await f.queue()
+    const row = JSON.parse((await f.box.state.read('ki/agents/r/queue.jsonl')).trim())
+    row[key] = { runtime: 'codex', model: 'different', effort: 'max', rules: 'push', allow: ['fetch'] }[key]
+    await f.box.data.write(`${assets}/grant-fetch.md`, '## Grant: fetch\n\nRead-only.\n')
+    await f.box.state.write('ki/agents/r/queue.jsonl', `${JSON.stringify(row)}\n`)
+    const result = await f.run('ki agent dispatch r --max 1 --foreground')
+    expect(result.exitCode, result.output).toBe(1)
+    expect(result.stderr).toContain('selection-changed')
+    expect(f.launched()).toBe(0)
+  })
+
+  test('invalid held role metadata is refused before any new launch', async () => {
+    const f = await fixture()
+    await f.box.state.write('ki/agents/r/before.pid', '900\n')
+    await f.run('ki agent launch r worker . brief.md --wait-for before --json')
+    const metadata = JSON.parse(await f.box.state.read('ki/agents/r/worker.launch.json'))
+    delete metadata.request.selection
+    metadata.request.role = 'foreign'
+    await f.box.state.write('ki/agents/r/worker.launch.json', JSON.stringify(metadata))
+    const result = await f.run(['ki', ...present(f.launches[0]).arguments])
+    expect(result.exitCode).toBe(2)
+    expect(result.stderr).toContain('unknown role')
+    expect(f.launched()).toBe(1)
+  })
+
+  test('legacy held metadata without an optional grant list keeps empty grants', async () => {
+    const f = await fixture(false)
+    await f.box.state.write('ki/agents/r/before.pid', '900\n')
+    await f.run('ki agent launch r worker . brief.md --wait-for before --json')
+    const metadata = JSON.parse(await f.box.state.read('ki/agents/r/worker.launch.json'))
+    delete metadata.request.selection
+    delete metadata.request.allow
+    await f.box.state.write('ki/agents/r/worker.launch.json', JSON.stringify(metadata))
+    await f.box.state.write('ki/agents/r/before.status', 'DONE\n')
+    const result = await f.run(['ki', ...present(f.launches[0]).arguments])
+    expect(result.exitCode, result.output).toBe(0)
+    expect(f.launched()).toBe(2)
+    const final = JSON.parse(await f.box.state.read('ki/agents/r/worker.launch.json'))
+    expect(final.grants).toEqual([])
+  })
+
+  test('acceptance rejects an invalid review object even with valid record evidence', async () => {
+    const f = await fixture()
+    const { declaration, authority } = await declarationFixture(f)
+    const document = structuredClone(declaration) as unknown as { records: { reviews: unknown[] }[] }
+    present(document.records[0]).reviews = [{}]
+    f.box.setAgentLaunchEvidence({
+      ...evidenced(),
+      acceptance: { revision: 'ki/scoped-acceptance/v1', render: JSON.stringify }
+    })
+    await f.box.project.write('acceptance.json', JSON.stringify(document))
+    const result = await f.run(
+      `ki agent launch r acceptor . brief.md --role accept --authority ${authority} --acceptance acceptance.json --dry-run --json`
+    )
+    expect(result.exitCode).toBe(1)
+    expect(JSON.parse(result.stdout).refusals.join(' ')).toContain('invalid review shape')
+  })
+
+  test.each(['0', '-1', '1.5', '9007199254740992'])('rejects invalid positive control number %s', async (value) => {
+    const f = await fixture()
+    expect((await f.run(`ki agent stop r worker --attempt ${value} --reason owner --json`)).exitCode).toBe(2)
+    expect(f.signals).toHaveLength(0)
+  })
+
+  test.each(['launch', 'queue'])(
+    'successful %s dry-run reports explicit grants without reserving an attempt',
+    async (verb) => {
+      const f = await fixture()
+      f.box.setAgentLaunchEvidence(evidenced())
+      await f.box.data.write(`${assets}/grant-fetch.md`, '# Fetch grant\n')
+      const args = `ki agent ${verb} r worker ${verb === 'launch' ? '. ' : ''}brief.md --role mechanical --authority authority.md#Grant --allow fetch --dry-run --json`
+      const result = await f.run(args)
+      expect(result.exitCode, result.output).toBe(0)
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        role: 'mechanical',
+        grants: ['fetch'],
+        sources: { grants: 'explicit' }
+      })
+      expect(f.launched()).toBe(0)
+      expect(await f.box.state.read('ki/agents/r/control.json').catch(() => undefined)).toBeUndefined()
+    }
+  )
+
+  test('authority digest covers nested headings and stops at the next peer', async () => {
+    const f = await fixture()
+    f.box.setAgentLaunchEvidence(evidenced())
+    const grant = '# Grant\n\nBounded.\n\n## Detail\n\nNested.\n\n'
+    await f.box.project.write('authority.md', `${grant}# Other\n\nUnrelated.\n`)
+    const result = await f.run(
+      'ki agent launch r worker . brief.md --role mechanical --authority authority.md#Grant --dry-run --json'
+    )
+    expect(result.exitCode, result.output).toBe(0)
+    expect(JSON.parse(result.stdout).authority.sha256).toBe(hash(grant))
+  })
+
+  test('a new stop request for a stopped attempt is an idempotent terminal no-op', async () => {
+    const f = await fixture()
+    await f.launch()
+    expect((await f.stop('--request first-stop')).exitCode).toBe(0)
+    const retry = await f.stop('--request later-stop')
+    expect(JSON.parse(retry.stdout).outcome).toBe('already-stopped')
+    expect(f.signals).toHaveLength(1)
+  })
+
+  test('an adapter completion without a worker report remains failed without a signal', async () => {
+    const f = await fixture()
+    await f.launch()
+    await rename(`${f.box.state.path}/ki/agents/r/worker.status`, `${f.box.state.path}/ki/agents/r/worker.saved-status`)
+    f.set({ terminal: 'done' })
+    const controller = present(f.processes.control)
+    f.box.setAgentProcesses({
+      ...f.processes,
+      control: {
+        ...controller,
+        inspect: async (identity) => ({ ...(await controller.inspect(identity)), empty: true })
+      }
+    })
+    const result = await f.stop()
+    expect(result.exitCode, result.output).toBe(0)
+    expect(JSON.parse(result.stdout)).toMatchObject({ outcome: 'already-terminal', resultingState: 'failed' })
+    expect(f.signals).toHaveLength(0)
+  })
+
+  test('completion with an unavailable scope observation stays busy', async () => {
+    const f = await fixture()
+    await f.launch()
+    await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
+    f.box.setAgentProcesses({
+      ...f.processes,
+      control: {
+        ...present(f.processes.control),
+        inspect: async () => {
+          throw new Error('observation unavailable')
+        }
+      }
+    })
+    const result = await f.run('ki agent status r')
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain('completion-unconfirmed')
+    expect(result.stdout).not.toContain('ALL FINISHED')
+  })
+
+  test.each(['worker', 'supervisor'])(
+    'foreign %s launch acknowledgements fence replacement and expose recovery',
+    async (phase) => {
+      const f = await fixture()
+      const controller = present(f.processes.control)
+      const launch = controller.launch
+      f.box.setAgentProcesses({
+        ...f.processes,
+        control: { ...controller, launch: async (...args) => ({ ...(await launch(...args)), token: 'foreign' }) }
+      })
+      if (phase === 'supervisor') await f.box.state.write('ki/agents/r/before.pid', '900\n')
+      const result = await f.run(
+        `ki agent launch r worker . brief.md ${phase === 'supervisor' ? '--wait-for before' : ''} --json`
+      )
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain('claim-unconfirmed')
+      expect((await f.state()).attempts.worker.state).toBe('unconfirmed')
+      const operation = Object.values((await f.state()).operations).find(
+        (item) => (item as { operation: string }).operation === (phase === 'worker' ? 'spawn' : 'spawn-supervisor')
+      ) as { id: string }
+      const inspected = await f.run(`ki agent recover inspect r --operation ${operation.id} --json`)
+      expect(JSON.parse(inspected.stdout).requiredEvidence.observations).toEqual(['spawn-started', 'spawn-not-started'])
+      expect((await f.run('ki agent queue r worker brief.md --json')).exitCode).toBe(1)
+      expect((await f.run('ki agent launch r worker . brief.md --relaunch --json')).exitCode).toBe(1)
+    }
+  )
+
+  test('an unacknowledged held supervisor stays live and cannot be replaced', async () => {
+    const f = await fixture()
+    await f.box.state.write('ki/agents/r/before.pid', '900\n')
+    expect((await f.run('ki agent launch r worker . brief.md --wait-for before --json')).exitCode).toBe(0)
+    await rename(`${f.box.state.path}/ki/agents/r/worker.pid`, `${f.box.state.path}/ki/agents/r/worker.saved-pid`)
+    const status = await f.run('ki agent status r')
+    expect(status.stdout).toContain('held; launch acknowledgement unavailable')
+    expect((await f.run('ki agent launch r worker . brief.md --relaunch --json')).stderr).toContain('claim-unconfirmed')
+  })
+
+  test.each(['missing-request', 'foreign-run', 'foreign-name'])('held launch refuses %s metadata', async (variant) => {
+    const f = await fixture()
+    await f.box.state.write('ki/agents/r/before.pid', '900\n')
+    await f.run('ki agent launch r worker . brief.md --wait-for before --json')
+    const packet = JSON.parse(await f.box.state.read('ki/agents/r/worker.launch.json'))
+    if (variant === 'missing-request') delete packet.request
+    if (variant === 'foreign-run') packet.request.run = 'foreign'
+    if (variant === 'foreign-name') packet.request.name = 'foreign'
+    await f.box.state.write('ki/agents/r/worker.launch.json', JSON.stringify(packet))
+    const result = await f.run(['ki', ...present(f.launches[0]).arguments])
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('selection-unverified')
+    expect(f.launched()).toBe(1)
+  })
+
+  test.each(['throw', 'changed-observation'])('recovery refuses an adapter %s', async (variant) => {
+    const { f, evidence, command } = await uncertain()
+    await f.box.project.write('evidence.json', JSON.stringify(evidence))
+    const controller = present(f.processes.control)
+    const inspect = controller.inspect
+    f.box.setAgentProcesses({
+      ...f.processes,
+      control: {
+        ...controller,
+        verifyRecovery: async (identity) => {
+          if (variant === 'throw') throw new Error('verification unavailable')
+          return { ...(await inspect(identity)), empty: true }
+        }
+      }
+    })
+    const result = await f.run(command)
+    expect(result.exitCode, result.output).toBe(1)
+    expect(JSON.parse(result.stdout).outcome).toBe('reconciliation-unconfirmed')
+    expect(f.signals).toHaveLength(0)
+  })
+
+  test('a failed recovery receipt can be retried by its exact operation identity', async () => {
+    const { f, evidence, command } = await uncertain()
+    await f.box.project.write('evidence.json', JSON.stringify(evidence))
+    f.set({ verified: false })
+    const first = await f.run(`${command} --request recovery-refusal`)
+    expect(first.exitCode).toBe(1)
+    const second = await f.run(`${command} --request recovery-refusal`)
+    expect(second.stdout).toBe(first.stdout)
+  })
+
+  test.each(['receipt-file', 'journal-intent', 'receipt-schema'])(
+    'replays interrupted persistence from %s',
+    async (variant) => {
+      const f = await fixture()
+      await f.launch()
+      const store = await f.state()
+      const operation = Object.values(store.operations)[0] as { id: string; receipt?: Record<string, unknown> }
+      const rows = (await f.box.state.read('ki/agents/r/control.journal.jsonl'))
+        .trim()
+        .split('\n')
+        .map((row) => JSON.parse(row))
+      if (variant === 'journal-intent') delete store.operations[operation.id]
+      else {
+        const receipt = present(operation.receipt)
+        if (variant === 'receipt-schema') receipt['schema'] = 'foreign'
+        await f.box.state.write(`ki/agents/r/control-receipts/${operation.id}.json`, JSON.stringify(receipt))
+        delete operation.receipt
+      }
+      await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+      await f.box.state.write(
+        'ki/agents/r/control.journal.jsonl',
+        `${rows
+          .filter((row) => row.phase === 'intent')
+          .map((row) => JSON.stringify(row))
+          .join('\n')}\n`
+      )
+      const result = await f.run(`ki agent recover inspect r --operation ${operation.id} --json`)
+      expect(result.exitCode, result.output).toBe(variant === 'receipt-schema' ? 1 : 0)
+      if (variant === 'receipt-schema') expect(result.stderr).toContain('control-state-unverified')
+      else expect(JSON.parse(result.stdout).reason).toBe('confirmed')
+      expect(f.launched()).toBe(1)
+    }
+  )
+
+  test.each(['footer', 'declaration', 'capability', 'wording', 'missing-evidence', 'renderer-error'])(
+    'frozen acceptance refuses changed %s',
+    async (variant) => {
+      const f = await fixture()
+      const { declaration, authority } = await declarationFixture(f)
+      const capability = {
+        revision: 'ki/scoped-acceptance/v1' as const,
+        render: (document: unknown) => JSON.stringify(document)
+      }
+      f.box.setAgentLaunchEvidence({ ...evidenced(), acceptance: capability })
+      await f.box.project.write('acceptance.json', JSON.stringify(declaration))
+      const queued = await f.run(
+        `ki agent queue r acceptor brief.md --role accept --authority ${authority} --acceptance acceptance.json --json`
+      )
+      expect(queued.exitCode, queued.output).toBe(0)
+      if (variant === 'footer') {
+        const store = await f.state()
+        const entry = store.entries[JSON.parse(queued.stdout).entry]
+        entry.request.selection.rules = 'push'
+        await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
+        await f.box.state.write('ki/agents/r/queue.jsonl', '')
+      }
+      if (variant === 'declaration') await f.box.project.write('acceptance.json', JSON.stringify(declaration, null, 2))
+      if (variant === 'capability') f.box.setAgentLaunchEvidence(evidenced())
+      if (variant === 'missing-evidence') f.box.setAgentLaunchEvidence(undefined)
+      if (variant === 'wording')
+        f.box.setAgentLaunchEvidence({ ...evidenced(), acceptance: { ...capability, render: () => 'different' } })
+      if (variant === 'renderer-error')
+        f.box.setAgentLaunchEvidence({
+          ...evidenced(),
+          acceptance: {
+            ...capability,
+            render: () => {
+              throw new Error('acceptance renderer unavailable')
+            }
+          }
+        })
+      f.set({ empty: true })
+      if (variant === 'renderer-error') {
+        await expect(f.run('ki agent dispatch r --max 1 --foreground')).rejects.toThrow(
+          'acceptance renderer unavailable'
+        )
+        expect(f.launched()).toBe(2)
+        return
+      }
+      const result = await f.run('ki agent dispatch r --max 1 --foreground')
+      expect(result.exitCode, result.output).toBe(1)
+      expect(result.stderr).toContain(
+        variant === 'footer'
+          ? 'footer-mismatch'
+          : variant === 'declaration'
+            ? 'acceptance-changed'
+            : 'acceptance-contract-unavailable'
+      )
+      expect(f.launched()).toBe(2)
+    }
+  )
+
   test('dequeue fences a claimed held supervisor before its dependency can finish', async () => {
     const f = await fixture()
     const queued = await f.run('ki agent queue r worker brief.md --wait-for before --json')
@@ -529,6 +1298,10 @@ describe('agent control contract', () => {
       ...evidenced(),
       acceptance: { revision: 'ki/scoped-acceptance/v1', render: (document) => JSON.stringify(document) }
     })
+    await f.box.state.write(
+      'ki/agents/r/reviewer.prev-99/reviewer.launch.json',
+      JSON.stringify({ identity: { token: 'another-attempt' } })
+    )
     const record = present(declaration.records[0])
     present(record.reviews[0]).path = `${f.box.state.path}/ki/agents/r/reviewer.prev-1/reviewer.report.md`
     await f.box.project.write('acceptance.json', JSON.stringify(declaration))

@@ -363,7 +363,6 @@ export const inspectRecovery = async (context: AgentContext, run: string, id: st
     .split('\n')
     .map((line) => JSON.parse(line) as { phase: string; id?: string })
   const position = journal.findIndex((entry) => entry.phase === 'intent' && entry.id === id)
-  if (position < 0) throw new KiError('journal-unverified: the original intent is unavailable', 1)
   const confirmed = operation.receipt !== undefined || operation.resolvedBy !== undefined
   return {
     schema: 'ki/agent-control/v1',
