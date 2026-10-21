@@ -43,6 +43,22 @@ const devLinkedHarness = async (box: Sandbox, source = generator()): Promise<str
 }
 
 describe('[ki dev skill generate]', () => {
+  test('generates from and publishes only into the caller linked worktree', async () => {
+    const box = await sandbox()
+    const primary = await devLinkedHarness(box)
+    await box.root.git(['add', '.'], 'local')
+    await box.root.git(['commit', '-q', '-m', 'base'], 'local')
+    await box.root.git(['worktree', 'add', '-q', '-b', 'delivery', '../linked'], 'local')
+    await box.root.write('linked/source.txt', 'worktree source\n')
+    box.cd('../linked')
+    const result = await box.run('ki dev skill generate ki-example --write', { runner: 'default' })
+    expect(result.exitCode).toBe(0)
+    expect(await box.root.read('linked/hooks/rendered.sh')).toBe("line='worktree source'\n")
+    await expect(box.root.read('local/hooks/rendered.sh')).rejects.toThrow()
+    expect(await box.root.git(['status', '--porcelain'], 'local')).toBe('')
+    expect(result.output).not.toContain(primary + '/hooks/rendered.sh')
+  })
+
   test('reports each missing and stale surface and fails until they are written', async () => {
     const box = await sandbox()
     await installedHarness(box)

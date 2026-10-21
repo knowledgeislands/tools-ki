@@ -56,6 +56,7 @@ export const createRepositorySkillActivation = async (options: {
   readonly configurationDirectory: string
   readonly homeDirectory: string
   readonly repository: string
+  readonly inspectionRepository?: string | undefined
   readonly repositoryDeclaration: string
   readonly skills: readonly ResolvedSkill[]
 }): Promise<RepositorySkillActivationHost> => {
@@ -87,7 +88,21 @@ export const createRepositorySkillActivation = async (options: {
       validNames(names).map(async (name) => {
         const targets = targetsFor(name)
         if (!targets.length) return { name, status: 'blocked', message: `${name} has no compatible configured runtime` }
-        const states = await Promise.all(targets.map(stateForTarget))
+        const states = await Promise.all(
+          targets.map(async (target) => {
+            const own = await stateForTarget(target)
+            if (
+              own !== 'missing' ||
+              !options.inspectionRepository ||
+              options.inspectionRepository === options.repository
+            )
+              return own
+            return stateForTarget({
+              ...target,
+              path: join(options.inspectionRepository, target.path.slice(options.repository.length + 1))
+            })
+          })
+        )
         const status = states.includes('blocked')
           ? 'blocked'
           : states.every((state) => state === 'active')

@@ -1,14 +1,44 @@
-import { mkdir, realpath } from 'node:fs/promises'
+import { lstat, mkdir, realpath } from 'node:fs/promises'
+import { join } from 'node:path'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../configuration/declaration.ts'
 import { resolveRepositoryDeclaredSkills } from '../../configuration/local-provider.ts'
 import type { ResolvedSkill } from '../../configuration/resolution.ts'
 import { KiError } from '../../errors.ts'
 import { prepareWrites } from '../../filesystem/publication.ts'
 import { discoverInstalledHarnesses } from '../../harness/inspection.ts'
-import { inspectLocalRegistry, invalidRegistryError, localRegistryWrite } from '../../storage/local-registry.ts'
+import { gitPrimaryWorkingTreeRoot } from '../../runtime/git.ts'
+import {
+  inspectLocalRegistry,
+  invalidRegistryError,
+  type LocalRegistryEntry,
+  localRegistryWrite
+} from '../../storage/local-registry.ts'
 import { registryEntryForRepository } from '../../storage/repository-stores.ts'
 import type { RepositoryLocation } from '../location.ts'
 import type { RepositoryOperationContext, RepositorySkillActivationHost } from './types.ts'
+
+/** Inherit only from a registered primary checkout in the same Git repository with the same declared identity. */
+const registeredCheckout = async (
+  context: RepositoryOperationContext,
+  root: string,
+  entries: readonly LocalRegistryEntry[]
+): Promise<string | undefined> => {
+  if (entries.some((entry) => entry.path === root)) return root
+  if (!entries.length || !(await lstat(join(root, '.git')).catch(() => undefined))) return undefined
+  const primary = await gitPrimaryWorkingTreeRoot(root, context.runner, context.environment)
+  const entry = entries.find((candidate) => candidate.path === primary)
+  if (!entry) return undefined
+  try {
+    const [current, original] = await Promise.all(
+      [root, entry.path].map(async (path) =>
+        declaredRepositoryIdentity(await readRepositoryDeclaration(`${path}/.ki.toml`))
+      )
+    )
+    return current === entry.repository && original === entry.repository ? entry.path : undefined
+  } catch {
+    return undefined
+  }
+}
 
 export const localRepositoryRegistration = async (
   context: RepositoryOperationContext,
@@ -21,7 +51,7 @@ export const localRepositoryRegistration = async (
   if (configuration.state === 'invalid') return `local KI configuration is invalid: ${configuration.errors.join('; ')}`
   const registry = await inspectLocalRegistry(context.stateDirectory)
   if (registry.state === 'invalid') return `local KI repository registry is invalid: ${registry.errors.join('; ')}`
-  if (!registry.repositories.some((entry) => entry.path === repository))
+  if (!(await registeredCheckout(context, repository, registry.repositories)))
     return `local KI repository registry does not register ${repository}`
   return undefined
 }
@@ -62,8 +92,11 @@ export const repositorySkillActivation = async (
   const skills = (
     await resolveRepositoryDeclaredSkills(repository.root, declaration, harnesses, context.dataDirectory)
   ).filter((skill) => skill.provider.kind === 'installed-harness')
+  const registry = await inspectLocalRegistry(context.stateDirectory)
+  const inspectionRepository = await registeredCheckout(context, repository.root, registry.repositories)
   return context.createSkillActivation({
     repository: repository.root,
+    inspectionRepository,
     repositoryDeclaration: repository.declaration,
     skills
   })

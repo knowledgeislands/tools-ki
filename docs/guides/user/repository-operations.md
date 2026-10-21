@@ -42,6 +42,10 @@ Record roots without applying any repair using `ki registry add --repo <path-or-
 
 `ki repo init`, `ki repo repair`, and `ki repo conform` also record each selected root — conform does so first, even when its later checks fail, so the registry stays an inventory for repair and bulk maintenance rather than a compliance badge. Trade commands also use the registry to locate the territory Capital named by each repository's `[skills.ki-repo].capital`; register the Capital's checkout on every machine that inspects or exchanges trades, or they fail with `territory policy lives in <capital>, not available here`.
 
+A linked Git worktree inherits its registered primary checkout's registration only after Git proves their common repository and both declarations match the registered identity. Runtime activation checks retain every declared skill and may read missing links from that verified primary checkout. An unsafe link in the worktree still fails; conformance writes new links only into the selected worktree.
+
+From a linked development Harness worktree, `ki dev skill generate --write` reads the generator and source from that worktree and publishes there. It leaves the primary checkout unchanged and refuses an unrelated repository.
+
 ## Manage declared stores
 
 A Knowledge Base declares stable store roles in `.ki.toml`; your machine binds external roles separately. Inspect one repository or a selected set:

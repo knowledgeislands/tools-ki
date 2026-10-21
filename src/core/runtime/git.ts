@@ -40,3 +40,31 @@ export const gitWorkingTreeRoot = async (
   // the inputs instead would refuse a legitimate write anywhere a symlinked prefix is in play.
   return realpath(reported.output.trim())
 }
+
+/** The primary checkout, proved by this working tree's own common Git directory and membership list. */
+export const gitPrimaryWorkingTreeRoot = async (
+  directory: string,
+  runner: Runner,
+  environment: Environment
+): Promise<string | undefined> => {
+  const root = await gitWorkingTreeRoot(directory, runner, environment)
+  if (root === undefined) return undefined
+  const common = await runner(
+    'git',
+    ['-C', root, 'rev-parse', '--path-format=absolute', '--git-common-dir'],
+    scrubbedGitEnvironment(environment)
+  )
+  if (common.exitCode !== 0) return undefined
+  const listing = await runner(
+    'git',
+    ['--git-dir', common.output.trim(), 'worktree', 'list', '--porcelain', '-z'],
+    scrubbedGitEnvironment(environment)
+  )
+  if (listing.exitCode !== 0) return undefined
+  const trees = listing.output
+    .split('\0')
+    .filter((part) => part.startsWith('worktree '))
+    .map((part) => part.slice('worktree '.length))
+  if (!trees.includes(root)) return undefined
+  return realpath(trees[0] as string)
+}

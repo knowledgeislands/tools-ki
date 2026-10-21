@@ -23,7 +23,7 @@ import {
 } from '../../core/harness/index.ts'
 import { loadRubricDefinition } from '../../core/rubric/loader.ts'
 import { prepareRubricPublication } from '../../core/rubric/publication.ts'
-import { gitWorkingTreeRoot } from '../../core/runtime/git.ts'
+import { gitPrimaryWorkingTreeRoot, gitWorkingTreeRoot } from '../../core/runtime/git.ts'
 import {
   enableHarnessDevelopment,
   harnessDevelopmentEnabled,
@@ -106,7 +106,24 @@ export const developmentSkillRubricPort = (context: KiContext): DevelopmentRubri
 })
 
 export const developmentSkillGenerationPort = (context: KiContext): DevelopmentGenerationPort => ({
-  resolveSkill: async (skill) => resolveInstalledSkill(await discoverInstalledHarnesses(context.paths.data), skill),
+  resolveSkill: async (skill) => {
+    const resolved = resolveInstalledSkill(await discoverInstalledHarnesses(context.paths.data), skill)
+    if (
+      context.workingDirectory === resolved.provider.root ||
+      !(await isHarnessDevelopmentLinked(context.paths.data, resolved.identity.split(':')[0] as string))
+    )
+      return resolved
+    const caller = await gitWorkingTreeRoot(context.workingDirectory, context.runner, context.environment)
+    if (caller === undefined || caller === resolved.provider.root) return resolved
+    const [current, original] = await Promise.all(
+      [caller, resolved.provider.root].map((root) =>
+        gitPrimaryWorkingTreeRoot(root, context.runner, context.environment)
+      )
+    )
+    return current !== undefined && current === original
+      ? { ...resolved, provider: { ...resolved.provider, root: caller } }
+      : resolved
+  },
   prepareGeneration: prepareSkillGeneration,
   developmentLinked: (identifier) => isHarnessDevelopmentLinked(context.paths.data, identifier),
   repositoryRoot: (path) => gitWorkingTreeRoot(path, context.runner, context.environment),

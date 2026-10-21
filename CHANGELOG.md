@@ -270,3 +270,4 @@ This baseline describes the `v0.12.0` release. Domain imports and extracted type
 
 - `install.sh`
 - `ki(1)`
+- Linked worktrees inherit registration and missing runtime activations from their verified registered primary checkout, retaining every activation check and rejecting unrelated repositories or changed identities. Development skill generation reads and writes the caller's linked Harness worktree.
