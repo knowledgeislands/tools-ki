@@ -148,3 +148,18 @@ test('refuses inheritance for a matching declaration outside any Git checkout', 
   expect(result.output).toContain('REPO-REG-1')
   expect(result.output).toContain('RUNTIMES-2')
 })
+
+test.each(['file', 'symlink'])(
+  'does not register a foreign checkout from a copied Git administration pointer (%s)',
+  async (kind) => {
+    const { box, declaration } = await fixture('tools-ki')
+    await box.root.write('impostor/.ki.toml', declaration)
+    if (kind === 'file') await box.root.write('impostor/.git', `gitdir: ${join(box.project.path, '.git')}\n`)
+    else await symlink(join(box.project.path, '.git'), join(box.root.path, 'impostor/.git'))
+    box.cd('../impostor')
+    const result = await box.run('ki repo audit', { runner: 'default' })
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('REPO-REG-1')
+    expect(result.output).toContain('RUNTIMES-2')
+  }
+)
