@@ -2,7 +2,7 @@
 id: KI-TOOL-KI-CLI-139
 area: CLI
 title: EBU sources sync
-project: humans-not-robots/phase3
+project: humans-not-robots/5g-emerge-phase3
 purpose: capability
 kind: deliver
 size: l
@@ -13,7 +13,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-15T23:15:13Z
-updated_at: 2026-10-20T04:14:07Z
+updated_at: 2026-10-21T01:30:50Z
 ---
 
 # EBU Sources Sync
