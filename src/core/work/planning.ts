@@ -8,6 +8,7 @@ export type RepositoryPlanningAdapter = 'roadmap' | 'kb-streams'
 export interface RepositoryPlanningSource {
   readonly adapter: RepositoryPlanningAdapter
   readonly directory: WorkItemDirectory
+  readonly repositoryCode?: string | undefined
   /** The `[skills.ki-work-roadmap].components` vocabulary; empty when undeclared, so no `component` is valid. */
   readonly components: ReadonlySet<string>
   /** The fixed `[skills.ki-work-roadmap].areas` codes with their titles; a legacy bare list carries no titles. */
@@ -97,6 +98,9 @@ export const readDeclaredPlanningSource = async (
   return {
     adapter,
     directory: adapter === 'roadmap' ? 'docs/roadmap' : 'Streams/Roadmap',
+    repositoryCode: declaration.skills.find(({ name }) => name === 'ki-repo')?.configuration['repo_code'] as
+      | string
+      | undefined,
     components: declaredComponents(roadmap),
     areas: declaredAreas(roadmap)
   }

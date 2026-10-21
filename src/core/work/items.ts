@@ -470,13 +470,23 @@ export const parseWorkItem = (
   if ((status === 'cancelled') !== (resolution !== undefined))
     throw itemError(file, 'must carry a resolution exactly when it is cancelled')
   const target = fields.resolution_target
-  if (resolution !== undefined && targetedResolutions.has(resolution) !== (target !== undefined))
-    throw itemError(
-      file,
-      `resolution ${resolution} ${targetedResolutions.has(resolution) ? 'requires' : 'forbids'} resolution_target`
-    )
+  if (target !== undefined && !targetedResolutions.has(resolution as string))
+    throw itemError(file, `resolution ${resolution} forbids resolution_target`)
   if (target !== undefined && (!WORK_ITEM_ID.test(target) || target === id))
     throw itemError(file, 'resolution_target must be another canonical work-item identifier')
+  if (target !== undefined) {
+    const recordNamespace = id.slice(0, id.lastIndexOf('-'))
+    const repositoryCode =
+      planning.repositoryCode ?? (fields.area ? recordNamespace.slice(0, -(fields.area.length + 1)) : recordNamespace)
+    const namespaces = planning.areas.size
+      ? [...planning.areas.keys()].map((area) => `${repositoryCode}-${area}`)
+      : [repositoryCode]
+    if (!namespaces.includes(target.slice(0, target.lastIndexOf('-'))))
+      throw itemError(
+        file,
+        'resolution_target must name a record in the same repository; describe another repository in ## Cancelled without a target'
+      )
+  }
   const baseline = fields['baseline_ref']
   if (baseline !== 'null' && !/^[a-f0-9]{40}$/.test(baseline as string))
     throw itemError(file, 'baseline_ref must be null or a full commit ID')

@@ -116,6 +116,68 @@ const territory = async (box: Box): Promise<{ readonly member: string; readonly 
 const roadmapFile = (box: Box, repository: string, id: string, contents: string) =>
   box.project.write(`${repository}/docs/roadmap/${id}-item.md`, contents)
 
+test('keeps resolution targets within declared repository areas', async () => {
+  const box = await sandbox()
+  await box.project.write(
+    'repo/.ki.toml',
+    declaration(home('example/repo')) +
+      'repo_code = "KI-TOOL-KI"\n\n[skills.ki-work-roadmap.areas]\nCLI = "Commands"\nVENDOR = "Vendor integrations"\n'
+  )
+  await roadmapFile(
+    box,
+    'repo',
+    'KI-TOOL-KI-CLI-003',
+    record({
+      area: 'CLI',
+      horizon: undefined,
+      status: 'cancelled',
+      resolution: 'merged',
+      resolution_target: 'KI-TOOL-KI-VENDOR-001'
+    })
+  )
+  expect((await box.run('ki repo --repo repo roadmap list')).exitCode).toBe(0)
+  await roadmapFile(
+    box,
+    'repo',
+    'KI-TOOL-KI-CLI-003',
+    record({
+      area: 'CLI',
+      horizon: undefined,
+      status: 'cancelled',
+      resolution: 'merged',
+      resolution_target: 'KI-TOOL-KIX-CLI-001'
+    })
+  )
+  const refused = await box.run('ki repo --repo repo roadmap list')
+  expect(refused.exitCode).toBe(1)
+  expect(refused.output).toContain('same repository')
+})
+
+test.each(['duplicate', 'merged', 'superseded'])(
+  'reads local and cross-repository %s resolutions without changing records',
+  async (resolution) => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', declaration(home('example/repo')))
+    const local = record(
+      { horizon: undefined, status: 'cancelled', resolution, resolution_target: 'KI-TOOL-KI-CLI-004' },
+      '## Cancelled\n\nReplaced by the local item.\n'
+    )
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-003', local)
+    expect((await box.run('ki repo --repo repo roadmap list')).exitCode).toBe(0)
+    expect(await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-003-item.md')).toBe(local)
+    const external = record(
+      { horizon: undefined, status: 'cancelled', resolution },
+      '## Cancelled\n\nThe KI Agentic Harness repository owns the replacing roadmap contract work.\n'
+    )
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-003', external)
+    const result = await box.run('ki repo --repo repo roadmap list --format json')
+    expect(result.exitCode).toBe(0)
+    expect(JSON.parse(result.output).items[0]).toMatchObject({ resolution })
+    expect(JSON.parse(result.output).items[0]).not.toHaveProperty('resolution_target')
+    expect(await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-003-item.md')).toBe(external)
+  }
+)
+
 describe('[ki repo roadmap] model fields', () => {
   test('reads classification, hold and resolution fields and projects them in JSON', async () => {
     const box = await sandbox()
@@ -259,9 +321,9 @@ describe('[ki repo roadmap] model fields', () => {
         'resolution must be one of'
       ],
       [
-        'missing target',
-        { horizon: undefined, status: 'cancelled', resolution: 'merged' },
-        'resolution merged requires resolution_target'
+        'foreign target',
+        { horizon: undefined, status: 'cancelled', resolution: 'merged', resolution_target: 'KI-HARNESS-GOV-170' },
+        'resolution_target must name a record in the same repository'
       ],
       [
         'forbidden target',
