@@ -138,3 +138,13 @@ test.each(['missing', 'foreign'])(
     expect(result.output).toContain('RUNTIMES-2')
   }
 )
+
+test('refuses inheritance for a matching declaration outside any Git checkout', async () => {
+  const { box, declaration } = await fixture('tools-ki')
+  await box.root.write('plain/.ki.toml', declaration)
+  box.cd('../plain')
+  const result = await box.run('ki repo audit', { runner: 'default' })
+  expect(result.exitCode).toBe(1)
+  expect(result.output).toContain('REPO-REG-1')
+  expect(result.output).toContain('RUNTIMES-2')
+})

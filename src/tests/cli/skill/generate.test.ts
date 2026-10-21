@@ -43,6 +43,15 @@ const devLinkedHarness = async (box: Sandbox, source = generator()): Promise<str
 }
 
 describe('[ki dev skill generate]', () => {
+  test('still generates from a subdirectory of the primary development checkout', async () => {
+    const box = await sandbox()
+    await devLinkedHarness(box)
+    box.cd('../local/skills')
+    const result = await box.run('ki dev skill generate ki-example --write', { runner: 'default' })
+    expect(result.exitCode).toBe(0)
+    expect(await box.root.read('local/hooks/rendered.sh')).toBe("line='rendered'\n")
+  })
+
   test('generates from and publishes only into the caller linked worktree', async () => {
     const box = await sandbox()
     const primary = await devLinkedHarness(box)

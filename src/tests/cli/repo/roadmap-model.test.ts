@@ -136,6 +136,12 @@ test('keeps resolution targets within declared repository areas', async () => {
     })
   )
   expect((await box.run('ki repo --repo repo roadmap list')).exitCode).toBe(0)
+  await box.project.write(
+    'repo/.ki.toml',
+    declaration(home('example/repo')) +
+      '[skills.ki-work-roadmap.areas]\nCLI = "Commands"\nVENDOR = "Vendor integrations"\n'
+  )
+  expect((await box.run('ki repo --repo repo roadmap list')).exitCode).toBe(0)
   await roadmapFile(
     box,
     'repo',
