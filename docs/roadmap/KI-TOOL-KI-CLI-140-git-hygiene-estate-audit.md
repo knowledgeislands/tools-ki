@@ -7,13 +7,12 @@ purpose: capability
 kind: deliver
 size: m
 component: repo
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 566679b2cb7648a0746d745aa29a297cd1b3eaf2
 created_at: 2026-10-16T00:29:07Z
-updated_at: 2026-10-21T04:30:57Z
+updated_at: 2026-10-21T04:43:24Z
 ---
 
 # Git Hygiene Estate Audit
@@ -50,7 +49,7 @@ A read-only `mgit --estate` survey on 16 October 2026 across 50 repositories, fr
 
 ## Current state
 
-Delivery is complete and awaiting independent review under `wow-night-cli-140`. The immutable implementation baseline is `566679b2cb7648a0746d745aa29a297cd1b3eaf2`. Implementation commit `b99fa0383b60fed7b9ab5dd006c31873c6213c68` is fast-forwarded into local `main` and pushed to `origin/main`. Every planned Step and required offline gate has passed; CI-1 in `.github/workflows/ci.yml` and MATURITY-1 in `.ki.toml` are the unchanged baseline warnings allowed by the dispatch. No acceptance or Git cleanup has been performed.
+Independently accepted as done by `wow-night-cli-140-accept` on 21 October 2026 under Kris Brown's explicit grant for this record. The full committed range from immutable baseline `566679b2cb7648a0746d745aa29a297cd1b3eaf2` through delivered head `97cbdce0cd73fb2670d1e0ba51a78e5e629e4bbd` passes the approved plan and offline gates. The retained review packet records the delivery and independent acceptance evidence; no implementation repair, cancellation or pruning was required.
 
 The historical Context describes mgit 0.17.0. The supported local baseline is now mgit 0.18.0 at `78a1b376cab73614ca896602557c3f4b9d4ce6b3`, whose overview producer and fixtures are committed and available. The current CLEAN contract is byte-identical to Harness `b91fa71dba7ea902e7c1fa8eefa9d515e226a741`; CLEAN-2 to CLEAN-7 accept the optional `gitOverview` session property, while CLEAN-1 remains judgement-only. tools-ki at `d5eac480f6b44a7fe0bb1ca1d2b7340decbefcab` does not yet supply that property in `src/core/runtime/audit.ts`, so those mechanical checks remain unassessed. This plan uses only delivered facts; the historical Goal and Boundary's conditional PR ambition remains outside this implementation.
 
@@ -196,15 +195,21 @@ Every runtime and governance gate used the run's fresh copied audit home, both l
 
 ### Outstanding concerns
 
-None within the approved delivery. Pull-request facts and unsupported branch/worktree facts remain judgement or unassessed; fetch ages remain qualified, non-standard stale thresholds remain unassessed, and CLEAN-7 remains heuristic. These are the agreed evidence limits, not claims of a clean estate or authority to clean it. Independent acceptance is still required.
+None within the approved delivery. Pull-request facts and unsupported branch/worktree facts remain judgement or unassessed; fetch ages remain qualified, non-standard stale thresholds remain unassessed, and CLEAN-7 remains heuristic. These are the agreed evidence limits, not claims of a clean estate or authority to clean it. Independent acceptance has passed under the explicit grant for this record.
 
 ### Post-change review
 
 The delivered behaviour meets the Goal within the Ready plan's supported-fact boundary. Command grammar and selectors remain unchanged; duplicate-root preflight, physical-root isolation, missing evidence, partial documents, selected-skill isolation and post-write refresh have executable public-seam evidence. The process-runner change preserves the existing bounds and error handling, and the new regression proves lossless split UTF-8 output. The full suite and coverage expose no regression. This packet requests independent review and does not accept its own delivery.
 
+Independent acceptance on 21 October 2026 by `wow-night-cli-140-accept` (`gpt-6.1-sol`) reviewed all 15 changed paths against the four completed Steps and reran every delivery gate offline in a fresh copied audit home. All 1,487 tests, all 44 focused cases and all three additional deliberate-failure probes pass; coverage remains 100 percent in every metric with unchanged exclusions. The additional probes verify that post-write acquisition failure withholds old evidence, later invocations do not reuse a previous document, and stderr counts towards the combined process limit. The pinned test archive also byte-matches both its canonical committed sources and the copied installed Harness. Only unchanged baseline warnings CI-1 in `.github/workflows/ci.yml` and MATURITY-1 in `.ki.toml` remain. Initial isolated-setup errors were corrected before passing reruns; no delivery repair was needed. [Independent review evidence](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140-accept.work/independent-review-evidence.json), [independent failure probes](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140-accept.work/independent-failures.log), [final repository audit](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140-accept.work/repository-final.log).
+
 ### Mini recap
 
-Delivered bounded, lossless Git evidence composition with honest unknowns and guarded catalogue findings. Offline verification is complete, existing documentation owns the learning, and the record is ready for independent review. No new roadmap item or external follow-up is needed.
+Delivered bounded, lossless Git evidence composition with honest unknowns and guarded catalogue findings. Offline verification is complete, existing documentation owns the learning, and the retained record is independently accepted. No new roadmap item or external follow-up is needed.
+
+## Done
+
+Accepted 21 October 2026 by `wow-night-cli-140-accept` (`gpt-6.1-sol`) under Kris Brown's explicit delegated acceptance grant, on the review packet above.
 
 ## Discussion
 
