@@ -262,7 +262,8 @@ export interface Sandbox {
 
 const create = async (): Promise<Sandbox> => {
   const rootPath = await mkdtemp(join(tmpdir(), 'ki-test-'))
-  onTestFinished(() => rm(rootPath, { recursive: true, force: true }))
+  // Retry transient fixture-removal errors, but still fail teardown if the directory stays busy.
+  onTestFinished(() => rm(rootPath, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }))
   const homePath = join(rootPath, 'home')
   const root = area(rootPath, homePath)
   const home = area(homePath, homePath)
