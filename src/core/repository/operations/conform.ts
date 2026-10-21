@@ -7,6 +7,7 @@ import { detectFixed, runSkillConform } from '../../runtime/conform.ts'
 import { publishIndependentConformGroups } from '../../runtime/publication.ts'
 import type { Finding, FixedItem, PreparedSkill, SkillConformResult } from '../../runtime/types.ts'
 import { repositoryCanonicalHooks } from '../canonical-hooks.ts'
+import { gatherGitOverview, withGitOverviewFindings } from '../git-overview.ts'
 import { applyHookConversion, type HookConversionEvent, planHookConversion } from '../hooks.ts'
 import { runPreparedWithProgress, runWithProgress } from '../progress/run.ts'
 import { resolveRepositoryTargets } from '../selection.ts'
@@ -88,6 +89,7 @@ export const conformRepositories = async (
     if (!selected) throw new KiError('repository conform lost its selected repository before resolution', 1)
     const { skills, resolvedSkills } = selected
     let packageScriptClaims: readonly PackageScriptClaim[] = []
+    const gitEvidence = await gatherGitOverview(context, repository.root, skills)
     const repositorySkills = await repositorySkillActivation(context, repository, skills)
     observer.repositoryStarted(repository.root, skills)
     // The commit gate moves into `.githooks/` before the rubric pass, so ki-repo and
@@ -113,21 +115,26 @@ export const conformRepositories = async (
         return {
           skill: skill.skill,
           prepared: skill,
-          conform: await runSkillConform(
-            {
-              kind: 'repository',
-              repository: repository.root,
-              userHome: context.homeDirectory,
-              lstat: context.lstat,
-              packageScriptClaims,
-              ...(repositorySkills ? { repositorySkills: repositorySkills.rubric } : {})
-            },
-            skill,
-            {
-              onItemStart: (item) => itemProgress.onItemStart(item.code),
-              onItemComplete: (item) => itemProgress.onItemComplete(item.code),
-              onProgressEvent: itemProgress.onProgressEvent
-            }
+          conform: withGitOverviewFindings(
+            skill.skill.declaration.name,
+            await runSkillConform(
+              {
+                kind: 'repository',
+                repository: repository.root,
+                userHome: context.homeDirectory,
+                lstat: context.lstat,
+                packageScriptClaims,
+                gitOverview: gitEvidence.gitOverview,
+                ...(repositorySkills ? { repositorySkills: repositorySkills.rubric } : {})
+              },
+              skill,
+              {
+                onItemStart: (item) => itemProgress.onItemStart(item.code),
+                onItemComplete: (item) => itemProgress.onItemComplete(item.code),
+                onProgressEvent: itemProgress.onProgressEvent
+              }
+            ),
+            gitEvidence
           )
         }
       },
@@ -138,6 +145,7 @@ export const conformRepositories = async (
     const initialReports = (): readonly RepositoryConformReport[] =>
       conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings }))
     const reAuditAndReport = async (): Promise<boolean> => {
+      const reAuditGitEvidence = await gatherGitOverview(context, repository.root, skills)
       const prepared = conformed.map((entry) => entry.prepared)
       const reaudited = await runPreparedWithProgress(
         prepared,
@@ -151,21 +159,26 @@ export const conformRepositories = async (
           return {
             prepared: skill,
             conform: previous.conform,
-            audit: await runSkillAudit(
-              {
-                kind: 'repository',
-                repository: repository.root,
-                userHome: context.homeDirectory,
-                lstat: context.lstat,
-                packageScriptClaims,
-                ...(reAuditRepositorySkills ? { repositorySkills: reAuditRepositorySkills.rubric } : {})
-              },
-              skill,
-              {
-                onItemStart: (item) => itemProgress.onItemStart(item.code),
-                onItemComplete: (item) => itemProgress.onItemComplete(item.code),
-                onProgressEvent: itemProgress.onProgressEvent
-              }
+            audit: withGitOverviewFindings(
+              skill.skill.declaration.name,
+              await runSkillAudit(
+                {
+                  kind: 'repository',
+                  repository: repository.root,
+                  userHome: context.homeDirectory,
+                  lstat: context.lstat,
+                  packageScriptClaims,
+                  gitOverview: reAuditGitEvidence.gitOverview,
+                  ...(reAuditRepositorySkills ? { repositorySkills: reAuditRepositorySkills.rubric } : {})
+                },
+                skill,
+                {
+                  onItemStart: (item) => itemProgress.onItemStart(item.code),
+                  onItemComplete: (item) => itemProgress.onItemComplete(item.code),
+                  onProgressEvent: itemProgress.onProgressEvent
+                }
+              ),
+              reAuditGitEvidence
             )
           }
         },

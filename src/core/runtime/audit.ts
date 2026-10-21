@@ -201,6 +201,9 @@ const gatherSkillAudit = async (
       userHome: scope.userHome,
       configuration: skill.declaration.configuration,
       packageScriptClaims: scope.packageScriptClaims,
+      ...(skill.declaration.name === 'ki-git' && scope.gitOverview !== undefined
+        ? { gitOverview: scope.gitOverview }
+        : {}),
       ...(scope.repositorySkills ? { repositorySkills: scope.repositorySkills } : {}),
       // Withheld when nothing is displaying, so a rubric can tell that emitting is pointless
       // rather than formatting reports no one will read.

@@ -44,6 +44,7 @@ export interface RepositoryOperationContext {
   readonly lstat: typeof lstat
   /** Injected process runner, so a Git read stays reachable from a CLI test. */
   readonly runner: Runner
+  readonly platform: NodeJS.Platform
   /** Injected wall clock, so a recorded audit outcome carries a testable observed time. */
   readonly now: () => number
   readonly inspectUserConfiguration: (configurationDirectory: string) => Promise<UserConfigurationInspection>

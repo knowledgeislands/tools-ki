@@ -7,13 +7,13 @@ purpose: capability
 kind: deliver
 size: m
 component: repo
-horizon: next
-status: ready
+horizon: now
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 566679b2cb7648a0746d745aa29a297cd1b3eaf2
 created_at: 2026-10-16T00:29:07Z
-updated_at: 2026-10-21T03:23:36Z
+updated_at: 2026-10-21T04:26:18Z
 ---
 
 # Git Hygiene Estate Audit
@@ -50,7 +50,7 @@ A read-only `mgit --estate` survey on 16 October 2026 across 50 repositories, fr
 
 ## Current state
 
-Selected Next work; no implementation has started and `baseline_ref` remains null. This offline plan is authorised by the 21 October 2026 `wow-night-cli-140-plan-f` dispatch under Kris's OVERNIGHT-BURNDOWN, 01:40 and 01:55 grants. The coordinator designated this run as the sole tools-ki roadmap writer in the [work state](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/state.md#writers). Planning approval permits Ready only after the required checks pass; it does not approve delivery, acceptance or cleanup.
+Implementation is in progress under the `wow-night-cli-140` dispatch and the existing Ready plan. The immutable implementation baseline is `566679b2cb7648a0746d745aa29a297cd1b3eaf2`. The unchanged baseline passed the full offline repository audit in a fresh copied home, with only CI-1 in `.github/workflows/ci.yml` and MATURITY-1 in `.ki.toml` retained under the pre-existing warnings allowance. Both work-adapter audits passed without warnings. No acceptance or Git cleanup is authorised.
 
 The historical Context describes mgit 0.17.0. The supported local baseline is now mgit 0.18.0 at `78a1b376cab73614ca896602557c3f4b9d4ce6b3`, whose overview producer and fixtures are committed and available. The current CLEAN contract is byte-identical to Harness `b91fa71dba7ea902e7c1fa8eefa9d515e226a741`; CLEAN-2 to CLEAN-7 accept the optional `gitOverview` session property, while CLEAN-1 remains judgement-only. tools-ki at `d5eac480f6b44a7fe0bb1ca1d2b7340decbefcab` does not yet supply that property in `src/core/runtime/audit.ts`, so those mechanical checks remain unassessed. This plan uses only delivered facts; the historical Goal and Boundary's conditional PR ambition remains outside this implementation.
 
@@ -92,9 +92,9 @@ CLEAN-1 and all unsupported facts remain unknown or unassessed. CLEAN-7 remains 
 
 ## Steps
 
-- [ ] Add bounded runner `cwd` support and core mgit acquisition using the existing injected runner; preserve separate stdout, process limits and error handling, with no direct Git collection.
-- [ ] Thread only the optional `gitOverview` document through repository runtime scope and rubric session creation for selected `ki-git`; wire both audit and conform, including fresh post-write re-audit evidence.
-- [ ] Add public CLI fixtures covering the schema and failure matrix below; install a test-only archive containing the byte-exact canonical CLEAN/session modules at the verified Harness commit, with provenance hashes, and a minimal session-observer fixture to prove lossless injection. Tests must not read the workstation Harness or contact a provider; no CLEAN policy is copied into product code.
+- [x] Add bounded runner `cwd` support and core mgit acquisition using the existing injected runner; preserve separate stdout, process limits and error handling, with no direct Git collection.
+- [x] Thread only the optional `gitOverview` document through repository runtime scope and rubric session creation for selected `ki-git`; wire both audit and conform, including fresh post-write re-audit evidence.
+- [x] Add public CLI fixtures covering the schema and failure matrix below; install a test-only archive containing the byte-exact canonical CLEAN/session modules at the verified Harness commit, with provenance hashes, and a minimal session-observer fixture to prove lossless injection. Tests must not read the workstation Harness or contact a provider; no CLEAN policy is copied into product code.
 - [ ] Record accepted host behaviour and conformance evidence in the existing repository-audit Specification, document supported evidence and unknowns in the user guide, align the consolidated changelog, complete every declared gate and retain verification evidence in this record before requesting independent review.
 
 ## Files touched
@@ -129,6 +129,10 @@ Use already installed dependencies with matching lockfiles; do not install or co
 For implementation, run `bun run test -- src/tests/cli/repo/git-overview.test.ts`, `bun run test`, `bunx tsc --noEmit`, `bunx biome check`, `bun run test:coverage`, `ki repo audit --skill ki-engineering --repo .` and `ki repo audit --repo .`. Coverage remains 100 percent; do not add unsupported exclusions. Both root and isolated boundary dependencies must already be available. Run the focused authoring check for every changed Markdown file and `git diff --check`.
 
 For this planning unit, require warning-free `ki repo audit --skill ki-work --repo .` and `ki repo audit --skill ki-work-roadmap --repo .`, a focused `ki-authoring` audit and `rumdl check` for this record, and `git diff --check`. Use the run's copied offline audit home with both Capital registrations; never suppress registry findings or change the real registry. Required readiness warnings stop publication of Ready. Runtime implementation tests remain planned, not claimed as delivered by this document.
+
+### Implementation verification
+
+The offline public CLI suite covers 44 Git overview fixtures, including canonical catalogue outcomes, root isolation, selector boundaries and lossless UTF-8 collection across process chunks. The full suite passed before the additional UTF-8 regression was added; the subsequent complete coverage run passed all 1,487 tests with 100 percent statements, branches, functions and lines. TypeScript, Biome, the authoring, Specifications and guides audits, and `git diff --check` passed. Final engineering and whole-repository audits remain in progress; this is not an acceptance claim.
 
 ### Planning verification
 

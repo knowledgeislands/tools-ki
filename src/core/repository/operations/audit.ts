@@ -1,6 +1,7 @@
 import { gatherSkillAuditEvidence, runGatheredSkillAudit } from '../../runtime/audit.ts'
 import type { AuditCriteria, Finding, PreparedSkill } from '../../runtime/types.ts'
 import { completedAudit, incompleteAudit, recordAuditHealth } from '../audit-health.ts'
+import { gatherGitOverview, withGitOverviewFindings } from '../git-overview.ts'
 import { runWithEvidenceProgress } from '../progress/run.ts'
 import { localRepositoryRegistration, repositorySkillActivation } from './local-state.ts'
 import { selectRepositorySkills } from './selection.ts'
@@ -64,6 +65,7 @@ export const auditRepositories = async (
       : undefined
     observer.repositoryStarted(repository.root, skills, index, scope)
     try {
+      const gitEvidence = await gatherGitOverview(context, repository.root, skills)
       const repositorySkills = await repositorySkillActivation(context, repository, skills)
       const results = await runWithEvidenceProgress(
         skills,
@@ -75,6 +77,7 @@ export const auditRepositories = async (
               userHome: context.homeDirectory,
               lstat: context.lstat,
               packageScriptClaims,
+              gitOverview: gitEvidence.gitOverview,
               ...(repositorySkills ? { repositorySkills: repositorySkills.rubric } : {})
             },
             skill,
@@ -82,11 +85,15 @@ export const auditRepositories = async (
           ),
         async (skill, evidence, itemProgress) => ({
           skill,
-          audit: await runGatheredSkillAudit(skill, evidence, {
-            onItemStart: (item) => itemProgress.onItemStart(item.code),
-            onItemComplete: (item) => itemProgress.onItemComplete(item.code),
-            onProgressEvent: itemProgress.onProgressEvent
-          })
+          audit: withGitOverviewFindings(
+            skill.skill.declaration.name,
+            await runGatheredSkillAudit(skill, evidence, {
+              onItemStart: (item) => itemProgress.onItemStart(item.code),
+              onItemComplete: (item) => itemProgress.onItemComplete(item.code),
+              onProgressEvent: itemProgress.onProgressEvent
+            }),
+            gitEvidence
+          )
         }),
         context.progress.resolved(skills, 'audit', 'root'),
         resolvedSkills

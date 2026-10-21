@@ -18,11 +18,17 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 `ki repo audit` MUST run only the mechanical rubric items of the repository's declared selected skills.
 
+When the selected skills include `ki-git`, audit and conform MUST acquire fresh `mgit --ignore --physical overview --json` evidence at most once per selected physical root in each evidence phase, with that root as the process working directory, a 30-second timeout and an 8 MiB output bound. Selection MUST finish before acquisition; extra repositories in the document MUST NOT widen the selected audit subjects. Other skill sessions and `educate` MUST NOT receive this evidence or trigger its acquisition.
+
+The host MUST pass the parsed stdout document unchanged as optional `gitOverview` evidence only to the selected `ki-git` session. Exit 0 and exit 1 with valid JSON MUST preserve the document, including partial failure records, unused fields and future extras. Stderr MUST NOT contaminate JSON parsing. Missing execution, rejected execution, timeout, overflow, absent stdout, invalid JSON or another exit status MUST produce a root-specific acquisition warning and withhold the document, while allowing other selected roots to continue. The Harness catalogue MUST retain ownership of envelope validation, canonical target matching, consumed fields and CLEAN findings; unavailable evidence MUST NOT become an empty repository or zero counts.
+
+Conform MUST acquire fresh evidence for its post-write re-audit. Audit and conform MUST NOT collect substitute Git facts, install mgit, contact a provider, fetch or push, or perform Git cleanup on the strength of CLEAN findings. The host MUST preserve the catalogue's unassessed outcomes and fetch-age qualifications, without interpreting a summary clean count as an estate-wide cleanliness verdict.
+
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/repo/repo.test.ts` — `runs only a declared skill's mechanical rubric items`.
+_Verify:_ `src/tests/cli/repo/git-overview.test.ts` - lossless injection, supported facts and unknowns, acquisition failures, physical root isolation, selectors and post-write refresh; `src/tests/cli/repo/repo.test.ts` — `runs only a declared skill's mechanical rubric items`.
 
-_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+_Evidence:_ The offline Git overview contract fixtures passed on 21 October 2026. The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-AUDIT-003 — Exact capability selection
 

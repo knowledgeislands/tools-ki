@@ -20,6 +20,8 @@ export interface RepositoryRuntimeScope {
   readonly userHome: string
   readonly lstat: typeof lstat
   readonly repositorySkills?: RepositorySkillActivation
+  /** Unmodified producer document; only the ki-git catalogue interprets it. */
+  readonly gitOverview?: unknown
   readonly packageScriptClaims: readonly PackageScriptClaim[]
 }
 

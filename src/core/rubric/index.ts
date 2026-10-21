@@ -115,6 +115,8 @@ export interface RubricContextOptions {
   readonly publication: RubricPublication
   /** Host-resolved repository-skill evidence and native activation proposal seam. */
   readonly repositorySkills?: RepositorySkillActivation
+  /** Unmodified producer document; only the ki-git catalogue interprets it. */
+  readonly gitOverview?: unknown
 }
 
 export interface PackageScriptClaim {

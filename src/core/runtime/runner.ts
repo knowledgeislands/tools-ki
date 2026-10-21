@@ -10,6 +10,7 @@ export interface CommandLimits {
   readonly timeoutMs: number
   readonly maxBytes: number
   readonly platform: NodeJS.Platform
+  readonly cwd?: string
 }
 
 export type Runner = (
@@ -26,9 +27,15 @@ export const runCommand: Runner = (command, arguments_, environment, limits) =>
       return
     }
     const grouped = Boolean(limits)
-    const child = spawn(command, arguments_, { env: environment, stdio: ['ignore', 'pipe', 'pipe'], detached: grouped })
+    const child = spawn(command, arguments_, {
+      env: environment,
+      cwd: limits?.cwd,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: grouped
+    })
     let output = ''
-    let stdout = ''
+    // Decode after collection so a UTF-8 code point split between chunks stays intact.
+    const stdout: Buffer[] = []
     let bytes = 0
     let failed = false
     const stop = (reason: string): void => {
@@ -51,7 +58,7 @@ export const runCommand: Runner = (command, arguments_, environment, limits) =>
         return
       }
       output += chunk.toString('utf8')
-      if (standard) stdout += chunk.toString('utf8')
+      if (standard) stdout.push(chunk)
     }
     child.stdout.on('data', (chunk: Buffer) => {
       receive(chunk, true)
@@ -65,6 +72,10 @@ export const runCommand: Runner = (command, arguments_, environment, limits) =>
     })
     child.on('close', (exitCode) => {
       clearTimeout(timer)
-      resolve({ exitCode: exitCode ?? 1, output, ...(limits ? { stdout } : {}) })
+      resolve({
+        exitCode: exitCode ?? 1,
+        output,
+        ...(limits ? { stdout: Buffer.concat(stdout).toString('utf8') } : {})
+      })
     })
   })
