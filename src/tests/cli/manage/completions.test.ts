@@ -177,6 +177,8 @@ describe('[ki completion]', () => {
     for (const output of [bash.output, zsh.output]) {
       expect(output).toContain("'acquire import:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'repo:--repo') printf '%s\\n' 'path'")
+      expect(output).toContain("'agent launch:--worktree') printf '%s\\n' 'path'")
+      expect(output).toContain("'agent queue:--worktree') printf '%s\\n' 'path'")
       expect(output).toContain("'repo roadmap:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'registry:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'registry remove:--repo') printf '%s\\n' 'path'")
