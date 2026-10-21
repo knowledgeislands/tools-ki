@@ -166,6 +166,10 @@ This baseline describes the `v0.13.0` release. Domain imports and extracted type
 - `ki agent new <run> <name> [--repo <dir>]`
 - `ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--class <class>] [--title <title>] [--repo <dir>]`
 - `ki agent reconcile <run> <entry> [<home>] [--class <class>]`
+- `ki agent stop <run> <name> --attempt <n> --reason <text> [--grace <seconds>] [--request <id>] [--json]`
+- `ki agent dequeue <run> <name> --entry <id> --reason <text> [--request <id>] [--json]`
+- `ki agent recover inspect <run> --operation <id> [--json]`
+- `ki agent recover resolve <run> --operation <id> --evidence <local-json-path> --authority <local-path#heading> [--request <id>] [--json]`
 - `ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]`
 - `ki agent sweep [--keep <n>] [--write]`
 
@@ -189,6 +193,7 @@ This baseline describes the `v0.13.0` release. Domain imports and extracted type
 
 ### Behaviours
 
+- Agent controls add immutable attempt and queue identities, transactional cancellation, versioned idempotent receipts and distinct spawn recovery under `ki agent recover inspect|resolve`. Stop requires verified whole-attempt containment; current native adapters refuse it without signalling. Unproved model profiles and accept-role launches remain disabled. Role-free footers and the decisions-log `reconcile` command retain their existing authority and grammar.
 - `ki territory show` reports each island's declared `ki-repo.maturity` and its health, sound, in decline or in ruin, read from the latest whole-repository `ki repo audit` recorded on this machine under `$XDG_STATE_HOME/ki/audit-health/`; anything undeclared or unrecorded reads as unknown, and `--format json` publishes `ki/territory/v1`.
 - `ki territory audit` and `ki territory show` name each declared member with no registry entry, filtered like the rest, and still check and list the registered members, exiting 1 until the territory is fully registered; `ki territory roots`, `open` and every `--territory` repository selection still refuse an unregistered member before doing anything.
 - `--repo <checkout>` follows a symbolic link to the repository's real location before the repository checks, so a linked checkout such as `~/workspaces/personal/dotfiles` is audited rather than refused.

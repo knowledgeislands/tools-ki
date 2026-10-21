@@ -17,6 +17,30 @@ This guide shows how to delegate work to detached Claude Code or Codex agents wi
 
 An owner report links every work record it cites. `ki link <identifier...>` prints each link in one call: `[KI-TOOL-KI-CLI-127](<absolute path>)` for a live record, found through the registered repository whose `repo_code` scopes the identifier, and `[<identifier> (pruned)](https://github.com/<owner>/<repo>/blob/<last revision>/<path>)` for a record pruned from its roadmap. An identifier that resolves to nothing exits 1 with the reason rather than an invented link.
 
+## Control one recorded attempt
+
+New launches record immutable attempt numbers and launch tokens. Queue receipts (`--json`) and status expose immutable entry IDs. `ki agent stop <run> <name> --attempt <n> --reason <text> [--grace <seconds>]` requests SIGTERM only through an adapter that proves ownership and containment of the whole attempt, including reparented descendants and changes of process group or session. Grace defaults to 30 seconds, accepts 1-120 seconds and never escalates to SIGKILL. The current native adapters have no accepted containment evidence, so they refuse confirmed stop without signalling. A PID or a new launch token alone is not ownership evidence.
+
+`ki agent dequeue <run> <name> --entry <id> --reason <text>` cancels an entry before it starts. A cancellation tombstone survives later dispatch and queue rewrites. A worker that has already started returns `already-started`, exit 1, with its exact stop command; a terminal attempt returns `already-terminal`, exit 0. The brief and frozen launch request remain available for review. Dequeue never signals a worker.
+
+Both controls accept `--request <id>` for durable idempotency and `--json` for `ki/agent-control/v1` receipts. Reusing an ID with different operation arguments is a refusal. A confirmed stop or cancellation produces one `stopped` or `dequeued` event; `wait --next`, status and watch expose it. These outcomes close dependency gates and never satisfy a `DONE` gate. Unconfirmed attempts keep the run visibly busy.
+
+## Inspect an uncertain launch
+
+A claim is journalled before spawn. An uncertain claim blocks replacement work. Use `ki agent recover inspect <run> --operation <id> --json` to read the frozen identity, journal and required evidence. `ki agent recover resolve <run> --operation <id> --evidence <local-json-path> --authority <local-path#heading> [--request <id>] [--json]` verifies local adapter evidence and records a reconciliation receipt. It never launches, signals, resumes or deletes anything.
+
+The evidence schema is `ki/agent-reconciliation/v1`, with `operation_id`, `target_id` (the reserved launch token), `observation` (`spawn-started` or `spawn-not-started`) and non-empty `proofs`, each containing an absolute local `path` and its `sha256`. File digests alone do not prove a process outcome: the managed adapter must validate its own evidence records and confirm current ownership and containment. A missing acknowledgement, PID or transcript does not prove that no worker started. The current native adapters cannot verify this evidence and leave uncertain claims fenced. An abandoned transaction lock also requires verified local inspection; the CLI never steals a lock on age or PID alone.
+
+The existing `ki agent reconcile <run> <entry> [home] --class <class>` remains the decisions-log operation, including runs named `inspect` or `resolve`.
+
+## Preview role defaults
+
+`launch` and `queue` accept `--role mechanical|plan|build|review|accept|prune|release`, `--authority <local-path#heading>` and `--dry-run --json`. Dry-run shows the effective fields, their sources and every selection refusal without creating a packet, worktree or process. Explicit fields take precedence within the role's constraints. Queueing freezes the selection and its profile revision; dispatch checks that frozen request rather than silently adopting changed defaults.
+
+All model profiles ship dormant until accepted local validity and suitability evidence exists. An explicit model name cannot bypass this gate. Accept also requires `--acceptance <local-json-path>` using `ki/agent-acceptance/v1`, the `none` footer, exact named records, digests and recorded independent review identities. The declaration preflight is available, but every accept launch remains disabled with `acceptance-contract-unavailable` until the Harness wording and CLI validator have been verified together. A role adds no grant. Push, pruning, release, fetch and machine authority remain explicit and bounded.
+
+Role-free launch and queue requests retain their Claude runtime default, omitted model and effort, and `none` footer. Existing role-free `--rules push|prune|release` requests do not acquire a new `--authority` requirement. Their selection is labelled `legacy`. Native wake is outside this build; no wake command or watcher is enabled.
+
 ## Launch one agent
 
 ```sh

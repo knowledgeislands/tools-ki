@@ -2,9 +2,21 @@ import { appendFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promise
 import { basename, dirname, join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { type AgentContext, git, instant, read } from './context.ts'
+import { loadControl } from './control-store.ts'
+import { ownsScope } from './scope.ts'
 import { followThread, heldAs, readThread, reportPath } from './thread.ts'
 
-export type EventKind = 'launch' | 'held' | 'progress' | 'done' | 'failed' | 'blocked' | 'needs-owner'
+export type EventKind =
+  | 'launch'
+  | 'held'
+  | 'progress'
+  | 'done'
+  | 'failed'
+  | 'blocked'
+  | 'needs-owner'
+  | 'stop-requested'
+  | 'stopped'
+  | 'dequeued'
 
 /** One line of the run's append-only `events.jsonl`; `seq` is its line number. */
 export interface RunEvent {
@@ -16,6 +28,7 @@ export interface RunEvent {
   readonly kind: EventKind
   readonly text: string
   readonly tag?: string
+  readonly operation?: string | undefined
 }
 
 /** What the last derivation saw of one agent's attempt, so nothing is emitted twice. */
@@ -29,7 +42,7 @@ interface Seen {
 
 type Snapshot = Record<string, Seen>
 
-type Pending = Omit<RunEvent, 'seq' | 'at' | 'run' | 'attempt'>
+type Pending = Omit<RunEvent, 'seq' | 'at' | 'run' | 'attempt'> & { readonly attempt?: number | undefined }
 
 /** The run's agents and whether each one's process is alive, as the caller observes them. */
 export interface Observed {
@@ -76,6 +89,7 @@ export const readEvents = async (directory: string, after = 0): Promise<RunEvent
 
 /** One more than the agent's `<name>.prev-<n>` folders, which a relaunch leaves behind. */
 const attemptOf = async (directory: string, name: string): Promise<number> =>
+  (await loadControl(directory))?.attempts[name]?.attempt ??
   (await readdir(directory)).filter((file) => file.startsWith(`${name}.prev-`)).length + 1
 
 const append = async (
@@ -88,9 +102,9 @@ const append = async (
   let seq = (await readEvents(directory)).length
   const lines = pending.map((event) => {
     seq += 1
-    const { agent, kind, text, tag } = event
-    const attempt = attempts.get(agent) as number
-    return `${JSON.stringify({ seq, at: instant(context), run: basename(directory), agent, attempt, kind, text, ...(tag === undefined ? {} : { tag }) })}\n`
+    const { agent, kind, text, tag, operation } = event
+    const attempt = event.attempt ?? (attempts.get(agent) as number)
+    return `${JSON.stringify({ seq, at: instant(context), run: basename(directory), agent, attempt, kind, text, ...(tag === undefined ? {} : { tag }), ...(operation === undefined ? {} : { operation }) })}\n`
   })
   await appendFile(eventsFile(directory), lines.join(''))
   await writeFile(stateFile(directory), `${JSON.stringify(snapshot)}\n`)
@@ -104,18 +118,30 @@ const append = async (
 export const recordEvent = (
   context: AgentContext,
   directory: string,
-  observed: Observed,
+  observed: Observed | undefined,
   agent: string,
-  kind: 'launch' | 'held' | 'blocked' | 'failed',
-  text: string
+  kind: 'launch' | 'held' | 'blocked' | 'failed' | 'stop-requested' | 'stopped' | 'dequeued',
+  text: string,
+  operation?: string,
+  explicitAttempt?: number
 ): Promise<void> =>
   withLock(context, directory, async () => {
-    const attempt = await attemptOf(directory, agent)
-    const others = { ...observed, agents: observed.agents.filter((name) => name !== agent) }
+    if (
+      operation &&
+      (await readEvents(directory)).some((event) => event.operation === operation && event.kind === kind)
+    )
+      return
+    const attempt = explicitAttempt ?? (await attemptOf(directory, agent))
+    const others = observed && { ...observed, agents: observed.agents.filter((name) => name !== agent) }
     const snapshot = await readSnapshot(context, directory, others)
     const seen = snapshot[agent]?.attempt === attempt ? (snapshot[agent] as Seen) : { attempt }
-    snapshot[agent] = kind === 'blocked' || kind === 'failed' ? { ...seen, ended: true } : seen
-    await append(context, directory, snapshot, new Map([[agent, attempt]]), [{ agent, kind, text }])
+    snapshot[agent] =
+      (kind === 'blocked' && operation === undefined) || kind === 'failed' || kind === 'stopped' || kind === 'dequeued'
+        ? { ...seen, ended: true }
+        : kind === 'launch'
+          ? { ...seen, ended: false }
+          : seen
+    await append(context, directory, snapshot, new Map([[agent, attempt]]), [{ agent, kind, text, operation }])
   })
 
 /** `HH:MM TZ - milestone: <text>`, and the `blocked:` and `failed:` forms of the progress protocol. */
@@ -190,17 +216,22 @@ const queryKeys = (report: string): string[] => reportQueries(report).map((query
  * keeps ordinary derivation. A run with events but no snapshot lost its state, not its history,
  * and derives from empty.
  */
-const readSnapshot = async (context: AgentContext, directory: string, observed: Observed): Promise<Snapshot> => {
+const readSnapshot = async (
+  context: AgentContext,
+  directory: string,
+  observed: Observed | undefined
+): Promise<Snapshot> => {
   const state = await read(stateFile(directory))
-  if (state !== undefined) return JSON.parse(state) as Snapshot
-  const snapshot: Snapshot = {}
+  if (state !== undefined) return Object.assign(Object.create(null), JSON.parse(state)) as Snapshot
+  const snapshot: Snapshot = Object.create(null)
   if ((await readEvents(directory)).length > 0) return snapshot
-  for (const name of observed.agents) {
-    const { done, line } = await statusOf(directory, name)
-    if (!done && (await observed.alive(name))) continue
-    const queries = done ? queryKeys((await reportOf(context, directory, name)) ?? '') : []
-    snapshot[name] = { attempt: await attemptOf(directory, name), line, ended: true, queries }
-  }
+  if (observed)
+    for (const name of observed.agents) {
+      const { done, line } = await statusOf(directory, name)
+      if (!done && (await observed.alive(name))) continue
+      const queries = done ? queryKeys((await reportOf(context, directory, name)) ?? '') : []
+      snapshot[name] = { attempt: await attemptOf(directory, name), line, ended: true, queries }
+    }
   return snapshot
 }
 
@@ -213,7 +244,31 @@ const agentChanges = async (
   alive: boolean
 ): Promise<{ readonly seen: Seen; readonly when: number; readonly events: Pending[] }> => {
   const events: Pending[] = []
+  const control = await loadControl(directory)
+  const attempt = control?.attempts[name]
+  if (attempt?.state === 'stopped') return { seen: { ...previous, ended: true }, when: 0, events }
+  if (
+    attempt &&
+    (['stop-requested', 'stop-timeout', 'unconfirmed'].includes(attempt.state) ||
+      (attempt.entry && control?.entries[attempt.entry]?.state === 'queued'))
+  )
+    return { seen: previous, when: 0, events }
+  if (attempt?.state === 'failed')
+    return {
+      seen: { ...previous, ended: true },
+      when: 0,
+      events: previous.ended ? [] : [{ agent: name, kind: 'failed', text: 'attempt failed' }]
+    }
   const { done, line } = await statusOf(directory, name)
+  if (done && attempt?.owner && context.processes.control) {
+    try {
+      const scope = await context.processes.control.inspect(attempt)
+      if (!ownsScope(attempt, scope) || !scope.containment || !scope.empty || !scope.fenced)
+        return { seen: previous, when: 0, events }
+    } catch {
+      return { seen: previous, when: 0, events }
+    }
+  }
   let seen = { ...previous, line }
   const form = line === undefined || line === previous.line ? undefined : statusForm.exec(line)
   if (form) {
@@ -258,6 +313,57 @@ export const deriveEvents = (context: AgentContext, directory: string, observed:
     const snapshot = await readSnapshot(context, directory, observed)
     const attempts = new Map<string, number>()
     const changes: { readonly when: number; readonly name: string; readonly events: Pending[] }[] = []
+    const store = await loadControl(directory)
+    const recorded = new Set((await readEvents(directory)).map((event) => `${event.operation}/${event.kind}`))
+    for (const operation of Object.values(store?.operations ?? {})) {
+      if (operation.operation === 'stop' && operation.previousState !== 'stopped') {
+        const target = operation.target as { token: string; agent: string; attempt: number }
+        const attempt = store?.history[target.token]
+        if (
+          attempt?.state === 'stopped' &&
+          (!operation.receipt || operation.receipt.outcome === 'stopped') &&
+          !recorded.has(`${operation.id}/stopped`)
+        ) {
+          const payload = JSON.parse(operation.payload) as { reason: string }
+          changes.push({
+            when: Date.parse(operation.timestamp),
+            name: target.agent,
+            events: [
+              {
+                agent: target.agent,
+                attempt: target.attempt,
+                kind: 'stopped',
+                operation: operation.id,
+                text: `${operation.id}: ${payload.reason}`
+              }
+            ]
+          })
+        }
+      }
+      if (operation.operation !== 'dequeue' || operation.previousState === 'cancelled') continue
+      const target = operation.target as { id: string }
+      const entry = store?.entries[target.id]
+      if (
+        entry?.state !== 'cancelled' ||
+        entry.cancellationOperation !== operation.id ||
+        recorded.has(`${operation.id}/dequeued`)
+      )
+        continue
+      const payload = JSON.parse(operation.payload) as { reason: string }
+      changes.push({
+        when: Date.parse(operation.timestamp),
+        name: entry.name,
+        events: [
+          {
+            agent: entry.name,
+            attempt: entry.attempt,
+            kind: 'dequeued',
+            operation: operation.id,
+            text: `${operation.id}: ${payload.reason}`
+          }
+        ]
+      })
+    }
     for (const name of observed.agents) {
       const attempt = await attemptOf(directory, name)
       attempts.set(name, attempt)

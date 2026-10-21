@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
+import type { AgentLaunchEvidence } from './launch-evidence.ts'
 import type { AgentProcesses } from './processes.ts'
 
 /** Cumulative authority tiers whose footers ship with the ki-delegation skill. */
@@ -23,13 +24,14 @@ export interface AgentContext {
   /** Command and leading arguments that start this same `ki` again. */
   readonly launcher: readonly [string, ...string[]]
   readonly processes: AgentProcesses
+  readonly launchEvidence?: AgentLaunchEvidence | undefined
   /** Runs `git` and `tar`; injected so tests drive real commands against a sandbox. */
   readonly runner: Runner
   readonly now: () => number
 }
 
 export const checkName = (value: string, label: string): string => {
-  if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new KiError(`invalid ${label}: '${value}'`, 2)
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]+$/.test(value)) throw new KiError(`invalid ${label}: '${value}'`, 2)
   return value
 }
 

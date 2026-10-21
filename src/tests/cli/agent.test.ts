@@ -110,8 +110,8 @@ describe('ki agent launch', () => {
     expect(await box.project.mkdir('+/_WORK/ki.r')).toBe(`${await realpath(box.project.path)}/+/_WORK/ki.r`)
     expect(await box.state.read('ki/agents/r/one.status')).toBe('21:30 CEST - launched\n')
     expect(await box.state.read('ki/agents/r/one.pid')).toBe('1001\n')
-    expect(await box.state.read('ki/agents/r/one.launch.json')).toBe(
-      `{"runtime":"claude","workdir":"${await realpath(box.project.path)}"}\n`
+    expect(JSON.parse(await box.state.read('ki/agents/r/one.launch.json'))).toMatchObject(
+      JSON.parse(`{"runtime":"claude","workdir":"${await realpath(box.project.path)}"}\n`)
     )
     const [launch] = processes.launches as [AgentLaunch]
     expect(launch.command).toBe('claude')
@@ -300,7 +300,7 @@ describe('ki agent launch', () => {
     const at = launch.arguments.indexOf(form[0] as string)
     expect(launch.arguments.slice(at, at + 4)).toEqual(form)
     if (runtime === 'codex') expect(launch.arguments.at(-1)).toBe(prompt)
-    expect(JSON.parse(await box.state.read('ki/agents/r/one.launch.json'))).toEqual({
+    expect(JSON.parse(await box.state.read('ki/agents/r/one.launch.json'))).toMatchObject({
       runtime,
       model,
       effort: 'xhigh',
@@ -559,6 +559,8 @@ describe('ki agent launch --wait-for', () => {
       'gpt-6-astra',
       '--effort',
       'high',
+      '--launch-token',
+      expect.any(String),
       '--foreground'
     ])
     expect(hold.workingDirectory).toBe(runDirectory(box))
@@ -621,9 +623,7 @@ describe('ki agent launch --wait-for', () => {
     const ended = await box.run(['ki', ...(processes.launches[0] as AgentLaunch).arguments], { now })
     expect(ended.stdout).toBe('19:30 UTC - gate cannot open: slow exited without DONE\n')
     expect(holder.launches).toHaveLength(0)
-    expect((await box.run('ki agent status r', { now })).stdout).toContain(
-      'one: EXITED WITHOUT DONE (19:30 UTC - gate cannot open: slow exited without DONE)\n'
-    )
+    expect((await box.run('ki agent status r', { now })).stdout).toContain('one: failed\n')
   })
 })
 
@@ -1640,7 +1640,7 @@ describe('ki agent queue, dispatch and wait', () => {
     await box.project.write('task.md', '# Changed\n')
     expect(await box.state.read('ki/agents/r/one.queued.md')).toBe('# Task\n')
     const [first] = (await box.state.read('ki/agents/r/queue.jsonl')).split('\n')
-    expect(JSON.parse(first as string)).toEqual({
+    expect(JSON.parse(first as string)).toMatchObject({
       run: 'r',
       name: 'one',
       workdir: await realpath(box.project.path),
@@ -1687,10 +1687,12 @@ describe('ki agent queue, dispatch and wait', () => {
     expect(second.arguments).toContain('exec')
     expect([first.environment['KI_AGENT_RUN'], second.environment['KI_AGENT_RUN']]).toEqual(['r', 'r'])
     const workdir = await realpath(box.project.path)
-    expect(await box.state.read('ki/agents/r/fable.launch.json')).toBe(
-      `{"runtime":"claude","model":"claude-fable-5-1","effort":"max","workdir":"${workdir}"}\n`
+    expect(JSON.parse(await box.state.read('ki/agents/r/fable.launch.json'))).toMatchObject(
+      JSON.parse(`{"runtime":"claude","model":"claude-fable-5-1","effort":"max","workdir":"${workdir}"}\n`)
     )
-    expect(await box.state.read('ki/agents/r/plain.launch.json')).toBe(`{"runtime":"codex","workdir":"${workdir}"}\n`)
+    expect(JSON.parse(await box.state.read('ki/agents/r/plain.launch.json'))).toMatchObject(
+      JSON.parse(`{"runtime":"codex","workdir":"${workdir}"}\n`)
+    )
   })
 
   test('starts one detached dispatcher per run', async () => {
@@ -1831,7 +1833,9 @@ describe('ki agent queue, dispatch and wait', () => {
       alive: () => false,
       sleep: async () => {}
     })
-    await expect(box.run('ki agent dispatch r --max 1 --foreground', { now })).rejects.toThrow('spawn failed')
+    const uncertain = await box.run('ki agent dispatch r --max 1 --foreground', { now })
+    expect(uncertain.exitCode).toBe(1)
+    expect(uncertain.stderr).toContain('claim-unconfirmed')
   })
 
   test('wakes on each event in the order it happened, then reports the run finished', async () => {

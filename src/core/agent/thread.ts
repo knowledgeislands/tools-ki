@@ -257,13 +257,14 @@ export const threadHome = async (
   run: string,
   repo?: string | undefined,
   write = true,
-  launch?: string | undefined
+  launch?: string | undefined,
+  requireWorkHome = false
 ): Promise<ThreadHome> => {
   const { existing, repository } = await homeRepository(context, run, repo, launch)
   if (existing && isWorkHome(existing)) return existing
   // A retired home is followed into its work folder; read alone, one with none stays readable.
   const folder = await runWorkFolder(repository, run).catch((error: unknown) => {
-    if (existing && !write) return undefined
+    if (existing && !write && !requireWorkHome) return undefined
     throw error
   })
   if (folder === undefined) return existing as ThreadHome

@@ -31,7 +31,11 @@ import { dirname, join } from 'node:path'
 import { onTestFinished } from 'vitest'
 import { run as runCli } from '../../cli.ts'
 import { createContext } from '../../context.ts'
+import type { AgentLaunchEvidence } from '../../core/agent/launch-evidence.ts'
 import type { AgentProcesses } from '../../core/agent/processes.ts'
+
+export type { AgentLaunchEvidence } from '../../core/agent/launch-evidence.ts'
+
 import type { Fetcher } from '../../core/harness/acquire.ts'
 import type { KiInstallationMode } from '../../core/paths.ts'
 import { type Runner, runCommand } from '../../core/runtime/runner.ts'
@@ -230,6 +234,7 @@ export interface Sandbox {
   readonly setFetcher: (fetcher: Fetcher) => void
   readonly setRunner: (runner: Runner) => void
   readonly setAgentProcesses: (processes: AgentProcesses) => void
+  readonly setAgentLaunchEvidence: (evidence: AgentLaunchEvidence | undefined) => void
   readonly setLstat: (lstat: typeof import('node:fs/promises').lstat) => void
   readonly cd: (relativePath: string) => void
   readonly run: (
@@ -305,6 +310,10 @@ const create = async (): Promise<Sandbox> => {
     sleep: async () => {}
   }
   let stat: typeof lstat | undefined
+  let agentLaunchEvidence: AgentLaunchEvidence | undefined
+  const setAgentLaunchEvidence = (next: AgentLaunchEvidence | undefined): void => {
+    agentLaunchEvidence = next
+  }
 
   const setEnv = (environment: Record<string, string | undefined>): void => {
     environmentOverrides = { ...environmentOverrides, ...environment }
@@ -387,6 +396,7 @@ const create = async (): Promise<Sandbox> => {
       ...(options?.fetcher === 'default' ? {} : { fetcher: (input, init) => fetcher(input, init) }),
       ...(options?.runner === 'default' ? {} : { runner }),
       ...(options?.agentProcesses === 'default' ? {} : { agentProcesses }),
+      agentLaunchEvidence,
       ...(stat === undefined ? {} : { lstat: stat }),
       now: options?.now,
       ...(options?.captureInterrupt === undefined
@@ -437,6 +447,7 @@ const create = async (): Promise<Sandbox> => {
     setFetcher,
     setRunner,
     setAgentProcesses,
+    setAgentLaunchEvidence,
     setLstat,
     cd,
     run

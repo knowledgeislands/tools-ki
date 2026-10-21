@@ -1,6 +1,7 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import type { Output } from './commands/presentation/index.ts'
+import type { AgentLaunchEvidence } from './core/agent/launch-evidence.ts'
 import { type AgentProcesses, hostAgentProcesses } from './core/agent/processes.ts'
 import type { Fetcher } from './core/harness/acquire.ts'
 import { installationProvenance } from './core/manage/installation-provenance.ts'
@@ -36,6 +37,7 @@ export interface KiContext {
   readonly startInterval: (milliseconds: number, handler: () => void) => () => void
   /** Detached agent processes behind `ki agent`, injected so tests never start a real agent. */
   readonly agentProcesses: AgentProcesses
+  readonly agentLaunchEvidence?: AgentLaunchEvidence | undefined
 }
 
 export interface ContextOptions {
@@ -61,6 +63,7 @@ export interface ContextOptions {
   readonly onInterrupt?: (handler: () => void) => () => void
   readonly startInterval?: (milliseconds: number, handler: () => void) => () => void
   readonly agentProcesses?: AgentProcesses
+  readonly agentLaunchEvidence?: AgentLaunchEvidence | undefined
 }
 
 /* v8 ignore start -- Real timers are a process concern; tests inject this capability at the same boundary. */
@@ -124,6 +127,7 @@ export const createContext = async (options: ContextOptions): Promise<KiContext>
     now: options.now ?? Date.now,
     onInterrupt: options.onInterrupt ?? processInterrupt,
     startInterval: options.startInterval ?? processInterval,
-    agentProcesses: options.agentProcesses ?? hostAgentProcesses
+    agentProcesses: options.agentProcesses ?? hostAgentProcesses,
+    agentLaunchEvidence: options.agentLaunchEvidence
   }
 }

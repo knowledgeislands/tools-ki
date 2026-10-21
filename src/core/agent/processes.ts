@@ -1,5 +1,43 @@
 import { spawn } from 'node:child_process'
 import { closeSync, openSync } from 'node:fs'
+import type { AgentEffectIdentity, AttemptIdentity, ProcessIdentity } from './identities.ts'
+
+export interface ScopeObservation {
+  readonly token: string
+  readonly scope: string
+  readonly ownership: boolean
+  /** Includes reparented descendants and session/group changes, not just one process group. */
+  readonly containment: boolean
+  readonly empty: boolean
+  readonly fenced: boolean
+  readonly authorisationConsumed: boolean
+  readonly workerStarted: boolean
+  readonly owner?: ProcessIdentity | undefined
+  readonly terminal?: 'done' | 'failed' | undefined
+}
+
+/** A managed adapter must acknowledge the supervisor before opening its durable worker gate.
+ * Lookup uses the reserved token/scope even if no PID reached the parent. Native adapters
+ * without this evidence port retain legacy launch, and cannot confirm stop or recovery.
+ */
+export interface AgentControlProcesses {
+  /** Worker phase returns only after its verified worker-start record, not supervisor registration alone. */
+  readonly launch: (
+    identity: AttemptIdentity,
+    launch: AgentLaunch,
+    phase: 'supervisor' | 'worker',
+    effect: AgentEffectIdentity
+  ) => Promise<ProcessIdentity>
+  readonly inspect: (identity: AttemptIdentity) => Promise<ScopeObservation>
+  /** Deduplicates the durable effect key and rechecks ownership/coverage before SIGTERM. No escalation. */
+  readonly terminate: (identity: AttemptIdentity, effect: AgentEffectIdentity) => Promise<void>
+  /** Validates adapter-managed proof records, rather than an operator's asserted outcome. */
+  readonly verifyRecovery: (
+    identity: AttemptIdentity,
+    evidence: Readonly<Record<string, unknown>>,
+    effect: AgentEffectIdentity
+  ) => Promise<ScopeObservation | undefined>
+}
 
 /** One detached agent process to start. */
 export interface AgentLaunch {
@@ -16,6 +54,7 @@ export interface AgentLaunch {
  * `launch` returns the detached process identifier.
  */
 export interface AgentProcesses {
+  readonly control?: AgentControlProcesses | undefined
   readonly launch: (launch: AgentLaunch) => Promise<number>
   readonly alive: (pid: number) => boolean
   readonly sleep: (milliseconds: number) => Promise<void>

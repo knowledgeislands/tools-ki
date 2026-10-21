@@ -22,6 +22,7 @@ import {
   watchRun
 } from '../../core/agent/runs.ts'
 import { type AgentEffort, type AgentRuntime, agentEfforts, agentRuntimes } from '../../core/agent/runtimes.ts'
+import { type AgentRole, agentRoles, resolveSelection } from '../../core/agent/selection.ts'
 import { archiveKept, sweepAgents } from '../../core/agent/sweep.ts'
 import {
   appendDecision,
@@ -34,8 +35,9 @@ import {
 } from '../../core/agent/thread.ts'
 import { estateWorktreeLines } from '../../core/agent/worktrees.ts'
 import { DEFAULT_HARNESS } from '../../core/configuration/declaration.ts'
-import { grammarError, KiError } from '../../core/errors.ts'
+import { grammarError, KiError, KiExit } from '../../core/errors.ts'
 import { harnessDirectory } from '../../core/storage/harness-paths.ts'
+import { controlCommands } from './control.ts'
 
 export const agentContext = (context: KiContext): AgentContext => ({
   stateDirectory: context.paths.state,
@@ -44,6 +46,7 @@ export const agentContext = (context: KiContext): AgentContext => ({
   environment: context.environment,
   launcher: context.launcher,
   processes: context.agentProcesses,
+  launchEvidence: context.agentLaunchEvidence,
   runner: context.runner,
   now: context.now
 })
@@ -66,9 +69,15 @@ const classOption = (): Option =>
   )
 
 interface LaunchOptions {
-  readonly runtime: AgentRuntime
+  readonly runtime?: AgentRuntime
   readonly addDir: readonly string[]
-  readonly rules: AuthorityTier
+  readonly rules?: AuthorityTier
+  readonly role?: AgentRole
+  readonly authority?: string
+  readonly acceptance?: string
+  readonly dryRun?: boolean
+  readonly json?: boolean
+  readonly launchToken?: string
   readonly allow: readonly GrantName[]
   readonly waitFor: readonly string[]
   readonly model?: string
@@ -90,15 +99,23 @@ const allowOption = (): Option => {
 /** The launch options `launch` and `queue` share. */
 const withLaunchOptions = (command: Command): Command =>
   command
-    .addOption(new Option('--runtime <runtime>', 'agent runtime adapter').choices(agentRuntimes).default('claude'))
+    .addOption(
+      new Option('--runtime <runtime>', 'agent runtime adapter; role-free default, claude').choices(agentRuntimes)
+    )
     .option('--add-dir <dir>', 'extra directory the agent may write; repeatable', collect, [])
     .addOption(
-      new Option('--rules <tier>', 'ki-delegation authority footer to append').choices(authorityTiers).default('none')
+      new Option('--rules <tier>', 'ki-delegation authority footer; role-free default, none').choices(authorityTiers)
     )
     .addOption(allowOption())
     .option('--wait-for <name>', 'agent in this run whose DONE gates the start; repeatable', collect, [])
     .option('--model <model>', "runtime model, passed through verbatim; omitted, the runtime's default")
     .addOption(new Option('--effort <level>', "reasoning effort; omitted, the runtime's default").choices(agentEfforts))
+    .addOption(new Option('--role <role>', 'evidence-gated background role profile').choices(agentRoles))
+    .option('--authority <local-path#heading>', 'existing bounded owner decision; required for role launches')
+    .option('--acceptance <local-json-path>', 'scoped acceptance declaration; capability remains disabled')
+    .option('--dry-run', 'resolve the selection without writing a packet or starting a worker')
+    .option('--json', 'machine-readable selection or launch receipt')
+    .addOption(new Option('--launch-token <token>', 'held-attempt fence').hideHelp())
     .option('--relaunch', 'start a name that has already run, keeping its earlier packet in <name>.prev-<n>/')
     .option('--worktree <repo>', 'launch from a linked worktree with installed dependencies and project skills')
     .addOption(repoOption)
@@ -114,9 +131,15 @@ const request = (
   name,
   workdir,
   prompt,
-  runtime: options.runtime,
+  runtime: options.runtime ?? 'claude',
+  explicitRuntime: options.runtime !== undefined,
+  explicitRules: options.rules !== undefined,
+  role: options.role,
+  authority: options.authority,
+  acceptance: options.acceptance,
+  launchToken: options.launchToken,
   addDirs: options.addDir,
-  rules: options.rules,
+  rules: options.rules ?? 'none',
   allow: options.allow,
   waitFor: options.waitFor,
   model: options.model,
@@ -133,6 +156,7 @@ export const createAgentCommand = (context: KiContext): Command => {
   const command = new Command('agent').description(
     'launch and coordinate detached background agents under the ki-delegation run contract'
   )
+  for (const control of controlCommands(context, agentContext(context))) command.addCommand(control)
   // Four positional operands would push the subcommand list past 80 columns, so the
   // list names each subcommand alone; its own help still shows the full usage.
   const createHelp = command.createHelp.bind(command)
@@ -161,8 +185,15 @@ export const createAgentCommand = (context: KiContext): Command => {
         options: LaunchOptions & { foreground?: boolean }
       ) => {
         const launch = request(run, name, workdir, prompt, options)
+        if (options.dryRun) {
+          const selection = await resolveSelection(agentContext(context), launch)
+          write(JSON.stringify(selection))
+          if (selection.refusals.length) throw new KiExit(1)
+          return
+        }
         if (options.foreground) return write(await holdAgent(agentContext(context), launch))
         const result = await launchAgent(agentContext(context), launch)
+        if (options.json) return write(JSON.stringify(result))
         for (const warning of result.warnings) context.stderr.write(`ki: warning: ${warning}\n`)
         write(
           result.held.length
@@ -182,7 +213,15 @@ export const createAgentCommand = (context: KiContext): Command => {
         .argument('<prompt-file>', 'prompt to launch when dispatched')
         .option('--workdir <dir>', 'working directory for the agent', '.')
     ).action(async (run: string, name: string, prompt: string, options: LaunchOptions & { workdir: string }) => {
-      const queued = await queueAgent(agentContext(context), request(run, name, options.workdir, prompt, options))
+      const launch = request(run, name, options.workdir, prompt, options)
+      if (options.dryRun) {
+        const selection = await resolveSelection(agentContext(context), launch)
+        write(JSON.stringify(selection))
+        if (selection.refusals.length) throw new KiExit(1)
+        return
+      }
+      const queued = await queueAgent(agentContext(context), launch)
+      if (options.json) return write(JSON.stringify(queued))
       for (const warning of queued.warnings) context.stderr.write(`ki: warning: ${warning}\n`)
       write(`queued ${run}/${name} at position ${queued.position}`)
     })

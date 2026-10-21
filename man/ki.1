@@ -404,11 +404,29 @@ A progress marker grants no source retirement or reconciliation authority.
 .SS Background agents
 \&
 .TP
-.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>]
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>] [--role mechanical|plan|build|review|accept|prune|release] [--authority <local-path#heading>] [--acceptance <local-json-path>] [--dry-run] [--json]
 Launch one detached agent and write its run packet.
 .TP
-.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>]
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>] [--role mechanical|plan|build|review|accept|prune|release] [--authority <local-path#heading>] [--acceptance <local-json-path>] [--dry-run] [--json]
 Append a ready-made agent to the run queue.
+.TP
+.B ki agent stop <run> <name> --attempt <n> --reason <text> [--grace <seconds>] [--request <id>] [--json]
+Request SIGTERM for a verified whole-attempt containment scope. Grace defaults
+to 30 seconds, accepts 1-120 seconds and never escalates. Native adapters
+without ownership and descendant-containment evidence refuse without signalling.
+.TP
+.B ki agent dequeue <run> <name> --entry <id> --reason <text> [--request <id>] [--json]
+Cancel an immutable queue entry before spawn, preserving its brief and
+selection.
+Already-started entries return exit 1 and the exact stop command.
+.TP
+.B ki agent recover inspect <run> --operation <id> [--json]
+Read the frozen operation, uncertainty and required adapter evidence.
+.TP
+.B ki agent recover resolve <run> --operation <id> --evidence <local-json-path> --authority <local-path#heading> [--request <id>] [--json]
+Verify local adapter evidence and record reconciliation. This operation never
+starts, signals, resumes or deletes anything. Unverifiable evidence leaves
+fences intact.
 .TP
 .B ki agent dispatch <run> --max <count> [--interval <seconds>]
 Keep up to the given number of queued agents running, detached.
@@ -1722,7 +1740,7 @@ Claude Code or Codex in their own session with standard input from
 .IR /dev/null ,
 so an interrupt of the launching session cannot stop them.
 .TP
-.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>]
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>] [--role mechanical|plan|build|review|accept|prune|release] [--authority <local-path#heading>] [--acceptance <local-json-path>] [--dry-run] [--json]
 Launch one detached agent. The prompt gains the authority footer the pinned
 Harness's
 .B ki-delegation
@@ -1833,8 +1851,23 @@ path, branch and source repository. Held and queued launches prepare the
 worktree only when their start gate opens. A failed preparation retains the
 stranded checkout for inspection. The close gate checks this same worktrees
 directory and refuses until it is empty.
+Role selections require a cited bounded decision and accepted local model
+evidence. Profiles ship dormant. An explicit model cannot bypass evidence gates.
+Accept requires the none footer and a scoped acceptance declaration; it remains
+disabled until combined Harness and validator verification. A role adds no
+grant.
+Role-free requests retain their existing runtime, model, effort and footer
+defaults,
+including elevated footers without a new authority option requirement.
+Dry-run with JSON displays the effective selection and refusals without
+mutation.
+Stopped and dequeued events close dependency gates and never satisfy DONE.
+An uncertain claim blocks replacement work. Native stop and recovery
+capabilities
+remain unavailable without verified adapter evidence. Wake is outside this
+build.
 .TP
-.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>]
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--allow fetch|machine...] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--worktree <repo>] [--repo <dir>] [--role mechanical|plan|build|review|accept|prune|release] [--authority <local-path#heading>] [--acceptance <local-json-path>] [--dry-run] [--json]
 Append a ready-made agent to the run queue, copying its prompt. A name already
 queued or already run is refused as for
 .BR launch ;
@@ -1844,6 +1877,24 @@ is priority order. The dispatcher launches it with the queued
 .B --model
 and
 .BR --effort .
+.TP
+.B ki agent stop <run> <name> --attempt <n> --reason <text> [--grace <seconds>] [--request <id>] [--json]
+Request SIGTERM for a verified whole-attempt containment scope. Grace defaults
+to 30 seconds, accepts 1-120 seconds and never escalates. Native adapters
+without ownership and descendant-containment evidence refuse without signalling.
+.TP
+.B ki agent dequeue <run> <name> --entry <id> --reason <text> [--request <id>] [--json]
+Cancel an immutable queue entry before spawn, preserving its brief and
+selection.
+Already-started entries return exit 1 and the exact stop command.
+.TP
+.B ki agent recover inspect <run> --operation <id> [--json]
+Read the frozen operation, uncertainty and required adapter evidence.
+.TP
+.B ki agent recover resolve <run> --operation <id> --evidence <local-json-path> --authority <local-path#heading> [--request <id>] [--json]
+Verify local adapter evidence and record reconciliation. This operation never
+starts, signals, resumes or deletes anything. Unverifiable evidence leaves
+fences intact.
 .TP
 .B ki agent dispatch <run> --max <count> [--interval <seconds>]
 Start a detached dispatcher that keeps up to
