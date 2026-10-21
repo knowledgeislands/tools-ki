@@ -8,12 +8,12 @@ kind: deliver
 size: m
 component: repo
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 566679b2cb7648a0746d745aa29a297cd1b3eaf2
 created_at: 2026-10-16T00:29:07Z
-updated_at: 2026-10-21T04:26:18Z
+updated_at: 2026-10-21T04:30:57Z
 ---
 
 # Git Hygiene Estate Audit
@@ -50,7 +50,7 @@ A read-only `mgit --estate` survey on 16 October 2026 across 50 repositories, fr
 
 ## Current state
 
-Implementation is in progress under the `wow-night-cli-140` dispatch and the existing Ready plan. The immutable implementation baseline is `566679b2cb7648a0746d745aa29a297cd1b3eaf2`. The unchanged baseline passed the full offline repository audit in a fresh copied home, with only CI-1 in `.github/workflows/ci.yml` and MATURITY-1 in `.ki.toml` retained under the pre-existing warnings allowance. Both work-adapter audits passed without warnings. No acceptance or Git cleanup is authorised.
+Delivery is complete and awaiting independent review under `wow-night-cli-140`. The immutable implementation baseline is `566679b2cb7648a0746d745aa29a297cd1b3eaf2`. Implementation commit `b99fa0383b60fed7b9ab5dd006c31873c6213c68` is fast-forwarded into local `main` and pushed to `origin/main`. Every planned Step and required offline gate has passed; CI-1 in `.github/workflows/ci.yml` and MATURITY-1 in `.ki.toml` are the unchanged baseline warnings allowed by the dispatch. No acceptance or Git cleanup has been performed.
 
 The historical Context describes mgit 0.17.0. The supported local baseline is now mgit 0.18.0 at `78a1b376cab73614ca896602557c3f4b9d4ce6b3`, whose overview producer and fixtures are committed and available. The current CLEAN contract is byte-identical to Harness `b91fa71dba7ea902e7c1fa8eefa9d515e226a741`; CLEAN-2 to CLEAN-7 accept the optional `gitOverview` session property, while CLEAN-1 remains judgement-only. tools-ki at `d5eac480f6b44a7fe0bb1ca1d2b7340decbefcab` does not yet supply that property in `src/core/runtime/audit.ts`, so those mechanical checks remain unassessed. This plan uses only delivered facts; the historical Goal and Boundary's conditional PR ambition remains outside this implementation.
 
@@ -95,7 +95,7 @@ CLEAN-1 and all unsupported facts remain unknown or unassessed. CLEAN-7 remains 
 - [x] Add bounded runner `cwd` support and core mgit acquisition using the existing injected runner; preserve separate stdout, process limits and error handling, with no direct Git collection.
 - [x] Thread only the optional `gitOverview` document through repository runtime scope and rubric session creation for selected `ki-git`; wire both audit and conform, including fresh post-write re-audit evidence.
 - [x] Add public CLI fixtures covering the schema and failure matrix below; install a test-only archive containing the byte-exact canonical CLEAN/session modules at the verified Harness commit, with provenance hashes, and a minimal session-observer fixture to prove lossless injection. Tests must not read the workstation Harness or contact a provider; no CLEAN policy is copied into product code.
-- [ ] Record accepted host behaviour and conformance evidence in the existing repository-audit Specification, document supported evidence and unknowns in the user guide, align the consolidated changelog, complete every declared gate and retain verification evidence in this record before requesting independent review.
+- [x] Record accepted host behaviour and conformance evidence in the existing repository-audit Specification, document supported evidence and unknowns in the user guide, align the consolidated changelog, complete every declared gate and retain verification evidence in this record before requesting independent review.
 
 ## Files touched
 
@@ -132,7 +132,7 @@ For this planning unit, require warning-free `ki repo audit --skill ki-work --re
 
 ### Implementation verification
 
-The offline public CLI suite covers 44 Git overview fixtures, including canonical catalogue outcomes, root isolation, selector boundaries and lossless UTF-8 collection across process chunks. The full suite passed before the additional UTF-8 regression was added; the subsequent complete coverage run passed all 1,487 tests with 100 percent statements, branches, functions and lines. TypeScript, Biome, the authoring, Specifications and guides audits, and `git diff --check` passed. Final engineering and whole-repository audits remain in progress; this is not an acceptance claim.
+All 44 offline Git overview contract fixtures pass. The final complete test suite passes all 1,487 tests, and the complete coverage run retains 100 percent statements, branches, functions and lines without changing exclusions. TypeScript, Biome, the build, focused documentation checks, the engineering audit and the full repository audit pass. The full audit retains only the unchanged CI-1 and MATURITY-1 baseline warnings; the pre-existing Biome `useTemplate` information in `src/tests/cli/skill/generate.test.ts` is also unchanged. The Review packet records the gates and evidence.
 
 ### Planning verification
 
@@ -164,7 +164,53 @@ Update the repository-governance user guide to explain the mgit prerequisite, ob
 
 Retain this existing record as the implementation and review home, preserve its identity and creation time, and advance only its plan metadata. No new record, dependency ID, acceptance, cancellation or prune follows from this planning grant. Implementation must establish its own immutable baseline when separately launched.
 
+## Review
+
+### Delivered
+
+Delivered the approved read-only mgit evidence composition plan from immutable baseline `566679b2cb7648a0746d745aa29a297cd1b3eaf2` in implementation commit `b99fa0383b60fed7b9ab5dd006c31873c6213c68`. The commit is published on `origin/main`; acceptance remains independent. The host acquires the producer document and supplies it unchanged only to the selected `ki-git` catalogue. Harness policy, mgit's repository, command grammar, the real registry and real HOME configuration are unchanged. No live cleanup, provider operation, tag or release is included.
+
+### Change Summary
+
+- `src/core/runtime/runner.ts` adds bounded working-directory support and preserves UTF-8 stdout across chunk boundaries before JSON parsing.
+- `src/core/repository/git-overview.ts`, repository audit/conform operations, the operation context, runtime scope and rubric session options compose one bounded document per physical root and evidence phase, retain acquisition warnings and refresh post-write evidence.
+- `src/tests/cli/repo/git-overview.test.ts` and `_git_overview_helper.ts` add 44 public CLI cases with a byte-exact, SHA-256-verified test archive of the named Harness contract. No CLEAN policy is copied into product code.
+- The existing repository-audit Specification, repository-operations guide and consolidated changelog record accepted behaviour and its limits. The UTF-8 fix fulfils the planned lossless evidence boundary within the approved runner file; no scope expansion was needed.
+
+### Verification
+
+- Dependency prerequisite: PASS - root and isolated-boundary dependencies were already available and both lockfiles byte-match the primary checkout; no dependency installation was performed, as the Ready plan requires. [Evidence](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/dependency-availability.json).
+- `bun run test -- src/tests/cli/repo/git-overview.test.ts`: PASS - 44 cases. [Evidence](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/focused-utf8.log).
+- `bun run test`: PASS - 1,487 tests across 90 files on the final implementation. [Evidence](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/tests-final.log).
+- `bunx tsc --noEmit`: PASS. [Evidence](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/typecheck-final.log).
+- `bunx biome check`: PASS - only the unchanged pre-existing `useTemplate` information in `src/tests/cli/skill/generate.test.ts`. [Evidence](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/biome-final.log).
+- `bun run test:coverage`: PASS - 100 percent statements, branches, functions and lines, with unchanged exclusions. [Evidence](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/coverage.log).
+- `bun run build`: PASS. [Evidence](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/build.log).
+- `ki repo audit --skill ki-engineering --repo .`: PASS - unchanged CI-1 warning in `.github/workflows/ci.yml`. [Evidence](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/engineering.log).
+- `ki repo audit --repo .`: PASS on the committed implementation - 20 passing skill verdicts, two warning verdicts and no failure; only unchanged CI-1 in `.github/workflows/ci.yml` and MATURITY-1 in `.ki.toml`. [Evidence](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/repository-final.log).
+- Authoring, Specifications and guides audits: PASS; focused `rumdl check` covers all four changed Markdown files. [Authoring](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/authoring-final.log), [Specifications](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/specification.log), [guides](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/guides.log), [Markdown](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/markdown-final.log).
+- `ki-work` and `ki-work-roadmap` audits: PASS without warnings, including the final review-state record. [Work](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/work-final.log), [roadmap](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/roadmap-final.log).
+- `git diff --check`: PASS. Hook-backed commit and explicit-path inspection: PASS, all 15 intended paths and no unrelated content; the verified content was unchanged by hooks. [Diff](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/diff-final.log), [commit inspection](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/implementation-commit-inspection.log).
+
+Every runtime and governance gate used the run's fresh copied audit home, both local Capital registrations and the offline sandbox. Only disposable test servers could use loopback; no provider or external network was available to the gates. Setup-only failures were corrected in the copied environment before the green baseline. The separate authorised Git publication fetched and fast-forwarded only this run's inspected commit. [Publication evidence](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-140.work/implementation-publication.json).
+
+### Outstanding concerns
+
+None within the approved delivery. Pull-request facts and unsupported branch/worktree facts remain judgement or unassessed; fetch ages remain qualified, non-standard stale thresholds remain unassessed, and CLEAN-7 remains heuristic. These are the agreed evidence limits, not claims of a clean estate or authority to clean it. Independent acceptance is still required.
+
+### Post-change review
+
+The delivered behaviour meets the Goal within the Ready plan's supported-fact boundary. Command grammar and selectors remain unchanged; duplicate-root preflight, physical-root isolation, missing evidence, partial documents, selected-skill isolation and post-write refresh have executable public-seam evidence. The process-runner change preserves the existing bounds and error handling, and the new regression proves lossless split UTF-8 output. The full suite and coverage expose no regression. This packet requests independent review and does not accept its own delivery.
+
+### Mini recap
+
+Delivered bounded, lossless Git evidence composition with honest unknowns and guarded catalogue findings. Offline verification is complete, existing documentation owns the learning, and the record is ready for independent review. No new roadmap item or external follow-up is needed.
+
 ## Discussion
+
+### Lossless process output
+
+The additional public CLI fixture reproduced an existing bounded-runner defect: decoding each stdout chunk independently corrupted a UTF-8 character split between chunks. Step 1 now retains raw stdout buffers and decodes the complete bounded stream once. The regression failed before the fix and passes afterwards; timeout, output bounds, stderr separation and process-group handling remain covered. This is necessary for the approved unchanged-document contract, not a second Git fact model.
 
 Capture only; adoption, priority and plan belong to this repository. Questions for planning: whether open-PR facts come from `gh` behind an injected provider or stay out of scope offline; whether the Git fact collection belongs in `ki` or as a read-only `mgit` report that `ki` consumes; and the stale-age threshold.
 
