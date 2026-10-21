@@ -8,13 +8,12 @@ project: tools-burndown
 component: dev
 priority: medium
 size: s
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: d6e8f369fac456de387298cae060058471970705
 created_at: 2026-10-19T08:04:00Z
-updated_at: 2026-10-21T03:51:18Z
+updated_at: 2026-10-21T04:05:57Z
 ---
 
 # KI-TOOL-KI-CLI-156: CI Uses Compatible KI
@@ -124,7 +123,21 @@ The repaired workflow now completes the native gate against the current reposito
 
 The release/Harness mismatch is repaired and exact implementation-head CI passes. Both the baseline and deliberate failures support the chosen route. Historical diagnostic semantics and inherited warnings are recorded here; no new record or cross-repository policy change was created.
 
+## Done
+
+Accepted 2026-10-21 by independent reviewer gpt-6.1-sol under Kris's named overnight acceptance grant on the review packet above.
+
 ## Discussion
+
+### Independent acceptance
+
+Fresh independent review of immutable baseline `d6e8f369fac456de387298cae060058471970705` and delivered candidate `a859371c6701f9c58b2930ceefdbb524019dd20e` passes. The workflow differs only in the compatible released KI pin; its guard test preserves one native audit. Release workflows, diagnostic policy and exceptions are unchanged.
+
+Tests, TypeScript, Biome, standalone coverage, manual lint and the full isolated repository audit pass with the installed dependencies. The current offline Harness retains the existing CI-1 and MATURITY-1 warnings. The selected v0.12.0 source and its exact pinned Harness pass a separate offline candidate audit; independently introduced formatting, type and test defects then fail BIO-1, TSC-1 and TEST-5 respectively. That released Harness retains the recorded PKG-6, CI-1 and HOOK-4 warnings. Temporary fixture provenance warnings were resolved by indexing the unchanged hooks and rechecking their owning audit. Historical source `949ff51267ab7ef8714ba8c693b185512138d3c5` independently reproduces 26 warnings and 15 infos with exit zero under Biome 2.5.15.
+
+Captured raw Actions run `39540918234` and job `119028204835` both identify exact candidate `a859371c6701f9c58b2930ceefdbb524019dd20e` and successful installation, Audit and manual lint. The installed archive digest maps to Harness `f4d6c521ef4859dc8965579bc39a5575004e3ac5` in the immutable v0.12.0 source. This review used the saved raw evidence without a GitHub API call. [Independent evidence](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-156-accept-d.work/independent-evidence.json) and [pinned-runtime rejection proof](/Users/krisbrown/.local/state/ki/agents/ways-of-working/wow-night-cli-156-accept-d.work/pinned-proof.json) retain the inspected identities and outcomes.
+
+Acceptance is limited to this record under the named [overnight grant](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md#2026-10-20-0520-bst---owner-answers-on-the-0422-send-overnight-burndown) and the current dispatch's exact-record override. No blocking acceptance concern remains. The terminal file is retained; nothing is pruned.
 
 ### The audit already claims these checks
 
