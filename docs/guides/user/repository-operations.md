@@ -46,6 +46,10 @@ A linked Git worktree inherits its registered primary checkout's registration on
 
 From a linked development Harness worktree, `ki dev skill generate --write` reads the generator and source from that worktree and publishes there. It leaves the primary checkout unchanged and refuses an unrelated repository.
 
+## Migrate work-record targets
+
+From v0.13.0, a supplied `resolution_target` must identify another work record in the same repository, including a different declared area where applicable. It is permitted only with `duplicate`, `merged` or `superseded`. For a cross-repository disposition, describe the receiving repository and record in `## Cancelled` and omit `resolution_target`. The reader rejects a cross-repository target and never rewrites the record; make any correction through the owning work's approved lifecycle.
+
 ## Read Git hygiene evidence
 
 Run `ki repo audit --skill ki-git` to review the Git facts available for one selected checkout, or combine the same skill with `--estate`, `--territory`, `--principals`, repeated `--repo` roots or `--filter`. Have `mgit` available on `PATH`. KI invokes its read-only overview separately for each selected physical root; extra checkouts reported by mgit do not become additional KI audit targets. This command does not fetch remote refs or contact a pull-request provider.

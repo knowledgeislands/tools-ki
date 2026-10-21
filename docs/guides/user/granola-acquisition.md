@@ -61,6 +61,16 @@ Each selected meeting UUID produces one package at `captures/<territory>/granola
 
 Acquisition keeps no ledger, checkpoint or journal. The committed capture is the record: its front matter carries the source identity, account binding, detail and transcript hashes and folder memberships, and Git history holds earlier bytes. Membership of the Acquired folder alone marks a meeting as dealt with. This is on-demand acquisition; configuration does not create a schedule or automate reconciliation.
 
+## Migrate ledger-based acquisition
+
+When upgrading from v0.12.0, replace `--refresh-transcripts` with `--refresh` in scripts. The `status`, `reconcile` and `reset` subcommands of `ki acquire` are removed; inspect the captures and their Git history instead. Harness adapter declarations now accept only `import` and `mark` actions: update a custom adapter that still advertises a retired action before using it with this CLI.
+
+Old ledger, checkpoint, journal and flagged-identity files are no longer read, migrated or removed. Preserve them while reviewing any interrupted acquisition or outstanding disposition; the new importer cannot resume an old journal. Resolve that work with the prior version or review it manually before relying on the new capture-based workflow. No state-file deletion is required to upgrade.
+
+Keep each capture's UUID-bearing file or package name beneath its configured capture directory. The importer finds an existing capture there and keeps it unless refresh is explicit. A refresh rewrites that capture in place, and `--refresh-acquired` also selects notes already in Acquired and implies `--refresh`. Review and commit the resulting capture changes. Duplicate captures and account conflicts remain visible for review, and a missing provider transcript does not erase a retained transcript.
+
+Marking verifies one committed capture, its source hashes and its attachment evidence. An old ledger receipt alone is insufficient. Acquired membership still skips routine imports without rechecking local evidence; it does not establish that the source is unchanged or grant source-retirement authority.
+
 ## Run acquisition
 
 From the receiving repository, run:
