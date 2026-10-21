@@ -80,20 +80,55 @@ export const reportPath = (home: ThreadHome, name: string): string => join(threa
 
 /**
  * Whether Git knows the thread-folder file: staged or tracked in the index, or in any commit
- * reachable from a ref. A shallow clone that lacks the commit answers no.
+ * reachable from a ref under the folder's present or any earlier name. A shallow clone that
+ * lacks the commit answers no.
  */
 const held = async (context: AgentContext, home: ThreadHome, file: string): Promise<boolean> => {
   const path = `${home.folder}/${file}`
   const indexed = await git(context, home.repository, ['ls-files', '--', path])
   if (indexed.exitCode === 0 && indexed.output.trim()) return true
-  const logged = await git(context, home.repository, ['log', '-1', '--format=%H', '--all', '--', path])
+  const paths = (await earlierNames(context, home)).map((folder) => `${folder}/${file}`)
+  const logged = await git(context, home.repository, ['log', '-1', '--format=%H', '--all', '--', ...paths])
   return logged.exitCode === 0 && logged.output.trim() !== ''
 }
 
 /**
+ * The thread folder's name and every name it had before, from the renames in the commits that
+ * added files to it, followed back through each earlier name, so that a renamed work folder
+ * keeps the history of the reports it retired under its old name.
+ */
+const earlierNames = async (context: AgentContext, home: ThreadHome): Promise<readonly string[]> => {
+  const names = [home.folder]
+  for (let index = 0; index < names.length; index++) {
+    const name = names[index] as string
+    const added = await git(context, home.repository, ['log', '--all', '--diff-filter=A', '--format=%H', '--', name])
+    const commits = added.output.split('\n').filter((line) => line.trim())
+    if (!commits.length) continue
+    const renamed = await git(context, home.repository, [
+      'show',
+      '-M',
+      '--diff-filter=R',
+      '--name-status',
+      '--format=',
+      ...commits
+    ])
+    // `--diff-filter=R` leaves only `R<score>\t<from>\t<to>` lines.
+    for (const line of renamed.output.split('\n')) {
+      const [, from = '', to = ''] = line.split('\t')
+      if (!to.startsWith(`${name}/`)) continue
+      const file = to.slice(name.length)
+      const earlier = from.endsWith(file) ? from.slice(0, -file.length) : ''
+      if (earlier && !names.includes(earlier)) names.push(earlier)
+    }
+  }
+  return names
+}
+
+/**
  * Whether Git knows the thread-folder file with the contents of `source`: staged in the index, or
- * in any commit reachable from a ref. A report a relaunched agent wrote afresh is not held so,
- * though an earlier attempt's report under its name may be.
+ * in any commit reachable from a ref, under the folder's present or any earlier name. A report
+ * a relaunched agent wrote afresh is not held so, though an earlier attempt's report under its
+ * name may be.
  */
 export const heldAs = async (
   context: AgentContext,
@@ -106,6 +141,7 @@ export const heldAs = async (
   const path = `${home.folder}/${file}`
   const indexed = await git(context, home.repository, ['ls-files', '-s', '--', path])
   if (indexed.exitCode === 0 && indexed.output.split(/\s+/)[1] === blob) return true
+  const paths = (await earlierNames(context, home)).map((folder) => `${folder}/${file}`)
   const logged = await git(context, home.repository, [
     'log',
     '-1',
@@ -113,7 +149,7 @@ export const heldAs = async (
     '--all',
     `--find-object=${blob}`,
     '--',
-    path
+    ...paths
   ])
   return logged.exitCode === 0 && logged.output.trim() !== ''
 }

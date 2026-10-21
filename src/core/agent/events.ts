@@ -293,11 +293,13 @@ const reportOf = async (context: AgentContext, directory: string, name: string):
 
 /**
  * Copies the report the agent wrote in the state folder into the thread folder, where the
- * coordinator reads and commits it, so that the launcher stays its only writer. A thread-folder
- * copy with changes Git does not hold is left alone; one Git holds unchanged, as after a
- * relaunch, is replaced. A report the thread retired, which Git holds with these contents, stays
- * retired, as when a lost `events.state.json` replays an ended agent. A run homed in a retired
- * `+/_THREADS/` folder follows its work folder, and one with none keeps its report in the state folder.
+ * coordinator reads and commits it, so that the launcher stays its only writer. It runs once per
+ * attempt, when the attempt first ends. A thread-folder copy with changes Git does not hold is
+ * left alone; one Git holds unchanged, as after a relaunch, is replaced. A report Git already holds
+ * with these contents, under the folder's present or an earlier name, is never written again: a
+ * retired report stays retired, and a newer committed version is not overwritten by an older one.
+ * A run homed in a retired `+/_THREADS/` folder follows its work folder, and one with none keeps
+ * its report in the state folder.
  */
 const homeReport = async (context: AgentContext, directory: string, name: string): Promise<void> => {
   const source = join(directory, `${name}.report.md`)
@@ -308,7 +310,8 @@ const homeReport = async (context: AgentContext, directory: string, name: string
   if ((await read(target)) !== undefined) {
     const status = await git(context, thread.repository, ['status', '--porcelain', '--', target])
     if (status.output.trim()) return
-  } else if (await heldAs(context, thread, `${name}.report.md`, source)) return
+  }
+  if (await heldAs(context, thread, `${name}.report.md`, source)) return
   await mkdir(dirname(target), { recursive: true })
   await writeFile(target, report)
 }
@@ -428,7 +431,8 @@ const agentChanges = async (
     await modified(join(directory, `${name}.status`)),
     await modified(join(directory, `${name}.pid`))
   )
-  if (done) await homeReport(context, directory, name)
+  // Home the report on the attempt's first end only, so that later passes never redeliver it.
+  if (done && !seen.ended) await homeReport(context, directory, name)
   const report = done ? await reportOf(context, directory, name) : undefined
   if (!seen.ended && done) {
     events.push(

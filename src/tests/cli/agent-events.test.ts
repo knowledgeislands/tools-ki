@@ -158,7 +158,7 @@ describe('ki agent run events', () => {
 
   test('leaves a retired report on snapshot recovery, homing a fresh one without replaying terminal events', async () => {
     const box = await sandbox()
-    await setupRun(box)
+    const processes = await setupRun(box)
     await box.run('ki agent launch r one . task.md', { now })
     await box.state.write('ki/agents/r/one.report.md', '# One\n')
     await box.state.write('ki/agents/r/one.status', 'DONE\n')
@@ -177,14 +177,89 @@ describe('ki agent run events', () => {
     expect(await replay()).toBe('absent')
     expect(await box.state.read('ki/agents/r/one.report.md')).toBe('# One\n')
 
-    // A report Git has never held with these contents, as from a relaunch, is still homed.
+    // A relaunch's report, which Git has never held with these contents, is homed when it ends.
+    processes.alive.clear()
+    expect((await box.run('ki agent launch r one . task.md --relaunch', { now })).exitCode).toBe(0)
     await box.state.write('ki/agents/r/one.report.md', '# One again\n')
+    await box.state.write('ki/agents/r/one.status', 'DONE\n')
     expect(await replay()).toBe('# One again\n')
 
     // Staged, then deleted from the working tree: the index alone holds it.
     await box.project.git(['add', '--', '+/_WORK/ki.r/one.report.md'])
     await rm(`${box.project.path}/+/_WORK/ki.r/one.report.md`)
+    processes.alive.clear()
+    expect((await box.run('ki agent launch r one . task.md --relaunch', { now })).exitCode).toBe(0)
+    await box.state.write('ki/agents/r/one.report.md', '# One again\n')
+    await box.state.write('ki/agents/r/one.status', 'DONE\n')
     expect(await replay()).toBe('absent')
+  })
+
+  test('homes a report once, when its attempt first ends, never redelivering it or overwriting a newer one', async () => {
+    const box = await sandbox()
+    await setupRun(box)
+    for (const name of ['swept', 'kept']) {
+      await box.run(`ki agent launch r ${name} . task.md`, { now })
+      await box.state.write(`ki/agents/r/${name}.report.md`, `# ${name}\n`)
+      await box.state.write(`ki/agents/r/${name}.status`, 'DONE\n')
+    }
+    await box.run('ki agent status r', { now })
+    expect(await box.project.read('+/_WORK/ki.r/swept.report.md')).toBe('# swept\n')
+
+    // The coordinator sweeps one copy and commits a newer version of the other.
+    await rm(`${box.project.path}/+/_WORK/ki.r/swept.report.md`)
+    await box.project.git(['add', '--', '+/_WORK/ki.r/kept.report.md'])
+    await box.project.git(['commit', '-q', '-m', 'kept'])
+    await box.project.write('+/_WORK/ki.r/kept.report.md', '# kept, answered\n')
+    await box.project.git(['commit', '-q', '-am', 'answered'])
+
+    await box.run('ki agent status r', { now })
+    await expect(box.project.read('+/_WORK/ki.r/swept.report.md')).rejects.toThrow()
+    expect(await box.project.read('+/_WORK/ki.r/kept.report.md')).toBe('# kept, answered\n')
+  })
+
+  test('homes a report into a work folder Git has never held', async () => {
+    const box = await sandbox()
+    await setupRun(box)
+    // No ref and an empty index: the work folder exists only in the working tree.
+    await box.project.git(['update-ref', '-d', 'HEAD'])
+    await box.project.git(['rm', '-q', '--cached', '+/_WORK/ki.r/work.md'])
+    await box.run('ki agent launch r one . task.md', { now })
+    await box.state.write('ki/agents/r/one.report.md', '# One\n')
+    await box.state.write('ki/agents/r/one.status', 'DONE\n')
+    await box.run('ki agent status r', { now })
+    expect(await box.project.read('+/_WORK/ki.r/one.report.md')).toBe('# One\n')
+  })
+
+  test("keeps a report retired under the work folder's earlier name retired after the folder is renamed", async () => {
+    const box = await sandbox()
+    await setupRun(box)
+    await box.run('ki agent launch r one . task.md', { now })
+    await box.state.write('ki/agents/r/one.report.md', '# One\n')
+    await box.state.write('ki/agents/r/one.status', 'DONE\n')
+    await box.run('ki agent status r', { now })
+    await box.project.git(['add', '--', '+/_WORK/ki.r/one.report.md'])
+    await box.project.git(['commit', '-q', '-m', 'thread'])
+    await box.project.git(['rm', '-q', '+/_WORK/ki.r/one.report.md'])
+    await box.project.git(['commit', '-q', '-m', 'retire'])
+    // The rename moves two files with the folder and brings one in from elsewhere under a new name.
+    await box.project.write('+/_WORK/ki.r/notes.md', '# Notes\n')
+    await box.project.write('brief.md', '# Brief\n')
+    await box.project.git(['add', '--', '+/_WORK/ki.r/notes.md', 'brief.md'])
+    await box.project.git(['commit', '-q', '-m', 'notes'])
+    await box.project.git(['mv', '+/_WORK/ki.r', '+/_WORK/ki.s'])
+    await box.project.git(['mv', 'brief.md', '+/_WORK/ki.s/one.md'])
+    await box.project.write('+/_WORK/ki.s/work.md', '---\nid: ki.s\n---\n')
+    await box.project.git(['add', '--', '+/_WORK/ki.s/work.md'])
+    await box.project.git(['commit', '-q', '-m', 'rename'])
+    expect((await box.run('ki agent home r --work ki.s', { now })).exitCode).toBe(0)
+
+    // Lost event evidence sees the agent end afresh; its retired report still does not come back.
+    await box.state.write('ki/agents/r/events.state.json', '{}\n')
+    await rm(`${box.state.path}/ki/agents/r/events.jsonl`)
+    await box.run('ki agent status r', { now })
+    expect((await kinds(box)).at(-1)).toBe('one done: DONE')
+    await expect(box.project.read('+/_WORK/ki.s/one.report.md')).rejects.toThrow()
+    await expect(box.project.read('+/_WORK/ki.r/one.report.md')).rejects.toThrow()
   })
 
   test('turns milestone, blocked and failed status lines into events, never re-emitting one', async () => {
