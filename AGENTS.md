@@ -10,5 +10,6 @@
 
 ## Working contract
 
+- Develop `tools-ki` only in a linked worktree. Under `ki-git`, fast-forward verified changes into the primary `main` checkout so every session runs committed code; keep its `src/` free of uncommitted changes.
 - Exercise behaviour through the public in-process CLI seam `run(args, context)` and the `sandbox()` helper. Inject streams, paths, time, and network through `KiContext`; tests do not contact the network.
 - Keep command modules responsible for grammar, validation, and rendering, and core modules responsible for typed domain behaviour and repository effects. Do not add legacy aliases or compatibility paths unless a transition is explicitly authorised.
