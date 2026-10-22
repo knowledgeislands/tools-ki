@@ -169,6 +169,7 @@ const gateLines = async (
     const state = await agentState(context, directory, name)
     if (state.kind === 'running')
       lines.push(blocker(`${name} still running (pid ${await pidOf(join(directory, `${name}.pid`))})`))
+    else if (state.kind === 'blocked') lines.push(blocker(`${name} ${state.last}`))
     else if (state.kind === 'finished') lines.push(ok(`${name} finished`))
     else if (request.acceptExited.includes(name)) lines.push(ok(`${name} exited without DONE, accepted`))
     else lines.push(blocker(`${name} exited without DONE`))

@@ -16,6 +16,7 @@ export const controlCommands = (context: KiContext, agent: AgentContext): readon
     context.stdout.write(
       `${json ? JSON.stringify(receipt) : `${localTime(agent)} - ${receipt.outcome}: ${receipt.reason} (${receipt.operationId})${receipt.recoveryCommand ? `\nnext: ${receipt.recoveryCommand}` : ''}`}\n`
     )
+    if (!json) for (const warning of receipt.warnings ?? []) context.stderr.write(`warning: ${warning}\n`)
     if (receipt.exitCode !== 0) throw new KiExit(receipt.exitCode)
   }
   const stop = new Command('stop')

@@ -16,6 +16,7 @@ export interface AttemptIdentity {
   readonly entry?: string | undefined
   owner?: ProcessIdentity | undefined
   stoppedBy?: string | undefined
+  gateFailure?: string | undefined
   state: 'held' | 'running' | 'stop-requested' | 'stopped' | 'stop-timeout' | 'done' | 'failed' | 'unconfirmed'
 }
 

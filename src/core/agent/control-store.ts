@@ -22,6 +22,7 @@ export interface QueueIdentity {
   readonly request: unknown
   readonly brief: string
   disposition?: 'dequeued' | 'failed' | 'blocked' | undefined
+  dispositionReason?: string | undefined
   cancellationOperation?: string | undefined
   state: 'queued' | 'claimed' | 'started' | 'cancelled' | 'unconfirmed'
   operation?: string | undefined
@@ -40,6 +41,7 @@ export interface ControlReceipt {
   readonly timestamp: string
   readonly exitCode: 0 | 1
   readonly eventSequence?: number | undefined
+  readonly warnings?: readonly string[] | undefined
   readonly evidence?: unknown
   readonly stopCommand?: string | undefined
   readonly dequeueCommand?: string | undefined
@@ -124,6 +126,8 @@ const replay = async (directory: string, store: ControlStore): Promise<ControlSt
   const intents = new Set<string>()
   for (const line of (journal ?? '').split('\n').filter(Boolean)) {
     const entry = JSON.parse(line) as ControlOperation & { phase: string }
+    if (!['intent', 'observed'].includes(entry.phase))
+      throw new KiError('control-state-unverified: unknown journal phase', 1)
     if (entry.phase === 'intent') {
       intents.add(entry.id)
       const old = store.operations[entry.id]
@@ -264,6 +268,23 @@ export const loadControl = async (directory: string): Promise<ControlStore | und
       )
     )
       throw new Error('dependency shape')
+    for (const attempt of [...Object.values(parsed.attempts), ...Object.values(parsed.history)]) {
+      if (
+        !['held', 'running', 'stop-requested', 'stopped', 'stop-timeout', 'done', 'failed', 'unconfirmed'].includes(
+          attempt.state
+        ) ||
+        (attempt.gateFailure !== undefined && (typeof attempt.gateFailure !== 'string' || !attempt.gateFailure.length))
+      )
+        throw new Error('invalid attempt outcome')
+    }
+    for (const entry of Object.values(parsed.entries)) {
+      if (
+        !['queued', 'claimed', 'started', 'cancelled', 'unconfirmed'].includes(entry.state) ||
+        (entry.dispositionReason !== undefined &&
+          (typeof entry.dispositionReason !== 'string' || !entry.dispositionReason.length))
+      )
+        throw new Error('invalid queue outcome')
+    }
     return await replay(directory, dictionaries(parsed))
   } catch {
     throw new KiError('control-state-unverified: invalid control journal projection', 1)
@@ -346,8 +367,16 @@ export const saveControl = async (directory: string, store: ControlStore): Promi
   bindDependants(store)
   for (const attempt of Object.values(store.attempts)) store.history[attempt.token] = structuredClone(attempt)
   const temporary = join(directory, `control-${randomUUID()}.tmp`)
-  await writeFile(temporary, `${JSON.stringify(store)}\n`)
-  await rename(temporary, join(directory, 'control.json'))
+  const contents = `${JSON.stringify(store)}\n`
+  try {
+    await writeFile(temporary, contents)
+    await rename(temporary, join(directory, 'control.json'))
+  } catch (error) {
+    if ((await controlRead(join(directory, 'control.json'))) !== contents)
+      throw new KiError(`control-state-unverified: projection write interrupted: ${String(error)}`, 1)
+  }
+  if ((await controlRead(join(directory, 'control.json'))) !== contents)
+    throw new KiError('control-state-unverified: projection write could not be verified; preserve all evidence', 1)
   // Every writer enters through controlTransaction; publication updates that transaction's snapshot.
   activeTransactions.set(directory, dictionaries(structuredClone(store)))
 }
@@ -360,7 +389,13 @@ export const controlTransaction = async <T>(
   retries = 100
 ): Promise<T> => {
   const directory = runDirectory(context, run)
-  await mkdir(directory, { recursive: true })
+  await mkdir(directory, { recursive: true }).catch((error: unknown) => {
+    throw new KiError(
+      `control-transaction-unavailable: ${String(error)}`,
+      1,
+      'preserve the run evidence and restore directory access before retrying'
+    )
+  })
   return withRunLock(
     directory,
     'control',
@@ -375,9 +410,67 @@ export const controlTransaction = async <T>(
       }
     },
     context.processes.onExit,
-    retries
-  )
+    retries,
+    (result, error) => {
+      if (
+        result !== null &&
+        typeof result === 'object' &&
+        'schema' in result &&
+        result.schema === 'ki/agent-control/v1'
+      ) {
+        const receipt = result as T & ControlReceipt
+        return {
+          ...receipt,
+          warnings: [
+            ...(receipt.warnings ?? []),
+            `observed ${receipt.outcome}; lock release requires inspection: ${String(error)}`
+          ]
+        }
+      }
+      throw error
+    }
+  ).catch((error: unknown) => {
+    if (error instanceof KiError) throw error
+    throw new KiError(
+      `control-transaction-unverified: ${String(error)}`,
+      1,
+      'preserve the run evidence and inspect the original operation before retrying'
+    )
+  })
 }
+/** Ownership loss is notification evidence, never permission to take over a lock. */
+export const lostControlOperations = async (
+  context: AgentContext,
+  directory: string,
+  store: ControlStore | undefined
+): Promise<ControlOperation[]> => {
+  if (!store || activeTransactions.has(directory)) return []
+  const pending = Object.values(store.operations).filter((operation) => {
+    if (
+      operation.receipt ||
+      operation.resolvedBy ||
+      !['stop', 'spawn', 'spawn-supervisor'].includes(operation.operation)
+    )
+      return false
+    const target = operation.target as AttemptIdentity
+    const attempt = store.history[target.token]
+    return !attempt || !['stopped', 'done', 'failed'].includes(attempt.state)
+  })
+  if (!pending.length) return []
+  const lock = await controlRead(join(directory, 'control.lock'))
+  if (lock !== undefined) {
+    let holder: { pid: number }
+    try {
+      holder = JSON.parse(lock) as { pid: number }
+      if (!Number.isSafeInteger(holder.pid) || holder.pid <= 0) throw new Error('invalid holder')
+    } catch (error) {
+      throw new KiError(`control-state-unverified: invalid holder evidence: ${String(error)}`, 1)
+    }
+    if (context.processes.alive(holder.pid)) return []
+  }
+  return pending
+}
+
 /** Wait through the longest supported stop grace; never silently wait forever on an abandoned lock. */
 export const pendingControl = async <T>(
   context: AgentContext,
@@ -460,14 +553,21 @@ export const finishOperation = async (
     timestamp: instant(context),
     ...result
   }
-  await saveControl(directory, store)
-  await mkdir(join(directory, 'control-receipts'), { recursive: true })
-  await writeFile(join(directory, 'control-receipts', `${operation.id}.json`), `${JSON.stringify(receipt)}\n`, {
-    flag: 'wx'
-  })
-  await appendFile(join(directory, 'control.journal.jsonl'), `${JSON.stringify({ phase: 'observed', receipt })}\n`)
+  // The observation is part of the first atomic projection, before secondary
+  // receipt/event projections. A later I/O failure cannot contradict the effect.
   operation.receipt = receipt
-  await saveControl(directory, store)
+  try {
+    await saveControl(directory, store)
+    await mkdir(join(directory, 'control-receipts'), { recursive: true })
+    await writeFile(join(directory, 'control-receipts', `${operation.id}.json`), `${JSON.stringify(receipt)}\n`, {
+      flag: 'wx'
+    })
+    await appendFile(join(directory, 'control.journal.jsonl'), `${JSON.stringify({ phase: 'observed', receipt })}\n`)
+    await saveControl(directory, store)
+  } catch (error) {
+    if (!['stop', 'dequeue', 'recover-resolve'].includes(operation.operation)) throw error
+    return { ...receipt, warnings: [`observed ${receipt.outcome}; persistence requires inspection: ${String(error)}`] }
+  }
   return receipt
 }
 

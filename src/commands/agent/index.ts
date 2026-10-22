@@ -244,8 +244,9 @@ export const createAgentCommand = (context: KiContext): Command => {
       .action(async (run: string, options: { max: number; interval: number; foreground?: boolean }) => {
         const dispatch = { run, max: options.max, seconds: options.interval }
         if (options.foreground) return dispatchRun(agentContext(context), dispatch, write)
-        const pid = await startDispatcher(agentContext(context), dispatch)
-        write(`dispatching ${run} with up to ${options.max} agents (pid ${pid})`)
+        const started = await startDispatcher(agentContext(context), dispatch)
+        write(`dispatching ${run} with up to ${options.max} agents (pid ${started.pid})`)
+        if (started.warning) context.stderr.write(`warning: ${started.warning}\n`)
       })
   )
 

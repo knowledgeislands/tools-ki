@@ -262,7 +262,7 @@ export const stopAgent = async (context: AgentContext, request: StopRequest): Pr
         }
         attempt.state = 'stopped'
         attempt.stoppedBy = operation.id
-        await saveControl(directory, store)
+        // finishOperation persists the observation; publication is independently recoverable.
         return finish(
           'stopped',
           request.reason,

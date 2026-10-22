@@ -381,7 +381,7 @@ describe('ki agent run events', () => {
     await olderRun(lost)
     await lost.state.write(
       'ki/agents/r/events.jsonl',
-      `${JSON.stringify({ seq: 1, at: 'x', run: 'r', agent: 'quit', attempt: 1, kind: 'launch', text: 'launched (pid 7)' })}\n`
+      `${JSON.stringify({ seq: 1, at: new Date(now()).toISOString(), run: 'r', agent: 'quit', attempt: 1, kind: 'launch', text: 'launched (pid 7)' })}\n`
     )
     await lost.run('ki agent status r', { now })
     expect(await kinds(lost)).toEqual([

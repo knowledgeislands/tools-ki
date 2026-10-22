@@ -28,6 +28,7 @@ import {
   finishOperation,
   identity,
   loadControl,
+  lostControlOperations,
   newStore,
   nextIdentity,
   pendingControl,
@@ -36,10 +37,18 @@ import {
   verifyStore,
   verifyWorkHome
 } from './control-store.ts'
-import { deriveEvents, initializeEvents, type Observed, type RunEvent, readEvents, recordEvent } from './events.ts'
+import {
+  deriveEvents,
+  flushPendingEvents,
+  initializeEvents,
+  type Observed,
+  type RunEvent,
+  readEvents,
+  recordEvent
+} from './events.ts'
 import type { DependencyIdentity } from './identities.ts'
 import { type AgentEffort, type AgentRuntime, runtimeLaunch } from './runtimes.ts'
-import { ownsScope } from './scope.ts'
+import { ownershipLoss, ownsScope } from './scope.ts'
 import { requireSelection, resolveSelection, type SelectionRequest, sha256 } from './selection.ts'
 import { readThread, reportPath, type ThreadHome, threadHome, threadPath } from './thread.ts'
 
@@ -76,7 +85,7 @@ export interface LaunchRequest extends SelectionRequest {
 export type AgentState =
   | { readonly kind: 'finished'; readonly last: string }
   | {
-      readonly kind: 'running' | 'exited' | 'stopped' | 'dequeued' | 'failed' | 'queued'
+      readonly kind: 'running' | 'exited' | 'stopped' | 'dequeued' | 'failed' | 'queued' | 'blocked'
       readonly last: string | undefined
     }
 
@@ -104,6 +113,8 @@ const minimumAttempt = async (directory: string, name: string): Promise<number> 
     const attempt = packet.identity?.attempt
     if (Number.isSafeInteger(attempt) && (attempt as number) > 0) minimum = Math.max(minimum, (attempt as number) + 1)
   }
+  for (const event of await readEvents(directory))
+    if (event.agent === name) minimum = Math.max(minimum, event.attempt + 1)
   return minimum
 }
 
@@ -207,19 +218,28 @@ export const agentState = async (context: AgentContext, directory: string, name:
     return { kind: 'dequeued', last: 'dequeued' }
   if (attempt?.state === 'failed') return { kind: 'failed', last: 'failed' }
   if (attempt?.state === 'done') return { kind: 'finished', last: 'done' }
-  if (attempt?.state === 'held' && (pid === undefined || !context.processes.alive(pid)))
+  const ownerPid = pid ?? attempt?.owner?.pid
+  if (store && attempt) {
+    const loss = await ownershipLoss(
+      context,
+      store,
+      attempt,
+      ownerPid !== undefined && context.processes.alive(ownerPid)
+    )
+    if (loss) return { kind: 'blocked', last: `${attempt.state === 'held' ? 'held; ' : ''}${loss.text}` }
+  }
+  if (attempt?.state === 'held' && pid === undefined && attempt.owner && context.processes.alive(attempt.owner.pid))
+    return { kind: 'running', last: 'held; launch acknowledgement unavailable' }
+  const status = lines(await read(join(directory, `${name}.status`)))
+  if (attempt?.state === 'held')
     return {
       kind: 'running',
-      last:
-        pid === undefined
-          ? 'held; launch acknowledgement unavailable'
-          : 'held; supervisor unavailable; inspect control evidence before recovery'
+      last: status.at(-1)?.trim() === 'DONE' ? 'held; worker launch not authorised' : status.at(-1)
     }
-  if (attempt && ['unconfirmed', 'stop-requested', 'stop-timeout'].includes(attempt.state))
-    return { kind: 'running', last: attempt.state }
-  const status = lines(await read(join(directory, `${name}.status`)))
+  if (attempt?.state === 'unconfirmed' && !context.processes.control)
+    return { kind: 'running', last: 'claim-unconfirmed' }
   if (status.at(-1)?.trim() === 'DONE') {
-    if (attempt?.owner && context.processes.control) {
+    if (attempt && context.processes.control) {
       try {
         const scope = await context.processes.control.inspect(attempt)
         if (!ownsScope(attempt, scope) || !scope.containment || !scope.empty || !scope.fenced)
@@ -230,6 +250,8 @@ export const agentState = async (context: AgentContext, directory: string, name:
     }
     return { kind: 'finished', last: status.at(-2) ?? 'DONE' }
   }
+  if (attempt && ['unconfirmed', 'stop-requested', 'stop-timeout'].includes(attempt.state))
+    return { kind: 'running', last: attempt.state }
   const kind = pid !== undefined && context.processes.alive(pid) ? 'running' : 'exited'
   return { kind, last: status.at(-1) }
 }
@@ -280,14 +302,13 @@ const gate = async (
       if (attempt.state === 'stopped' || attempt.state === 'failed')
         return { kind: 'closed', reason: `${name} was ${attempt.state}` }
       if (attempt.state === 'done') continue
-      if (current?.token !== target.token) {
-        waiting.push(name)
-        continue
-      }
+      if (current?.token !== target.token)
+        return { kind: 'closed', reason: `${name} attempt was superseded without verified completion` }
     } else if (bindings && store && dependencyTargets(store, [name])[name])
       return { kind: 'closed', reason: `${name} has an unbound predecessor identity` }
     const state = await agentState(context, directory, name)
     if (state.kind === 'finished') continue
+    if (state.kind === 'blocked') return { kind: 'closed', reason: `${name}: ${state.last}` }
     if (state.kind === 'exited' && (await pidOf(join(directory, `${name}.pid`))) !== undefined)
       return { kind: 'closed', reason: `${name} exited without DONE` }
     waiting.push(name)
@@ -296,13 +317,15 @@ const gate = async (
 }
 
 const describe = (state: AgentState): string =>
-  state.kind === 'stopped' || state.kind === 'dequeued' || state.kind === 'failed' || state.kind === 'queued'
-    ? state.kind
-    : state.kind === 'finished'
-      ? 'finished'
-      : state.kind === 'running'
-        ? (state.last ?? 'no status yet')
-        : `EXITED WITHOUT DONE (${state.last ?? 'no status'})`
+  state.kind === 'blocked'
+    ? (state.last as string)
+    : state.kind === 'stopped' || state.kind === 'dequeued' || state.kind === 'failed' || state.kind === 'queued'
+      ? state.kind
+      : state.kind === 'finished'
+        ? 'finished'
+        : state.kind === 'running'
+          ? (state.last ?? 'no status yet')
+          : `EXITED WITHOUT DONE (${state.last ?? 'no status'})`
 
 export const agents = async (directory: string): Promise<string[]> => {
   const packet = (await readdir(directory))
@@ -781,9 +804,17 @@ export const launchAgent = async (
   if (state.kind === 'closed') throw new KiError(`${request.run}/${request.name} gate cannot open: ${state.reason}`, 1)
   if (earlier && earlier.token !== reserved.token) {
     const current = await agentState(context, directory, request.name)
+    await deriveEvents(context, directory, { ...(await observed(context, directory)), homeReports: false })
     store.history[earlier.token] = {
       ...earlier,
-      state: current.kind === 'finished' ? 'done' : earlier.state === 'stopped' ? 'stopped' : 'failed'
+      state:
+        current.kind === 'finished'
+          ? 'done'
+          : current.kind === 'blocked'
+            ? earlier.state
+            : earlier.state === 'stopped'
+              ? 'stopped'
+              : 'failed'
     }
   }
   if (request.relaunch) await setAside(context, directory, thread, request)
@@ -939,6 +970,13 @@ export const holdAgent = async (context: AgentContext, candidate: LaunchRequest)
       }
       if (state.kind === 'closed') {
         attempt.state = 'failed'
+        attempt.gateFailure = `gate cannot open: ${state.reason}`
+        if (attempt.entry) {
+          const entry = store.entries[attempt.entry] as QueueIdentity
+          entry.state = 'cancelled'
+          entry.disposition = 'blocked'
+          entry.dispositionReason = attempt.gateFailure
+        }
         await saveControl(directory, store)
         const line = `${stamp(context)} - gate cannot open: ${state.reason}`
         await writeFile(`${base}.status`, `${line}\n`)
@@ -986,12 +1024,26 @@ const queueOutcomeOf = (store: ControlStore | undefined, operation: ControlOpera
 
 export const readQueue = async (directory: string): Promise<LaunchRequest[]> => {
   const store = await loadControl(directory)
-  const projection = lines(await read(queueFile(directory))).map((line) => JSON.parse(line) as LaunchRequest)
+  let projection: LaunchRequest[]
+  try {
+    projection = lines(await read(queueFile(directory))).map((line) => JSON.parse(line) as LaunchRequest)
+  } catch (error) {
+    throw new KiError(
+      `queue-evidence-unverified: preserve the queue projection and control journal: ${String(error)}`,
+      1
+    )
+  }
   if (projection.some((request) => request.entry !== undefined && !store?.entries[request.entry]))
     throw new KiError('queue-identity-unverified: unknown queue entry; inspect the control journal', 1)
+  const refusals = new Set(
+    (await readEvents(directory))
+      .filter((event) => event.queueSource && (event.kind === 'blocked' || event.kind === 'failed'))
+      .map((event) => event.queueSource)
+  )
   const legacy = projection.filter(
     (request) =>
       request.entry === undefined &&
+      !refusals.has(sha256(canonical(request))) &&
       !Object.values(store?.operations ?? {}).some(
         (operation) =>
           queueSourceOf(operation) === sha256(canonical(request)) &&
@@ -1013,8 +1065,18 @@ export const readQueue = async (directory: string): Promise<LaunchRequest[]> => 
 
 const writeQueue = async (directory: string, queue: readonly LaunchRequest[]): Promise<void> => {
   const temporary = `${queueFile(directory)}.${randomUUID()}.tmp`
-  await writeFile(temporary, queue.map((request) => `${JSON.stringify(request)}\n`).join(''))
-  await rename(temporary, queueFile(directory))
+  const contents = queue.map((request) => `${JSON.stringify(request)}\n`).join('')
+  try {
+    await writeFile(temporary, contents)
+    await rename(temporary, queueFile(directory))
+    if ((await read(queueFile(directory))) !== contents)
+      throw new Error('queue publication differs from its intended bytes')
+  } catch (error) {
+    throw new KiError(
+      `queue-evidence-unverified: preserve the control journal and queue projection: ${String(error)}`,
+      1
+    )
+  }
 }
 
 /** Appends a ready-made agent to the run queue; returns its position. */
@@ -1062,6 +1124,8 @@ export const queueAgent = async (
   if (!request.relaunch) await refuseTaken(directory, thread, request)
   const prompt = join(directory, `${request.name}.queued.md`)
   await copyFile(resolve(context.workingDirectory, request.prompt), prompt)
+  if ((await read(prompt)) !== body)
+    throw new KiError('queue-evidence-unverified: copied prompt differs from the frozen brief', 1)
   // The thread home is on record now, so the dispatcher's launch needs no repository.
   const store = (await loadControl(directory)) ?? (await newStore(context, request.run))
   await verifyStore(context, request.run, store)
@@ -1069,6 +1133,8 @@ export const queueAgent = async (
   const brief = join(directory, 'queue-entries', `${id}.md`)
   await mkdir(join(directory, 'queue-entries'), { recursive: true })
   await copyFile(prompt, brief)
+  if ((await read(brief)) !== body)
+    throw new KiError('queue-evidence-unverified: retained brief differs from the frozen prompt', 1)
   const entry = {
     id,
     brief,
@@ -1118,14 +1184,17 @@ export const queueAgent = async (
 export interface AgentSummary {
   readonly lines: readonly string[]
   readonly live: boolean
+  readonly blocked?: string | undefined
 }
 
 const summary = async (context: AgentContext, directory: string): Promise<AgentSummary> => {
   const result: string[] = []
   let live = false
+  let blocked: string | undefined
   for (const name of await agents(directory)) {
     const state = await agentState(context, directory, name)
     live ||= state.kind === 'running'
+    if (state.kind === 'blocked') blocked = state.last
     result.push(`${name}: ${describe(state)}`)
     result.push(...(await agentWorktreeLines(context, directory, name, state.kind !== 'running')))
   }
@@ -1145,7 +1214,10 @@ const summary = async (context: AgentContext, directory: string): Promise<AgentS
     }
     if (entry.state === 'cancelled') result.push(`${entry.name}: ${entry.disposition} [${entry.id}]`)
   }
-  return { lines: result, live }
+  const lost = await lostControlOperations(context, directory, store)
+  if (lost.length)
+    blocked = `ownership-unverified: ${lost.map((operation) => operation.id).join(', ')}; control holder lost; inspect preserved evidence`
+  return { lines: result, live, blocked }
 }
 
 /** Brings the run's `events.jsonl` up to date with its packet. */
@@ -1188,7 +1260,7 @@ export const runStatus = async (context: AgentContext, run: string): Promise<Age
 
 /** One live item of a run, in the `ki-coordination` banner's `- [running] <agent> - <what>` form. */
 export interface RunItem {
-  readonly kind: 'running' | 'queued'
+  readonly kind: 'running' | 'queued' | 'blocked'
   readonly agent: string
   readonly what: string
 }
@@ -1210,6 +1282,7 @@ export const runOverview = async (context: AgentContext, run: string): Promise<R
   for (const name of await agents(directory)) {
     const state = await agentState(context, directory, name)
     if (state.kind === 'running') items.push({ kind: 'running', agent: name, what: describe(state) })
+    if (state.kind === 'blocked') items.push({ kind: 'blocked', agent: name, what: describe(state) })
     worktrees.push(...(await agentWorktreeLines(context, directory, name, state.kind !== 'running')))
   }
   for (const [position, request] of (await readQueue(directory)).entries())
@@ -1321,6 +1394,12 @@ export const watchRun = async (
       cursor = event.seq
     }
     const line = [stamp(context), ...current.lines].join(' | ')
+    if (current.blocked)
+      throw new KiError(
+        current.blocked,
+        1,
+        'preserve the attempt evidence; inspect before an explicit launch --relaunch'
+      )
     if (!current.live) return emit(`${line} | ALL FINISHED`)
     emit(line)
     await context.processes.sleep(seconds * 1000)
@@ -1360,7 +1439,10 @@ export interface DispatchRequest {
 }
 
 /** Starts the run's dispatcher as a detached `ki agent dispatch --foreground` process. */
-export const startDispatcher = async (context: AgentContext, request: DispatchRequest): Promise<number> => {
+export const startDispatcher = async (
+  context: AgentContext,
+  request: DispatchRequest
+): Promise<{ readonly pid: number; readonly warning?: string }> => {
   const directory = await existingRun(context, request.run)
   const live = await running(context, join(directory, 'dispatch.pid'))
   if (live) throw new KiError(`the ${request.run} dispatcher is already running (pid ${live})`, 1)
@@ -1381,8 +1463,17 @@ export const startDispatcher = async (context: AgentContext, request: DispatchRe
     environment: context.environment,
     log: join(directory, 'dispatch.log')
   })
-  await writeFile(join(directory, 'dispatch.pid'), `${pid}\n`)
-  return pid
+  try {
+    await writeFile(join(directory, 'dispatch.pid'), `${pid}\n`)
+    if ((await read(join(directory, 'dispatch.pid'))) !== `${pid}\n`)
+      throw new Error('PID publication could not be verified')
+  } catch (error) {
+    return {
+      pid,
+      warning: `dispatcher started; preserve dispatch.log and inspect its process before retrying: ${String(error)}`
+    }
+  }
+  return { pid }
 }
 
 /**
@@ -1395,8 +1486,10 @@ export const dispatchRun = async (
   emit: (line: string) => void
 ): Promise<void> => {
   const directory = await existingRun(context, request.run)
+  let confirmedStart = false
   for (;;) {
     const result = await pendingControl(context, request.run, async () => {
+      await flushPendingEvents(context, directory)
       const store = await loadControl(directory)
       if (store) {
         await verifyStore(context, request.run, store)
@@ -1411,8 +1504,14 @@ export const dispatchRun = async (
         }
       }
       let alive = 0
-      for (const name of await agents(directory))
-        if ((await agentState(context, directory, name)).kind === 'running') alive += 1
+      for (const name of await agents(directory)) {
+        const state = await agentState(context, directory, name)
+        if (state.kind === 'running') alive += 1
+        if (state.kind === 'blocked' && store?.attempts[name]?.state !== 'held') {
+          emit(`${stamp(context)} ${state.last}`)
+          return 'uncertain'
+        }
+      }
       const queue = await readQueue(directory)
       const gates: Gate[] = []
       for (const queued of queue)
@@ -1428,33 +1527,39 @@ export const dispatchRun = async (
       let next = queue[index]
       const state = gates[index]
       const drop = async (queued: LaunchRequest, kind: 'blocked' | 'failed', reason: string): Promise<void> => {
-        if (store && queued.entry && store.entries[queued.entry]) {
-          const entry = store.entries[queued.entry] as QueueIdentity
+        const text = `could not launch: ${reason}`
+        const entry = queued.entry === undefined ? undefined : store?.entries[queued.entry]
+        const publish = async (): Promise<void> =>
+          recordEvent(
+            context,
+            directory,
+            await observed(context, directory),
+            queued.name,
+            kind,
+            text,
+            undefined,
+            entry?.attempt ?? (await minimumAttempt(directory, queued.name)),
+            queued.entry === undefined ? sha256(canonical(queued)) : undefined
+          )
+        if (store && entry) {
           entry.state = 'cancelled'
           entry.disposition = kind
+          entry.dispositionReason = text
           await saveControl(directory, store)
           const pending = lines(await read(queueFile(directory))).map((line) => JSON.parse(line) as LaunchRequest)
           await writeQueue(
             directory,
-            pending.filter((entry) => entry.entry !== queued.entry)
+            pending.filter((candidate) => candidate.entry !== queued.entry)
           )
-        } else
+          await publish()
+        } else {
+          // Durable refusal evidence precedes removal of a pre-identity packet.
+          await publish()
           await writeQueue(
             directory,
-            queue.filter((entry) => entry !== queued)
+            queue.filter((candidate) => candidate !== queued)
           )
-        await recordEvent(
-          context,
-          directory,
-          await observed(context, directory),
-          queued.name,
-          kind,
-          `could not launch: ${reason}`,
-          undefined,
-          queued.entry === undefined
-            ? await minimumAttempt(directory, queued.name)
-            : store?.entries[queued.entry]?.attempt
-        )
+        }
         emit(`${stamp(context)} could not launch ${queued.name}: ${reason}`)
       }
       if (next && state?.kind === 'closed') {
@@ -1486,11 +1591,11 @@ export const dispatchRun = async (
             next.entry === undefined ? { ...next, queueSource: sha256(canonical(next)) } : next,
             true
           )
+          confirmedStart = true
           await writeQueue(directory, queue.toSpliced(index, 1))
           emit(`${stamp(context)} launched ${next.name}`)
           if (launched.warnings.some((warning) => warning.startsWith('confirmed start;'))) {
             emit(`${stamp(context)} follow-up requires inspection: ${launched.warnings.join('; ')}`)
-            return 'inspection'
           }
         } catch (error) {
           if (launched !== undefined) {
@@ -1532,6 +1637,10 @@ export const dispatchRun = async (
         return 'end'
       }
       return 'sleep'
+    }).catch((error: unknown) => {
+      if (!confirmedStart) throw error
+      emit(`${stamp(context)} follow-up requires inspection: ${String(error)}`)
+      return 'inspection' as const
     })
     if (result === 'uncertain') throw new KiError('claim-unconfirmed: reconcile before dispatching replacement work', 1)
     if (result === 'end' || result === 'inspection') return
@@ -1562,16 +1671,26 @@ export const waitForRun = async (
   const seenFile = join(directory, 'events.seen')
   for (;;) {
     // Liveness first, so an agent that stops during this pass still has its events derived.
-    const { live } = await summary(context, directory)
+    const { live, blocked } = await summary(context, directory)
     await pendingObservation(context, directory)
     if (options.next) {
       const cursor = Number.parseInt((await read(seenFile)) ?? '0', 10)
       const event = (await readEvents(directory, cursor)).find((candidate) => waitedKinds.has(candidate.kind))
       if (event) {
-        await writeFile(seenFile, `${event.seq}\n`)
+        const contents = `${event.seq}\n`
+        try {
+          await writeFile(seenFile, contents)
+        } catch (error) {
+          if ((await read(seenFile)) !== contents)
+            throw new KiError(`events-evidence-unverified: waiter cursor write interrupted: ${String(error)}`, 1)
+        }
+        if ((await read(seenFile)) !== contents)
+          throw new KiError('events-evidence-unverified: waiter cursor write could not be verified', 1)
         return eventText(event)
       }
     }
+    if (blocked)
+      throw new KiError(blocked, 1, 'preserve the attempt evidence; inspect before an explicit launch --relaunch')
     if (!live) return 'ALL FINISHED'
     await context.processes.sleep(options.seconds * 1000)
   }

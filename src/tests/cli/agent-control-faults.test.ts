@@ -96,6 +96,90 @@ const fixture = async () => {
   return box
 }
 
+test('fourth-review dispatcher continues the queue after a confirmed packet warning', async () => {
+  const box = await fixture()
+  await box.run('ki agent queue r first brief.md --json')
+  await box.run('ki agent queue r second brief.md --json')
+  let launches = 0
+  box.setAgentProcesses({
+    launch: async () => {
+      launches += 1
+      const name = launches === 1 ? 'first' : 'second'
+      if (launches === 1) fault.writeTarget = `${box.state.path}/ki/agents/r/first.launch.json`
+      await box.state.write(`ki/agents/r/${name}.status`, 'DONE\n')
+      await box.state.write(`ki/agents/r/${name}.report.md`, '# Done\n')
+      return 4000 + launches
+    },
+    alive: () => false,
+    sleep: async () => {}
+  })
+  const dispatched = await box.run('ki agent dispatch r --max 1 --foreground')
+  expect(dispatched.exitCode, dispatched.output).toBe(0)
+  expect(launches).toBe(2)
+  expect(dispatched.output).toContain('launched first')
+  expect(dispatched.output).toContain('launched second')
+})
+
+test.each(['held-gate', 'queued-gate', 'queued-refusal'] as const)(
+  'fourth-review %s outcome survives a failed pending write',
+  async (kind) => {
+    const box = await fixture()
+    await box.state.write('ki/agents/r/before.pid', '17\n')
+    let command: string
+    if (kind === 'held-gate') {
+      const launch = await box.run('ki agent launch r worker . brief.md --wait-for before --json')
+      const token = JSON.parse(launch.stdout).identity.token
+      command = `ki agent launch r worker . ${box.state.path}/ki/agents/r/worker.prompt.md --foreground --launch-token ${token}`
+    } else {
+      await box.run(`ki agent queue r worker brief.md --json ${kind === 'queued-gate' ? '--wait-for before' : ''}`)
+      command = 'ki agent dispatch r --max 1 --foreground'
+      if (kind === 'queued-refusal')
+        await rename(
+          `${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/skills/governance/ki-delegation/assets/rules-none.md`,
+          `${box.data.path}/footer.saved`
+        )
+    }
+    box.setAgentProcesses({
+      launch: async () => {
+        throw new Error('worker must not start')
+      },
+      alive: (pid) => pid !== 17,
+      sleep: async () => {}
+    })
+    fault.writeTarget = `${box.state.path}/ki/agents/r/events.pending/*`
+    await box.run(command)
+    fault.writeTarget = ''
+    expect((await box.run('ki agent status r')).exitCode).toBe(0)
+    const events = (await box.state.read('ki/agents/r/events.jsonl'))
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line))
+    const outcome = kind === 'queued-refusal' ? 'failed' : 'blocked'
+    expect(events.filter((event) => event.agent === 'worker' && event.kind === outcome)).toHaveLength(1)
+    if (kind === 'held-gate')
+      expect(events.filter((event) => event.agent === 'worker' && event.kind === 'failed')).toHaveLength(0)
+  }
+)
+
+test('fourth-review legacy refusal cannot remove its queue entry before publishing durable evidence', async () => {
+  const box = await fixture()
+  const request = {
+    run: 'r',
+    name: 'worker',
+    workdir: `${box.project.path}/missing`,
+    prompt: `${box.project.path}/brief.md`,
+    runtime: 'claude',
+    addDirs: [],
+    rules: 'none',
+    allow: [],
+    waitFor: []
+  }
+  await box.state.write('ki/agents/r/queue.jsonl', `${JSON.stringify(request)}\n`)
+  fault.writeTarget = `${box.state.path}/ki/agents/r/events.pending/*`
+  expect((await box.run('ki agent dispatch r --max 1 --foreground')).exitCode).toBe(1)
+  expect(await box.state.read('ki/agents/r/queue.jsonl')).toContain('worker')
+})
+
 test('recovery inspection refuses a journal lost after replay with a typed result', async () => {
   const box = await fixture()
   expect((await box.run('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
@@ -352,9 +436,11 @@ test('third-review dispatch returns a confirmed start with its packet inspection
   box.setAgentProcesses({
     launch: async () => {
       fault.writeTarget = `${box.state.path}/ki/agents/r/worker.launch.json`
+      await box.state.write('ki/agents/r/worker.status', 'DONE\n')
+      await box.state.write('ki/agents/r/worker.report.md', '# Done\n')
       return 4001
     },
-    alive: () => true,
+    alive: () => false,
     sleep: async () => {}
   })
   const result = await box.run('ki agent dispatch r --max 1 --foreground')

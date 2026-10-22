@@ -16,7 +16,8 @@ export const withRunLock = async <T>(
   kind: 'control' | 'events',
   action: () => Promise<T>,
   onExit: AgentProcesses['onExit'],
-  retries = 100
+  retries = 100,
+  retain?: (result: T, error: unknown) => T
 ): Promise<T> => {
   const lock = join(directory, `${kind}.lock`)
   const contents = `${JSON.stringify({ ...holder, token: randomUUID() })}\n`
@@ -74,6 +75,11 @@ export const withRunLock = async <T>(
     }
     throw error
   }
-  finish()
+  try {
+    finish()
+  } catch (error) {
+    if (retain) return retain(result, error)
+    throw new KiError(`${kind}-transaction-unverified: ${String(error)}`, 1, recovery)
+  }
   return result
 }
