@@ -132,6 +132,8 @@ const parseSnapshot = (path: string, source: string): Snapshot =>
   )
 
 const eventLease = new AsyncLocalStorage<string>()
+/** Provenance from the validated raw journal, without adding persisted metadata. */
+const legacyFailureEvents = new WeakSet<RunEvent>()
 
 /** Single-shot observers refuse boundedly. Pending publications survive this refusal. */
 const withLock = <T>(context: AgentContext, directory: string, work: () => Promise<T>): Promise<T> =>
@@ -161,6 +163,9 @@ const writeHistory = async (
   if ((await evidenceRead(path)) !== contents) throw evidenceError(path, 'checkpoint write could not be verified')
 }
 
+const legacyAttempt = (events: readonly RunEvent[]): boolean =>
+  !events.some((event) => ['launch', 'held'].includes(event.kind) && event.terminal !== undefined)
+
 const verifyLegacyHistory = async (
   directory: string,
   events: readonly RunEvent[],
@@ -187,12 +192,11 @@ const verifyLegacyHistory = async (
         throw evidenceError(eventsFile(directory), 'journal has lost an observed immutable attempt')
       continue
     }
+    // Legacy snapshots were seeded before event publication existed. Their
+    // status, query and ended fields cannot prove a missing journal entry.
+    if (legacyAttempt(journal) || journal.some((event) => legacyFailures.has(event.seq))) continue
     const replayed = journal.reduce<Seen>((prior, event) => publicationSeen(prior, event), { attempt: seen.attempt })
-    if (
-      seen.ended &&
-      !replayed.ended &&
-      !journal.some((event) => legacyFailures.has(event.seq) && event.terminal === false)
-    )
+    if (seen.ended && !replayed.ended)
       throw evidenceError(eventsFile(directory), 'journal has lost an observed terminal outcome')
     if (seen.line !== undefined) {
       const form = statusForm.exec(seen.line)
@@ -366,7 +370,12 @@ export const readEvents = async (
     await appendFile(path, intended.subarray((bytes as Buffer).length))
     if (!(await readFile(path)).equals(intended)) throw evidenceError(path, 'journal recovery could not be verified')
   }
-  if (initialize && checkpoint === undefined) await writeHistory(directory, journal, events.length, events)
+  // Only publishers adopt a checkpoint, after reading under their event lock.
+  // Unlocked validation must never replace a concurrently committed append intent.
+  if (initialize && checkpoint === undefined && eventLease.getStore() === directory) {
+    await writeHistory(directory, journal, events.length, events)
+  }
+  for (const event of events) if (legacyFailures.has(event.seq)) legacyFailureEvents.add(event)
   return events.filter((event) => event.seq > after)
 }
 
@@ -574,14 +583,13 @@ const legacyTerminalFailure = ({ kind, text }: RunEvent): boolean =>
     ? text.startsWith('gate cannot open:')
     : text === 'no report' || text === 'attempt failed' || /^exited without DONE \(.+\)$/.test(text))
 
-/** Resolve old failure identities before adopting their journal or trusting a snapshot. */
+/** Old journals lack terminal identities: use corroboration, never absence, to end an attempt. */
 const classifyLegacyFailures = async (directory: string, events: RunEvent[]): Promise<void> => {
   const legacy = events.filter((event) => ['failed', 'blocked'].includes(event.kind) && event.terminal === undefined)
   if (!legacy.length) return
   const source = await evidenceRead(stateFile(directory))
   const snapshot = source === undefined ? {} : parseSnapshot(stateFile(directory), source)
   const control = await loadControl(directory)
-  const progress = new Set<string>()
   for (const event of legacy) {
     const key = seenKey(event.agent, event.attempt)
     const seen = snapshot[key] ?? snapshot[event.agent]
@@ -593,19 +601,17 @@ const classifyLegacyFailures = async (directory: string, events: RunEvent[]): Pr
     })
     const receipt = event.operation === undefined ? undefined : control?.operations[event.operation]?.receipt
     const confirmed = receipt?.eventSequence === event.seq && receipt.resultingState === 'failed'
-    const identity = `${key}/${event.kind}/${event.text}`
     const attemptEvents = events.filter((other) => other.agent === event.agent && other.attempt === event.attempt)
     const later = attemptEvents.some((other) => other.seq > event.seq)
     if (confirmed) {
       events[event.seq - 1] = { ...event, terminal: true }
-    } else if ((line !== undefined && !progress.has(identity)) || later || !legacyTerminalFailure(event)) {
-      progress.add(identity)
+    } else if (later || !legacyTerminalFailure(event)) {
       events[event.seq - 1] = { ...event, terminal: false, statusLine: line }
     } else {
       const attempt = Object.values(control?.history ?? {}).find(
         (value) => value.agent === event.agent && value.attempt === event.attempt
       )
-      const ended = attempt?.state === 'failed' || attempt?.state === 'done'
+      const failed = attempt?.state === 'failed'
       const noReport =
         event.text === 'no report' &&
         status?.done &&
@@ -619,13 +625,25 @@ const classifyLegacyFailures = async (directory: string, events: RunEvent[]): Pr
             entry.state === 'cancelled' &&
             entry.disposition === event.kind
         )
-      if (ended || noReport || queued) events[event.seq - 1] = { ...event, terminal: true }
-      else
-        throw evidenceError(
-          eventsFile(directory),
-          `ambiguous legacy failure at sequence ${event.seq}; preserve status, snapshot and control evidence`
-        )
+      const crashed =
+        seen?.attempt === event.attempt &&
+        seen.ended &&
+        event.text === `exited without DONE (${seen.line ?? 'no status'})`
+      // Repeated worker text corroborates every matching occurrence. Otherwise
+      // leave old wording provisional until current evidence proves an outcome.
+      const terminal = noReport || (line === undefined && (queued || failed || crashed))
+      events[event.seq - 1] = { ...event, terminal: Boolean(terminal), statusLine: terminal ? undefined : line }
     }
+  }
+  // Only the latest matching progress observation owns a retained source line.
+  // A following launcher failure with identical text does not consume that source.
+  const sources = new Set<string>()
+  for (const original of legacy.toReversed()) {
+    const event = events[original.seq - 1] as RunEvent
+    if (event.terminal !== false || event.statusLine === undefined) continue
+    const source = `${seenKey(event.agent, event.attempt)}/${event.statusLine}`
+    if (sources.has(source)) events[event.seq - 1] = { ...event, statusLine: undefined }
+    else sources.add(source)
   }
 }
 
@@ -738,7 +756,13 @@ const readSnapshot = async (
     const seen = previous?.attempt === event.attempt ? previous : { attempt: event.attempt }
     // Rebuild terminal ownership from classified evidence, including poisoned v1 snapshots.
     if (!replayed.has(key)) {
-      snapshot[key] = { ...seen, ended: false, failed: false }
+      const attemptEvents = journal.filter((other) => other.agent === event.agent && other.attempt === event.attempt)
+      // Old snapshots may predate terminal events. Worker-failure progress is
+      // the known poisoning case; modern attempts rebuild wholly from events.
+      const legacyEnd =
+        legacyAttempt(attemptEvents) &&
+        !attemptEvents.some((other) => legacyFailureEvents.has(other) && other.terminal === false)
+      snapshot[key] = legacyEnd ? seen : { ...seen, ended: false, failed: false }
       replayed.add(key)
     }
     const next = publicationSeen(snapshot[key] as Seen, event)

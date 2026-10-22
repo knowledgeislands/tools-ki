@@ -4746,6 +4746,143 @@ const baselineCli = async (box: Awaited<ReturnType<typeof sandbox>>) => {
 
 test.each(
   [true, false].flatMap((snapshot) =>
+    [
+      ['failed', 'no report'],
+      ['failed', 'attempt failed'],
+      ['failed', 'exited without DONE (no status)'],
+      ['failed', 'could not launch: brief missing'],
+      ['blocked', 'gate cannot open: dependency failed']
+    ].map(([kind, text]) => ({ snapshot, kind, text }))
+  )
+)(
+  'seventh-review repeated legacy $kind $text preserves completion, snapshot $snapshot',
+  async ({ snapshot, kind, text }) => {
+    const f = await fixture(false)
+    const cli = await baselineCli(f.box)
+    const old = (command: string) => f.box.run(command, { cli })
+    expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
+    for (const time of ['12:00', '12:01']) {
+      await f.box.state.write('ki/agents/r/worker.status', `${time} UTC - ${kind}: ${text}\n`)
+      expect((await old('ki agent status r')).exitCode).toBe(0)
+    }
+    if (!snapshot)
+      await rename(
+        `${f.box.state.path}/ki/agents/r/events.state.json`,
+        `${f.box.state.path}/ki/agents/r/legacy-snapshot.saved`
+      )
+    await f.box.state.write('ki/agents/r/worker.report.md', '# Repeated progress completed\n')
+    await f.box.state.write('ki/agents/r/worker.status', `12:01 UTC - ${kind}: ${text}\nDONE\n`)
+    f.set({ empty: true })
+    const completed = await f.run('ki agent wait r --next')
+    expect(completed.exitCode, completed.output).toBe(0)
+    const checkpoint = JSON.parse(await f.box.state.read('ki/agents/r/events.history'))
+    expect(checkpoint.failures).toEqual([
+      { seq: 2, terminal: false },
+      { seq: 3, terminal: false, statusLine: `12:01 UTC - ${kind}: ${text}` }
+    ])
+    expect((await f.events()).filter((event) => event.kind === 'done')).toHaveLength(1)
+    expect(await f.box.project.read('+/_WORK/ki.r/worker.report.md')).toBe('# Repeated progress completed\n')
+    await rename(`${f.box.state.path}/ki/agents/r/events.state.json`, `${f.box.state.path}/ki/agents/r/snapshot.saved`)
+    expect((await f.run('ki agent status r')).exitCode).toBe(0)
+    expect((await f.events()).filter((event) => event.kind === 'done')).toHaveLength(1)
+  }
+)
+
+test.each([true, false])(
+  'seventh-review crashed baseline run remains readable and relaunchable, snapshot %s',
+  async (snapshot) => {
+    const f = await fixture(false)
+    const cli = await baselineCli(f.box)
+    const old = (command: string) => f.box.run(command, { cli })
+    expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
+    await f.box.state.write('ki/agents/r/worker.status', '12:00 UTC - milestone: working\n')
+    f.set({ empty: true })
+    expect((await old('ki agent status r')).exitCode).toBe(0)
+    if (!snapshot)
+      await rename(
+        `${f.box.state.path}/ki/agents/r/events.state.json`,
+        `${f.box.state.path}/ki/agents/r/snapshot.saved`
+      )
+    const status = await f.run('ki agent status r')
+    expect(status.exitCode, status.output).toBe(0)
+    const relaunched = await f.run('ki agent launch r worker . brief.md --relaunch --json')
+    expect(relaunched.exitCode, relaunched.output).toBe(0)
+    f.set({ empty: false })
+    await f.box.state.write('ki/agents/r/worker.report.md', '# Successor\n')
+    await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
+    f.set({ empty: true })
+    expect((await f.run('ki agent status r')).exitCode).toBe(0)
+    await f.box.project.git(['add', '--', '+/_WORK/ki.r/worker.report.md'])
+    await f.box.project.git(['commit', '-q', '-m', 'test: preserve successor report'])
+    const closed = await f.run('ki agent close r')
+    expect(closed.exitCode, closed.output).toBe(0)
+  }
+)
+
+test('seventh-review a later attempt snapshot cannot corroborate an earlier failure', async () => {
+  const f = await fixture(false)
+  const cli = await baselineCli(f.box)
+  const old = (command: string) => f.box.run(command, { cli })
+  expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
+  const progress = '12:00 UTC - failed: exited without DONE (10:52 BST - DONE)'
+  await f.box.state.write('ki/agents/r/worker.status', `${progress}\n`)
+  expect((await old('ki agent status r')).exitCode).toBe(0)
+  expect((await old('ki agent status r')).exitCode).toBe(0)
+  await f.box.state.write('ki/agents/r/worker.status', `${progress}\nDONE\n`)
+  await f.box.state.write('ki/agents/r/worker.report.md', '# Earlier completion\n')
+  f.set({ empty: true })
+  expect((await old('ki agent status r')).exitCode).toBe(0)
+  expect((await old('ki agent launch r worker . brief.md --relaunch --json')).exitCode).toBe(0)
+  await f.box.state.write('ki/agents/r/worker.status', '10:52 BST - DONE\nDONE\n')
+  await f.box.state.write('ki/agents/r/worker.report.md', '# Later completion\n')
+  expect((await old('ki agent status r')).exitCode).toBe(0)
+  const result = await f.run('ki agent status r')
+  expect(result.exitCode, result.output).toBe(0)
+  const checkpoint = JSON.parse(await f.box.state.read('ki/agents/r/events.history'))
+  expect(checkpoint.failures).toEqual([{ seq: 2, terminal: false }])
+})
+
+test.each([false, true])('seventh-review pre-event snapshot remains readable, protocol status %s', async (protocol) => {
+  const f = await fixture(false)
+  const cli = await baselineCli(f.box)
+  const old = (command: string) => f.box.run(command, { cli })
+  expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
+  const first = JSON.parse((await f.box.state.read('ki/agents/r/events.jsonl')).trim())
+  const journal = `${JSON.stringify({ ...first, kind: 'needs-owner', tag: 'REVIEW', text: 'Review result' })}\n`
+  await f.box.state.write('ki/agents/r/events.jsonl', journal)
+  // Old observers also persisted ended without publishing an outcome (as in mac-studio-setup).
+  const line = protocol ? '12:00 UTC - milestone: seeded before events' : undefined
+  if (line !== undefined) await f.box.state.write('ki/agents/r/worker.status', `${line}\n`)
+  await f.box.state.write(
+    'ki/agents/r/worker.report.md',
+    '# Prior report\n\n## Queries\n\n### SEEDED - Before events\n'
+  )
+  await f.box.state.write(
+    'ki/agents/r/events.state.json',
+    JSON.stringify({
+      worker: { attempt: 1, ended: true, line, queries: ['SEEDED - Before events'] }
+    })
+  )
+  const directory = `${f.box.state.path}/ki/agents/r`
+  for (const name of await readdir(directory))
+    if (name.startsWith('control') || name.endsWith('.launch.json'))
+      await rename(`${directory}/${name}`, `${directory}/legacy-${name}.saved`)
+  f.set({ empty: true })
+  expect((await old('ki agent status r')).exitCode).toBe(0)
+  const status = await f.run('ki agent status r')
+  expect(status.exitCode, status.output).toBe(0)
+  expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(journal)
+  for (const kind of ['milestone', 'failed', 'blocked']) {
+    await f.box.state.write('ki/agents/r/worker.status', `12:01 UTC - ${kind}: archival annotation\n`)
+    expect((await f.run('ki agent status r')).exitCode).toBe(0)
+    expect((await f.run('ki agent status r')).exitCode).toBe(0)
+    // New progress cannot retroactively establish complete history or poison a pre-event end.
+    expect((await f.events()).filter((event) => event.terminal === true)).toHaveLength(0)
+  }
+})
+
+test.each(
+  [true, false].flatMap((snapshot) =>
     ['ordinary worker failure progress', 'no report', 'attempt failed', 'exited without DONE (no status)'].map(
       (text) => ({ snapshot, text })
     )
@@ -4891,15 +5028,15 @@ test.each([
   await rename(`${f.box.state.path}/ki/agents/r/events.state.json`, `${f.box.state.path}/ki/agents/r/snapshot.saved`)
   await rename(`${f.box.state.path}/ki/agents/r/worker.status`, `${f.box.state.path}/ki/agents/r/status.saved`)
   const journal = await f.box.state.read('ki/agents/r/events.jsonl')
-  const refused = await f.run('ki agent status r')
-  expect(refused.exitCode, refused.output).toBe(1)
-  expect(refused.output).toContain('ambiguous legacy failure')
-  expect(refused.output).toContain('background-agents.md#recover-event-evidence')
-  expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(journal)
+  const provisional = await f.run('ki agent status r')
+  expect(provisional.exitCode, provisional.output).toBe(0)
+  expect((await f.box.state.read('ki/agents/r/events.jsonl')).startsWith(journal)).toBe(true)
   await f.box.state.write('ki/agents/r/worker.report.md', '# Verified completion\n')
   await f.box.state.write('ki/agents/r/worker.status', `${line}\nDONE\n`)
   f.set({ empty: true })
-  const completed = await f.run('ki agent wait r --next')
+  // Restoring a previously missing source line may first publish its progress identity.
+  let completed = await f.run('ki agent wait r --next')
+  if (!completed.output.includes('done')) completed = await f.run('ki agent wait r --next')
   expect(completed.exitCode, completed.output).toBe(0)
   expect(completed.output).toContain('done')
   expect(await f.box.project.read('+/_WORK/ki.r/worker.report.md')).toBe('# Verified completion\n')
@@ -4931,15 +5068,10 @@ test.each(['failed', 'blocked', 'wrong-name', 'wrong-attempt', 'active', 'wrong-
     await f.box.state.write('ki/agents/r/events.history', 'ki/agent-events/v1\n')
     const result = await f.run('ki agent status r')
     const valid = mode === 'failed' || mode === 'blocked'
-    expect(result.exitCode, result.output).toBe(valid ? 0 : 1)
-    if (valid) {
-      expect(await f.events()).toHaveLength(1)
-      const checkpoint = JSON.parse(await f.box.state.read('ki/agents/r/events.history'))
-      expect(checkpoint.failures[0].terminal).toBe(true)
-    } else {
-      expect(result.output).toContain('ambiguous legacy failure')
-      expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(journal)
-    }
+    expect(result.exitCode, result.output).toBe(0)
+    expect((await f.events())[0]).toMatchObject(event)
+    const checkpoint = JSON.parse(await f.box.state.read('ki/agents/r/events.history'))
+    expect(checkpoint.failures[0].terminal).toBe(valid)
   }
 )
 
@@ -4969,7 +5101,7 @@ test.each([
 })
 
 test.each(['no report', 'could not launch: brief missing'])(
-  'ambiguous legacy failure %s refuses checkpointing with recovery guidance',
+  'uncorroborated legacy failure %s remains readable and provisional',
   async (text) => {
     const f = await fixture(false)
     await f.launch()
@@ -4984,10 +5116,9 @@ test.each(['no report', 'could not launch: brief missing'])(
         await rename(`${directory}/${name}`, `${directory}/legacy-${name}.saved`)
 
     const result = await f.run('ki agent status r')
-    expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('ambiguous legacy failure')
-    expect(result.output).toContain('background-agents.md#recover-event-evidence')
-    expect(await f.box.state.read('ki/agents/r/events.history')).toBe('ki/agent-events/v1\n')
+    expect(result.exitCode, result.output).toBe(0)
+    const checkpoint = JSON.parse(await f.box.state.read('ki/agents/r/events.history'))
+    expect(checkpoint.failures[0].terminal).toBe(false)
     expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(journal)
   }
 )
@@ -5038,7 +5169,16 @@ test('legacy duplicate fixed failure text separates worker progress from its gen
   await rename(`${f.box.state.path}/ki/agents/r/events.state.json`, `${f.box.state.path}/ki/agents/r/snapshot.saved`)
   f.set({ empty: true })
   expect((await f.run('ki agent status r')).exitCode).toBe(0)
-  expect((await f.events()).filter((event) => event.kind === 'failed')).toHaveLength(2)
+  expect(JSON.parse(await f.box.state.read('ki/agents/r/events.history')).failures).toEqual([
+    { seq: 2, terminal: false, statusLine: '12:00 UTC - failed: no report' },
+    { seq: 3, terminal: true }
+  ])
+  expect((await f.events()).filter((event) => event.kind === 'failed').map(({ seq, text }) => ({ seq, text }))).toEqual(
+    [
+      { seq: 2, text: 'no report' },
+      { seq: 3, text: 'no report' }
+    ]
+  )
   expect((await f.events()).filter((event) => event.kind === 'done')).toHaveLength(0)
 })
 
@@ -5089,7 +5229,7 @@ test('changed legacy failure identity digest refuses checkpoint adoption', async
 })
 
 test.each(['progress', 'terminal', 'ambiguous'] as const)(
-  'legacy pending failure %s requires proof before publication',
+  'legacy pending failure %s requires proof of terminal identity',
   async (mode) => {
     const f = await fixture(false)
     await f.launch()
@@ -5106,16 +5246,10 @@ test.each(['progress', 'terminal', 'ambiguous'] as const)(
         text: mode === 'progress' ? 'worker progress' : 'no report'
       })
     )
-    const before = await f.box.state.read('ki/agents/r/events.jsonl')
     const result = await f.run('ki agent status r')
-    expect(result.exitCode, result.output).toBe(mode === 'ambiguous' ? 1 : 0)
-    if (mode === 'ambiguous') {
-      expect(result.output).toContain('ambiguous legacy failure')
-      expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(before)
-    } else {
-      const checkpoint = JSON.parse(await f.box.state.read('ki/agents/r/events.history'))
-      expect(checkpoint.failures[0].terminal).toBe(mode === 'terminal')
-    }
+    expect(result.exitCode, result.output).toBe(0)
+    const checkpoint = JSON.parse(await f.box.state.read('ki/agents/r/events.history'))
+    expect(checkpoint.failures[0].terminal).toBe(mode === 'terminal')
   }
 )
 

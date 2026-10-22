@@ -15,6 +15,8 @@ const fault = vi.hoisted(() => ({
   preparation: '',
   corruptCreate: '',
   shortAppend: '',
+  pauseCheckpoint: '',
+  beforeCheckpoint: undefined as (() => Promise<void>) | undefined,
   journalMissingOnce: '',
   historyMissingOnce: ''
 }))
@@ -24,6 +26,16 @@ vi.mock('node:fs/promises', async (original) => {
     ...fs,
     readFile: async (...args: Parameters<typeof fs.readFile>) => {
       const path = String(args[0])
+      if (path === fault.pauseCheckpoint) {
+        fault.pauseCheckpoint = ''
+        const captured = await fs.readFile(...args).then(
+          (value) => ({ value }),
+          (error) => ({ error })
+        )
+        await fault.beforeCheckpoint?.()
+        if ('error' in captured) throw captured.error
+        return captured.value
+      }
       if (path === fault.traceJournal) {
         fault.journalReads += 1
         if (fault.journalReads === fault.dropJournalReadAt) {
@@ -88,6 +100,8 @@ afterEach(() => {
   fault.preparation = ''
   fault.corruptCreate = ''
   fault.shortAppend = ''
+  fault.pauseCheckpoint = ''
+  fault.beforeCheckpoint = undefined
   fault.journalMissingOnce = ''
   fault.historyMissingOnce = ''
 })
@@ -125,6 +139,54 @@ const fixture = async () => {
     starts: () => starts
   }
 }
+
+test('seventh-review concurrent checkpoint adoption cannot erase interrupted completion append', async () => {
+  const f = await fixture()
+  expect((await f.run('launch r worker . brief.md --json')).exitCode).toBe(0)
+  await rename(join(f.directory, 'events.history'), join(f.directory, 'history.saved'))
+  let reached!: () => void
+  let release!: () => void
+  const paused = new Promise<void>((resolve) => {
+    reached = resolve
+  })
+  const resumed = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  fault.pauseCheckpoint = join(f.directory, 'events.history')
+  fault.beforeCheckpoint = async () => {
+    reached()
+    await resumed
+  }
+  const adopting = f.run('stop r worker --attempt 1 --reason owner --request adopting')
+  await paused
+  f.dead()
+  await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
+  await f.box.state.write('ki/agents/r/worker.report.md', '# Concurrent completion\n')
+  fault.shortAppend = join(f.directory, 'events.jsonl')
+  let committed = ''
+  try {
+    const interrupted = await f.run('status r')
+    expect(interrupted.exitCode, interrupted.output).toBe(1)
+    committed = await readFile(join(f.directory, 'events.history'), 'utf8')
+    expect(JSON.parse(committed).seq).toBe(2)
+  } finally {
+    release()
+    await adopting
+  }
+  expect(await readFile(join(f.directory, 'events.history'), 'utf8')).toBe(committed)
+  // The publisher's exact completion suffix must remain recoverable after initialization returns.
+  await f.run('status r')
+  const recovered = await f.run('status r')
+  expect(recovered.exitCode, recovered.output).toBe(0)
+  const checkpoint = JSON.parse(await readFile(join(f.directory, 'events.history'), 'utf8'))
+  expect(await readFile(join(f.directory, 'events.jsonl'), 'utf8')).toBe(checkpoint.journal)
+  const events = checkpoint.journal
+    .trim()
+    .split('\n')
+    .map((line: string) => JSON.parse(line))
+  expect(events.filter((event: { kind: string }) => event.kind === 'done')).toHaveLength(1)
+  expect(await f.box.project.read('+/_WORK/ki.r/worker.report.md')).toBe('# Concurrent completion\n')
+})
 
 test.each(['archive', 'preparation'])(
   'interrupted relaunch retry at %s preserves a completed predecessor and its dependent gate',
