@@ -130,7 +130,9 @@ const context = await createContext({
   agentProcesses: {
     launch: started,
     alive: (pid) =>
-      !empty && !(['gate-closed', 'queued-held-gate', 'dispatch-gate'].includes(input.scenario) && pid === 17),
+      input.scenario === 'dispatch-held-loss' && pid === 4001
+        ? false
+        : !empty && !(['gate-closed', 'queued-held-gate', 'dispatch-gate'].includes(input.scenario) && pid === 17),
     sleep: async (milliseconds) => {
       time += Math.max(milliseconds, 121_000)
       if (input.scenario === 'gate-waiting' && ++holdSleeps === 2) {
@@ -139,19 +141,22 @@ const context = await createContext({
       }
       if (time > 1_000_000) throw new Error('unbounded crash probe wait')
     },
-    control: {
-      launch: async (identity) => {
-        await started()
-        return owner(identity)
-      },
-      inspect: async (identity) => observation(identity),
-      terminate: async () => {
-        signals += 1
-        empty = input.scenario !== 'timeout'
-        effects()
-      },
-      verifyRecovery: async (identity) => observation(identity)
-    }
+    control:
+      input.scenario === 'checkpoint-append'
+        ? undefined
+        : {
+            launch: async (identity) => {
+              await started()
+              return owner(identity)
+            },
+            inspect: async (identity) => observation(identity),
+            terminate: async () => {
+              signals += 1
+              empty = input.scenario !== 'timeout'
+              effects()
+            },
+            verifyRecovery: async (identity) => observation(identity)
+          }
   }
 })
 exitCode = await run(input.command.slice(1), context)

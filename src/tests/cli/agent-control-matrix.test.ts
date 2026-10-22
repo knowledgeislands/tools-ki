@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, expect, test, vi } from 'vitest'
@@ -25,6 +25,8 @@ type Fault =
   | 'busy'
 type Site = { operation: string; path: string }
 const injection = vi.hoisted(() => ({
+  reservationStop: false,
+  archiveTarget: '',
   root: '',
   home: '',
   trace: [] as Site[],
@@ -32,6 +34,7 @@ const injection = vi.hoisted(() => ({
   kind: '' as Fault | '',
   hit: false,
   dead: false,
+  corrupted: '',
   damaged: '',
   busy: '',
   original: undefined as string | undefined
@@ -46,6 +49,8 @@ vi.mock('node:fs/promises', async (importOriginal) => {
     (operation: 'writeFile' | 'appendFile' | 'rename' | 'copyFile' | 'mkdir' | 'rm') =>
     async (...args: unknown[]) => {
       const path = String(args[operation === 'rename' || operation === 'copyFile' ? 1 : 0])
+      if (operation === 'rename' && path === injection.archiveTarget)
+        throw new Error('injected archive preparation crash')
       const workerWrite =
         operation === 'writeFile' &&
         path.startsWith(injection.root) &&
@@ -72,20 +77,29 @@ vi.mock('node:fs/promises', async (importOriginal) => {
               : operation === 'rename'
                 ? previous
                 : String(args[1])
-        await fs.writeFile(
-          source,
+        injection.corrupted =
           kind === 'truncate-before' ? previous.slice(0, Math.floor(previous.length / 2)) : '{corrupt evidence'
-        )
+        await fs.writeFile(source, injection.corrupted)
+        if (operation === 'appendFile') injection.corrupted += String(args[1])
       } else if ((operation === 'writeFile' || operation === 'copyFile') && injection.damaged === path) {
+        injection.corrupted = ''
         injection.damaged = ''
         injection.original = undefined
       } else if (operation === 'appendFile' && injection.damaged === path) {
-        injection.original += String(args[1])
+        const current = await fs.readFile(path, 'utf8')
+        if (current + String(args[1]) !== injection.original) {
+          injection.original += String(args[1])
+          injection.corrupted += String(args[1])
+        }
       }
       const invoke = fs[operation] as (...args: unknown[]) => Promise<unknown>
       const result = await invoke(...args)
+      if (injection.reservationStop && operation === 'rename' && path.endsWith('/control.json')) {
+        injection.dead = true
+        throw new Error('injected controller death before spawn intent')
+      }
       if (operation === 'rename' && injection.damaged === String(args[0])) injection.damaged = path
-      if (beforeDamage && (await fs.readFile(path, 'utf8')) === injection.original) {
+      if (injection.damaged === path && (await fs.readFile(path, 'utf8')) === injection.original) {
         injection.damaged = ''
         injection.original = undefined
       }
@@ -93,10 +107,9 @@ vi.mock('node:fs/promises', async (importOriginal) => {
         const original = await fs.readFile(path, 'utf8')
         injection.damaged = path
         injection.original = original
-        await fs.writeFile(
-          path,
+        injection.corrupted =
           kind === 'truncate' ? original.slice(0, Math.floor(original.length / 2)) : '{corrupt evidence'
-        )
+        await fs.writeFile(path, injection.corrupted)
       }
       if (kind === 'death-after') injection.dead = true
       if (kind === 'after' || kind === 'death-after')
@@ -170,6 +183,8 @@ vi.mock('node:fs', async (importOriginal) => {
 })
 
 const reset = () => {
+  injection.reservationStop = false
+  injection.archiveTarget = ''
   injection.root = ''
   injection.home = ''
   injection.trace = []
@@ -178,6 +193,7 @@ const reset = () => {
   injection.hit = false
   injection.dead = false
   injection.busy = ''
+  injection.corrupted = ''
   injection.damaged = ''
   injection.original = undefined
 }
@@ -288,6 +304,10 @@ const fixture = async () => {
     waitOneGatePass: () => {
       openGate = true
     },
+    legacy: () => box.setAgentProcesses({ ...processes, control: undefined }),
+    loseSupervisor: () => {
+      deadPids.add(4001)
+    },
     closeGate: () => {
       deadPids.add(17)
     },
@@ -312,6 +332,10 @@ type Fixture = Awaited<ReturnType<typeof fixture>>
 
 const scenarios = [
   'launch',
+  'preintent-reservation',
+  'checkpoint-append',
+  'relaunch-retry',
+  'dispatch-held-loss',
   'held',
   'resume',
   'gate-waiting',
@@ -338,6 +362,8 @@ type Scenario = (typeof scenarios)[number]
 const prepare = async (name: Scenario) => {
   const f = await fixture()
   let command: string
+  let predecessor: string | undefined
+  let reservation: string | undefined
   if (name === 'gate-closed' || name === 'queued-held-gate') {
     await f.box.state.write('ki/agents/r/before.pid', '17\n')
     const held = JSON.parse((await f.run('launch r worker . brief.md --wait-for before --json')).stdout) as {
@@ -438,8 +464,26 @@ const prepare = async (name: Scenario) => {
       await f.box.state.write('ki/agents/r/before.status', 'DONE\n')
     }
     command = `launch r worker . ${f.directory}/worker.prompt.md --foreground --launch-token ${held.identity.token}`
-  } else if (name === 'launch') command = 'launch r worker . brief.md --json'
-  else if (name === 'held') {
+  } else if (name === 'preintent-reservation') {
+    injection.root = f.directory
+    injection.reservationStop = true
+    await f.run('launch r worker . brief.md --json').catch(() => undefined)
+    reset()
+    expect(f.starts()).toBe(0)
+    await rename(join(f.directory, 'control.lock'), join(f.directory, 'control.lock.preparation'))
+    const store = JSON.parse(await f.box.state.read('ki/agents/r/control.json'))
+    expect(Object.keys(store.operations)).toHaveLength(0)
+    reservation = store.attempts.worker.token
+    command = 'launch r worker . brief.md --relaunch --json'
+  } else if (name === 'launch' || name === 'checkpoint-append') {
+    if (name === 'checkpoint-append') f.legacy()
+    command = 'launch r worker . brief.md --json'
+  } else if (name === 'dispatch-held-loss') {
+    await f.box.state.write('ki/agents/r/before.pid', '17\n')
+    await f.run('launch r worker . brief.md --wait-for before --json')
+    f.loseSupervisor()
+    command = 'dispatch r --max 1 --foreground'
+  } else if (name === 'held') {
     await f.box.state.write('ki/agents/r/before.pid', '17\n')
     command = 'launch r worker . brief.md --wait-for before --json'
   } else if (name === 'queue' || name === 'dispatch' || name === 'dequeue') {
@@ -454,9 +498,16 @@ const prepare = async (name: Scenario) => {
     }
   } else {
     await f.run('launch r worker . brief.md --json')
-    if (name === 'relaunch') {
+    if (name === 'relaunch' || name === 'relaunch-retry') {
       await f.finishWorker()
+      predecessor = JSON.parse(await f.box.state.read('ki/agents/r/control.json')).attempts.worker.token
       command = 'launch r worker . brief.md --relaunch --json'
+      if (name === 'relaunch-retry') {
+        await f.run('queue r dependent brief.md --wait-for worker --json')
+        injection.archiveTarget = join(f.directory, 'worker.prev-1/worker.prompt.md')
+        expect((await f.run(command)).exitCode).toBe(1)
+        reset()
+      }
     } else if (name === 'stop' || name === 'timeout' || name === 'ownership') {
       if (name === 'timeout') f.timeout()
       if (name === 'ownership') f.lost()
@@ -466,7 +517,7 @@ const prepare = async (name: Scenario) => {
       command = name === 'status' ? 'status r' : name === 'wait' ? 'wait r --next' : 'watch r 1'
     }
   }
-  return { ...f, command }
+  return { ...f, command, predecessor, reservation }
 }
 
 const journal = async (f: Fixture) => {
@@ -485,6 +536,128 @@ const journal = async (f: Fixture) => {
           terminal?: boolean
         }
     )
+}
+
+const workerFailures = (
+  events: Awaited<ReturnType<typeof journal>>,
+  control: {
+    operations: Record<
+      string,
+      { operation: string; target: { agent?: string; attempt?: number; token?: string }; receipt?: { outcome: string } }
+    >
+  }
+) =>
+  events.filter(
+    (event) =>
+      event.kind === 'failed' &&
+      !Object.values(control.operations).some(
+        (operation) =>
+          operation.operation === 'prepare-retire' &&
+          operation.receipt?.outcome === 'preparation-not-started' &&
+          operation.target.agent === event.agent &&
+          operation.target.attempt === event.attempt &&
+          !Object.values(control.operations).some(
+            (next) =>
+              ['spawn', 'spawn-supervisor'].includes(next.operation) && next.target.token === operation.target.token
+          )
+      )
+  )
+
+const assertReadRefusal = async (
+  f: Fixture,
+  first: Awaited<ReturnType<Fixture['run']>> | undefined,
+  second: Awaited<ReturnType<Fixture['run']>> | undefined,
+  cell: string
+): Promise<void> => {
+  const files = await readdir(f.directory).catch(() => undefined)
+  let expected: string | undefined
+  if (files === undefined) expected = 'ki: error: no such run: r\n'
+  else if (
+    !files.includes('control.json') &&
+    files.some(
+      (file) =>
+        file === 'control.journal.jsonl' ||
+        file === 'control-receipts' ||
+        (file.startsWith('control-') && file.endsWith('.tmp'))
+    )
+  )
+    expected = 'ki: error: control-state-unverified: projection missing beside prior control evidence\n'
+  else if (!files.includes('events.jsonl') && files.includes('events.history'))
+    expected = `ki: error: events-evidence-unverified: ${join(f.directory, 'events.jsonl')}: journal missing beside prior event evidence; restore the authoritative history\nnext: see docs/guides/user/background-agents.md#recover-event-evidence\n`
+  expect(expected, `${cell}: unexpected refusal ${first?.output}; second ${second?.output}`).toBeDefined()
+  expect(first?.exitCode, cell).toBe(1)
+  expect(second?.exitCode, cell).toBe(1)
+  expect(first?.output, cell).toBe(expected)
+  expect(second?.output, cell).toBe(expected)
+}
+
+// Each named crash window proves its recovery outcome, beyond refusal text.
+const assertWindow = async (
+  f: Awaited<ReturnType<typeof prepare>>,
+  scenario: Scenario,
+  cell: string
+): Promise<void> => {
+  const source = await f.box.state.read('ki/agents/r/control.json').catch(() => undefined)
+  if (source === undefined) return
+  let store = JSON.parse(source)
+  const intents = (await f.box.state.read('ki/agents/r/control.journal.jsonl').catch(() => ''))
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line))
+    .filter((entry) => entry.phase === 'intent')
+  const attempts = [...Object.values(store.operations), ...intents] as {
+    operation: string
+    target: { token: string }
+  }[]
+  const current = store.attempts.worker
+  let restarted = false
+  if (
+    current?.state === 'held' &&
+    !current.owner &&
+    !attempts.some(
+      (operation) =>
+        ['spawn', 'spawn-supervisor'].includes(operation.operation) && operation.target.token === current.token
+    )
+  ) {
+    const retry = await f.run('launch r worker . brief.md --relaunch --json')
+    expect(retry.exitCode, `${cell}: reservation retry ${retry.output}`).toBe(0)
+    restarted = true
+    store = JSON.parse(await f.box.state.read('ki/agents/r/control.json'))
+    expect(store.history[current.token].state, cell).toBe('failed')
+    expect(store.attempts.worker.token, cell).not.toBe(current.token)
+  }
+  if (f.reservation) {
+    expect(store.operations[`prepare-${f.reservation}`]?.receipt, cell).toMatchObject({
+      outcome: 'preparation-not-started'
+    })
+    expect(store.history[f.reservation].state, cell).toBe('failed')
+  }
+  if (f.predecessor) {
+    if (
+      !restarted &&
+      !attempts.some(
+        (operation) =>
+          ['spawn', 'spawn-supervisor'].includes(operation.operation) && operation.target.token !== f.predecessor
+      )
+    ) {
+      const retry = await f.run('launch r worker . brief.md --relaunch --json')
+      expect(retry.exitCode, `${cell}: archive retry ${retry.output}`).toBe(0)
+      store = JSON.parse(await f.box.state.read('ki/agents/r/control.json'))
+    }
+    expect(store.history[f.predecessor].state, cell).toBe('done')
+    if (scenario === 'relaunch-retry') {
+      const dependent = Object.values(store.entries).find(
+        (entry) => (entry as { name: string }).name === 'dependent'
+      ) as { dependencies: { worker: { token: string } } }
+      expect(dependent.dependencies.worker.token, cell).toBe(f.predecessor)
+    }
+  }
+  if (scenario === 'dispatch-held-loss') {
+    const retried = await f.run(f.command)
+    expect(retried.exitCode, cell).toBe(1)
+    expect(retried.output, cell).toContain('ownership-unverified')
+    expect(retried.output, cell).not.toContain('all finished')
+  }
 }
 
 // Read witnesses before the recovery fixture changes anything: repairing bytes must never hide a reset.
@@ -516,6 +689,22 @@ test.each(scenarios)(
     if (scenario === 'queued-held-gate')
       expect(baselineResult.output).toContain('gate cannot open: before exited without DONE')
     const sites = [...injection.trace]
+    if (scenario === 'dispatch-held-loss') expect(baselineResult.exitCode).toBe(1)
+    if (scenario === 'launch') {
+      const reservation = sites.findIndex((site) => site.operation === 'rename' && site.path.endsWith('/control.json'))
+      const intent = sites.findIndex(
+        (site) => site.operation === 'appendFile' && site.path.endsWith('/control.journal.jsonl')
+      )
+      expect(reservation).toBeGreaterThanOrEqual(0)
+      expect(intent).toBeGreaterThan(reservation)
+    }
+    if (scenario === 'checkpoint-append') {
+      const checkpoint = sites.findIndex((site) => site.operation === 'rename' && site.path.endsWith('/events.history'))
+      const append = sites.findIndex((site) => site.operation === 'appendFile' && site.path.endsWith('/events.jsonl'))
+      expect(checkpoint).toBeGreaterThanOrEqual(0)
+      expect(append).toBeGreaterThan(checkpoint)
+    }
+
     console.info(`FAULT-MATRIX ${scenario}: ${sites.length} durable mutation sites`)
     console.info(
       `FAULT-COUNTS ${scenario}: ${JSON.stringify(
@@ -552,6 +741,7 @@ test.each(scenarios)(
         }
         const hit = injection.hit
         const damaged = injection.damaged
+        const corrupted = injection.corrupted
         const original = injection.original
         const trace = [...injection.trace]
         reset()
@@ -565,16 +755,20 @@ test.each(scenarios)(
         }
         // Explicit offline recovery after the invocation has ended: restore the
         // damaged bytes and remove only this sandbox's abandoned transaction locks.
-        if (damaged && original !== undefined && !damaged.endsWith('.lock')) await writeFile(damaged, original)
-        for (const lock of ['control.lock', 'events.lock']) await rm(join(f.directory, lock), { force: true })
-        // The checkpoint preserves the exact append intent across a torn append.
-        const history = await readFile(join(f.directory, 'events.history'), 'utf8').catch(() => '')
-        if (history.startsWith('{')) {
-          const saved = JSON.parse(history) as { journal?: string }
-          if (saved.journal !== undefined) await writeFile(join(f.directory, 'events.jsonl'), saved.journal)
-        }
+        if (
+          damaged &&
+          original !== undefined &&
+          !damaged.endsWith('.lock') &&
+          (await readFile(damaged, 'utf8').catch(() => undefined)) === corrupted
+        )
+          await writeFile(damaged, original)
+        for (const lock of ['control.lock', 'events.lock'])
+          await rename(join(f.directory, lock), join(f.directory, `${lock}.preserved`)).catch((error) => {
+            if (error.code !== 'ENOENT') throw error
+          })
         if (scenario === 'legacy-refusal')
           expect((await f.run('dispatch r --max 1 --foreground')).exitCode, cell).toBe(0)
+        await assertWindow(f, scenario, cell)
         const first = await f.run('status r').catch(() => undefined)
         const second = await f.run('status r').catch(() => undefined)
         if (first?.exitCode === 0 && second?.exitCode === 0) {
@@ -649,16 +843,11 @@ test.each(scenarios)(
               cell
             ).toHaveLength(1)
           }
-          if (f.starts() > starts)
-            expect(
-              events.filter((event) => event.kind === 'failed'),
-              cell
-            ).toHaveLength(0)
+          if (f.starts() > starts) expect(workerFailures(events, control), cell).toHaveLength(0)
         } else {
-          expect(`${first?.output} ${second?.output} ${String(thrown)}`, cell).toMatch(
-            /unverified|unconfirmed|injected|ENOENT|no such run/
-          )
+          await assertReadRefusal(f, first, second, cell)
         }
+        if (first?.exitCode === 0 && second?.exitCode === 0) await assertWindow(f, scenario, cell)
         expect(trace.length, cell).toBeGreaterThan(index)
       }
     }
@@ -731,8 +920,8 @@ test.each(scenarios)(
           const saved = JSON.parse(history) as { journal: string; sha256: string }
           expect(createHash('sha256').update(saved.journal).digest('hex'), cell).toBe(saved.sha256)
           expect(saved.journal.startsWith(before), cell).toBe(true)
-          await writeFile(join(f.directory, 'events.jsonl'), saved.journal)
         }
+        await assertWindow(f, scenario, cell)
         const first = await f.run('status r')
         const second = await f.run('status r')
         if (first.exitCode === 0 && second.exitCode === 0) {
@@ -748,7 +937,7 @@ test.each(scenarios)(
           expect(new Set(outcomes.map((event) => `${event.agent}/${event.attempt}`)).size, cell).toBe(outcomes.length)
           if (crashed.starts)
             expect(
-              events.some((event) => event.kind === 'failed'),
+              workerFailures(events, JSON.parse(await f.box.state.read('ki/agents/r/control.json'))).length > 0,
               cell
             ).toBe(false)
           const store = JSON.parse(
@@ -769,7 +958,10 @@ test.each(scenarios)(
               expect(waited.output, cell).toContain(operation.id)
             }
           }
-        } else expect(`${first.output} ${second.output}`, cell).toMatch(/unverified|unconfirmed|no such run/)
+          await assertWindow(f, scenario, cell)
+        } else {
+          await assertReadRefusal(f, first, second, cell)
+        }
       }
   },
   180_000

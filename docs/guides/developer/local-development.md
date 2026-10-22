@@ -2,6 +2,8 @@
 
 `tools-ki` supports released Homebrew and signed-release installations, plus an explicit link to the current checkout. The link mode exposes the checkout's unreleased version; released modes run the selected released executable.
 
+In a linked worktree, provide the isolated boundary tool dependencies under `tooling/boundaries/node_modules` as well as the root dependencies before running the full gates. The repository audit requires the boundary dependencies to be physically inside the worktree; copy that verified dependency directory from the primary checkout for offline work.
+
 ## Run the checkout directly
 
 Run the checkout without changing any installation:

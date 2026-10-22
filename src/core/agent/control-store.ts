@@ -169,9 +169,21 @@ const replay = async (directory: string, store: ControlStore): Promise<ControlSt
       operation.operation === 'spawn' &&
       receipt.outcome === 'started' &&
       attempt?.token === target.token &&
-      !attempt.stoppedBy
+      !attempt.stoppedBy &&
+      !['done', 'failed'].includes(attempt.state)
     )
       attempt.state = 'running'
+    if (
+      operation.operation === 'prepare-retire' &&
+      receipt.outcome === 'preparation-not-started' &&
+      attempt?.token === target.token &&
+      !Object.values(store.operations).some(
+        (next) =>
+          ['spawn', 'spawn-supervisor'].includes(next.operation) &&
+          (next.target as AttemptIdentity).token === target.token
+      )
+    )
+      attempt.state = 'failed'
     if (operation.operation === 'stop' && attempt?.token === target.token && !attempt.stoppedBy) {
       attempt.state = receipt.resultingState as AttemptIdentity['state']
       if (receipt.outcome === 'stopped') attempt.stoppedBy = operation.id

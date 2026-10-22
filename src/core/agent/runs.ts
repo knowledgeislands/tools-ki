@@ -98,7 +98,7 @@ export const existingRun = async (context: AgentContext, run: string): Promise<s
 const lines = (text: string | undefined): string[] => (text ?? '').split('\n').filter((line) => line.trim())
 
 /** Legacy packet history consumes attempt numbers without conferring process ownership. */
-const minimumAttempt = async (directory: string, name: string): Promise<number> => {
+const minimumAttempt = async (context: AgentContext, directory: string, name: string): Promise<number> => {
   const files = await readdir(directory)
   const archives = files.filter(
     (file) => file.startsWith(`${name}.prev-`) && /^\d+$/.test(file.slice(`${name}.prev-`.length))
@@ -113,7 +113,7 @@ const minimumAttempt = async (directory: string, name: string): Promise<number> 
     const attempt = packet.identity?.attempt
     if (Number.isSafeInteger(attempt) && (attempt as number) > 0) minimum = Math.max(minimum, (attempt as number) + 1)
   }
-  for (const event of await readEvents(directory))
+  for (const event of await readEvents(context, directory))
     if (event.agent === name) minimum = Math.max(minimum, event.attempt + 1)
   return minimum
 }
@@ -689,6 +689,47 @@ export interface LaunchResult {
  * Launches one detached agent and writes its run packet. With an open gate the runtime
  * starts at once; otherwise a detached hold process starts it once the gate opens.
  */
+/** Retire only journal-proven preparations; the control lease excludes a competing spawn. */
+const retirePreparation = async (
+  context: AgentContext,
+  directory: string,
+  store: ControlStore,
+  earlier: AttemptIdentity | undefined
+): Promise<void> => {
+  if (
+    earlier?.state === 'held' &&
+    !earlier.owner &&
+    !Object.values(store.operations).some(
+      (operation) =>
+        ['spawn', 'spawn-supervisor'].includes(operation.operation) &&
+        (operation.target as AttemptIdentity).token === earlier.token
+    )
+  ) {
+    await initializeEvents(context, directory)
+    const reason = 'preparation interrupted before spawn intent; no process was started'
+    const retirement = await beginOperation(
+      context,
+      directory,
+      store,
+      'prepare-retire',
+      { reason },
+      earlier,
+      earlier.state,
+      `prepare-${earlier.token}`
+    )
+    earlier.state = 'failed'
+    store.history[earlier.token] = structuredClone(earlier)
+    const queued = earlier.entry === undefined ? undefined : store.entries[earlier.entry]
+    if (queued?.state === 'claimed') queued.state = 'queued'
+    await finishOperation(context, directory, store, retirement, {
+      outcome: 'preparation-not-started',
+      resultingState: 'failed',
+      reason,
+      exitCode: 0
+    })
+  }
+}
+
 export const launchAgent = async (
   context: AgentContext,
   candidate: LaunchRequest,
@@ -779,6 +820,7 @@ export const launchAgent = async (
   const store = (await loadControl(directory)) ?? (await newStore(context, request.run))
   await verifyStore(context, request.run, store)
   const earlier = store.attempts[request.name]
+  await retirePreparation(context, directory, store, earlier)
   if (earlier?.state === 'held' && (await pidOf(`${base}.pid`)) === undefined)
     throw new KiError('claim-unconfirmed: held process acknowledgement is unavailable', 1)
   if (earlier && ['unconfirmed', 'stop-requested', 'stop-timeout'].includes(earlier.state))
@@ -798,24 +840,29 @@ export const launchAgent = async (
           await physicalWorkdir(context, directory, request),
           entry,
           request.waitFor,
-          await minimumAttempt(directory, request.name)
+          await minimumAttempt(context, directory, request.name)
         )
   const state = await gate(context, directory, request.waitFor, reserved.dependencies)
   if (state.kind === 'closed') throw new KiError(`${request.run}/${request.name} gate cannot open: ${state.reason}`, 1)
   if (earlier && earlier.token !== reserved.token) {
     const current = await agentState(context, directory, request.name)
     await deriveEvents(context, directory, { ...(await observed(context, directory)), homeReports: false })
-    store.history[earlier.token] = {
+    const previousOutcome: AttemptIdentity = {
       ...earlier,
-      state:
-        current.kind === 'finished'
+      state: ['done', 'failed', 'stopped'].includes(earlier.state)
+        ? earlier.state
+        : current.kind === 'finished'
           ? 'done'
           : current.kind === 'blocked'
             ? earlier.state
-            : earlier.state === 'stopped'
-              ? 'stopped'
-              : 'failed'
+            : 'failed'
     }
+    // Persist both projections before moving any packet file, and retain the
+    // same outcome if later preparation must restore the predecessor.
+    earlier.state = previousOutcome.state
+    store.history[earlier.token] = previousOutcome
+    store.attempts[request.name] = structuredClone(previousOutcome)
+    await saveControl(directory, store)
   }
   if (request.relaunch) await setAside(context, directory, thread, request)
   let started: { pid: number; held: readonly string[] } | undefined
@@ -823,7 +870,7 @@ export const launchAgent = async (
   try {
     store.attempts[request.name] = reserved
     await saveControl(directory, store)
-    await initializeEvents(directory)
+    await initializeEvents(context, directory)
     request = { ...request, launchToken: reserved.token }
 
     // The launcher copies the agent's report into the tracked thread folder, so the folder must exist.
@@ -1022,7 +1069,7 @@ const queueOutcomeOf = (store: ControlStore | undefined, operation: ControlOpera
   operation.receipt?.outcome ??
   (operation.resolvedBy === undefined ? undefined : store?.operations[operation.resolvedBy]?.receipt?.outcome)
 
-export const readQueue = async (directory: string): Promise<LaunchRequest[]> => {
+export const readQueue = async (context: AgentContext, directory: string): Promise<LaunchRequest[]> => {
   const store = await loadControl(directory)
   let projection: LaunchRequest[]
   try {
@@ -1036,7 +1083,7 @@ export const readQueue = async (directory: string): Promise<LaunchRequest[]> => 
   if (projection.some((request) => request.entry !== undefined && !store?.entries[request.entry]))
     throw new KiError('queue-identity-unverified: unknown queue entry; inspect the control journal', 1)
   const refusals = new Set(
-    (await readEvents(directory))
+    (await readEvents(context, directory))
       .filter((event) => event.queueSource && (event.kind === 'blocked' || event.kind === 'failed'))
       .map((event) => event.queueSource)
   )
@@ -1118,7 +1165,7 @@ export const queueAgent = async (
     )
   )
     throw new KiError('claim-unconfirmed: reconcile the prior queue claim before replacement', 1)
-  const queue = await readQueue(directory)
+  const queue = await readQueue(context, directory)
   if (queue.some((queued) => queued.name === request.name))
     throw new KiError(`${request.run}/${request.name} is already queued`, 1)
   if (!request.relaunch) await refuseTaken(directory, thread, request)
@@ -1144,7 +1191,7 @@ export const queueAgent = async (
     name: request.name,
     attempt:
       Math.max(
-        (await minimumAttempt(directory, request.name)) - 1,
+        (await minimumAttempt(context, directory, request.name)) - 1,
         store.attempts[request.name]?.attempt ?? 0,
         ...Object.values(store.entries)
           .filter((entry) => entry.name === request.name)
@@ -1198,7 +1245,7 @@ const summary = async (context: AgentContext, directory: string): Promise<AgentS
     result.push(`${name}: ${describe(state)}`)
     result.push(...(await agentWorktreeLines(context, directory, name, state.kind !== 'running')))
   }
-  const queue = await readQueue(directory)
+  const queue = await readQueue(context, directory)
   if (queue.length) {
     const dispatcher = await running(context, join(directory, 'dispatch.pid'))
     live = true
@@ -1285,7 +1332,7 @@ export const runOverview = async (context: AgentContext, run: string): Promise<R
     if (state.kind === 'blocked') items.push({ kind: 'blocked', agent: name, what: describe(state) })
     worktrees.push(...(await agentWorktreeLines(context, directory, name, state.kind !== 'running')))
   }
-  for (const [position, request] of (await readQueue(directory)).entries())
+  for (const [position, request] of (await readQueue(context, directory)).entries())
     items.push({
       kind: 'queued',
       agent: request.name,
@@ -1385,11 +1432,11 @@ export const watchRun = async (
   emit: (line: string) => void
 ): Promise<void> => {
   const directory = await existingRun(context, run)
-  let cursor = (await readEvents(directory)).length
+  let cursor = (await readEvents(context, directory)).length
   for (;;) {
     const current = await summary(context, directory)
     await pendingObservation(context, directory)
-    for (const event of await readEvents(directory, cursor)) {
+    for (const event of await readEvents(context, directory, cursor)) {
       emit(`${stamp(context)} | ${eventText(event)}`)
       cursor = event.seq
     }
@@ -1493,6 +1540,7 @@ export const dispatchRun = async (
       const store = await loadControl(directory)
       if (store) {
         await verifyStore(context, request.run, store)
+        for (const attempt of Object.values(store.attempts)) await retirePreparation(context, directory, store, attempt)
         if (
           Object.values(store.entries).some((entry) => entry.state === 'claimed' || entry.state === 'unconfirmed') ||
           Object.values(store.operations).some(
@@ -1504,15 +1552,17 @@ export const dispatchRun = async (
         }
       }
       let alive = 0
+      let heldUncertainty = false
       for (const name of await agents(directory)) {
         const state = await agentState(context, directory, name)
         if (state.kind === 'running') alive += 1
-        if (state.kind === 'blocked' && store?.attempts[name]?.state !== 'held') {
+        if (state.kind === 'blocked') {
           emit(`${stamp(context)} ${state.last}`)
-          return 'uncertain'
+          if (store?.attempts[name]?.state === 'held') heldUncertainty = true
+          else return 'uncertain'
         }
       }
-      const queue = await readQueue(directory)
+      const queue = await readQueue(context, directory)
       const gates: Gate[] = []
       for (const queued of queue)
         gates.push(
@@ -1538,7 +1588,7 @@ export const dispatchRun = async (
             kind,
             text,
             undefined,
-            entry?.attempt ?? (await minimumAttempt(directory, queued.name)),
+            entry?.attempt ?? (await minimumAttempt(context, directory, queued.name)),
             queued.entry === undefined ? sha256(canonical(queued)) : undefined
           )
         if (store && entry) {
@@ -1628,11 +1678,13 @@ export const dispatchRun = async (
         }
         return 'again'
       }
+      if (heldUncertainty && queue.length === 0) return 'uncertain'
       if (alive === 0) {
         for (const [position, queued] of queue.entries()) {
           const waiting = gates[position] as Extract<Gate, { kind: 'waiting' }>
           await drop(queued, 'blocked', `gate cannot open: nothing running for ${waiting.names.join(', ')}`)
         }
+        if (heldUncertainty) return 'uncertain'
         emit(`${stamp(context)} queue empty, all finished`)
         return 'end'
       }
@@ -1643,7 +1695,8 @@ export const dispatchRun = async (
       return 'inspection' as const
     })
     if (result === 'uncertain') throw new KiError('claim-unconfirmed: reconcile before dispatching replacement work', 1)
-    if (result === 'end' || result === 'inspection') return
+    if (result === 'inspection') throw new KiError('dispatch-unconfirmed: follow-up requires inspection', 1)
+    if (result === 'end') return
     if (result === 'sleep') await context.processes.sleep(request.seconds * 1000)
   }
 }
@@ -1675,7 +1728,7 @@ export const waitForRun = async (
     await pendingObservation(context, directory)
     if (options.next) {
       const cursor = Number.parseInt((await read(seenFile)) ?? '0', 10)
-      const event = (await readEvents(directory, cursor)).find((candidate) => waitedKinds.has(candidate.kind))
+      const event = (await readEvents(context, directory, cursor)).find((candidate) => waitedKinds.has(candidate.kind))
       if (event) {
         const contents = `${event.seq}\n`
         try {

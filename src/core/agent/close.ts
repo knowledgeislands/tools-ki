@@ -176,7 +176,7 @@ const gateLines = async (
   }
   const dispatcher = await running(context, join(directory, 'dispatch.pid'))
   lines.push(dispatcher ? blocker(`dispatcher still running (pid ${dispatcher})`) : ok('no dispatcher running'))
-  const queue = await readQueue(directory)
+  const queue = await readQueue(context, directory)
   lines.push(queue.length ? blocker(`queue holds ${listed(queue.map((queued) => queued.name))}`) : ok('queue empty'))
   const worktrees = await entries(join(directory, 'worktrees'))
   lines.push(worktrees.length ? blocker(`worktrees/ holds ${listed(worktrees)}`) : ok('no worktrees'))

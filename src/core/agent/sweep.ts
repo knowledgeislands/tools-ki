@@ -51,12 +51,12 @@ const expiredArchives = async (archive: string, keep: number): Promise<readonly 
  * Each open run's `<name>.queued.md` or `<name>.draft.md` that a launch has superseded: a
  * `<name>.prompt.md` at least as new holds the brief, and the name is not queued again.
  */
-const spentBriefs = async (agents: string): Promise<readonly string[]> => {
+const spentBriefs = async (context: AgentContext, agents: string): Promise<readonly string[]> => {
   const spent: string[] = []
   for (const entry of await readdir(agents, { withFileTypes: true }).catch(() => []))
     if (entry.isDirectory() && entry.name !== '_archive') {
       const directory = join(agents, entry.name)
-      const queued = new Set((await readQueue(directory)).map((request) => request.name))
+      const queued = new Set((await readQueue(context, directory)).map((request) => request.name))
       for (const file of (await readdir(directory)).sort()) {
         const name = /^(.+)\.(?:queued|draft)\.md$/.exec(file)?.[1]
         if (name === undefined || queued.has(name)) continue
@@ -74,7 +74,10 @@ const spentBriefs = async (agents: string): Promise<readonly string[]> => {
  */
 export const sweepAgents = async (context: AgentContext, request: SweepRequest): Promise<readonly string[]> => {
   const agents = agentsDirectory(context)
-  const paths = [...(await expiredArchives(join(agents, '_archive'), request.keep)), ...(await spentBriefs(agents))]
+  const paths = [
+    ...(await expiredArchives(join(agents, '_archive'), request.keep)),
+    ...(await spentBriefs(context, agents))
+  ]
   if (request.write) for (const path of paths) await rm(path, { recursive: true, force: true })
   return paths
 }

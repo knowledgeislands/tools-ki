@@ -268,7 +268,7 @@ test('a post-start queue projection failure never cancels a started entry', asyn
     sleep: async () => {}
   })
   const result = await box.run('ki agent dispatch r --max 1 --foreground')
-  expect(result.exitCode, result.output).toBe(0)
+  expect(result.exitCode, result.output).toBe(1)
   expect(result.output).toContain('launched worker; follow-up requires inspection')
   const state = JSON.parse(await box.state.read('ki/agents/r/control.json'))
   expect(state.entries[entry].state).toBe('started')
@@ -327,7 +327,7 @@ test.each(['publication', 'acknowledgement'] as const)(
     })
     for (let retry = 0; retry < 2; retry += 1) {
       const result = await box.run('ki agent dispatch r --max 1 --foreground')
-      expect(result.exitCode, result.output).toBe(kind === 'publication' ? 0 : 1)
+      expect(result.exitCode, result.output).toBe(kind === 'publication' && retry === 1 ? 0 : 1)
       expect(result.output).not.toContain('could not launch')
       if (kind === 'acknowledgement') expect(result.output).toContain('claim-unconfirmed')
       fault.renameTarget = ''

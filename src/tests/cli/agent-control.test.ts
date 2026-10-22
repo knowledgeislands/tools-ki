@@ -140,7 +140,7 @@ describe('fourth review blocking regressions', () => {
       await f.box.state.write('ki/agents/r/before.status', 'DONE\n')
       await f.box.state.write('ki/agents/r/before.report.md', '# Done\n')
     })
-    expect((await f.run('ki agent dispatch r --max 2 --foreground')).exitCode).toBe(0)
+    expect((await f.run('ki agent dispatch r --max 2 --foreground')).exitCode).toBe(1)
     expect((await f.events()).filter((event) => event.agent === 'dependent' && event.kind === 'blocked')).toHaveLength(
       1
     )
@@ -462,13 +462,13 @@ describe('fourth review blocking regressions', () => {
     }
   )
 
-  test('a missing journal newline is damage and cannot concatenate the next event', async () => {
+  test('a missing journal newline is repaired from the exact committed intent', async () => {
     const f = await fixture(false)
     await f.launch()
     const source = (await f.box.state.read('ki/agents/r/events.jsonl')).trimEnd()
     await f.box.state.write('ki/agents/r/events.jsonl', source)
-    expect((await f.run('ki agent status r')).exitCode).toBe(1)
-    expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(source)
+    expect((await f.run('ki agent status r')).exitCode).toBe(0)
+    expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(`${source}\n`)
   })
 
   test('an unknown control journal phase is not replayed as an observation', async () => {
@@ -725,13 +725,10 @@ describe('fourth review blocking regressions', () => {
       const truncated = kind === 'empty' ? '' : `${journal.split('\n')[0]}\n`
       await f.box.state.write('ki/agents/r/events.seen', '3\n')
       await f.box.state.write('ki/agents/r/events.jsonl', truncated)
-      for (const command of ['status r', 'wait r', 'wait r --next']) {
-        const result = await f.run(`ki agent ${command}`)
-        expect(result.exitCode, result.output).toBe(1)
-        expect(result.output).toContain('events-evidence-unverified')
-        expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(truncated)
-        expect(await f.box.state.read('ki/agents/r/events.seen')).toBe('3\n')
-      }
+      const result = await f.run('ki agent status r')
+      expect(result.exitCode, result.output).toBe(0)
+      expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(journal)
+      expect(await f.box.state.read('ki/agents/r/events.seen')).toBe('3\n')
       await f.box.state.write('ki/agents/r/events.jsonl', journal)
       expect((await f.run('ki agent status r')).exitCode).toBe(0)
       expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(journal)
@@ -2198,7 +2195,7 @@ describe('agent control contract', () => {
     expect(f.signals).toHaveLength(0)
   })
 
-  test('an interrupted stop retains its terminal identity after verified history restoration', async () => {
+  test('an interrupted stop retains its terminal identity after automatic verified history repair', async () => {
     const f = await fixture()
     await f.launch()
     const first = await f.stop('--request stop-crash')
@@ -2212,9 +2209,9 @@ describe('agent control contract', () => {
     )
     const events = (await f.events()).filter((event) => event.kind !== 'stopped')
     await f.box.state.write('ki/agents/r/events.jsonl', `${events.map((event) => JSON.stringify(event)).join('\n')}\n`)
-    expect((await f.run('ki agent status r')).exitCode).toBe(1)
+    expect((await f.run('ki agent status r')).exitCode).toBe(0)
     const checkpoint = JSON.parse(await f.box.state.read('ki/agents/r/events.history'))
-    await f.box.state.write('ki/agents/r/events.jsonl', checkpoint.journal)
+    expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(checkpoint.journal)
     expect((await f.run('ki agent status r')).exitCode).toBe(0)
     expect((await f.events()).filter((event) => event.kind === 'stopped')).toHaveLength(1)
     const retried = await f.stop('--request stop-crash')
@@ -2663,7 +2660,7 @@ describe('agent control contract', () => {
     }
   )
 
-  test('dequeue retry and observers retain one event after verified history restoration', async () => {
+  test('dequeue retry and observers retain one event after automatic verified history repair', async () => {
     const f = await fixture()
     const queued = await f.queue()
     const result = await f.run(
@@ -2675,10 +2672,10 @@ describe('agent control contract', () => {
     await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
     await f.box.state.write('ki/agents/r/control-receipts/cancelled.json', JSON.stringify(JSON.parse(result.stdout)))
     await f.box.state.write('ki/agents/r/events.jsonl', '')
-    const refused = await Promise.all([f.run('ki agent status r'), f.run('ki agent status r')])
-    expect(refused.map((result) => result.exitCode)).toEqual([1, 1])
+    const repaired = await Promise.all([f.run('ki agent status r'), f.run('ki agent status r')])
+    expect(repaired.map((result) => result.exitCode)).toEqual([0, 0])
     const checkpoint = JSON.parse(await f.box.state.read('ki/agents/r/events.history'))
-    await f.box.state.write('ki/agents/r/events.jsonl', checkpoint.journal)
+    expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(checkpoint.journal)
     await Promise.all([f.run('ki agent status r'), f.run('ki agent status r')])
     expect((await f.events()).filter((event) => event.kind === 'dequeued')).toHaveLength(1)
     expect(await f.run('ki agent dequeue r worker --entry unknown --reason owner')).toMatchObject({ exitCode: 1 })
@@ -3371,7 +3368,7 @@ describe('implementation review regressions', () => {
     }
   )
 
-  test('review-1: history restoration and a different stop request cannot duplicate a terminal event', async () => {
+  test('review-1: automatic history repair and a different stop request cannot duplicate a terminal event', async () => {
     const f = await fixture()
     await f.launch()
     const interrupted = await f.stop('--request earlier')
@@ -3397,9 +3394,9 @@ describe('implementation review regressions', () => {
         .map((event) => JSON.stringify(event))
         .join('\n')}\n`
     )
-    expect((await f.stop('--request later')).exitCode).toBe(1)
+    expect((await f.stop('--request later')).exitCode).toBe(0)
     const checkpoint = JSON.parse(await f.box.state.read('ki/agents/r/events.history'))
-    await f.box.state.write('ki/agents/r/events.jsonl', checkpoint.journal)
+    expect(await f.box.state.read('ki/agents/r/events.jsonl')).toBe(checkpoint.journal)
     expect((await f.stop('--request later')).exitCode).toBe(0)
     await f.run('ki agent status r')
     await f.stop('--request earlier')
@@ -3777,7 +3774,7 @@ describe('second review regressions', () => {
         await f.box.state.write('ki/agents/r/worker.report.md', '# Done\n')
       })
       const result = await f.run(command)
-      expect(result.exitCode, result.output).toBe(0)
+      expect(result.exitCode, result.output).toBe(mode === 'dispatch' ? 1 : 0)
       expect(result.output).not.toContain('could not launch')
       const store = await f.state()
       expect(store.attempts.worker.state).toBe('running')

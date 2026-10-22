@@ -50,7 +50,7 @@ const event = async (
       operation,
       attempt.attempt
     )
-    const events = await readEvents(directory)
+    const events = await readEvents(context, directory)
     return events.find((entry) => entry.operation === operation && entry.kind === kind)?.seq
   } catch (error) {
     // The control journal already proves these outcomes. Publication and its
@@ -90,7 +90,7 @@ export const stopAgent = async (context: AgentContext, request: StopRequest): Pr
   await storeFor(context, request.run)
   return controlTransaction(context, request.run, async (directory) => {
     const store = await storeFor(context, request.run)
-    await initializeEvents(directory)
+    await initializeEvents(context, directory)
     const body = {
       run: request.run,
       name: request.name,
@@ -298,7 +298,7 @@ export const dequeueAgent = async (context: AgentContext, request: DequeueReques
   await storeFor(context, request.run)
   return controlTransaction(context, request.run, async (directory) => {
     const store = await storeFor(context, request.run)
-    await initializeEvents(directory)
+    await initializeEvents(context, directory)
     const entry = store.entries[request.entry]
     if (!entry || entry.name !== request.name) throw new KiError('unknown-entry: no matching queue identity', 1)
     const attempt =

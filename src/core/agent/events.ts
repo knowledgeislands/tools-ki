@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { createHash, randomUUID } from 'node:crypto'
 import { appendFile, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
@@ -130,15 +131,19 @@ const parseSnapshot = (path: string, source: string): Snapshot =>
       )
   )
 
+const eventLease = new AsyncLocalStorage<string>()
+
 /** Single-shot observers refuse boundedly. Pending publications survive this refusal. */
 const withLock = <T>(context: AgentContext, directory: string, work: () => Promise<T>): Promise<T> =>
-  withRunLock(directory, 'events', work, context.processes.onExit).catch((error: unknown) => {
-    if (error instanceof KiError) throw error
-    throw evidenceError(directory, error)
-  })
+  withRunLock(directory, 'events', () => eventLease.run(directory, work), context.processes.onExit).catch(
+    (error: unknown) => {
+      if (error instanceof KiError) throw error
+      throw evidenceError(directory, error)
+    }
+  )
 
 const eventDigest = (text: string): string => createHash('sha256').update(text).digest('hex')
-/** Commit the expected journal before appending it. A torn append is a refusal, never a new identity space. */
+/** Commit the exact append intent before publication so readers can finish an interrupted append. */
 const writeHistory = async (directory: string, journal: string, seq: number): Promise<void> => {
   const path = join(directory, 'events.history')
   const temporary = `${path}.tmp`
@@ -194,9 +199,18 @@ const verifyLegacyHistory = async (directory: string, events: readonly RunEvent[
   }
 }
 
-export const readEvents = async (directory: string, after = 0, initialize = false): Promise<RunEvent[]> => {
+export const readEvents = async (
+  context: AgentContext,
+  directory: string,
+  after = 0,
+  initialize = false
+): Promise<RunEvent[]> => {
   const path = eventsFile(directory)
-  const source = await evidenceRead(path)
+  const bytes = await readFile(path).catch((error: unknown) => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw evidenceError(path, error)
+  })
+  const source = bytes?.toString('utf8')
   if (source === undefined) {
     const snapshot = await evidenceRead(stateFile(directory))
     const initialized = await evidenceRead(join(directory, 'events.history'))
@@ -214,13 +228,42 @@ export const readEvents = async (directory: string, after = 0, initialize = fals
         await writeFile(path, '', { flag: 'wx' })
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw evidenceError(path, error)
-        return readEvents(directory, after, initialize)
       }
+      return readEvents(context, directory, after, initialize)
     }
   }
   const history = join(directory, 'events.history')
   const checkpoint = await evidenceRead(history)
-  const journal = source ?? ''
+  let journal = source ?? ''
+  let expectedSequence: number | undefined
+  if (checkpoint !== undefined && checkpoint !== 'ki/agent-events/v1\n') {
+    // A concurrent first publication may appear after the initial absence checks.
+    if (bytes === undefined) return readEvents(context, directory, after, initialize)
+    const saved = parseEvidence<{ schema: string; seq: number; sha256: string; journal: string }>(
+      history,
+      checkpoint,
+      (value) =>
+        value !== null &&
+        value.schema === 'ki/agent-events/v2' &&
+        Number.isSafeInteger(value.seq) &&
+        value.seq >= 0 &&
+        typeof value.sha256 === 'string' &&
+        typeof value.journal === 'string' &&
+        eventDigest(value.journal) === value.sha256
+    )
+    if (
+      !Buffer.from(saved.journal)
+        .subarray(0, (bytes as Buffer).length)
+        .equals(bytes as Buffer)
+    )
+      throw evidenceError(
+        path,
+        'journal differs from committed history; preserve both copies and restore authoritative evidence'
+      )
+
+    journal = saved.journal
+    expectedSequence = saved.seq
+  }
   if (journal !== '' && !journal.endsWith('\n')) throw evidenceError(path, 'journal has a truncated line terminator')
   const events = journal
     .split('\n')
@@ -251,25 +294,8 @@ export const readEvents = async (directory: string, after = 0, initialize = fals
       )
     )
 
-  if (checkpoint !== undefined && checkpoint !== 'ki/agent-events/v1\n') {
-    const saved = parseEvidence<{ schema: string; seq: number; sha256: string; journal: string }>(
-      history,
-      checkpoint,
-      (value) =>
-        value !== null &&
-        value.schema === 'ki/agent-events/v2' &&
-        Number.isSafeInteger(value.seq) &&
-        value.seq >= 0 &&
-        typeof value.sha256 === 'string' &&
-        typeof value.journal === 'string' &&
-        eventDigest(value.journal) === value.sha256
-    )
-    if (saved.seq !== events.length || saved.sha256 !== eventDigest(journal))
-      throw evidenceError(
-        path,
-        'journal differs from committed history; preserve both copies and restore authoritative evidence'
-      )
-  }
+  if (expectedSequence !== undefined && expectedSequence !== events.length)
+    throw evidenceError(history, 'checkpoint sequence differs from journal')
   if (checkpoint === 'ki/agent-events/v1\n' || checkpoint === undefined) await verifyLegacyHistory(directory, events)
   const cursor = await evidenceRead(join(directory, 'events.seen'))
   if (
@@ -277,13 +303,21 @@ export const readEvents = async (directory: string, after = 0, initialize = fals
     (!/^\d+\s*$/.test(cursor) || !Number.isSafeInteger(Number(cursor)) || Number(cursor) > events.length)
   )
     throw evidenceError(join(directory, 'events.seen'), 'invalid cursor or cursor ahead of journal')
+  if (source !== undefined && journal !== source) {
+    if (eventLease.getStore() !== directory)
+      return withLock(context, directory, () => readEvents(context, directory, after, initialize))
+    // Finish only a digest-verified exact prefix, preserving every existing byte.
+    const intended = Buffer.from(journal)
+    await appendFile(path, intended.subarray((bytes as Buffer).length))
+    if (!(await readFile(path)).equals(intended)) throw evidenceError(path, 'journal recovery could not be verified')
+  }
   if (initialize && checkpoint === undefined) await writeHistory(directory, journal, events.length)
   return events.filter((event) => event.seq > after)
 }
 
 /** Initialise by exclusive creation before effects; never replace existing history. */
-export const initializeEvents = async (directory: string): Promise<void> => {
-  await readEvents(directory, 0, true)
+export const initializeEvents = async (context: AgentContext, directory: string): Promise<void> => {
+  await readEvents(context, directory, 0, true)
 }
 
 /** One more than the agent's `<name>.prev-<n>` folders, which a relaunch leaves behind. */
@@ -298,14 +332,15 @@ const append = async (
   attempts: ReadonlyMap<string, number>,
   pending: readonly Pending[]
 ): Promise<void> => {
-  let seq = (await readEvents(directory)).length
+  let seq = (await readEvents(context, directory, 0, true)).length
   const lines = pending.map((event) => {
     seq += 1
     const { agent, kind, text, tag, operation, publication, queueSource, statusLine, terminal } = event
     const attempt = event.attempt ?? (attempts.get(agent) as number)
     return `${JSON.stringify({ seq, at: instant(context), run: basename(directory), agent, attempt, kind, text, ...(tag === undefined ? {} : { tag }), ...(operation === undefined ? {} : { operation }), ...(publication === undefined ? {} : { publication }), ...(queueSource === undefined ? {} : { queueSource }), ...(statusLine === undefined ? {} : { statusLine }), ...(terminal === undefined ? {} : { terminal }) })}\n`
   })
-  const journal = (await evidenceRead(eventsFile(directory))) ?? ''
+  const journal = await evidenceRead(eventsFile(directory))
+  if (journal === undefined) throw evidenceError(eventsFile(directory), 'journal disappeared before append intent')
   await writeHistory(directory, journal + lines.join(''), seq)
   await appendFile(eventsFile(directory), lines.join(''))
   if ((await evidenceRead(eventsFile(directory))) !== journal + lines.join(''))
@@ -349,7 +384,7 @@ export const recordEvent = async (
       // Producers hold control.lock; the journal and pending count provide a
       // durable order even when a fixed clock gives several events one instant.
       publicationOrder:
-        (await readEvents(directory)).length +
+        (await readEvents(context, directory)).length +
         (await readdir(pending)).filter((file) => file.endsWith('.json')).length +
         1,
       attempt: explicitAttempt ?? (await attemptOf(directory, agent))
@@ -395,7 +430,7 @@ const publishPending = async (
     .sort()
     .map((file) => join(pendingDirectory, file))
   if (paths.length === 0) return
-  const journal = await readEvents(directory)
+  const journal = await readEvents(context, directory)
   const snapshot = await readSnapshot(context, directory, observed)
   const startedKey = (event: Pending): string => `${event.agent}/${event.attempt}/${event.kind}`
   const started = new Set(journal.filter((event) => ['launch', 'held'].includes(event.kind)).map(startedKey))
@@ -566,7 +601,7 @@ const readSnapshot = async (
   const state = await evidenceRead(path)
   const snapshot: Snapshot =
     state === undefined ? Object.create(null) : Object.assign(Object.create(null), parseSnapshot(path, state))
-  const journal = await readEvents(directory)
+  const journal = await readEvents(context, directory)
   for (const event of journal) {
     const key = seenKey(event.agent, event.attempt)
     const previous = snapshot[key] ?? snapshot[event.agent]
@@ -605,7 +640,7 @@ const agentChanges = async (
   if (control && attempt) {
     const loss = await ownershipLoss(context, control, attempt, alive)
     if (loss) {
-      const journal = await readEvents(directory)
+      const journal = await readEvents(context, directory)
       return {
         seen: previous,
         when: 0,
@@ -701,7 +736,7 @@ export const deriveEvents = (context: AgentContext, directory: string, observed:
     const attempts = new Map<string, number>()
     const changes: { readonly when: number; readonly name: string; readonly events: Pending[] }[] = []
     const store = await loadControl(directory)
-    const journal = await readEvents(directory)
+    const journal = await readEvents(context, directory)
     const recorded = new Set(journal.map((event) => `${event.operation}/${event.kind}`))
     const ended = new Set(journal.filter(terminalEvent).map((event) => `${event.agent}/${event.attempt}`))
     for (const entry of Object.values(store?.entries ?? {})) {
