@@ -1,5 +1,5 @@
 import { lstat, readFile } from 'node:fs/promises'
-import { isAbsolute, join } from 'node:path'
+import { isAbsolute, join, relative } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
 import { matchesDirectoryName } from '../territory/filters.ts'
@@ -14,6 +14,7 @@ interface WorkspaceMember {
   readonly kind: 'workspace' | 'repository'
   readonly path: string
   readonly type?: MgitRepositoryType
+  readonly external?: boolean
 }
 
 interface WorkspaceManifest {
@@ -34,11 +35,22 @@ interface WorkspaceTargets {
   readonly skipped: readonly string[]
 }
 
+interface ResolvedRepository extends RepositoryLocation {
+  readonly external: boolean
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const safeRelativePath = (value: string): boolean =>
   Boolean(value) && !isAbsolute(value) && !value.split(/[\\/]/).some((part) => !part || part === '.' || part === '..')
+
+// As mGit does, an external repository member climbs out of the workspace with one or more leading
+// `../` segments, then names a safe path below that ancestor.
+const externalPath = (value: string): boolean => {
+  const tail = value.replace(/^(?:\.\.\/)+/, '')
+  return tail !== value && safeRelativePath(tail)
+}
 
 const manifestError = (path: string, detail: string): KiError => new KiError(`${path} ${detail}`, 2)
 
@@ -63,15 +75,18 @@ const repositoryMember = (path: string, value: Record<string, unknown>, manifest
 
 const structuralMembers = (
   group: Record<string, unknown>,
-  manifestPath: string
+  manifestPath: string,
+  allowExternal = false
 ): ReadonlyMap<string, WorkspaceMember> => {
   rejectUnknownKeys(group, ['members'], manifestPath, 'workspace structural group')
   if (!isRecord(group['members'])) throw manifestError(manifestPath, 'workspace structural group must declare members')
   const members = new Map<string, WorkspaceMember>()
   for (const [path, value] of Object.entries(group['members'])) {
-    if (!safeRelativePath(path) || !isRecord(value))
+    const external = allowExternal && isRecord(value) && value['kind'] === 'repository' && externalPath(path)
+    if (!(safeRelativePath(path) || external) || !isRecord(value))
       throw manifestError(manifestPath, `workspace has unsafe or invalid member ${path}`)
-    if (value['kind'] === 'repository') members.set(path, repositoryMember(path, value, manifestPath))
+    if (value['kind'] === 'repository')
+      members.set(path, { ...repositoryMember(path, value, manifestPath), ...(external && { external }) })
     else if (value['kind'] === 'workspace') {
       rejectUnknownKeys(value, ['kind'], manifestPath, `workspace member ${path}`)
       members.set(path, { kind: 'workspace', path })
@@ -138,7 +153,7 @@ const directWorkspaceManifest = (parsed: Record<string, unknown>, path: string):
   if (locations !== undefined && (!Array.isArray(locations) || locations.some((value) => typeof value !== 'string')))
     throw manifestError(path, 'workspace locations must be an array of strings')
   if (!isRecord(parsed['members'])) throw manifestError(path, 'workspace members must be a table')
-  const members = [...structuralMembers({ members: parsed['members'] }, path).values()]
+  const members = [...structuralMembers({ members: parsed['members'] }, path, true).values()]
   if (!members.length) throw manifestError(path, 'workspace selects no repositories')
   return { kind: 'workspace', path, members }
 }
@@ -186,14 +201,20 @@ const resolveWorkspace = async (
   manifest: WorkspaceManifest,
   filters: readonly string[],
   prefix = ''
-): Promise<WorkspaceTargets> => {
-  const repositories: RepositoryLocation[] = []
+): Promise<{ readonly repositories: readonly ResolvedRepository[]; readonly skipped: readonly string[] }> => {
+  const repositories: ResolvedRepository[] = []
   const skipped: string[] = []
   for (const member of manifest.members) {
     if (member.kind === 'repository') {
       if (member.type === 'bare' || !matchesDirectoryName(member.path, filters)) continue
       const checkout = member.type === 'nested' ? join(directory, member.path, 'main') : join(directory, member.path)
       const root = await physicalDirectory(checkout, `${manifest.path} has invalid repository member ${member.path}`)
+      const inside = relative(directory, root)
+      if (member.external && inside !== '..' && !inside.startsWith('../') && !isAbsolute(inside))
+        throw manifestError(
+          manifest.path,
+          `external repository member ${member.path} resolves inside the workspace; declare it as the local member ${inside || '.'}`
+        )
       const declaration = await inspectRepositoryDeclarationState(root)
       if (declaration.state === 'absent') {
         skipped.push(join(prefix, member.path))
@@ -205,7 +226,7 @@ const resolveWorkspace = async (
           declaration,
           `${manifest.path} has invalid repository member ${member.path}`
         )
-      repositories.push({ root, declaration: declaration.path })
+      repositories.push({ root, declaration: declaration.path, external: member.external === true })
       continue
     }
     const child = await physicalDirectory(
@@ -231,5 +252,14 @@ export const repositoriesFromMgitManifest = async (
 ): Promise<WorkspaceTargets | undefined> => {
   const manifest = await readManifest(directory)
   if (!manifest || manifest.kind === 'repository') return undefined
-  return resolveWorkspace(directory, manifest, filters)
+  const { repositories, skipped } = await resolveWorkspace(directory, manifest, filters)
+  // An external member reached from several workspaces, or also declared locally, is selected once.
+  const local = new Set(repositories.filter((repository) => !repository.external).map(({ root }) => root))
+  const seen = new Set<string>()
+  const selected = repositories.flatMap(({ root, declaration, external }) => {
+    if (external && (local.has(root) || seen.has(root))) return []
+    seen.add(root)
+    return [{ root, declaration }]
+  })
+  return { repositories: selected, skipped }
 }

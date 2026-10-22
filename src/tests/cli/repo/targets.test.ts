@@ -167,6 +167,59 @@ describe('[ki repo target sets]', () => {
       }
     })
 
+    test('selects external mGit members once and rejects ones that resolve inside or are unsafe', async () => {
+      const box = await sandbox()
+      const member = (path: string, kind = 'repository') =>
+        `[members."${path}"]\nkind = "${kind}"\n${kind === 'repository' ? 'type = "standard"\n' : ''}`
+      const write = (document: string) => box.project.write('ws/.mgit.toml', `kind = "workspace"\n${document}`)
+      await write(`${member('first')}${member('../shared')}${member('group', 'workspace')}`)
+      await box.project.write('ws/first/.ki.toml', '# first\n')
+      await box.project.write(
+        'ws/group/.mgit.toml',
+        `kind = "workspace"\n${member('../../shared')}${member('../first')}`
+      )
+      await box.project.write('shared/.ki.toml', '# shared\n')
+      box.cd('ws')
+
+      const selected = await box.run('ki repo roadmap list')
+      expect(selected.output).not.toContain('duplicate repository')
+      expect(selected.stdout.match(/\/shared\)/g)).toHaveLength(1)
+      expect(selected.stdout.match(/\/ws\/first\)/g)).toHaveLength(1)
+
+      await write(member('../ws/first'))
+      const inside = await box.run('ki repo roadmap list')
+      expect(inside.exitCode).toBe(2)
+      expect(inside.output).toContain(
+        'external repository member ../ws/first resolves inside the workspace; declare it as the local member first'
+      )
+      await write(member('../ws'))
+      expect((await box.run('ki repo roadmap list')).output).toContain(
+        'external repository member ../ws resolves inside the workspace; declare it as the local member .'
+      )
+
+      for (const document of [
+        member('../shared/../shared'),
+        member('first/../../shared'),
+        member('..//shared'),
+        member('../'),
+        member('/shared'),
+        member('../shared', 'workspace')
+      ]) {
+        await write(document)
+        const unsafe = await box.run('ki repo roadmap list')
+        expect(unsafe.exitCode).toBe(2)
+        expect(unsafe.output).toContain('workspace has unsafe or invalid member')
+      }
+
+      await box.project.write(
+        'ws/.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members."../shared"]\nkind = "repository"\ntype = "standard"\n'
+      )
+      const grouped = await box.run('ki repo roadmap list')
+      expect(grouped.exitCode).toBe(2)
+      expect(grouped.output).toContain('workspace has unsafe or invalid member ../shared')
+    })
+
     test('audits KI members and reports skipped non-KI members in both output modes', async () => {
       const box = await sandbox()
       await box.project.write(
