@@ -1,14 +1,57 @@
 import { rename } from 'node:fs/promises'
 import { afterEach, expect, test, vi } from 'vitest'
-import { runCommand, sandbox } from './_cli_helper.ts'
+import { type AgentProcesses, runCommand, sandbox } from './_cli_helper.ts'
 
 // A journal can disappear between replay and inspection. Inject only that filesystem
 // boundary: a single CLI call cannot otherwise deterministically schedule the race.
-const fault = vi.hoisted(() => ({ path: '', call: 0, at: 0, directory: '', renameTarget: '' }))
+const fault = vi.hoisted(() => ({
+  path: '',
+  call: 0,
+  at: 0,
+  directory: '',
+  renameTarget: '',
+  writeTarget: '',
+  statTarget: '',
+  writeExists: '',
+  syncReadTarget: ''
+}))
+vi.mock('node:fs', async (importOriginal) => {
+  const original = await importOriginal<typeof import('node:fs')>()
+  return {
+    ...original,
+    readFileSync: (...args: Parameters<typeof original.readFileSync>) => {
+      if (String(args[0]) === fault.syncReadTarget) {
+        fault.syncReadTarget = ''
+        throw Object.assign(new Error('injected release read denial'), { code: 'EACCES' })
+      }
+      return original.readFileSync(...args)
+    }
+  }
+})
 vi.mock('node:fs/promises', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs/promises')>()
   return {
     ...original,
+    stat: (...args: Parameters<typeof original.stat>) => {
+      if (String(args[0]) === fault.statTarget)
+        return Promise.reject(Object.assign(new Error('injected metadata denial'), { code: 'EACCES' }))
+      return original.stat(...args)
+    },
+    writeFile: (...args: Parameters<typeof original.writeFile>) => {
+      if (String(args[0]) === fault.writeExists) {
+        fault.writeExists = ''
+        fault.syncReadTarget = ''
+        return original
+          .writeFile(...args)
+          .then(() => Promise.reject(Object.assign(new Error('concurrent creator'), { code: 'EEXIST' })))
+      }
+      if (
+        String(args[0]) === fault.writeTarget ||
+        (fault.writeTarget.endsWith('*') && String(args[0]).startsWith(fault.writeTarget.slice(0, -1)))
+      )
+        return Promise.reject(Object.assign(new Error('injected post-start persistence denial'), { code: 'EACCES' }))
+      return original.writeFile(...args)
+    },
     rename: (...args: Parameters<typeof original.rename>) => {
       if (String(args[1]) === fault.renameTarget)
         return Promise.reject(new Error('injected post-start queue publication failure'))
@@ -32,6 +75,10 @@ afterEach(() => {
   fault.at = 0
   fault.directory = ''
   fault.renameTarget = ''
+  fault.writeTarget = ''
+  fault.statTarget = ''
+  fault.writeExists = ''
+  fault.syncReadTarget = ''
 })
 
 const fixture = async () => {
@@ -142,4 +189,206 @@ test('a post-start queue projection failure never cancels a started entry', asyn
   const state = JSON.parse(await box.state.read('ki/agents/r/control.json'))
   expect(state.entries[entry].state).toBe('started')
   expect(await box.state.read('ki/agents/r/events.jsonl')).not.toContain('"kind":"failed"')
+})
+
+test.each(['worker.pid', 'control-*', 'worker.launch.json'])(
+  'third-review post-start %s denial keeps the confirmed launch',
+  async (file) => {
+    const box = await fixture()
+    box.setAgentProcesses({
+      launch: async () => {
+        fault.writeTarget = `${box.state.path}/ki/agents/r/${file}`
+        return 4001
+      },
+      alive: () => true,
+      sleep: async () => {}
+    })
+    const result = await box.run('ki agent launch r worker . brief.md --json')
+    expect(result.exitCode, result.output).toBe(0)
+    const receipt = JSON.parse(result.stdout)
+    expect(receipt.pid).toBe(4001)
+    expect(receipt.identity.state).toBe('running')
+    expect(receipt.warnings.join(' ')).toContain('inspection')
+  }
+)
+
+test.each(['publication', 'acknowledgement'] as const)(
+  'third-review legacy queue preserves its started identity after %s failure',
+  async (kind) => {
+    const box = await fixture()
+    const request = {
+      run: 'r',
+      name: 'worker',
+      workdir: box.project.path,
+      prompt: `${box.project.path}/brief.md`,
+      runtime: 'claude',
+      addDirs: [],
+      rules: 'none',
+      allow: [],
+      waitFor: []
+    }
+    await box.state.write('ki/agents/r/queue.jsonl', `${JSON.stringify(request)}\n`)
+    let launches = 0
+    box.setAgentProcesses({
+      launch: async () => {
+        launches += 1
+        if (kind === 'acknowledgement') throw new Error('injected acknowledgement loss')
+        fault.renameTarget = `${box.state.path}/ki/agents/r/queue.jsonl`
+        await box.state.write('ki/agents/r/worker.status', 'DONE\n')
+        await box.state.write('ki/agents/r/worker.report.md', '# Result\n')
+        return 4001
+      },
+      alive: () => true,
+      sleep: async () => {}
+    })
+    for (let retry = 0; retry < 2; retry += 1) {
+      const result = await box.run('ki agent dispatch r --max 1 --foreground')
+      expect(result.exitCode, result.output).toBe(kind === 'publication' ? 0 : 1)
+      expect(result.output).not.toContain('could not launch')
+      if (kind === 'acknowledgement') expect(result.output).toContain('claim-unconfirmed')
+      fault.renameTarget = ''
+    }
+    expect(launches).toBe(1)
+    if (kind === 'acknowledgement') {
+      const status = await box.run('ki agent status r')
+      expect(status.exitCode, status.output).toBe(0)
+      expect(status.output).toContain('unconfirmed')
+    }
+    expect(await box.state.read('ki/agents/r/events.jsonl')).not.toContain('"kind":"failed"')
+  }
+)
+
+test('third-review denied event metadata never becomes an absent timestamp', async () => {
+  const box = await fixture()
+  await box.run('ki agent launch r worker . brief.md --json')
+  fault.statTarget = `${box.state.path}/ki/agents/r/worker.status`
+  const result = await box.run('ki agent status r')
+  expect(result.exitCode).toBe(1)
+  expect(result.output).toContain('events-evidence-unverified')
+})
+
+test('third-review first history creation refuses denied writes before spawn', async () => {
+  const box = await fixture()
+  let launches = 0
+  box.setAgentProcesses({
+    launch: async () => {
+      launches += 1
+      return 4001
+    },
+    alive: () => true,
+    sleep: async () => {}
+  })
+  fault.writeTarget = `${box.state.path}/ki/agents/r/events.jsonl`
+  const result = await box.run('ki agent launch r worker . brief.md --json')
+  expect(result.exitCode).toBe(1)
+  expect(result.output).toContain('events-evidence-unverified')
+  expect(launches).toBe(0)
+})
+
+test('third-review concurrent first history creation never overwrites the journal', async () => {
+  const box = await fixture()
+  fault.writeExists = `${box.state.path}/ki/agents/r/events.jsonl`
+  const result = await box.run('ki agent launch r worker . brief.md --json')
+  expect(result.exitCode, result.output).toBe(0)
+  expect(await box.state.read('ki/agents/r/events.jsonl')).toContain('"kind":"launch"')
+})
+
+test('third-review native release read failure cannot contradict a started worker', async () => {
+  const box = await fixture()
+  fault.syncReadTarget = `${box.state.path}/ki/agents/r/events.lock`
+  const result = await box.run('ki agent launch r worker . brief.md --json')
+  expect(result.exitCode, result.output).toBe(0)
+  expect(JSON.parse(result.stdout).pid).toBe(4001)
+})
+
+test('third-review lost journal during stop publication refuses before signalling', async () => {
+  const box = await fixture()
+  type Identity = Parameters<NonNullable<AgentProcesses['control']>['launch']>[0]
+  const owner = (identity: Identity) => ({
+    pid: 4001,
+    birth: 'fixture',
+    session: 'fixture',
+    group: 'fixture',
+    token: identity.token,
+    scope: identity.scope,
+    launcher: identity.launcher
+  })
+  let signals = 0
+  box.setAgentProcesses({
+    launch: async () => 4001,
+    alive: () => true,
+    sleep: async () => {},
+    control: {
+      launch: async (identity) => owner(identity),
+      inspect: async (identity) => ({
+        token: identity.token,
+        scope: identity.scope,
+        ownership: true,
+        containment: true,
+        empty: false,
+        fenced: true,
+        authorisationConsumed: true,
+        workerStarted: true,
+        owner: owner(identity)
+      }),
+      terminate: async () => {
+        signals += 1
+      },
+      verifyRecovery: async () => undefined
+    }
+  })
+  expect((await box.run('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
+  fault.path = `${box.state.path}/ki/agents/r/events.jsonl`
+  fault.at = 3
+  const result = await box.run('ki agent stop r worker --attempt 1 --reason owner --json')
+  expect(result.exitCode, result.output).toBe(1)
+  expect(result.output).toContain('events-evidence-unverified')
+  expect(signals).toBe(0)
+})
+
+test('third-review dispatch returns a confirmed start with its packet inspection warning', async () => {
+  const box = await fixture()
+  await box.run('ki agent queue r worker brief.md --json')
+  box.setAgentProcesses({
+    launch: async () => {
+      fault.writeTarget = `${box.state.path}/ki/agents/r/worker.launch.json`
+      return 4001
+    },
+    alive: () => true,
+    sleep: async () => {}
+  })
+  const result = await box.run('ki agent dispatch r --max 1 --foreground')
+  expect(result.exitCode, result.output).toBe(0)
+  expect(result.output).toContain('launched worker')
+  expect(result.output).toContain('inspection')
+  expect(result.output).not.toContain('could not launch')
+})
+
+test('third-review a legacy preparation refusal creates no attempt or process', async () => {
+  const box = await fixture()
+  const request = {
+    run: 'r',
+    name: 'worker',
+    workdir: `${box.project.path}/missing`,
+    prompt: `${box.project.path}/brief.md`,
+    runtime: 'claude',
+    addDirs: [],
+    rules: 'none',
+    allow: [],
+    waitFor: []
+  }
+  await box.state.write('ki/agents/r/queue.jsonl', `${JSON.stringify(request)}\n`)
+  let launches = 0
+  box.setAgentProcesses({
+    launch: async () => {
+      launches += 1
+      return 4001
+    },
+    alive: () => false,
+    sleep: async () => {}
+  })
+  const result = await box.run('ki agent dispatch r --max 1 --foreground')
+  expect(result.exitCode, result.output).toBe(0)
+  expect(result.output).toContain('could not launch worker')
+  expect(launches).toBe(0)
 })

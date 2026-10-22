@@ -18,6 +18,7 @@ const setupRun = async (box: Sandbox) => {
   await box.project.write('task.md', '# Task\n')
   // A run started under run events; a test of an older run removes the snapshot.
   await box.state.write('ki/agents/r/events.state.json', '{}\n')
+  await box.state.write('ki/agents/r/events.jsonl', '')
   const launches: AgentLaunch[] = []
   const alive = new Set<number>()
   box.setAgentProcesses({
@@ -53,6 +54,7 @@ const kinds = async (box: Sandbox): Promise<string[]> =>
 /** A run from before run events: no snapshot and no log, with agents that already ended. */
 const olderRun = async (box: Sandbox): Promise<void> => {
   await rm(`${box.state.path}/ki/agents/r/events.state.json`)
+  await rm(`${box.state.path}/ki/agents/r/events.jsonl`)
   await box.state.write('ki/agents/r/answered.pid', '5\n')
   await box.state.write('ki/agents/r/answered.report.md', '## Queries\n\n### HOOK-FIX - Fix the hook\n')
   await box.state.write('ki/agents/r/answered.status', '19:20 UTC - milestone: reported\nDONE\n')
@@ -286,12 +288,13 @@ describe('ki agent run events', () => {
       'one blocked: no key',
       'one failed: tests red'
     ])
-    expect([await wait(box), await wait(box), await wait(box)]).toEqual([
+    expect([await wait(box), await wait(box), await wait(box), await wait(box)]).toEqual([
       'one blocked: no key\n',
       'one failed: tests red\n',
+      'one failed: exited without DONE (19:34 UTC - failed: tests red)\n',
       'ALL FINISHED\n'
     ])
-    expect(await events(box)).toHaveLength(4)
+    expect(await events(box)).toHaveLength(5)
   })
 
   test('records a held launch and a closed gate as blocked, and a dispatcher drop', async () => {
@@ -387,7 +390,8 @@ describe('ki agent run events', () => {
       'answered done: 19:20 UTC - milestone: reported',
       'answered needs-owner: HOOK-FIX - Fix the hook',
       'moved failed: no report',
-      'quit failed: tests red'
+      'quit failed: tests red',
+      'quit failed: exited without DONE (19:22 UTC - failed: tests red)'
     ])
   })
 

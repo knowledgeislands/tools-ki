@@ -50,7 +50,15 @@ export const temporaryRoot = (context: AgentContext, run: string): string =>
 export const temporaryDirectory = (context: AgentContext, run: string, name: string): string =>
   join(temporaryRoot(context, run), checkName(name, 'name'))
 
-export const read = (path: string): Promise<string | undefined> => readFile(path, 'utf8').catch(() => undefined)
+export const read = (path: string): Promise<string | undefined> =>
+  readFile(path, 'utf8').catch((error: unknown) => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw new KiError(
+      `agent-evidence-unverified: cannot read ${path}: ${String(error)}`,
+      1,
+      'preserve the run evidence and restore access before retrying'
+    )
+  })
 
 /** The run's `git`, with discovery left to `-C` so the answer follows the directory asked about. */
 export const git = async (

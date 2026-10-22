@@ -68,8 +68,10 @@ const fakeProcesses = (box: Sandbox, onSleep: () => Promise<void> = async () => 
 const runDir = (box: Sandbox): string => `${box.state.path}/ki/agents/r`
 
 /** Marks a run as started under run events, so agents written by hand are not an older run's past. */
-const eventRun = (box: Sandbox, run = 'r'): Promise<void> =>
-  box.state.write(`ki/agents/${run}/events.state.json`, '{}\n')
+const eventRun = async (box: Sandbox, run = 'r'): Promise<void> => {
+  await box.state.write(`ki/agents/${run}/events.jsonl`, '')
+  await box.state.write(`ki/agents/${run}/events.state.json`, '{}\n')
+}
 const runPath = (box: Sandbox, file: string): string => `${runDir(box)}/${file}`
 const threadPath = async (box: Sandbox, file: string): Promise<string> =>
   `${await realpath(box.project.path)}/+/_WORK/ki.r/${file}`
@@ -443,6 +445,8 @@ describe('ki agent launch of a name that has already run', () => {
     const held = await box.run(`ki agent launch r gated . ${runPath(box, 'gated.draft.md')} --wait-for slow`, { now })
     expect(held.stdout).toContain('held r/gated until slow finish')
     expect(await absent('gated.draft.md')).toBe('absent')
+    processes.finish()
+    await box.run(['ki', ...(processes.launches.at(-1) as AgentLaunch).arguments], { now })
 
     // A queued launch that fails keeps its brief.
     expect((await box.run('ki agent queue r stuck task.md', { now })).exitCode).toBe(0)

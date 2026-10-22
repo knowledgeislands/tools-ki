@@ -15,7 +15,7 @@ import {
   saveControl,
   verifyStore
 } from './control-store.ts'
-import { readEvents, recordEvent } from './events.ts'
+import { initializeEvents, readEvents, recordEvent } from './events.ts'
 import type { ScopeObservation } from './processes.ts'
 import { ownsScope as owned } from './scope.ts'
 import { authorityReference, sha256 } from './selection.ts'
@@ -38,19 +38,26 @@ const event = async (
   kind: 'stop-requested' | 'stopped' | 'dequeued' | 'blocked',
   operation: string,
   text: string
-): Promise<number> => {
-  await recordEvent(
-    context,
-    directory,
-    undefined,
-    attempt.agent,
-    kind,
-    `${operation}: ${text}`,
-    operation,
-    attempt.attempt
-  )
-  const events = await readEvents(directory)
-  return (events.find((entry) => entry.operation === operation && entry.kind === kind) as { seq: number }).seq
+): Promise<number | undefined> => {
+  try {
+    await recordEvent(
+      context,
+      directory,
+      undefined,
+      attempt.agent,
+      kind,
+      `${operation}: ${text}`,
+      operation,
+      attempt.attempt
+    )
+    const events = await readEvents(directory)
+    return events.find((entry) => entry.operation === operation && entry.kind === kind)?.seq
+  } catch (error) {
+    // The control journal already proves these outcomes. Publication and its
+    // sequence are projections; neither can invalidate a confirmed effect.
+    if (kind !== 'stop-requested') return undefined
+    throw error
+  }
 }
 
 const terminal = async (directory: string, attempt: AttemptIdentity): Promise<'done' | 'failed' | undefined> => {
@@ -83,6 +90,7 @@ export const stopAgent = async (context: AgentContext, request: StopRequest): Pr
   await storeFor(context, request.run)
   return controlTransaction(context, request.run, async (directory) => {
     const store = await storeFor(context, request.run)
+    await initializeEvents(directory)
     const body = {
       run: request.run,
       name: request.name,
@@ -290,6 +298,7 @@ export const dequeueAgent = async (context: AgentContext, request: DequeueReques
   await storeFor(context, request.run)
   return controlTransaction(context, request.run, async (directory) => {
     const store = await storeFor(context, request.run)
+    await initializeEvents(directory)
     const entry = store.entries[request.entry]
     if (!entry || entry.name !== request.name) throw new KiError('unknown-entry: no matching queue identity', 1)
     const attempt =

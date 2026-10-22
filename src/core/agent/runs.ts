@@ -20,6 +20,7 @@ import {
 import {
   type AttemptIdentity,
   beginOperation,
+  type ControlOperation,
   type ControlStore,
   canonical,
   dependencyTargets,
@@ -35,11 +36,11 @@ import {
   verifyStore,
   verifyWorkHome
 } from './control-store.ts'
-import { deriveEvents, type Observed, type RunEvent, readEvents, recordEvent } from './events.ts'
+import { deriveEvents, initializeEvents, type Observed, type RunEvent, readEvents, recordEvent } from './events.ts'
 import type { DependencyIdentity } from './identities.ts'
 import { type AgentEffort, type AgentRuntime, runtimeLaunch } from './runtimes.ts'
 import { ownsScope } from './scope.ts'
-import { requireSelection, resolveSelection, type SelectionRequest } from './selection.ts'
+import { requireSelection, resolveSelection, type SelectionRequest, sha256 } from './selection.ts'
 import { readThread, reportPath, type ThreadHome, threadHome, threadPath } from './thread.ts'
 
 import { agentWorktree, agentWorktreeLines, prepareAgentWorktree, worktreeRepository } from './worktrees.ts'
@@ -50,6 +51,8 @@ export { authorityTiers, grantNames } from './context.ts'
 export interface LaunchRequest extends SelectionRequest {
   readonly entry?: string | undefined
   readonly launchToken?: string | undefined
+  /** Binds a legacy queue projection to its durable spawn intent before any effect. */
+  readonly queueSource?: string | undefined
   readonly run: string
   readonly name: string
   readonly workdir: string
@@ -204,8 +207,14 @@ export const agentState = async (context: AgentContext, directory: string, name:
     return { kind: 'dequeued', last: 'dequeued' }
   if (attempt?.state === 'failed') return { kind: 'failed', last: 'failed' }
   if (attempt?.state === 'done') return { kind: 'finished', last: 'done' }
-  if (attempt?.state === 'held' && pid === undefined)
-    return { kind: 'running', last: 'held; launch acknowledgement unavailable' }
+  if (attempt?.state === 'held' && (pid === undefined || !context.processes.alive(pid)))
+    return {
+      kind: 'running',
+      last:
+        pid === undefined
+          ? 'held; launch acknowledgement unavailable'
+          : 'held; supervisor unavailable; inspect control evidence before recovery'
+    }
   if (attempt && ['unconfirmed', 'stop-requested', 'stop-timeout'].includes(attempt.state))
     return { kind: 'running', last: attempt.state }
   const status = lines(await read(join(directory, `${name}.status`)))
@@ -401,7 +410,8 @@ const startRuntime = async (
   request: LaunchRequest,
   prompt: string,
   store: ControlStore,
-  attempt: AttemptIdentity
+  attempt: AttemptIdentity,
+  confirmed: (pid: number) => void
 ): Promise<number> => {
   const base = join(directory, request.name)
   // Both callers validate the reservation and cancellation fence inside this transaction.
@@ -418,7 +428,7 @@ const startRuntime = async (
     directory,
     store,
     'spawn',
-    { token: attempt.token, scope: attempt.scope, selection: request.selection },
+    { token: attempt.token, scope: attempt.scope, selection: request.selection, queueSource: request.queueSource },
     { ...attempt },
     'held',
     entry?.operation
@@ -467,6 +477,7 @@ const startRuntime = async (
   }
   attempt.state = 'running'
   if (entry) entry.state = 'started'
+  confirmed(pid)
   await writeFile(`${base}.pid`, `${pid}\n`)
   await finishOperation(context, directory, store, operation, {
     resultingState: 'running',
@@ -486,7 +497,8 @@ const startHold = async (
   directory: string,
   request: LaunchRequest,
   store: ControlStore,
-  attempt: AttemptIdentity
+  attempt: AttemptIdentity,
+  confirmed: (pid: number) => void
 ): Promise<number> => {
   const base = join(directory, request.name)
   const launch = {
@@ -521,7 +533,7 @@ const startHold = async (
     directory,
     store,
     'spawn-supervisor',
-    { token: attempt.token, scope: attempt.scope, selection: request.selection },
+    { token: attempt.token, scope: attempt.scope, selection: request.selection, queueSource: request.queueSource },
     { ...attempt },
     'held'
   )
@@ -558,6 +570,7 @@ const startHold = async (
       1
     )
   }
+  confirmed(pid)
   await finishOperation(context, directory, store, operation, {
     resultingState: 'held',
     outcome: 'held',
@@ -660,7 +673,20 @@ export const launchAgent = async (
 ): Promise<LaunchResult> => {
   if (!locked) {
     const accepted = await preflight(context, candidate)
-    return pendingControl(context, candidate.run, () => launchAgent(context, accepted, true))
+    let confirmed: LaunchResult | undefined
+    try {
+      return await pendingControl(context, candidate.run, async () => {
+        confirmed = await launchAgent(context, accepted, true)
+        return confirmed
+      })
+    } catch (error) {
+      if (confirmed !== undefined)
+        return {
+          ...confirmed,
+          warnings: [...confirmed.warnings, `confirmed start; follow-up requires inspection: ${String(error)}`]
+        }
+      throw error
+    }
   }
   const accepted = await validated(context, candidate)
   const body = await promptText(context, accepted.prompt)
@@ -710,7 +736,17 @@ export const launchAgent = async (
       throw new KiError('claim-unconfirmed: prior scope is not verified empty and fenced', 1)
     scopeEmpty = true
   }
-  const resuming = request.entry !== undefined && old?.entry === request.entry && old.state === 'failed'
+  const resuming =
+    prior !== undefined &&
+    old?.state === 'failed' &&
+    ((request.entry !== undefined && old.entry === request.entry) ||
+      (request.queueSource !== undefined &&
+        Object.values(prior.operations).some(
+          (operation) =>
+            queueSourceOf(operation) === request.queueSource &&
+            queueOutcomeOf(prior, operation) === 'spawn-not-started' &&
+            (operation.target as AttemptIdentity).token === old.token
+        )))
   const live =
     scopeEmpty || (old && ['stopped', 'done', 'failed'].includes(old.state))
       ? undefined
@@ -726,7 +762,9 @@ export const launchAgent = async (
     throw new KiError('claim-unconfirmed: reconcile the prior attempt before replacement', 1)
   const entry = request.entry === undefined ? undefined : store.entries[request.entry]
   const reserved =
-    earlier && request.entry !== undefined && earlier.entry === request.entry
+    earlier &&
+    ((request.entry !== undefined && earlier.entry === request.entry) ||
+      (resuming && request.queueSource !== undefined))
       ? { ...earlier, state: 'held' as const, owner: undefined }
       : identity(
           context,
@@ -749,15 +787,17 @@ export const launchAgent = async (
     }
   }
   if (request.relaunch) await setAside(context, directory, thread, request)
+  let started: { pid: number; held: readonly string[] } | undefined
+  const warnings = reportConflicts(body, directory, request.name)
   try {
     store.attempts[request.name] = reserved
     await saveControl(directory, store)
+    await initializeEvents(directory)
     request = { ...request, launchToken: reserved.token }
 
     // The launcher copies the agent's report into the tracked thread folder, so the folder must exist.
     await mkdir(threadPath(thread), { recursive: true })
     await mkdir(temporary, { recursive: true })
-    const warnings = reportConflicts(body, directory, request.name)
     const prompt = await composePrompt(
       context,
       directory,
@@ -773,7 +813,9 @@ export const launchAgent = async (
       (path) => path === resolve(context.workingDirectory, request.prompt)
     )
     if (state.kind === 'open') {
-      const pid = await startRuntime(context, directory, request, prompt, store, reserved)
+      const pid = await startRuntime(context, directory, request, prompt, store, reserved, (pid) => {
+        started = { pid, held: [] }
+      })
       if (spent) await rm(spent, { force: true })
       await recordEvent(
         context,
@@ -795,7 +837,9 @@ export const launchAgent = async (
       }
     }
     await writeFile(`${base}.status`, heldLine(context, state.names))
-    const pid = await startHold(context, directory, request, store, reserved)
+    const pid = await startHold(context, directory, request, store, reserved, (pid) => {
+      started = { pid, held: state.names }
+    })
     await writeFile(`${base}.pid`, `${pid}\n`)
     await writeFile(`${base}.launch.json`, await launchDetails(context, request))
     if (spent) await rm(spent, { force: true })
@@ -818,6 +862,17 @@ export const launchAgent = async (
       identity: (await loadControl(directory))?.attempts[request.name]
     }
   } catch (error) {
+    if (started !== undefined)
+      return {
+        schema: 'ki/agent-launch/v1',
+        exitCode: 0,
+        pid: started.pid,
+        directory,
+        held: started.held,
+        selection: request.selection,
+        identity: reserved,
+        warnings: [...warnings, `confirmed start; follow-up requires inspection: ${String(error)}`]
+      }
     const current = await loadControl(directory)
     if (
       current &&
@@ -855,6 +910,7 @@ export const holdAgent = async (context: AgentContext, candidate: LaunchRequest)
   const prompt = await promptText(context, request.prompt)
   const directory = runDirectory(context, request.run)
   const base = join(directory, request.name)
+  let started: number | undefined
   for (;;) {
     // The launcher has just seen the gate shut, so the first check waits a full interval.
     await context.processes.sleep(holdSeconds * 1000)
@@ -896,7 +952,9 @@ export const holdAgent = async (context: AgentContext, candidate: LaunchRequest)
         )
         return line
       }
-      const pid = await startRuntime(context, directory, request, prompt, store, attempt)
+      const pid = await startRuntime(context, directory, request, prompt, store, attempt, (pid) => {
+        started = pid
+      })
       await recordEvent(
         context,
         directory,
@@ -906,6 +964,10 @@ export const holdAgent = async (context: AgentContext, candidate: LaunchRequest)
         `launched (pid ${pid})`
       )
       return `${stamp(context)} launched ${request.run}/${request.name} (pid ${pid})`
+    }).catch((error: unknown) => {
+      if (started !== undefined)
+        return `${stamp(context)} launched ${request.run}/${request.name} (pid ${started}); follow-up requires inspection: ${String(error)}`
+      throw error
     })
     if (result !== undefined) return result
   }
@@ -913,12 +975,29 @@ export const holdAgent = async (context: AgentContext, candidate: LaunchRequest)
 
 const queueFile = (directory: string): string => join(directory, 'queue.jsonl')
 
+const queueSourceOf = (operation: ControlOperation): string | undefined =>
+  ['spawn', 'spawn-supervisor'].includes(operation.operation)
+    ? (JSON.parse(operation.payload) as { queueSource?: string }).queueSource
+    : undefined
+
+const queueOutcomeOf = (store: ControlStore | undefined, operation: ControlOperation): string | undefined =>
+  operation.receipt?.outcome ??
+  (operation.resolvedBy === undefined ? undefined : store?.operations[operation.resolvedBy]?.receipt?.outcome)
+
 export const readQueue = async (directory: string): Promise<LaunchRequest[]> => {
   const store = await loadControl(directory)
   const projection = lines(await read(queueFile(directory))).map((line) => JSON.parse(line) as LaunchRequest)
   if (projection.some((request) => request.entry !== undefined && !store?.entries[request.entry]))
     throw new KiError('queue-identity-unverified: unknown queue entry; inspect the control journal', 1)
-  const legacy = projection.filter((request) => request.entry === undefined)
+  const legacy = projection.filter(
+    (request) =>
+      request.entry === undefined &&
+      !Object.values(store?.operations ?? {}).some(
+        (operation) =>
+          queueSourceOf(operation) === sha256(canonical(request)) &&
+          ['started', 'held', 'spawn-started'].includes(queueOutcomeOf(store, operation) ?? '')
+      )
+  )
   const queued = Object.values(store?.entries ?? {}).filter((entry) => entry.state === 'queued')
   return [
     ...legacy,
@@ -1074,11 +1153,13 @@ const observe = async (context: AgentContext, directory: string): Promise<void> 
   deriveEvents(context, directory, await observed(context, directory))
 
 const pendingObservation = async (context: AgentContext, directory: string): Promise<void> => {
+  const started = context.now()
   for (;;) {
     try {
       return await observe(context, directory)
     } catch (error) {
       if (!(error instanceof KiError) || !error.message.startsWith('events-transaction-busy:')) throw error
+      if (context.now() - started >= 120_000) throw new KiError(`${error.message}; waited 120 seconds`, 1, error.next)
       await context.processes.sleep(1000)
     }
   }
@@ -1319,7 +1400,12 @@ export const dispatchRun = async (
       const store = await loadControl(directory)
       if (store) {
         await verifyStore(context, request.run, store)
-        if (Object.values(store.entries).some((entry) => entry.state === 'claimed' || entry.state === 'unconfirmed')) {
+        if (
+          Object.values(store.entries).some((entry) => entry.state === 'claimed' || entry.state === 'unconfirmed') ||
+          Object.values(store.operations).some(
+            (operation) => queueSourceOf(operation) !== undefined && queueOutcomeOf(store, operation) === undefined
+          )
+        ) {
           emit(`${stamp(context)} claim-unconfirmed: inspect and reconcile before replacement`)
           return 'uncertain'
         }
@@ -1363,7 +1449,11 @@ export const dispatchRun = async (
           await observed(context, directory),
           queued.name,
           kind,
-          `could not launch: ${reason}`
+          `could not launch: ${reason}`,
+          undefined,
+          queued.entry === undefined
+            ? await minimumAttempt(directory, queued.name)
+            : store?.entries[queued.entry]?.attempt
         )
         emit(`${stamp(context)} could not launch ${queued.name}: ${reason}`)
       }
@@ -1372,6 +1462,7 @@ export const dispatchRun = async (
         return 'again'
       }
       if (next && alive < request.max) {
+        let launched: LaunchResult | undefined
         if (next.run !== request.run || typeof next.name !== 'string')
           throw new KiError('queue-home-unverified: the queued request does not belong to this run', 1)
         try {
@@ -1390,26 +1481,39 @@ export const dispatchRun = async (
               throw new KiError('selection-changed: the queue differs from its frozen request', 1)
             next = { ...frozen, entry: entry.id }
           }
-          await launchAgent(context, next, true)
+          launched = await launchAgent(
+            context,
+            next.entry === undefined ? { ...next, queueSource: sha256(canonical(next)) } : next,
+            true
+          )
           await writeQueue(directory, queue.toSpliced(index, 1))
           emit(`${stamp(context)} launched ${next.name}`)
+          if (launched.warnings.some((warning) => warning.startsWith('confirmed start;'))) {
+            emit(`${stamp(context)} follow-up requires inspection: ${launched.warnings.join('; ')}`)
+            return 'inspection'
+          }
         } catch (error) {
+          if (launched !== undefined) {
+            emit(`${stamp(context)} launched ${next.name}; follow-up requires inspection: ${String(error)}`)
+            return 'inspection'
+          }
           const current = await loadControl(directory)
           const entryId = next.entry
-          if (next.entry && current?.entries[next.entry]?.state === 'started') {
-            emit(`${stamp(context)} launched ${next.name}; follow-up requires inspection: ${String(error)}`)
-            return 'again'
-          }
           if (!(error instanceof KiError)) throw error
           if (error.message.startsWith('selection-changed:')) throw error
+          const operations = Object.values(current?.operations ?? {})
           if (
-            next.entry &&
-            (Object.values((current as ControlStore).operations).some(
-              (operation) =>
-                ['spawn', 'spawn-supervisor'].includes(operation.operation) &&
-                (operation.target as AttemptIdentity).entry === entryId
-            ) ||
-              current?.entries[next.entry]?.state === 'unconfirmed')
+            (next.entry === undefined &&
+              operations.some(
+                (operation) => queueSourceOf(operation) === sha256(canonical(next)) && !operation.resolvedBy
+              )) ||
+            (next.entry &&
+              (operations.some(
+                (operation) =>
+                  ['spawn', 'spawn-supervisor'].includes(operation.operation) &&
+                  (operation.target as AttemptIdentity).entry === entryId
+              ) ||
+                current?.entries[next.entry]?.state === 'unconfirmed'))
           ) {
             emit(`${stamp(context)} claim-unconfirmed: ${error.message}`)
             return 'uncertain'
@@ -1430,7 +1534,7 @@ export const dispatchRun = async (
       return 'sleep'
     })
     if (result === 'uncertain') throw new KiError('claim-unconfirmed: reconcile before dispatching replacement work', 1)
-    if (result === 'end') return
+    if (result === 'end' || result === 'inspection') return
     if (result === 'sleep') await context.processes.sleep(request.seconds * 1000)
   }
 }

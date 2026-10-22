@@ -56,13 +56,24 @@ export const withRunLock = async <T>(
       /* Unverified ownership or I/O leaves the holder evidence for offline recovery. */
     }
   })
-  try {
-    return await action()
-  } finally {
+  const finish = (): void => {
     try {
       release()
     } finally {
       unregister?.()
     }
   }
+  let result: T
+  try {
+    result = await action()
+  } catch (error) {
+    try {
+      finish()
+    } catch {
+      /* Preserve the action's refusal and the unverifiable holder evidence. */
+    }
+    throw error
+  }
+  finish()
+  return result
 }
