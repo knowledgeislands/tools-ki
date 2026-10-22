@@ -144,16 +144,28 @@ const withLock = <T>(context: AgentContext, directory: string, work: () => Promi
 
 const eventDigest = (text: string): string => createHash('sha256').update(text).digest('hex')
 /** Commit the exact append intent before publication so readers can finish an interrupted append. */
-const writeHistory = async (directory: string, journal: string, seq: number): Promise<void> => {
+const writeHistory = async (
+  directory: string,
+  journal: string,
+  seq: number,
+  events: readonly RunEvent[]
+): Promise<void> => {
   const path = join(directory, 'events.history')
   const temporary = `${path}.tmp`
-  const contents = `${JSON.stringify({ schema: 'ki/agent-events/v2', seq, sha256: eventDigest(journal), journal })}\n`
+  const failures = events
+    .filter((event) => event.kind === 'failed')
+    .map(({ seq, terminal, statusLine }) => ({ seq, terminal, statusLine }))
+  const contents = `${JSON.stringify({ schema: 'ki/agent-events/v2', seq, sha256: eventDigest(journal), journal, failures, failureSha256: eventDigest(JSON.stringify(failures)) })}\n`
   await writeFile(temporary, contents)
   await rename(temporary, path)
   if ((await evidenceRead(path)) !== contents) throw evidenceError(path, 'checkpoint write could not be verified')
 }
 
-const verifyLegacyHistory = async (directory: string, events: readonly RunEvent[]): Promise<void> => {
+const verifyLegacyHistory = async (
+  directory: string,
+  events: readonly RunEvent[],
+  legacyFailures: ReadonlySet<number>
+): Promise<void> => {
   const store = await loadControl(directory)
   if (
     Object.values(store?.operations ?? {}).some((operation) => (operation.receipt?.eventSequence ?? 0) > events.length)
@@ -176,7 +188,13 @@ const verifyLegacyHistory = async (directory: string, events: readonly RunEvent[
       continue
     }
     const replayed = journal.reduce<Seen>((prior, event) => publicationSeen(prior, event), { attempt: seen.attempt })
-    if (seen.ended && !replayed.ended)
+    if (
+      seen.ended &&
+      !replayed.ended &&
+      !journal.some(
+        (event) => legacyFailures.has(event.seq) && event.terminal === false && event.statusLine === seen.line
+      )
+    )
       throw evidenceError(eventsFile(directory), 'journal has lost an observed terminal outcome')
     if (seen.line !== undefined) {
       const form = statusForm.exec(seen.line)
@@ -236,10 +254,18 @@ export const readEvents = async (
   const checkpoint = await evidenceRead(history)
   let journal = source ?? ''
   let expectedSequence: number | undefined
+  let failures: RunEvent[] = []
   if (checkpoint !== undefined && checkpoint !== 'ki/agent-events/v1\n') {
     // A concurrent first publication may appear after the initial absence checks.
     if (bytes === undefined) return readEvents(context, directory, after, initialize)
-    const saved = parseEvidence<{ schema: string; seq: number; sha256: string; journal: string }>(
+    const saved = parseEvidence<{
+      schema: string
+      seq: number
+      sha256: string
+      journal: string
+      failures?: RunEvent[]
+      failureSha256?: string
+    }>(
       history,
       checkpoint,
       (value) =>
@@ -249,7 +275,20 @@ export const readEvents = async (
         value.seq >= 0 &&
         typeof value.sha256 === 'string' &&
         typeof value.journal === 'string' &&
-        eventDigest(value.journal) === value.sha256
+        eventDigest(value.journal) === value.sha256 &&
+        (value.failures === undefined ||
+          (Array.isArray(value.failures) &&
+            value.failures.every(
+              (failure) =>
+                failure !== null &&
+                Number.isSafeInteger(failure.seq) &&
+                failure.seq > 0 &&
+                failure.seq <= value.seq &&
+                typeof failure.terminal === 'boolean' &&
+                (failure.statusLine === undefined || typeof failure.statusLine === 'string')
+            ) &&
+            new Set(value.failures.map((failure) => failure.seq)).size === value.failures.length &&
+            value.failureSha256 === eventDigest(JSON.stringify(value.failures))))
     )
     if (
       !Buffer.from(saved.journal)
@@ -263,6 +302,7 @@ export const readEvents = async (
 
     journal = saved.journal
     expectedSequence = saved.seq
+    failures = saved.failures ?? []
   }
   if (journal !== '' && !journal.endsWith('\n')) throw evidenceError(path, 'journal has a truncated line terminator')
   const events = journal
@@ -296,7 +336,22 @@ export const readEvents = async (
 
   if (expectedSequence !== undefined && expectedSequence !== events.length)
     throw evidenceError(history, 'checkpoint sequence differs from journal')
-  if (checkpoint === 'ki/agent-events/v1\n' || checkpoint === undefined) await verifyLegacyHistory(directory, events)
+  const legacyFailures = new Set(
+    events.filter((event) => event.kind === 'failed' && event.terminal === undefined).map((event) => event.seq)
+  )
+  for (const failure of failures) {
+    const event = events[failure.seq - 1] as RunEvent
+    if (
+      event.kind !== 'failed' ||
+      (event.terminal !== undefined && event.terminal !== failure.terminal) ||
+      (event.statusLine !== undefined && event.statusLine !== failure.statusLine)
+    )
+      throw evidenceError(history, 'failure identity differs from journal')
+    events[failure.seq - 1] = { ...event, terminal: failure.terminal, statusLine: failure.statusLine }
+  }
+  await classifyLegacyFailures(directory, events)
+  if (checkpoint === 'ki/agent-events/v1\n' || checkpoint === undefined)
+    await verifyLegacyHistory(directory, events, legacyFailures)
   const cursor = await evidenceRead(join(directory, 'events.seen'))
   if (
     cursor !== undefined &&
@@ -311,7 +366,7 @@ export const readEvents = async (
     await appendFile(path, intended.subarray((bytes as Buffer).length))
     if (!(await readFile(path)).equals(intended)) throw evidenceError(path, 'journal recovery could not be verified')
   }
-  if (initialize && checkpoint === undefined) await writeHistory(directory, journal, events.length)
+  if (initialize && checkpoint === undefined) await writeHistory(directory, journal, events.length, events)
   return events.filter((event) => event.seq > after)
 }
 
@@ -332,7 +387,8 @@ const append = async (
   attempts: ReadonlyMap<string, number>,
   pending: readonly Pending[]
 ): Promise<void> => {
-  let seq = (await readEvents(context, directory, 0, true)).length
+  const events = await readEvents(context, directory, 0, true)
+  let seq = events.length
   const lines = pending.map((event) => {
     seq += 1
     const { agent, kind, text, tag, operation, publication, queueSource, statusLine, terminal } = event
@@ -341,7 +397,10 @@ const append = async (
   })
   const journal = await evidenceRead(eventsFile(directory))
   if (journal === undefined) throw evidenceError(eventsFile(directory), 'journal disappeared before append intent')
-  await writeHistory(directory, journal + lines.join(''), seq)
+  await writeHistory(directory, journal + lines.join(''), seq, [
+    ...events,
+    ...lines.map((line) => JSON.parse(line) as RunEvent)
+  ])
   await appendFile(eventsFile(directory), lines.join(''))
   if ((await evidenceRead(eventsFile(directory))) !== journal + lines.join(''))
     throw evidenceError(eventsFile(directory), 'append could not be verified; preserve the checkpoint append intent')
@@ -470,6 +529,19 @@ const publishPending = async (
       (left.event.publicationOrder ?? left.created) - (right.event.publicationOrder ?? right.created) ||
       (left.event.publication as string).localeCompare(right.event.publication as string)
   )
+  // Pending v1 records need the same proof before they can own a terminal identity.
+  const planned = [
+    ...journal,
+    ...records.map(({ event }, index) => ({
+      ...event,
+      attempt: event.attempt as number,
+      seq: journal.length + index + 1,
+      at: instant(context),
+      run: basename(directory)
+    }))
+  ]
+  await classifyLegacyFailures(directory, planned)
+  for (const [index, record] of records.entries()) record.event = planned[journal.length + index] as RunEvent
   for (const { event } of records) {
     if (
       publications.has(event.publication) ||
@@ -495,10 +567,47 @@ const publishPending = async (
   for (const path of paths) await rm(path)
 }
 
+/** These are launcher outcomes, rather than arbitrary worker failure progress. */
+const legacyTerminalFailure = (text: string): boolean =>
+  text === 'no report' || text === 'attempt failed' || /^exited without DONE \(.+\)$/.test(text)
+
+/** Resolve old failure identities before adopting their journal or trusting a snapshot. */
+const classifyLegacyFailures = async (directory: string, events: RunEvent[]): Promise<void> => {
+  const legacy = events.filter((event) => event.kind === 'failed' && event.terminal === undefined)
+  if (!legacy.length) return
+  const source = await evidenceRead(stateFile(directory))
+  const snapshot = source === undefined ? {} : parseSnapshot(stateFile(directory), source)
+  const control = await loadControl(directory)
+  const progress = new Set<string>()
+  for (const event of legacy) {
+    const key = seenKey(event.agent, event.attempt)
+    const seen = snapshot[key] ?? snapshot[event.agent]
+    const current = (await attemptOf(directory, event.agent)) === event.attempt
+    const status = current ? await statusOf(directory, event.agent) : undefined
+    const line = [seen?.attempt === event.attempt ? seen.line : undefined, status?.line].find((line) => {
+      const form = line === undefined ? undefined : statusForm.exec(line)
+      return form?.[1] === 'failed' && form[2] === event.text
+    })
+    const receipt = event.operation === undefined ? undefined : control?.operations[event.operation]?.receipt
+    const confirmed = receipt?.eventSequence === event.seq && receipt.resultingState === 'failed'
+    const identity = `${key}/${event.text}`
+    if (line !== undefined && !progress.has(identity) && !confirmed) {
+      progress.add(identity)
+      events[event.seq - 1] = { ...event, terminal: false, statusLine: line }
+    } else if (confirmed || legacyTerminalFailure(event.text)) {
+      events[event.seq - 1] = { ...event, terminal: true }
+    } else {
+      throw evidenceError(
+        eventsFile(directory),
+        `ambiguous legacy failure at sequence ${event.seq}; preserve status, snapshot and control evidence`
+      )
+    }
+  }
+}
+
 const terminalEvent = (event: Pending): boolean =>
   event.terminal ??
   (['done', 'stopped', 'dequeued'].includes(event.kind) ||
-    event.kind === 'failed' ||
     (event.kind === 'blocked' &&
       event.operation === undefined &&
       (event.text.startsWith('gate cannot open:') || event.text.startsWith('could not launch:'))))
@@ -602,11 +711,17 @@ const readSnapshot = async (
   const snapshot: Snapshot =
     state === undefined ? Object.create(null) : Object.assign(Object.create(null), parseSnapshot(path, state))
   const journal = await readEvents(context, directory)
+  const replayed = new Set<string>()
   for (const event of journal) {
     const key = seenKey(event.agent, event.attempt)
     const previous = snapshot[key] ?? snapshot[event.agent]
     const seen = previous?.attempt === event.attempt ? previous : { attempt: event.attempt }
-    const next = publicationSeen(seen, event)
+    // Rebuild terminal ownership from classified evidence, including poisoned v1 snapshots.
+    if (!replayed.has(key)) {
+      snapshot[key] = { ...seen, ended: false, failed: false }
+      replayed.add(key)
+    }
+    const next = publicationSeen(snapshot[key] as Seen, event)
     snapshot[key] = next
     if ((snapshot[event.agent]?.attempt ?? 0) <= event.attempt) snapshot[event.agent] = next
   }

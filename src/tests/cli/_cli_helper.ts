@@ -30,6 +30,8 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { onTestFinished } from 'vitest'
 import { run as runCli } from '../../cli.ts'
+export type CliEntrypoint = typeof runCli
+
 import { createContext } from '../../context.ts'
 import type { AgentLaunchEvidence } from '../../core/agent/launch-evidence.ts'
 import type { AgentProcesses } from '../../core/agent/processes.ts'
@@ -240,6 +242,7 @@ export interface Sandbox {
   readonly run: (
     command: string | readonly string[],
     options?: {
+      readonly cli?: typeof runCli
       readonly interactive?: boolean
       readonly columns?: number
       readonly now?: () => number
@@ -344,6 +347,7 @@ const create = async (): Promise<Sandbox> => {
   const run = async (
     command: string | readonly string[],
     options?: {
+      readonly cli?: typeof runCli
       readonly interactive?: boolean
       readonly columns?: number
       readonly now?: () => number
@@ -421,7 +425,7 @@ const create = async (): Promise<Sandbox> => {
     // Existing tests compare `{ exitCode, output }` exactly. The named stream transcripts are
     // intentionally non-enumerable so that strengthening the harness preserves that contract.
     return Object.defineProperties(
-      { exitCode: await runCli(tokens.slice(1), context), output },
+      { exitCode: await (options?.cli ?? runCli)(tokens.slice(1), context), output },
       { stdout: { value: stdout }, stderr: { value: stderr } }
     ) as CommandResult
   }
