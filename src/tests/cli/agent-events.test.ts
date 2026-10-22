@@ -237,8 +237,8 @@ describe('ki agent run events', () => {
     await setupRun(box)
     await box.run('ki agent launch r one . task.md', { now })
     await box.state.write('ki/agents/r/one.report.md', '# One\n')
-    await box.state.write('ki/agents/r/one.status', 'DONE\n')
-    await box.run('ki agent status r', { now })
+    // The coordinator committed and retired this exact report before its first end was observed.
+    await box.project.write('+/_WORK/ki.r/one.report.md', '# One\n')
     await box.project.git(['add', '--', '+/_WORK/ki.r/one.report.md'])
     await box.project.git(['commit', '-q', '-m', 'thread'])
     await box.project.git(['rm', '-q', '+/_WORK/ki.r/one.report.md'])
@@ -255,10 +255,9 @@ describe('ki agent run events', () => {
     await box.project.git(['commit', '-q', '-m', 'rename'])
     expect((await box.run('ki agent home r --work ki.s', { now })).exitCode).toBe(0)
 
-    // Lost event evidence sees the agent end afresh; its retired report still does not come back.
-    await box.state.write('ki/agents/r/events.state.json', '{}\n')
-    await rm(`${box.state.path}/ki/agents/r/events.jsonl`)
-    await box.run('ki agent status r', { now })
+    // Publish the first end after the rename, preserving the authoritative event history.
+    await box.state.write('ki/agents/r/one.status', 'DONE\n')
+    expect((await box.run('ki agent status r', { now })).exitCode).toBe(0)
     expect((await kinds(box)).at(-1)).toBe('one done: DONE')
     await expect(box.project.read('+/_WORK/ki.s/one.report.md')).rejects.toThrow()
     await expect(box.project.read('+/_WORK/ki.r/one.report.md')).rejects.toThrow()
