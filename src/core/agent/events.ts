@@ -153,7 +153,7 @@ const writeHistory = async (
   const path = join(directory, 'events.history')
   const temporary = `${path}.tmp`
   const failures = events
-    .filter((event) => event.kind === 'failed')
+    .filter((event) => event.kind === 'failed' || event.kind === 'blocked')
     .map(({ seq, terminal, statusLine }) => ({ seq, terminal, statusLine }))
   const contents = `${JSON.stringify({ schema: 'ki/agent-events/v2', seq, sha256: eventDigest(journal), journal, failures, failureSha256: eventDigest(JSON.stringify(failures)) })}\n`
   await writeFile(temporary, contents)
@@ -191,9 +191,7 @@ const verifyLegacyHistory = async (
     if (
       seen.ended &&
       !replayed.ended &&
-      !journal.some(
-        (event) => legacyFailures.has(event.seq) && event.terminal === false && event.statusLine === seen.line
-      )
+      !journal.some((event) => legacyFailures.has(event.seq) && event.terminal === false)
     )
       throw evidenceError(eventsFile(directory), 'journal has lost an observed terminal outcome')
     if (seen.line !== undefined) {
@@ -337,12 +335,14 @@ export const readEvents = async (
   if (expectedSequence !== undefined && expectedSequence !== events.length)
     throw evidenceError(history, 'checkpoint sequence differs from journal')
   const legacyFailures = new Set(
-    events.filter((event) => event.kind === 'failed' && event.terminal === undefined).map((event) => event.seq)
+    events
+      .filter((event) => ['failed', 'blocked'].includes(event.kind) && event.terminal === undefined)
+      .map((event) => event.seq)
   )
   for (const failure of failures) {
     const event = events[failure.seq - 1] as RunEvent
     if (
-      event.kind !== 'failed' ||
+      !['failed', 'blocked'].includes(event.kind) ||
       (event.terminal !== undefined && event.terminal !== failure.terminal) ||
       (event.statusLine !== undefined && event.statusLine !== failure.statusLine)
     )
@@ -567,13 +567,16 @@ const publishPending = async (
   for (const path of paths) await rm(path)
 }
 
-/** These are launcher outcomes, rather than arbitrary worker failure progress. */
-const legacyTerminalFailure = (text: string): boolean =>
-  text === 'no report' || text === 'attempt failed' || /^exited without DONE \(.+\)$/.test(text)
+/** A closed launcher vocabulary can also occur verbatim in worker progress. */
+const legacyTerminalFailure = ({ kind, text }: RunEvent): boolean =>
+  text.startsWith('could not launch:') ||
+  (kind === 'blocked'
+    ? text.startsWith('gate cannot open:')
+    : text === 'no report' || text === 'attempt failed' || /^exited without DONE \(.+\)$/.test(text))
 
 /** Resolve old failure identities before adopting their journal or trusting a snapshot. */
 const classifyLegacyFailures = async (directory: string, events: RunEvent[]): Promise<void> => {
-  const legacy = events.filter((event) => event.kind === 'failed' && event.terminal === undefined)
+  const legacy = events.filter((event) => ['failed', 'blocked'].includes(event.kind) && event.terminal === undefined)
   if (!legacy.length) return
   const source = await evidenceRead(stateFile(directory))
   const snapshot = source === undefined ? {} : parseSnapshot(stateFile(directory), source)
@@ -586,31 +589,48 @@ const classifyLegacyFailures = async (directory: string, events: RunEvent[]): Pr
     const status = current ? await statusOf(directory, event.agent) : undefined
     const line = [seen?.attempt === event.attempt ? seen.line : undefined, status?.line].find((line) => {
       const form = line === undefined ? undefined : statusForm.exec(line)
-      return form?.[1] === 'failed' && form[2] === event.text
+      return form != null && formKind[form[1] as keyof typeof formKind] === event.kind && form[2] === event.text
     })
     const receipt = event.operation === undefined ? undefined : control?.operations[event.operation]?.receipt
     const confirmed = receipt?.eventSequence === event.seq && receipt.resultingState === 'failed'
-    const identity = `${key}/${event.text}`
-    if (line !== undefined && !progress.has(identity) && !confirmed) {
+    const identity = `${key}/${event.kind}/${event.text}`
+    const attemptEvents = events.filter((other) => other.agent === event.agent && other.attempt === event.attempt)
+    const later = attemptEvents.some((other) => other.seq > event.seq)
+    if (confirmed) {
+      events[event.seq - 1] = { ...event, terminal: true }
+    } else if ((line !== undefined && !progress.has(identity)) || later || !legacyTerminalFailure(event)) {
       progress.add(identity)
       events[event.seq - 1] = { ...event, terminal: false, statusLine: line }
-    } else if (confirmed || legacyTerminalFailure(event.text)) {
-      events[event.seq - 1] = { ...event, terminal: true }
     } else {
-      throw evidenceError(
-        eventsFile(directory),
-        `ambiguous legacy failure at sequence ${event.seq}; preserve status, snapshot and control evidence`
+      const attempt = Object.values(control?.history ?? {}).find(
+        (value) => value.agent === event.agent && value.attempt === event.attempt
       )
+      const ended = attempt?.state === 'failed' || attempt?.state === 'done'
+      const noReport =
+        event.text === 'no report' &&
+        status?.done &&
+        (await read(join(directory, `${event.agent}.report.md`))) === undefined
+      const queued =
+        (event.text.startsWith('could not launch:') || event.text.startsWith('gate cannot open:')) &&
+        Object.values(control?.entries ?? {}).some(
+          (entry) =>
+            entry.name === event.agent &&
+            entry.attempt === event.attempt &&
+            entry.state === 'cancelled' &&
+            entry.disposition === event.kind
+        )
+      if (ended || noReport || queued) events[event.seq - 1] = { ...event, terminal: true }
+      else
+        throw evidenceError(
+          eventsFile(directory),
+          `ambiguous legacy failure at sequence ${event.seq}; preserve status, snapshot and control evidence`
+        )
     }
   }
 }
 
 const terminalEvent = (event: Pending): boolean =>
-  event.terminal ??
-  (['done', 'stopped', 'dequeued'].includes(event.kind) ||
-    (event.kind === 'blocked' &&
-      event.operation === undefined &&
-      (event.text.startsWith('gate cannot open:') || event.text.startsWith('could not launch:'))))
+  event.terminal ?? ['done', 'stopped', 'dequeued'].includes(event.kind)
 
 /** The append-only journal is authoritative if snapshot persistence was interrupted. */
 const publicationSeen = (previous: Seen, event: Pending): Seen => {
