@@ -17,6 +17,7 @@ This baseline describes the `v0.13.0` release. Domain imports and extracted type
 - A work record's `resolution_target`, when present, must name another record in the same repository. Describe cross-repository disposition in `## Cancelled` without that field; see [work-record migration](docs/guides/user/repository-operations.md#migrate-work-record-targets).
 - `ki territory show` and `audit` retain the registered members in their output and exit 1 when selected declared members are unregistered. `show` adds maturity and recorded audit health; consumers needing structured output can select `--format json` and its `ki/territory/v1` contract.
 - `ki agent launch` and `queue` ship repeatable `--allow fetch` and `--allow machine` grants. Existing queued requests without `allow` retain no grants; a held request retains its composed prompt. The Harness's interim hand-appended grant instruction remains until a release carrying this option is installed.
+- After upgrading, restart long-lived `ki` processes such as dispatchers. If an older `ki` still running appends to a run's event journal after the upgraded `ki` has checkpointed it, the upgraded `ki` refuses that run with `events-evidence-unverified`; see [event-evidence recovery](docs/guides/user/background-agents.md#recover-event-evidence).
 
 ### Knowledge Base search
 
