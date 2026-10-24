@@ -114,6 +114,17 @@ describe('ki agent prompts', () => {
     expect(result.stdout).toContain('Secondary State of play under ex (ex):')
   })
 
+  test('says so when the territory has no coordination threads', async () => {
+    const box = await sandbox()
+    await registerEstate(box, [await writeCapital(box)])
+    await work(box, 'ex.regular.tidy', { level: 'regular', title: "'EX > Tidy'" })
+
+    const result = await box.run('ki agent prompts capital', { now })
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toBe('no coordination threads in example/capital\n')
+  })
+
   test('selects the territory by its work id or the working directory, and fails on an unknown territory', async () => {
     const box = await territory()
 
