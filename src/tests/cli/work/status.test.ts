@@ -127,7 +127,10 @@ describe('ki work status', () => {
       id: 'ex.alpha',
       level: 'project',
       title: 'EX > ex.alpha',
+      label: null,
       theme: 'model',
+      parent: null,
+      covers: [],
       worker: 'agent',
       supervisor: 'owner',
       state: 'with-worker',
@@ -286,7 +289,10 @@ describe('ki work status', () => {
       id: 'ex.pack',
       level: 'project',
       title: 'EX > Pack',
+      label: null,
       theme: 'model',
+      parent: null,
+      covers: [],
       worker: 'agent',
       supervisor: 'owner',
       description: 'Packs things. Takes packing. Not for unpacking (ex.unpack).',
@@ -477,6 +483,70 @@ describe('ki work status', () => {
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('├─ with you (0)\n├─ stuck (0)')
     expect(result.stdout).toContain('╰─ summary: WORK=0 WITH_YOU=0 STUCK=0 BLOCKED=0 MOVING=0 ON_HOLD=0 REVIEW=0\n')
+  })
+
+  test('reads a secondary State of play with its parent and covers, and rejects a misplaced one', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', declaration())
+    await writeWork(box, 'ex', { level: 'territory', title: "'EX > SoP'" })
+    await writeWork(box, 'ex.sop.sites', {
+      level: 'territory',
+      title: "'EX > SoP (sites)'",
+      label: "'EX > SoP (sites)'",
+      parent: 'ex',
+      covers: '[ex.site-home, ex.site-sales]'
+    })
+    await writeWork(box, 'ex.sop.labs', { level: 'territory', parent: 'ex', covers: '[ex.site-home]' })
+    const rejected: readonly (readonly [string, Readonly<Record<string, string>>, string])[] = [
+      [
+        'ex.sop.none',
+        { level: 'territory', parent: 'ex' },
+        'covers must list the work ids this State of play coordinates'
+      ],
+      [
+        'ex.sop.stray',
+        { level: 'territory', parent: 'other', covers: '[ex.a]' },
+        'parent must name the main State of play, ex'
+      ],
+      [
+        'ex.sop.wide',
+        { level: 'territory', parent: 'ex', covers: '[other.a]' },
+        'covers names other.a, which is not other work of territory ex'
+      ],
+      [
+        'ex.sop.self',
+        { level: 'territory', parent: 'ex', covers: '[ex.sop.sites]' },
+        'covers names ex.sop.sites, which is not other work of territory ex'
+      ],
+      ['ex.sop.odd', { level: 'territory', parent: 'ex', covers: '[1]' }, 'covers must list dotted work ids'],
+      ['ex.sop.case', { level: 'territory', parent: 'ex', covers: '[Ex.A]' }, 'covers must list dotted work ids'],
+      ['ex.hub', { level: 'territory' }, 'territory work id must be ex or ex.sop.<name>'],
+      ['ex.sop.proj', { level: 'project' }, 'a ex.sop.<name> id is territory work'],
+      ['ex.proj', { parent: 'ex' }, 'parent and covers belong to a secondary State of play']
+    ]
+    for (const [id, fields] of rejected) await writeWork(box, id, fields)
+    await box.project.write('repo/+/_WORK/main/work.md', workFile('main', { level: 'territory', covers: '[main.a]' }))
+
+    const json = await box.run('ki work status --repo repo --format json', { now })
+
+    expect(json.exitCode).toBe(0)
+    const byId = Object.fromEntries(JSON.parse(json.stdout).work.map((entry: { id: string }) => [entry.id, entry]))
+    expect(Object.keys(byId).sort()).toEqual(['ex', 'ex.sop.labs', 'ex.sop.sites'])
+    expect(byId['ex']).toMatchObject({ level: 'territory', parent: null, covers: [], label: null })
+    expect(byId['ex.sop.sites']).toMatchObject({
+      level: 'territory',
+      label: 'EX > SoP (sites)',
+      parent: 'ex',
+      covers: ['ex.site-home', 'ex.site-sales']
+    })
+    for (const [id, , message] of rejected)
+      expect(json.stderr).toContain(`ki: warning: +/_WORK/${id}/work.md: ${message}\n`)
+    expect(json.stderr).toContain(
+      'ki: warning: +/_WORK/main/work.md: the main State of play takes no parent or covers\n'
+    )
+    expect(json.stderr).toContain(
+      'ki: warning: +/_WORK/ex.sop.sites/work.md: covers ex.site-home, which ex.sop.labs already covers\n'
+    )
   })
 
   test('rejects an unknown format and a directory that is not a KI repository', async () => {

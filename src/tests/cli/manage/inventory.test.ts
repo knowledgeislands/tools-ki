@@ -102,6 +102,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
     'home',
     'launch',
     'new',
+    'prompts',
     'queue',
     'reconcile',
     'recover',

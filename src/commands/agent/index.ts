@@ -1,4 +1,4 @@
-import { dirname } from 'node:path'
+import { basename, dirname } from 'node:path'
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { closeRun } from '../../core/agent/close.ts'
@@ -35,8 +35,13 @@ import {
 } from '../../core/agent/thread.ts'
 import { estateWorktreeLines } from '../../core/agent/worktrees.ts'
 import { DEFAULT_HARNESS } from '../../core/configuration/declaration.ts'
+import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../core/configuration/index.ts'
 import { grammarError, KiError, KiExit } from '../../core/errors.ts'
+import { resolveRepository } from '../../core/repository/index.ts'
 import { harnessDirectory } from '../../core/storage/harness-paths.ts'
+import { resolveTerritoryWorkCapital } from '../../core/territory/resolution.ts'
+import { AGENT_PROMPTS_SCHEMA, threadPrompts } from '../../core/work/prompts.ts'
+import { readWorkDefinitions, readWorkStatus } from '../../core/work/status.ts'
 import { controlCommands } from './control.ts'
 
 export const agentContext = (context: KiContext): AgentContext => ({
@@ -278,6 +283,68 @@ export const createAgentCommand = (context: KiContext): Command => {
                   ? overview.items.map((item) => `- [${item.kind}] ${item.agent} - ${item.what}`)
                   : ['- [at rest]']),
                 ...overview.worktrees
+              ].join('\n')
+            )
+            .join('\n\n')
+        )
+      })
+  )
+
+  command.addCommand(
+    new Command('prompts')
+      .description(
+        "print the opener of each coordination thread in a territory, the owner's way to start or resume one"
+      )
+      .argument(
+        '[territory]',
+        "territory handle, alias or territory work id; omitted, the working directory's KI repository"
+      )
+      .option('--short', 'print only the one-line re-bootstrap opener of each thread')
+      .addOption(
+        new Option('--format <format>', 'text openers or the versioned ki/agent-prompts/v1 JSON')
+          .choices(['text', 'json'])
+          .default('text')
+      )
+      .action(async (territory: string | undefined, options: { short?: boolean; format: 'text' | 'json' }) => {
+        const capital =
+          territory === undefined
+            ? await (async () => {
+                const location = await resolveRepository({
+                  workingDirectory: context.workingDirectory,
+                  homeDirectory: context.homeDirectory
+                })
+                const repository = declaredRepositoryIdentity(await readRepositoryDeclaration(location.declaration))
+                return { path: location.root, repository }
+              })()
+            : await resolveTerritoryWorkCapital(context.paths.state, territory)
+        const identity = capital.repository.replace(/^https:\/\/github\.com\//, '')
+        const status = await readWorkStatus({
+          root: capital.path,
+          identity,
+          now: new Date(context.now()),
+          runs: []
+        })
+        for (const warning of status.warnings) context.stderr.write(`ki: warning: ${warning}\n`)
+        const threads = threadPrompts(
+          await readWorkDefinitions(capital.path),
+          new Map(status.report.work.map((entry) => [entry.id, entry.state])),
+          basename(identity)
+        )
+        if (options.format === 'json')
+          return write(JSON.stringify({ schema: AGENT_PROMPTS_SCHEMA, repository: identity, threads }, null, 2))
+        if (!threads.length) return write(`no coordination threads in ${identity}`)
+        const kinds = {
+          'state-of-play': 'State of play',
+          secondary: 'secondary State of play',
+          project: 'Project work'
+        }
+        write(
+          threads
+            .map((thread) =>
+              [
+                `# ${thread.label} · ${thread.id} · ${kinds[thread.kind]}${thread.parent ? ` under ${thread.parent}` : ''} · ${thread.state ?? 'state unreadable'}`,
+                '',
+                options.short ? thread.rebootstrap : thread.opener
               ].join('\n')
             )
             .join('\n\n')

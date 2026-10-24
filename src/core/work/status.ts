@@ -47,7 +47,13 @@ export interface WorkStatusEntry {
   readonly id: string
   readonly level: WorkLevel
   readonly title: string
+  /** The work's thread label from its work file, or null when it declares none and the title serves. */
+  readonly label: string | null
   readonly theme: string | null
+  /** A secondary State of play's main State of play, its territory id; null for all other work. */
+  readonly parent: string | null
+  /** The work ids a secondary State of play coordinates; empty for all other work. */
+  readonly covers: readonly string[]
   readonly worker: string
   readonly supervisor: string
   readonly state: WorkState
@@ -103,6 +109,12 @@ const HOLDER = new RegExp(`^(?:owner|agent|(?:run|person|repo)/[A-Za-z0-9_-]+|wo
 
 /** Whether the value is a dotted work id, such as `ki.ways-of-working`. */
 export const isWorkId = (value: string): boolean => WORK_ID.test(value)
+
+/** The reserved second id segment of a secondary State of play, `<territory>.sop.<name>`. */
+export const SECONDARY_SEGMENT = 'sop'
+
+/** Whether the id names a secondary State of play, `<territory>.sop.<name>`. */
+export const isSecondaryStateOfPlay = (id: string): boolean => id.split('.')[1] === SECONDARY_SEGMENT
 
 /** The work's slug, its id with each `.` written as `-`; never parsed back into an id. */
 export const workSlug = (id: string): string => id.replaceAll('.', '-')
@@ -168,6 +180,40 @@ const section = (text: string, heading: string): string => {
   return lines.slice(start + 1, end < 0 ? undefined : end).join('\n')
 }
 
+/**
+ * A State of play's place in its territory, or the reason it is wrong: the main State of play is `<territory>` with no
+ * parent or covers; a secondary is `<territory>.sop.<name>`, names its main as parent and covers at least one other
+ * work id of the same territory. Parent and covers belong to secondaries alone, and only territory work may use `sop`.
+ */
+const statePlacement = (
+  id: string,
+  level: WorkLevel,
+  values: Record<string, unknown>
+): { readonly parent: string | null; readonly covers: readonly string[] } | string => {
+  const segments = id.split('.')
+  const territory = segments[0] as string
+  const { parent, covers } = values
+  if (level !== 'territory') {
+    if (isSecondaryStateOfPlay(id)) return `a ${territory}.${SECONDARY_SEGMENT}.<name> id is territory work`
+    if (parent !== undefined || covers !== undefined) return 'parent and covers belong to a secondary State of play'
+    return { parent: null, covers: [] }
+  }
+  if (segments.length === 1) {
+    if (parent !== undefined || covers !== undefined) return 'the main State of play takes no parent or covers'
+    return { parent: null, covers: [] }
+  }
+  if (segments.length !== 3 || !isSecondaryStateOfPlay(id))
+    return `territory work id must be ${territory} or ${territory}.${SECONDARY_SEGMENT}.<name>`
+  if (parent !== territory) return `parent must name the main State of play, ${territory}`
+  if (!Array.isArray(covers) || !covers.length) return 'covers must list the work ids this State of play coordinates'
+  for (const covered of covers) {
+    if (typeof covered !== 'string' || !WORK_ID.test(covered)) return 'covers must list dotted work ids'
+    if (!covered.startsWith(`${territory}.`) || isSecondaryStateOfPlay(covered))
+      return `covers names ${covered}, which is not other work of territory ${territory}`
+  }
+  return { parent: territory, covers: covers as string[] }
+}
+
 /** The work file's identity and supervision, or the reason it cannot be read. */
 const workDefinition = (folder: string, values: Record<string, unknown>) => {
   const { id, level, title, worker, supervisor } = values
@@ -177,15 +223,37 @@ const workDefinition = (folder: string, values: Record<string, unknown>) => {
   if (typeof title !== 'string' || !title.trim()) return 'title must be a non-empty string'
   if (typeof worker !== 'string' || !HOLDER.test(worker)) return 'worker must name a holder'
   if (typeof supervisor !== 'string' || !HOLDER.test(supervisor)) return 'supervisor must name a holder'
+  const placement = statePlacement(id, level as WorkLevel, values)
+  if (typeof placement === 'string') return placement
   return {
     id,
     level: level as WorkLevel,
     title,
+    label: typeof values['label'] === 'string' ? values['label'] : null,
     theme: typeof values['theme'] === 'string' ? values['theme'] : null,
+    ...placement,
     worker,
     supervisor,
     description: typeof values['description'] === 'string' ? values['description'] : null
   }
+}
+
+/** A work file's definition and its path: what a work is, read apart from its state. */
+export type WorkDefinition = Exclude<ReturnType<typeof workDefinition>, string> & { readonly path: string }
+
+/**
+ * Reads each work definition under `+/_WORK/` without its state, so that a work whose `state.md` cannot be read is
+ * still known by its id, title and placement. It writes nothing; `readWorkStatus` names any unreadable file.
+ */
+export const readWorkDefinitions = async (root: string): Promise<readonly WorkDefinition[]> => {
+  const work: WorkDefinition[] = []
+  for (const folder of await directories(join(root, WORK_DIRECTORY))) {
+    const path = `${WORK_DIRECTORY}/${folder}/work.md`
+    const values = frontmatter(await readFile(join(root, path), 'utf8').catch(() => ''))
+    const definition = values ? workDefinition(folder, values) : undefined
+    if (definition && typeof definition !== 'string') work.push({ ...definition, path })
+  }
+  return work
 }
 
 /** Reads the state fields, from `state.md` in a package and the work file otherwise, or the reason it cannot. */
@@ -297,7 +365,10 @@ const checkpointEntry = (
     identity,
     ...mapped,
     title: typeof values['label'] === 'string' ? values['label'] : stem,
+    label: null,
     theme: null,
+    parent: null,
+    covers: [],
     worker: 'agent',
     supervisor: 'owner',
     state,
@@ -350,6 +421,14 @@ export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkSt
     warnings.push(...read.warnings)
     if (read.entry) work.push(read.entry)
   }
+  // Each covered work answers to one secondary State of play; the main covers whatever no secondary does.
+  const coveredBy = new Map<string, string>()
+  for (const entry of work)
+    for (const covered of entry.covers) {
+      const other = coveredBy.get(covered)
+      if (other) warnings.push(`${entry.path}: covers ${covered}, which ${other} already covers`)
+      else coveredBy.set(covered, entry.id)
+    }
   const checkpoints = (await readdir(join(request.root, CHECKPOINTS_DIRECTORY)).catch(() => []))
     .filter((name) => name.endsWith('.md') && name !== 'README.md')
     .sort()

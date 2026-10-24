@@ -437,6 +437,9 @@ Block until the next unseen run event, or until the whole run finishes.
 .B ki agent status [<run>] [--all] [--worktrees]
 Print each agent's latest status, or with no run every live thread.
 .TP
+.B ki agent prompts [<territory>] [--short] [--format text|json]
+Print the opener of each coordination thread in a territory.
+.TP
 .B ki agent send <run> <line...> [--from <run>]
 Append one line, naming the sender, to a live run's inbox.
 .TP
@@ -1973,6 +1976,36 @@ the registered estate; it takes no run name or
 .BR --all .
 Unavailable Git facts are reported as unknown.
 .TP
+.B ki agent prompts [<territory>] [--short] [--format text|json]
+Print, for the territory named by its handle, alias or territory work id,
+such as
+.IR hnr ,
+or with none the working directory's KI repository, each coordination
+thread's exact opener
+under the
+.B ki-coordination
+standard's Opening work: the main State of play, each secondary State of
+play
+.RI ( <territory>.sop.<name> ),
+then each unfinished piece of Project work, read read-only from the
+Capital's
+.I +/_WORK/
+folders. Each thread opens with a
+.I "# <label> · <id> · <kind> · <state>"
+line, naming the secondary that covers a piece of Project work; a work
+whose state file cannot be read keeps its thread, its state shown as
+.IR "state unreadable" .
+Regular and ad hoc work have no thread and are left out.
+.B --short
+prints only the one-line
+.I "Re-bootstrap as <id> under ki-coordination."
+form;
+.B --format json
+prints the versioned
+.I ki/agent-prompts/v1
+report. Owner reports and banners never carry an opener; this command is
+the owner's way to get one.
+.TP
 .B ki agent send <run> <line...> [--from <run>]
 Append
 .I "<UTC time> from <sender>: <line>"
@@ -2246,6 +2279,20 @@ from the state, never stored. Each detached run whose home is a
 .I +/_WORK/<id>/
 folder adds one item per running agent, dated by its status file, which
 counts as stuck after ten silent minutes.
+.PP
+Territory work is the main State of play,
+.IR <territory> ,
+with no parent or covers, or a secondary State of play,
+.IR <territory>.sop.<name> ,
+whose work file names the main as
+.I parent
+and lists in
+.I covers
+the other work ids of the territory it coordinates. Any other territory
+id, a
+.I sop
+id at another level, or parent or covers anywhere else is an unreadable
+work file, and a work covered by two secondaries is a warning.
 .I +/_WORK_REVIEW/
 is shown only as an awaiting-review count, and an unreadable work file is
 a warning that leaves the rest listed. Through the work model's tolerance
@@ -2263,8 +2310,9 @@ else the folder name.
 .B --format json
 writes the versioned
 .I ki/work-status/v1
-report, one entry per work with its id, level, title, theme, worker,
-supervisor, description, state, hold, holder, role, target, blocking,
+report, one entry per work with its id, level, title, label, theme,
+parent, covers, worker, supervisor, description, state, hold, holder,
+role, target, blocking,
 since, received, beat, method_read, messages (the pending count), path
 (the file its state came from) and items, and sends the warnings to
 standard error.
