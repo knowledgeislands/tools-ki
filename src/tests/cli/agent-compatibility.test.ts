@@ -1,4 +1,4 @@
-import { readdir } from 'node:fs/promises'
+import { readdir, realpath } from 'node:fs/promises'
 import { expect, test } from 'vitest'
 import { type AgentLaunch, runCommand, sandbox } from './_cli_helper.ts'
 
@@ -100,7 +100,13 @@ test.each(['none', 'push', 'prune', 'release'])('baseline role-free footer %s', 
   })
   const packet = JSON.parse(await box.state.read('ki/agents/r/worker.launch.json'))
   const request = JSON.parse((await box.state.read('ki/agents/r/queue.jsonl')).trim())
-  const clean = (text: string): string => text.replaceAll(box.root.path, '<fixture>').replace(/^selection:.*\n/gm, '')
+  // The runner records the resolved fixture root; on macOS that carries the /private prefix.
+  const resolvedRoot = await realpath(box.root.path)
+  const clean = (text: string): string =>
+    text
+      .replaceAll(resolvedRoot, '<fixture>')
+      .replaceAll(box.root.path, '<fixture>')
+      .replace(/^selection:.*\n/gm, '')
   expect({
     launch: { exitCode: launch.exitCode, stdout: clean(launch.stdout), stderr: clean(launch.stderr) },
     queue: { exitCode: queued.exitCode, stdout: clean(queued.stdout), stderr: clean(queued.stderr) },
