@@ -25,7 +25,7 @@ Run focused tests while iterating, then the complete engineering gate:
 
 ```sh
 bun install --frozen-lockfile
-bun install --frozen-lockfile --cwd tooling/boundaries
+bun install --frozen-lockfile --cwd tooling/depcruise
 bun run test
 bunx tsc --noEmit
 bunx biome check

@@ -37,7 +37,7 @@ const fixture = async () => {
 test('launches in the recorded worktree, clones installed dependencies and links project skills, and close checks that location', async () => {
   const { box, launches, alive, prompt } = await fixture()
   await box.project.write('node_modules/installed/package.json', '{"name":"installed"}\n')
-  await box.project.write('tooling/boundaries/node_modules/installed/package.json', '{}\n')
+  await box.project.write('tooling/depcruise/node_modules/installed/package.json', '{}\n')
   await box.root.write('skill/SKILL.md', '# Project skill\n')
   await box.project.mkdir('.agents/skills')
   await box.project.mkdir('.claude/skills')
@@ -58,7 +58,7 @@ test('launches in the recorded worktree, clones installed dependencies and links
     'installed'
   )
   expect(
-    await box.state.read('ki/agents/r/worktrees/worker.project/tooling/boundaries/node_modules/installed/package.json')
+    await box.state.read('ki/agents/r/worktrees/worker.project/tooling/depcruise/node_modules/installed/package.json')
   ).toBe('{}\n')
   expect(await box.state.isSymlink('ki/agents/r/worktrees/worker.project/.agents/skills/shared')).toBe(true)
   expect(await box.state.isSymlink('ki/agents/r/worktrees/worker.project/.claude/skills/shared')).toBe(true)

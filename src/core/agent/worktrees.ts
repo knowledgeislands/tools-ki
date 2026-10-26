@@ -44,7 +44,7 @@ export const prepareAgentWorktree = async (
   const created = await git(context, tree.repository, ['worktree', 'add', '-q', '-b', tree.branch, tree.path, 'HEAD'])
   if (created.exitCode !== 0) throw new KiError(`cannot create worktree ${tree.path}: ${created.output.trim()}`, 1)
   try {
-    for (const relative of ['node_modules', 'tooling/boundaries/node_modules']) {
+    for (const relative of ['node_modules', 'tooling/depcruise/node_modules']) {
       const source = join(tree.repository, relative)
       if ((await lstat(source).catch(() => undefined))?.isDirectory()) {
         await mkdir(join(tree.path, relative, '..'), { recursive: true })

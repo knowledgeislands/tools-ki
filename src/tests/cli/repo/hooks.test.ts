@@ -48,7 +48,7 @@ const lines = (...parts: readonly (readonly string[])[]): string => `${parts.fla
 const toolsKiManifest = `{
   "name": "@example/project",
   "scripts": {
-    "prepare": "husky && bun install --frozen-lockfile --cwd tooling/boundaries",
+    "prepare": "husky && bun install --frozen-lockfile --cwd tooling/depcruise",
     "test": "vitest run"
   },
   "devDependencies": {
@@ -131,7 +131,7 @@ test('replaces Husky hooks canonically and retires package, lockfile, directory 
   expect(await mode(box, '.githooks/commit-msg')).toBe(0o755)
   const manifest = JSON.parse(await box.project.read('package.json'))
   expect(manifest.scripts.prepare).toBe(
-    'git config core.hooksPath .githooks && bun install --frozen-lockfile --cwd tooling/boundaries'
+    'git config core.hooksPath .githooks && bun install --frozen-lockfile --cwd tooling/depcruise'
   )
   expect(manifest.devDependencies).not.toHaveProperty('husky')
   expect(await box.project.read('bun.lock')).not.toContain('"husky"')
