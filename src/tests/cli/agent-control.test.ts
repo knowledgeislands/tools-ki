@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto'
 import { writeFileSync } from 'node:fs'
-import { chmod, readdir, readFile, rename, symlink, utimes } from 'node:fs/promises'
-import { hostname } from 'node:os'
+import { chmod, mkdtemp, readdir, readFile, rename, rm, symlink, utimes } from 'node:fs/promises'
+import { hostname, tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, test } from 'vitest'
+import { afterAll, describe, expect, test } from 'vitest'
 import {
   type AgentLaunch,
   type AgentLaunchEvidence,
@@ -4721,27 +4721,41 @@ test('third-review legacy queue refusal belongs to its successor and cannot repl
 })
 
 // Execute the untouched pre-terminal-identity CLI, then upgrade the same state in place.
-const baselineCli = async (box: Awaited<ReturnType<typeof sandbox>>) => {
-  const repository = fileURLToPath(new URL('../../../', import.meta.url))
-  const root = await box.root.mkdir('baseline')
-  for (const [command, args] of [
-    [
-      'git',
-      ['-C', repository, 'archive', '--format=tar', '-o', `${root}/source.tar`, '51725e8b', 'src', 'package.json']
-    ],
-    ['tar', ['-xf', `${root}/source.tar`, '-C', root]]
-  ] as const) {
-    const result = await runCommand(command, args, process.env)
-    expect(result.exitCode, result.output).toBe(0)
-  }
-  await symlink(`${repository}/node_modules`, `${root}/node_modules`)
-  const built = await runCommand(
-    'bun',
-    ['build', `${root}/src/cli.ts`, '--target=node', '--outfile', `${root}/cli.mjs`],
-    process.env
-  )
-  expect(built.exitCode, built.output).toBe(0)
-  return (await import(/* @vite-ignore */ `${root}/cli.mjs`)).run as CliEntrypoint
+// The pre-terminal-identity baseline CLI is archived from Git, bundled and imported
+// once for the whole file. An ES module is never unloaded, so importing a fresh bundle
+// per test retained every bundle until the worker exhausted its heap on the release
+// runners; one shared bundle keeps the worker's footprint flat across these tests.
+let baseline: Promise<CliEntrypoint> | undefined
+let baselineRoot: string | undefined
+afterAll(async () => {
+  if (baselineRoot) await rm(baselineRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+})
+
+const baselineCli = (): Promise<CliEntrypoint> => {
+  baseline ??= (async () => {
+    const repository = fileURLToPath(new URL('../../../', import.meta.url))
+    const root = await mkdtemp(`${tmpdir()}/ki-test-baseline-`)
+    baselineRoot = root
+    for (const [command, args] of [
+      [
+        'git',
+        ['-C', repository, 'archive', '--format=tar', '-o', `${root}/source.tar`, '51725e8b', 'src', 'package.json']
+      ],
+      ['tar', ['-xf', `${root}/source.tar`, '-C', root]]
+    ] as const) {
+      const result = await runCommand(command, args, process.env)
+      expect(result.exitCode, result.output).toBe(0)
+    }
+    await symlink(`${repository}/node_modules`, `${root}/node_modules`)
+    const built = await runCommand(
+      'bun',
+      ['build', `${root}/src/cli.ts`, '--target=node', '--outfile', `${root}/cli.mjs`],
+      process.env
+    )
+    expect(built.exitCode, built.output).toBe(0)
+    return (await import(/* @vite-ignore */ `${root}/cli.mjs`)).run as CliEntrypoint
+  })()
+  return baseline
 }
 
 test.each(
@@ -4758,7 +4772,7 @@ test.each(
   'seventh-review repeated legacy $kind $text preserves completion, snapshot $snapshot',
   async ({ snapshot, kind, text }) => {
     const f = await fixture(false)
-    const cli = await baselineCli(f.box)
+    const cli = await baselineCli()
     const old = (command: string) => f.box.run(command, { cli })
     expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
     for (const time of ['12:00', '12:01']) {
@@ -4792,7 +4806,7 @@ test.each([true, false])(
   'seventh-review crashed baseline run remains readable and relaunchable, snapshot %s',
   async (snapshot) => {
     const f = await fixture(false)
-    const cli = await baselineCli(f.box)
+    const cli = await baselineCli()
     const old = (command: string) => f.box.run(command, { cli })
     expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
     await f.box.state.write('ki/agents/r/worker.status', '12:00 UTC - milestone: working\n')
@@ -4821,7 +4835,7 @@ test.each([true, false])(
 
 test('seventh-review a later attempt snapshot cannot corroborate an earlier failure', async () => {
   const f = await fixture(false)
-  const cli = await baselineCli(f.box)
+  const cli = await baselineCli()
   const old = (command: string) => f.box.run(command, { cli })
   expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
   const progress = '12:00 UTC - failed: exited without DONE (10:52 BST - DONE)'
@@ -4844,7 +4858,7 @@ test('seventh-review a later attempt snapshot cannot corroborate an earlier fail
 
 test.each([false, true])('seventh-review pre-event snapshot remains readable, protocol status %s', async (protocol) => {
   const f = await fixture(false)
-  const cli = await baselineCli(f.box)
+  const cli = await baselineCli()
   const old = (command: string) => f.box.run(command, { cli })
   expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
   const first = JSON.parse((await f.box.state.read('ki/agents/r/events.jsonl')).trim())
@@ -4889,7 +4903,7 @@ test.each(
   )
 )('legacy baseline upgrade preserves failure progress $text with snapshot $snapshot', async ({ snapshot, text }) => {
   const f = await fixture(false)
-  const cli = await baselineCli(f.box)
+  const cli = await baselineCli()
   const old = (command: string) => f.box.run(command, { cli })
   expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
   const line = `12:00 UTC - failed: ${text}`
@@ -4937,7 +4951,7 @@ test.each(
   'sixth-review baseline later progress preserves completion $kind $text snapshot $snapshot later $later',
   async ({ snapshot, later, kind, text }) => {
     const f = await fixture(false)
-    const cli = await baselineCli(f.box)
+    const cli = await baselineCli()
     const old = (command: string) => f.box.run(command, { cli })
     expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
     await f.box.state.write('ki/agents/r/worker.status', `12:00 UTC - ${kind}: ${text}\n`)
@@ -4969,7 +4983,7 @@ test.each(
 
 test.each([true, false])('sixth-review untouched baseline failure relaunch upgrades snapshot %s', async (snapshot) => {
   const f = await fixture(false)
-  const cli = await baselineCli(f.box)
+  const cli = await baselineCli()
   const old = (command: string) => f.box.run(command, { cli })
   expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
   await f.box.state.write('ki/agents/r/worker.status', '12:00 UTC - failed: tests failing\n')
@@ -4993,7 +5007,7 @@ test.each([true, false])('sixth-review untouched baseline failure relaunch upgra
 
 test('sixth-review untouched baseline queue launch failure upgrades', async () => {
   const f = await fixture(false)
-  const cli = await baselineCli(f.box)
+  const cli = await baselineCli()
   const old = (command: string) => f.box.run(command, { cli })
   expect((await old('ki agent queue r worker brief.md --json')).exitCode).toBe(0)
   await rename(`${f.box.state.path}/ki/agents/r/worker.queued.md`, `${f.box.state.path}/ki/agents/r/queued.saved`)
@@ -5018,7 +5032,7 @@ test.each([
   ['blocked', 'could not launch: brief missing']
 ])('sixth-review ambiguous baseline %s %s preserves completion evidence', async (kind, text) => {
   const f = await fixture(false)
-  const cli = await baselineCli(f.box)
+  const cli = await baselineCli()
   const old = (command: string) => f.box.run(command, { cli })
   expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
   const line = `12:00 UTC - ${kind}: ${text}`
@@ -5083,7 +5097,7 @@ test.each([
   ['blocked', 'exited without DONE (no status)']
 ])('sixth-review status overwritten before observation keeps %s %s as progress', async (kind, text) => {
   const f = await fixture(false)
-  const cli = await baselineCli(f.box)
+  const cli = await baselineCli()
   const old = (command: string) => f.box.run(command, { cli })
   expect((await old('ki agent launch r worker . brief.md --json')).exitCode).toBe(0)
   await f.box.state.write('ki/agents/r/worker.status', `12:00 UTC - ${kind}: ${text}\n`)
