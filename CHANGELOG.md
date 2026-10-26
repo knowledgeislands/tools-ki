@@ -9,7 +9,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 - `ki agent prompts [<territory>] [--short] [--format text|json]` prints each coordination thread's exact opener for a territory, named by its handle, alias or territory work id, main State of play first, then secondaries, then unfinished Project work, read read-only from the Capital's work folders; `--short` prints the one-line re-bootstrap form and `--format json` the `ki/agent-prompts/v1` report. Owner reports still carry no opener; this command is the owner's way to get one.
 - Agent report homing: `status`, `watch` and `wait` copy a finished agent's report into its work folder once, when its attempt first ends, and never write one Git holds with the same contents under the folder's present or any earlier name, so a renamed work folder no longer gets retired reports redelivered or newer committed versions overwritten.
 
-This baseline describes the `v0.14.0` release. Domain imports and extracted type leaves keep the dependency graph acyclic, enforced by a resolved-graph boundary gate with a supported isolated compiler and deliberate failure fixtures.
+This baseline describes the `v0.14.1` release. Domain imports and extracted type leaves keep the dependency graph acyclic, enforced by a resolved-graph boundary gate with a supported isolated compiler and deliberate failure fixtures.
 
 ### Compatibility and migration
 
