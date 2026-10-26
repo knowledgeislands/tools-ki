@@ -82,7 +82,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --yes zsh
       - run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile --cwd tooling/depcruise
+      # Every target runs the full functional suite before it packages. The ceiling keeps
+      # the single vitest worker inside the 7 GB macOS runners instead of V8's memory-derived
+      # default, which the suite exhausted at 2 GB there.
       - run: bun run test
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
       - run: release/package.sh "${{ needs.validate.outputs.version }}" "${{ matrix.bun-target }}" "${{ matrix.asset-target }}"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
