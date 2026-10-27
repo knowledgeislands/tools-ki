@@ -8,13 +8,12 @@ project: ways-of-working
 component: agent
 priority: medium
 size: s
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 900d278857513471243f0b4a0c7cc2d7959e8e3b
 created_at: 2026-10-19T21:10:00Z
-updated_at: 2026-10-27T02:46:00Z
+updated_at: 2026-10-27T04:30:20Z
 transferred_from: ki-principal ki.ways-of-working work-package design, point 35, 2026-10-19
 ---
 
@@ -108,6 +107,9 @@ Adopted from Soon to Now and delivered on 27 October 2026 under Kris's "Do the q
 - Re-checked after the rebase onto `631deaf9`, a commit that only moved roadmap records to ideas: `bunx tsc --noEmit`, Biome and the `work status` test file.
 - Pre-commit hook (lint-staged, syncpack, shellcheck and mandoc, staged audit): ran on the commit.
 - Not run: the live `ki work status --view routing` against the Capital.
+- Acceptance review on 27 October 2026: fresh `ki repo audit --skill ki-work-roadmap --repo .` and `ki repo audit --skill ki-authoring --repo .` pass. The seven delivery paths above are unchanged from delivery commit `5428d3841f760c891a9ccbb670b67538754ba2b4`, so the existing implementation checks and coverage evidence remain applicable without repeating them.
+- PKG-6 is resolved by the focused, byte- and JSON-equivalent removal of the two rewriting flags in `cb4c6835282bc60eca93d71d34b7c4d3a017d408`; the repair's hooks passed. DESIGN-2 and COORD-15 were delivery-worktree findings, not findings against this clean designated primary checkout. No governing failure is waived.
+- `ki work status --view routing --repo /Users/krisbrown/workspaces/knowledge-islands/ki-principal` exits successfully and shows `ki.ways-of-working`, its state, pending count and description together on one line. This closes the previously unrun read-only acceptance check.
 
 ### Outstanding concerns
 
@@ -118,11 +120,21 @@ Adopted from Soon to Now and delivered on 27 October 2026 under Kris's "Do the q
 
 Goal met: State of play reads one listing for id, state, pending count and description without opening a work folder or parsing JSON. Scope held to the In clause. Regression risk is low: the default text form and the JSON report are unchanged, and the only new path is behind `--view routing`. Ready for acceptance.
 
+Acceptance review on 27 October 2026 confirms the goal and approved boundary are met, all Steps are complete, the delivery paths remain unchanged and the required Capital listing now has direct evidence. The 96-character cut width and ordinary treatment of tolerance-window work are documented behaviour, not unfinished implementation or acceptance prerequisites. Regression risk remains low; the existing implementation evidence and the focused baseline repair proof support closure.
+
 ### Mini recap
 
 Delivered `--view routing` with its test and documents; verified by the coverage gate and audit; outstanding is the cut width as a choice. Learning route: none proposed.
 
+## Done
+
+Accepted 27 October 2026 by Kris on the review packet above.
+
 ## Discussion
+
+### Acceptance authority
+
+Kris's ACCEPT-PRUNE-CONFIDENT instruction of 27 October 2026 in the principal ways-of-working decisions log authorises high-confidence acceptance of work awaiting the coordinator: "things if are waiting with you, you've got high confidence, you can just accept them and then you can get things pruned out as well. Also, do that. Yeah, just make it happen." The exact selected set was frozen in the run report before mutation and contains only this record. This applies the owner's approval; it grants no cancellation, provider operation or code-publication authority. Pruning remains subject to surviving-reference and archived-peer guards.
 
 Open for planning: whether the view is a flag on `ki work status` (such as `--view routing`), a subcommand, or a section of the default text form; whether checkpoints and `+/_WORK_REVIEW/` folders appear; how a long description is cut on one line; and whether finished or on-hold works list or are filtered. tools-ki owns priority and design.
 
