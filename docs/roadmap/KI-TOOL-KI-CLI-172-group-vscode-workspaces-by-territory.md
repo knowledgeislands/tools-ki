@@ -33,12 +33,12 @@ In: native territory grouping in source reconciliation, recursive discovery of g
 
 Out: applying chezmoi, changing editor state, registry cleanup, inventing source stores, deleting `.DS_Store`, deleting unrelated files or work records, and automatically deleting customised, external or intentionally empty workspaces without a reviewed ownership policy.
 
+## Dependencies / blocks
+
+No build-order dependencies. Planning must settle membership resolution for repositories outside the estate root, ownership evidence for pruning, preservation of custom workspaces, and the migration contract. This intake record does not authorise implementation or adoption.
+
 ## Discussion
 
 The immediate manual layout meets Kris's request, but the current flat-only reader would recreate flat duplicates on the next sync and could overlook grouped custom settings. Native support must read existing grouped files before planning writes and preserve settings, source-store roots and trusted-client scopes. Keep the current `kis-` names within each territory; define collision and ambiguous-membership behaviour explicitly rather than guessing from a repository basename.
 
 Pruning must distinguish generated files owned by a retired repository from user-authored workspaces. Preview each exact removal and restrict writes to the confirmed plan; do not infer that every unfamiliar filename is stale. Decide how to handle a retained external source-store root when its repository disappears, and how to migrate relative folder entries without changing their resolved roots. Regeneration should be idempotent after grouping and should never leave both flat and grouped copies.
-
-## Dependencies / blocks
-
-No build-order dependencies. Planning must settle membership resolution for repositories outside the estate root, ownership evidence for pruning, preservation of custom workspaces, and the migration contract. This intake record does not authorise implementation or adoption.
