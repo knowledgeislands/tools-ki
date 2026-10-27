@@ -139,11 +139,12 @@ See [run detached background agents](docs/guides/user/background-agents.md).
 
 ## Read the work model
 
-`ki work status` reads each `+/_WORK/<id>/` work folder in a repository and shows its work in five views: with you, stuck, blocked, moving and on hold. A work package takes its state from `state.md` and its definition from `work.md`; a single-file work folder takes both from `work.md`. Whose move it is comes from that state, a work with lines waiting in its message queue shows how many are pending, and each detached run homed in a work folder adds its running agents as items, which count as stuck after ten silent minutes. `+/_WORK_REVIEW/` shows only as a count. Through the work model's tolerance window, `+/_CHECKPOINTS/` files still read, each with a warning naming its new home. `--format json` writes the versioned `ki/work-status/v1` report, each entry carrying its routing `description`, `method_read` revision and pending `messages` count.
+`ki work status` reads each `+/_WORK/<id>/` work folder in a repository and shows its work in five views: with you, stuck, blocked, moving and on hold. A work package takes its state from `state.md` and its definition from `work.md`; a single-file work folder takes both from `work.md`. Whose move it is comes from that state, a work with lines waiting in its message queue shows how many are pending, and each detached run homed in a work folder adds its running agents as items, which count as stuck after ten silent minutes. `+/_WORK_REVIEW/` shows only as a count. Through the work model's tolerance window, `+/_CHECKPOINTS/` files still read, each with a warning naming its new home. `--format json` writes the versioned `ki/work-status/v1` report, each entry carrying its routing `description`, `method_read` revision and pending `messages` count. `--view routing` replaces the five views with the routing listing State of play reads to choose which work takes a unit of work: one line per unfinished work with its id, state, pending count and description cut to one line.
 
 ```sh
 ki work status --repo ~/workspaces/knowledge-islands/ki-principal
 ki work status --format json
+ki work status --view routing
 ```
 
 ## Check commit messages

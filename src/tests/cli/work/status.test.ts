@@ -549,6 +549,50 @@ describe('ki work status', () => {
     )
   })
 
+  test('lists each unfinished work for routing with its id, state, pending count and description on one line', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', declaration())
+    const long = `${'Routes everything the territory sends, '.repeat(3)}and more besides, far past one line.`
+    await box.project.write(
+      'repo/+/_WORK/ex.pack/work.md',
+      `---\nid: ex.pack\nlevel: project\ntitle: 'EX > Pack'\ndescription: >-\n  Packs things.\n  Takes packing.\nworker: agent\nsupervisor: owner\n---\n`
+    )
+    await box.project.write(
+      'repo/+/_WORK/ex.pack/state.md',
+      '---\nid: ex.pack\nstate: with-supervisor\nsince: 2026-10-18T02:10:00Z\n---\n'
+    )
+    await box.project.write('repo/+/_WORK/ex.pack/messages.md', '# ex.pack messages\n\n- one.\n- two.\n')
+    await writeWork(box, 'ex.long', { state: 'on-hold', hold: '{reason: paused}', description: `'${long}'` })
+    await writeWork(box, 'ex.bare', { state: 'with-worker' })
+    await writeWork(box, 'ex.done', { state: 'finished', description: 'Finished, so not listed.' })
+    await box.project.write('repo/+/_WORK_REVIEW/ex.old/work.md', workFile('ex.old'))
+    await box.project.write('repo/+/_WORK/ex.broken/work.md', '---\nid: ex.other\n---\n')
+
+    const routing = await box.run('ki work status --repo repo --view routing', { now })
+    const json = await box.run('ki work status --repo repo --view routing --format json', { now })
+    const bad = await box.run('ki work status --repo repo --view sideways', { now })
+
+    expect(routing.exitCode).toBe(0)
+    expect(routing.stdout).toBe(
+      [
+        '╭─ KI WORK ROUTING example/principal',
+        '├─ ex.bare · with-worker · 0 pending · no description',
+        `├─ ex.long · on-hold · 0 pending · ${long.slice(0, 93)}...`,
+        '├─ ex.pack · with-supervisor · 2 pending · Packs things. Takes packing.',
+        '├─ awaiting review (1)',
+        '├─ warnings (1)',
+        '│  ╰─ ! +/_WORK/ex.broken/work.md: id ex.other must name its folder',
+        '╰─ summary: WORK=4 PENDING=2 REVIEW=1',
+        ''
+      ].join('\n')
+    )
+    expect(routing.stdout).not.toContain('ex.done')
+    expect(json.exitCode).toBe(0)
+    expect(JSON.parse(json.stdout).schema).toBe('ki/work-status/v1')
+    expect(bad.exitCode).toBe(2)
+    expect(bad.output).toContain("argument 'sideways' is invalid")
+  })
+
   test('rejects an unknown format and a directory that is not a KI repository', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki.toml', declaration())

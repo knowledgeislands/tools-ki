@@ -466,7 +466,7 @@ Remove closed runs beyond the newest kept and briefs a launch has superseded.
 .SS Work model
 \&
 .TP
-.B ki work status [--repo <dir>] [--format text|json]
+.B ki work status [--repo <dir>] [--format text|json] [--view views|routing]
 Show a repository's work by view, read-only, from its work files.
 .SS Estate convergence
 \&
@@ -2240,7 +2240,7 @@ it is, under the
 .B ki-work-package
 work-package standard. These commands change nothing.
 .TP
-.B ki work status [--repo <dir>] [--format text|json]
+.B ki work status [--repo <dir>] [--format text|json] [--view views|routing]
 Read every
 .I +/_WORK/<id>/
 work folder in the repository, default the working directory's KI
@@ -2260,6 +2260,16 @@ or in
 (the rest) and
 .B on hold
 (a paused hold older than 31 days flagged). Finished work is in no view.
+.B --view routing
+replaces the five views with the routing listing State of play reads to
+choose which work takes a unit of work: one line per unfinished work in
+folder order, its id, state, pending message count and routing
+description cut to one line of at most 96 characters, or
+.B no description
+when the work file declares none, followed by the same awaiting-review
+count, warnings and a summary with the pending total.
+.B --view
+applies to the text form only.
 A work package, a folder holding
 .IR state.md ,
 takes its state from that file, which must name the folder's id, and its

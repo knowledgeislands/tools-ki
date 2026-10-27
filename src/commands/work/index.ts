@@ -8,6 +8,7 @@ import {
   deriveWorkViews,
   readWorkStatus,
   type WorkStatus,
+  type WorkStatusEntry,
   type WorkView,
   type WorkViewLine,
   workViews
@@ -28,22 +29,56 @@ const viewLine = (view: WorkView, line: WorkViewLine): TreeEntry => ({
   label: `${viewLabels[view].glyph} ${line.id} · ${line.holder ?? 'nobody'} · since ${line.since}${line.overdue ? ' · paused over 31 days' : ''}${line.pending ? ` · ${line.pending} pending` : ''}`
 })
 
-/** The five views, one line per work or item, then the review count, any warnings and a summary line. */
-const renderWorkStatus = (status: WorkStatus, now: Date): string => {
+/** The text forms: the five views, or the routing listing State of play reads to choose which work takes a unit. */
+const textViews = ['views', 'routing'] as const
+type TextView = (typeof textViews)[number]
+
+/** A routing description is cut to one line of this many characters, so each work stays on one row. */
+const ROUTING_DESCRIPTION_WIDTH = 96
+
+/** One routing row: the work's id, state, pending count and its description on one line, or `no description`. */
+const routingLine = (entry: WorkStatusEntry): TreeEntry => {
+  const description = entry.description?.replace(/\s+/g, ' ').trim() || 'no description'
+  const cut =
+    description.length > ROUTING_DESCRIPTION_WIDTH
+      ? `${description.slice(0, ROUTING_DESCRIPTION_WIDTH - 3).trimEnd()}...`
+      : description
+  return { label: `${entry.id} · ${entry.state} · ${entry.messages} pending · ${cut}` }
+}
+
+/** The five views, one line per work or item, with their counts for the summary line. */
+const viewEntries = (status: WorkStatus, now: Date): { entries: TreeEntry[]; counts: string } => {
   const views = deriveWorkViews(status.report.work, now)
-  const entries: TreeEntry[] = workViews.map((view) => ({
-    label: `${viewLabels[view].label} (${views[view].length})`,
-    children: views[view].map((line) => viewLine(view, line))
-  }))
+  return {
+    entries: workViews.map((view) => ({
+      label: `${viewLabels[view].label} (${views[view].length})`,
+      children: views[view].map((line) => viewLine(view, line))
+    })),
+    counts: workViews.map((view) => `${viewLabels[view].key}=${views[view].length}`).join(' ')
+  }
+}
+
+/** The routing listing, one line per unfinished work in folder order, with the pending total for the summary line. */
+const routingEntries = (status: WorkStatus): { entries: TreeEntry[]; counts: string } => {
+  const live = status.report.work.filter((entry) => entry.state !== 'finished')
+  return {
+    entries: live.map(routingLine),
+    counts: `PENDING=${live.reduce((total, entry) => total + entry.messages, 0)}`
+  }
+}
+
+/** The chosen text form, then the review count, any warnings and a summary line. */
+const renderWorkStatus = (status: WorkStatus, now: Date, view: TextView): string => {
+  const { entries, counts } = view === 'routing' ? routingEntries(status) : viewEntries(status, now)
   entries.push({ label: `awaiting review (${status.review})` })
   if (status.warnings.length)
     entries.push({
       label: `warnings (${status.warnings.length})`,
       children: status.warnings.map((warning) => ({ label: `${presentation('status.warn').terminal} ${warning}` }))
     })
-  const counts = workViews.map((view) => `${viewLabels[view].key}=${views[view].length}`).join(' ')
   entries.push({ label: `summary: WORK=${status.report.work.length} ${counts} REVIEW=${status.review}` })
-  return renderTree({ title: `KI WORK STATUS ${status.report.repository}`, entries }).join('\n')
+  const title = view === 'routing' ? 'KI WORK ROUTING' : 'KI WORK STATUS'
+  return renderTree({ title: `${title} ${status.report.repository}`, entries }).join('\n')
 }
 
 export const createWorkCommand = (context: KiContext): Command => {
@@ -57,25 +92,35 @@ export const createWorkCommand = (context: KiContext): Command => {
           .choices(['text', 'json'])
           .default('text')
       )
-      .action(async (options: { readonly repo?: string; readonly format: 'text' | 'json' }) => {
-        const location = await resolveRepository({
-          ...(options.repo === undefined ? {} : { repository: resolve(context.workingDirectory, options.repo) }),
-          workingDirectory: context.workingDirectory,
-          homeDirectory: context.homeDirectory
-        })
-        const repository = declaredRepositoryIdentity(await readRepositoryDeclaration(location.declaration))
-        const now = new Date(context.now())
-        const status = await readWorkStatus({
-          root: location.root,
-          identity: repository.slice('https://github.com/'.length),
-          now,
-          runs: await workRuns(agentContext(context), location.root)
-        })
-        if (options.format === 'json') context.stdout.write(`${JSON.stringify(status.report, null, 2)}\n`)
-        else context.stdout.write(`${renderWorkStatus(status, now)}\n`)
-        if (options.format === 'json')
-          for (const warning of status.warnings) context.stderr.write(`ki: warning: ${warning}\n`)
-      })
+      .addOption(
+        new Option(
+          '--view <view>',
+          'the text form: the five views, or routing, one line per unfinished work with its id, state, pending count and description'
+        )
+          .choices(textViews)
+          .default('views')
+      )
+      .action(
+        async (options: { readonly repo?: string; readonly format: 'text' | 'json'; readonly view: TextView }) => {
+          const location = await resolveRepository({
+            ...(options.repo === undefined ? {} : { repository: resolve(context.workingDirectory, options.repo) }),
+            workingDirectory: context.workingDirectory,
+            homeDirectory: context.homeDirectory
+          })
+          const repository = declaredRepositoryIdentity(await readRepositoryDeclaration(location.declaration))
+          const now = new Date(context.now())
+          const status = await readWorkStatus({
+            root: location.root,
+            identity: repository.slice('https://github.com/'.length),
+            now,
+            runs: await workRuns(agentContext(context), location.root)
+          })
+          if (options.format === 'json') context.stdout.write(`${JSON.stringify(status.report, null, 2)}\n`)
+          else context.stdout.write(`${renderWorkStatus(status, now, options.view)}\n`)
+          if (options.format === 'json')
+            for (const warning of status.warnings) context.stderr.write(`ki: warning: ${warning}\n`)
+        }
+      )
   )
   return command
 }
