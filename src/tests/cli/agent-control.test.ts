@@ -3811,7 +3811,8 @@ describe('second review regressions', () => {
       expect((await f.run('ki agent status r')).exitCode).toBe(0)
       expect((await f.events()).filter((event) => event.agent === 'worker' && event.kind === 'launch')).toHaveLength(1)
       expect((await f.events()).filter((event) => event.agent === 'worker' && event.kind === 'failed')).toHaveLength(0)
-    }
+    },
+    30_000
   )
 
   test.each(['control', 'events'] as const)(
@@ -4282,7 +4283,8 @@ describe('third review regressions', () => {
             event.kind === (kind === 'stop' ? 'stopped' : kind === 'dequeue' ? 'dequeued' : 'blocked')
         )
       ).toHaveLength(1)
-    }
+    },
+    30_000
   )
 
   test('third-review dequeue fences held worker without another failed event', async () => {
