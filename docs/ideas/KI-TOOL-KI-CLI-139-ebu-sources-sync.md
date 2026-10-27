@@ -16,6 +16,8 @@ created_at: 2026-10-15T23:15:13Z
 updated_at: 2026-10-21T01:30:50Z
 ---
 
+> **Idea, not on the roadmap.** Let ki keep a repository's copy of the EBU 5G-EMERGE SharePoint documents in step with SharePoint; a Humans Not Robots need rather than a KI one. Moved out of `docs/roadmap/` on 27 October 2026 under the roadmap sweep, with its record kept in full here so that it can return when Kris brings it back; it was `KI-TOOL-KI-CLI-139`.
+
 # EBU Sources Sync
 
 ## Goal

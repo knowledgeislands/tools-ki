@@ -17,6 +17,8 @@ created_at: 2026-10-18T09:27:30Z
 updated_at: 2026-10-20T22:21:15Z
 ---
 
+> **Idea, not on the roadmap.** Publish the five views of ki work status as JSON under a schema so the Observatory reads them from a contract; the text views serve the Observatory today, so a schema is premature. Moved out of `docs/roadmap/` on 27 October 2026 under the roadmap sweep, with its record kept in full here so that it can return when Kris brings it back; it was `KI-TOOL-KI-CLI-149`.
+
 # KI-TOOL-KI-CLI-149: Work Status Views Contract
 
 ## Goal

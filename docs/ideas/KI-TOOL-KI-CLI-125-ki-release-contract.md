@@ -19,6 +19,8 @@ created_at: 2026-10-13T22:53:48Z
 updated_at: 2026-10-20T00:46:49Z
 ---
 
+> **Idea, not on the roadmap.** A documented release contract for ki with per-platform archives, checksums, signing and an installer; every machine runs ki from the linked checkout and releases are deprioritised, so there is nothing to contract for now. Moved out of `docs/roadmap/` on 27 October 2026 under the roadmap sweep, with its record kept in full here so that it can return when Kris brings it back; it was `KI-TOOL-KI-CLI-125`.
+
 # KI Release Contract
 
 ## Goal

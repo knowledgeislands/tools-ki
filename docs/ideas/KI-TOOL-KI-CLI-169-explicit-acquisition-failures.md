@@ -14,6 +14,8 @@ created_at: 2026-10-21T04:52:19Z
 updated_at: 2026-10-21T04:52:19Z
 ---
 
+> **Idea, not on the roadmap.** Make acquisition report unmapped projects, overlapping mappings, missing or changed sessions and failed reads as explicit outcomes, so nothing is silently dropped; worth keeping, deferred for now. Moved out of `docs/roadmap/` on 27 October 2026 under the roadmap sweep, with its record kept in full here so that it can return when Kris brings it back; it was `KI-TOOL-KI-CLI-169`.
+
 # KI-TOOL-KI-CLI-169: Explicit acquisition failure outcomes
 
 ## Goal

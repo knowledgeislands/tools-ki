@@ -14,6 +14,8 @@ created_at: 2026-10-21T04:52:19Z
 updated_at: 2026-10-21T04:52:19Z
 ---
 
+> **Idea, not on the roadmap.** Acquire a whole readable ChatGPT project with complete conversations and provenance; the acquisition Project is finished. Moved out of `docs/roadmap/` on 27 October 2026 under the roadmap sweep, with its record kept in full here so that it can return when Kris brings it back; it was `KI-TOOL-KI-CLI-168`.
+
 # KI-TOOL-KI-CLI-168: Readable ChatGPT project acquisition
 
 ## Goal

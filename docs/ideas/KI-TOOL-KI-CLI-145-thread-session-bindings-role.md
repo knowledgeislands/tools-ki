@@ -17,6 +17,8 @@ created_at: 2026-10-16T21:28:02Z
 updated_at: 2026-10-19T22:49:04Z
 ---
 
+> **Idea, not on the roadmap.** Bind a native Claude or Codex session to its logical thread so a session knows which thread it is and what role it plays; waits on harness thread work and a launch-style probe. Moved out of `docs/roadmap/` on 27 October 2026 under the roadmap sweep, with its record kept in full here so that it can return when Kris brings it back; it was `KI-TOOL-KI-CLI-145`.
+
 # KI-TOOL-KI-CLI-145: Thread Session Bindings
 
 ## Goal

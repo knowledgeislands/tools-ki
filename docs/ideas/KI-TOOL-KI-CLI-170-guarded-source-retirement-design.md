@@ -14,6 +14,8 @@ created_at: 2026-10-21T04:52:19Z
 updated_at: 2026-10-21T04:52:19Z
 ---
 
+> **Idea, not on the roadmap.** Design a guarded way to delete an acquired source only after every safety gate passes; nothing deletes sources today, so there is nothing to guard. Moved out of `docs/roadmap/` on 27 October 2026 under the roadmap sweep, with its record kept in full here so that it can return when Kris brings it back; it was `KI-TOOL-KI-CLI-170`.
+
 # KI-TOOL-KI-CLI-170: Guarded source retirement design
 
 ## Goal

@@ -14,6 +14,8 @@ created_at: 2026-10-21T04:52:19Z
 updated_at: 2026-10-21T04:52:19Z
 ---
 
+> **Idea, not on the roadmap.** Prove one complete ChatGPT project move and one agent-session no-op before source deletion could be allowed; only needed for the retirement design, which is not wanted. Moved out of `docs/roadmap/` on 27 October 2026 under the roadmap sweep, with its record kept in full here so that it can return when Kris brings it back; it was `KI-TOOL-KI-CLI-171`.
+
 # KI-TOOL-KI-CLI-171: Complete acquisition move proof
 
 ## Goal

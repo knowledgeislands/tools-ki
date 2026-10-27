@@ -16,6 +16,8 @@ created_at: 2026-10-19T18:21:00Z
 updated_at: 2026-10-19T22:49:04Z
 ---
 
+> **Idea, not on the roadmap.** Make ki work and the harness roadmap checker read one shared field rule table with conformance cases, so the two cannot drift apart; the tools-burndown Project is on hold. Moved out of `docs/roadmap/` on 27 October 2026 under the roadmap sweep, with its record kept in full here so that it can return when Kris brings it back; it was `KI-TOOL-KI-CLI-157`.
+
 # KI-TOOL-KI-CLI-157: Validator Parity
 
 ## Goal
