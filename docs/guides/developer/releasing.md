@@ -109,6 +109,8 @@ Follow the shared release-readiness checklist's tap and website handoff procedur
 
 After publication, the release workflow's `Notify Homebrew tap` job sends a `tool-release-published` dispatch to `knowledgeislands/homebrew-tap` through the `ki-tools-release-bot` GitHub App; the tap then opens the exact formula pull request and squash-merges it automatically once its required checks pass. The job is skipped until the `KI_TOOLS_RELEASE_BOT_APP_ID` variable and `KI_TOOLS_RELEASE_BOT_PRIVATE_KEY` secret are available to this repository at organisation or repository level (not as `release`-environment secrets); the tap's daily scheduled intake still picks up a published immutable release without the dispatch.
 
+Read the tap CI run’s `Notify release consumers` job’s `Dispatch verified tool releases` step log with `gh run view <run-id> --repo knowledgeislands/homebrew-tap --log`. Each successful dispatch prints `Dispatched <tool> <version> to <consumer>` there and in the job summary.
+
 ## Release-please assessment
 
 Do not introduce release-please before the V1 baseline has been released.
