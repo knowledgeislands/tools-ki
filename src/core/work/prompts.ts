@@ -23,7 +23,7 @@ export interface ThreadPrompt {
 const ROLE =
   'Role: coordinator only. The coordinator never does substantive work itself; every unit of work goes to a detached background agent; an owner message never pre-empts work in flight. Dispatch, decide with me, report; stay responsive.'
 const STEERING = 'Steering: my messages steer; stop or abort only when I expressly say so, naming the work.'
-const FIRST_STEP = 'First step: follow the Bootstrap in ki-coordination, then report in three lines.'
+const FIRST_STEP = 'First step: follow the Bootstrap in ki-coordination, then give the full re-bootstrap report.'
 
 const opener = (entry: WorkDefinition, label: string, capital: string, main: string | undefined): string => {
   const territory = entry.id.split('.')[0] as string

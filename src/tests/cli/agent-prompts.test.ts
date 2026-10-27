@@ -64,7 +64,7 @@ describe('ki agent prompts', () => {
         'Project management only: priorities, the Project-work queue (cap three or four), decisions and releases; route real work to Project work.',
         'Background agents: run substantive work through `ki agent` in run `ex`; stay responsive.',
         'Steering: my messages steer; stop or abort only when I expressly say so, naming the work.',
-        'First step: follow the Bootstrap in ki-coordination, then report in three lines.'
+        'First step: follow the Bootstrap in ki-coordination, then give the full re-bootstrap report.'
       ].join('\n')
     )
     expect(result.stdout).toContain('Bootstrap as ex.sop.sites territory work under ki-coordination.')
