@@ -42,7 +42,7 @@ Kris decided on 18 October, in the [ways-of-working decisions log](/Users/krisbr
 
 **Approach:** a `ki/work-status/v2` JSON report that adds the five views and the `+/_WORK_REVIEW/` count beside the v1 fields, taken from `deriveWorkViews` and `WorkStatus` rather than derived again.
 
-**Dependencies:** waits on State of play confirming the work-status form, alongside [KI-TOOL-KI-CLI-160](KI-TOOL-KI-CLI-160-work-status-routing-view.md). The Observatory works from v1 and nothing there waits on this, which is why it is `low`. [KI-TOOL-KI-CLI-160](KI-TOOL-KI-CLI-160-work-status-routing-view.md) touches the same report and may be planned beside it.
+**Dependencies:** waits on State of play confirming the work-status form, alongside [KI-TOOL-KI-CLI-160](https://github.com/knowledgeislands/tools-ki/blob/5428d3841f760c891a9ccbb670b67538754ba2b4/docs/roadmap/KI-TOOL-KI-CLI-160-work-status-routing-view.md). The Observatory works from v1 and nothing there waits on this, which is why it is `low`. [KI-TOOL-KI-CLI-160](https://github.com/knowledgeislands/tools-ki/blob/5428d3841f760c891a9ccbb670b67538754ba2b4/docs/roadmap/KI-TOOL-KI-CLI-160-work-status-routing-view.md) touches the same report and may be planned beside it.
 
 **Decisions still needed:** how long v1 stays available or whether `--schema` selects it; whether views carry full lines or keys into `work`; and where the review count sits.
 
@@ -50,7 +50,7 @@ Kris decided on 18 October, in the [ways-of-working decisions log](/Users/krisbr
 
 ## Dependencies / blocks
 
-Waits on State of play confirming the work-status form, alongside [KI-TOOL-KI-CLI-160](KI-TOOL-KI-CLI-160-work-status-routing-view.md). This is an external decision dependency; `blocked_by` stays empty because no local work record owns it.
+Waits on State of play confirming the work-status form, alongside [KI-TOOL-KI-CLI-160](https://github.com/knowledgeislands/tools-ki/blob/5428d3841f760c891a9ccbb670b67538754ba2b4/docs/roadmap/KI-TOOL-KI-CLI-160-work-status-routing-view.md). This is an external decision dependency; `blocked_by` stays empty because no local work record owns it.
 
 Not blocking: the Observatory works from v1 today. Planning decides how long v1 stays available, or whether `--schema` selects it, so the Observatory can move when it is ready.
 
