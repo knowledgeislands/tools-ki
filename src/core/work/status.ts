@@ -180,11 +180,7 @@ const section = (text: string, heading: string): string => {
   return lines.slice(start + 1, end < 0 ? undefined : end).join('\n')
 }
 
-/**
- * A State of play's place in its territory, or the reason it is wrong: the main State of play is `<territory>` with no
- * parent or covers; a secondary is `<territory>.sop.<name>`, names its main as parent and covers at least one other
- * work id of the same territory. Parent and covers belong to secondaries alone, and only territory work may use `sop`.
- */
+/** Valid same-territory supervision and State of play coverage, independent of session role. */
 const statePlacement = (
   id: string,
   level: WorkLevel,
@@ -195,23 +191,34 @@ const statePlacement = (
   const { parent, covers } = values
   if (level !== 'territory') {
     if (isSecondaryStateOfPlay(id)) return `a ${territory}.${SECONDARY_SEGMENT}.<name> id is territory work`
-    if (parent !== undefined || covers !== undefined) return 'parent and covers belong to a secondary State of play'
-    return { parent: null, covers: [] }
+    if (covers !== undefined) return 'covers belongs to State of play'
+    if (
+      parent !== undefined &&
+      (typeof parent !== 'string' ||
+        !WORK_ID.test(parent) ||
+        parent === id ||
+        (parent !== territory && !isSecondaryStateOfPlay(parent)) ||
+        parent.split('.')[0] !== territory)
+    )
+      return `parent must name a State of play of territory ${territory}`
+    return { parent: (parent as string | undefined) ?? null, covers: [] }
   }
-  if (segments.length === 1) {
-    if (parent !== undefined || covers !== undefined) return 'the main State of play takes no parent or covers'
-    return { parent: null, covers: [] }
+  const main = segments.length === 1
+  if (main && parent !== undefined) return 'the main State of play takes no parent'
+  if (!main) {
+    if (segments.length !== 3 || !isSecondaryStateOfPlay(id))
+      return `territory work id must be ${territory} or ${territory}.${SECONDARY_SEGMENT}.<name>`
+    if (parent !== territory) return `parent must name the main State of play, ${territory}`
   }
-  if (segments.length !== 3 || !isSecondaryStateOfPlay(id))
-    return `territory work id must be ${territory} or ${territory}.${SECONDARY_SEGMENT}.<name>`
-  if (parent !== territory) return `parent must name the main State of play, ${territory}`
-  if (!Array.isArray(covers) || !covers.length) return 'covers must list the work ids this State of play coordinates'
+  if (main && covers === undefined) return { parent: null, covers: [] }
+  if (!Array.isArray(covers) || (!main && !covers.length))
+    return 'covers must list the work ids this State of play coordinates'
   for (const covered of covers) {
     if (typeof covered !== 'string' || !WORK_ID.test(covered)) return 'covers must list dotted work ids'
     if (!covered.startsWith(`${territory}.`) || isSecondaryStateOfPlay(covered))
       return `covers names ${covered}, which is not other work of territory ${territory}`
   }
-  return { parent: territory, covers: covers as string[] }
+  return { parent: main ? null : territory, covers: covers as string[] }
 }
 
 /** The work file's identity and supervision, or the reason it cannot be read. */

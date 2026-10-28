@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from './_cli_helper.ts'
-import { registerEstate, writeCapital } from './_territory_helper.ts'
+import { memberConfiguration, registerEstate, writeCapital } from './_territory_helper.ts'
 
 const now = () => Date.parse('2026-10-24T09:00:00Z')
 
@@ -54,7 +54,8 @@ describe('ki agent prompts', () => {
       '# EX > SoP (sites) · ex.sop.sites · secondary State of play under ex · with-supervisor',
       '# EX > Sites > Home · ex.site-home · Project work under ex.sop.sites · with-supervisor',
       '# EX > Tools · ex.tools · Project work · with-supervisor',
-      '# EX > Vague · ex.vague · Project work · state unreadable'
+      '# EX > Vague · ex.vague · Project work · state unreadable',
+      '# EX > Tidy · ex.regular.tidy · regular work (optional coordination) · with-supervisor'
     ])
     expect(result.stdout).toContain(
       [
@@ -73,7 +74,9 @@ describe('ki agent prompts', () => {
     expect(result.stdout).toContain('Bootstrap as ex.site-home Project work under ki-coordination.\nRole:')
     expect(result.stdout).toContain("Project: site-home; work only this Project's records.")
     expect(result.stdout).not.toContain('ex.old')
-    expect(result.stdout).not.toContain('ex.regular.tidy')
+    expect(result.stdout).toContain('Bootstrap as ex.regular.tidy regular work under ki-coordination.')
+    expect(result.stdout).toContain('Individual captures remain conversational.')
+    expect(result.stdout).toContain('only when the owner explicitly chooses it')
   })
 
   test('prints the one-line re-bootstrap form with --short and the versioned JSON with --format json', async () => {
@@ -93,7 +96,8 @@ describe('ki agent prompts', () => {
       ['ex.sop.sites', 'secondary'],
       ['ex.site-home', 'project'],
       ['ex.tools', 'project'],
-      ['ex.vague', 'project']
+      ['ex.vague', 'project'],
+      ['ex.regular.tidy', 'regular']
     ])
     expect(report.threads[1]).toMatchObject({ label: 'EX > SoP (sites)', parent: 'ex' })
   })
@@ -117,12 +121,46 @@ describe('ki agent prompts', () => {
   test('says so when the territory has no coordination threads', async () => {
     const box = await sandbox()
     await registerEstate(box, [await writeCapital(box)])
-    await work(box, 'ex.regular.tidy', { level: 'regular', title: "'EX > Tidy'" })
+    await work(box, 'ex.regular.tidy', { level: 'regular', title: "'EX > Tidy'", state: 'finished' })
 
     const result = await box.run('ki agent prompts capital', { now })
 
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toBe('no coordination threads in example/capital\n')
+  })
+
+  test('offers the authoritative member-local regular package without copying it to the Capital', async () => {
+    const box = await territory()
+    await box.project.write('member/.ki.toml', memberConfiguration('example/member'))
+    await registerEstate(box, [await box.project.mkdir('capital'), await box.project.mkdir('member')])
+    const definition =
+      '---\nid: ex.regular.intake\nlevel: regular\nparent: ex\ntitle: Intake\nworker: agent\nsupervisor: owner\n---\n\n## Scope\n\nHome: owner-approved example/member. Individual captures remain conversational.\n'
+    await box.project.write('member/+/_WORK/ex.regular.intake/work.md', definition)
+    await box.project.write(
+      'member/+/_WORK/ex.regular.intake/state.md',
+      '---\nid: ex.regular.intake\nstate: on-hold\nhold: {reason: paused, release: owner selects}\nsince: 2026-10-24T08:00:00Z\n---\n'
+    )
+    await box.project.write('member/+/_WORK/ex.regular.intake/messages.md', '- Keep this inbox.\n')
+    await box.project.write('member/+/_WORK/ex.regular.intake/queries.md', '# Queries\n\nNone.\n')
+    await box.project.write('member/+/_WORK/ex.regular.intake/decisions.md', '# Decisions\n\nNone.\n')
+    box.cd('member')
+    const result = await box.run('ki agent prompts --format json', { now })
+    expect(result.exitCode).toBe(0)
+    const report = JSON.parse(result.stdout)
+    expect(report.repository).toBe('example/member')
+    expect(report.threads).toHaveLength(1)
+    expect(report.threads[0]).toMatchObject({
+      id: 'ex.regular.intake',
+      kind: 'regular',
+      parent: 'ex',
+      state: 'on-hold'
+    })
+    expect(report.threads[0].opener).toContain('Work package: +/_WORK/ex.regular.intake/ in member.')
+    expect(report.threads[0].opener).toContain('end condition for a bounded episode')
+    expect(await box.project.read('member/+/_WORK/ex.regular.intake/work.md')).toBe(definition)
+    expect(await box.project.read('member/+/_WORK/ex.regular.intake/messages.md')).toBe('- Keep this inbox.\n')
+    const status = await box.run('ki work status --format json', { now })
+    expect(JSON.parse(status.stdout).work).toHaveLength(1)
   })
 
   test('selects the territory by its work id or the working directory, and fails on an unknown territory', async () => {

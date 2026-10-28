@@ -336,7 +336,8 @@ export const createAgentCommand = (context: KiContext): Command => {
         const kinds = {
           'state-of-play': 'State of play',
           secondary: 'secondary State of play',
-          project: 'Project work'
+          project: 'Project work',
+          regular: 'regular work (optional coordination)'
         }
         write(
           threads

@@ -9,12 +9,12 @@ component: agent
 priority: high
 size: s
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: a4b6953aba1edccfa50d4bbb885ca962fed648b4
 created_at: 2026-10-28T15:51:00Z
-updated_at: 2026-10-28T15:51:00Z
+updated_at: 2026-10-28T15:58:01Z
 ---
 
 # KI-TOOL-KI-CLI-173: Regular coordination readers
@@ -33,14 +33,14 @@ Only the frozen local reader/opener contract and focused evidence. No cross-repo
 
 ## Current state
 
-Current primary baseline is 74a07bf83c92b1ba425f0ea2f013e8df958b248f, level-based legacy readers. Registry identity is <https://github.com/knowledgeislands/tools-ki> at the verified primary checkout. Fetch is level with origin/main, primary is clean, and focused existing status/opener baseline tests pass. No current source changes or active overlapping writer found. Existing retained worktrees are separate historical work and untouched.
+Implemented against immutable Ready commit recorded in `baseline_ref`, starting from primary 74a07bf83c92b1ba425f0ea2f013e8df958b248f. Registry confirms Tools identity and primary checkout; fetch found no divergence. Native work and roadmap preflights passed. Primary had no changes, and retained worktrees and active run evidence showed no overlapping writer. Exact file hashes were frozen in this run's external temporary directory before product edits.
 
 ## Steps
 
-- [ ] Preserve same-territory parents on regular and Project work and main SoP covers; retain invalid placement warnings.
-- [ ] Offer regular package coordination with explicit owner selection, scope and bounded episode end condition; preserve conversational work and real repository home.
-- [ ] Add focused existing CLI reader and opener cases, including a member-home invocation; inspect existing run-home boundaries without adding a discovery representation.
-- [ ] Verify changed contracts, types and required hooks; integrate coherent result to local main and prepare Awaiting review.
+- [x] Preserve same-territory parents on regular and Project work and main SoP covers; retain invalid placement warnings.
+- [x] Offer regular package coordination with explicit owner selection, scope and bounded episode end condition; preserve conversational work and real repository home.
+- [x] Add focused existing CLI reader and opener cases, including a member-home invocation; inspect existing run-home boundaries without adding a discovery representation.
+- [x] Verify changed contracts, types and required hooks; integrate coherent result to local main and prepare Awaiting review.
 
 ## Files touched
 
@@ -75,6 +75,32 @@ This record carries delivery evidence and the discovery limitation through Await
 ## Delegation
 
 This owner-approved detached unit is the implementation worker; no further agents. Integrate locally under ki-git after affected gates. No acceptance, push or release authority.
+
+## Review
+
+### Delivered
+
+Regular and Project definitions retain valid same-territory SoP parents; main SoP retains covers including regular umbrella and children. Regular packages are offered with a regular coordination opener, owner selection, scope and bounded episode end condition. Listing and local status preserve the real package, held state and inbox. Baseline is the full immutable Ready revision in front matter.
+
+### Change Summary
+
+Only the three frozen product files and two existing CLI test files changed. Non-SoP covers and invalid parents remain warnings. Regular entries use the additional `regular` prompt kind within the existing schema. Existing Project/SoP ordering and tolerance readers remain; no typed migration, native ID or package-home format was introduced. Existing command resolution reads a selected repository's real package; agent thread homes already retain repository plus work folder and need no parallel locator.
+
+### Verification
+
+Native ki-work preflight: pass. Native roadmap preflight and corrected readiness: pass. Existing focused baseline: 14 tests pass. Changed focused evidence: 14 pass initially, with two new fixture assertions failing; corrected fixture declaration, state id and identity assertion, then only the affected new cases passed. Combined evidence covers all 16 current tests. TypeScript noEmit: pass after final test edits. Biome changed-path check: pass. Diff whitespace check: pass. Required staged hooks run at each commit; no install, product build, aggregate coverage cycle, release or publication.
+
+### Outstanding concerns
+
+Automatic Capital-to-member discovery is not implemented: territory-qualified prompts still read the Capital and member-local prompts read their declared local home. Parent covers and a prose home reference do not provide an executable repository identity/work-id locator. Tools owner must settle that interpretation before an automatic resolver can be added; no shadow state or inbox was created. This does not block delivered regular eligibility and parent/coverage placement. Broader typed-ID work remains independent.
+
+### Post-change review
+
+The changed reader matches the reviewed parent/coverage intent and retains visible warnings for malformed relationships. Existing Project and SoP opener cases remain passing. The member-home CLI case proves a held five-file regular package stays at its own declared repository with its inbox unchanged. Acceptance stays with Tools burndown and the owner; its existing hold and priorities are unchanged.
+
+### Mini recap
+
+Delivered eligibility, placement and a direct member-local path; limited automatic discovery is explicitly handed back. The complete worker inbox beside the launched prompt was read directly at verification boundaries: older named-run instructions are not applicable here, verification/install cautions were respected, and the current contract handoff to Harness remains informational with no dependency wait. No receipt of another owner's queue, mark move, acceptance or publication is claimed.
 
 ## Discussion
 

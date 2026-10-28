@@ -2,7 +2,7 @@ import { isSecondaryStateOfPlay, type WorkDefinition, type WorkStatusEntry, work
 
 export const AGENT_PROMPTS_SCHEMA = 'ki/agent-prompts/v1' as const
 
-export type ThreadKind = 'state-of-play' | 'secondary' | 'project'
+export type ThreadKind = 'state-of-play' | 'secondary' | 'project' | 'regular'
 
 /** One coordination thread of a territory and the exact openers that start or resume it. */
 export interface ThreadPrompt {
@@ -27,13 +27,15 @@ const FIRST_STEP = 'First step: follow the Bootstrap in ki-coordination, then gi
 
 const opener = (entry: WorkDefinition, label: string, capital: string, main: string | undefined): string => {
   const territory = entry.id.split('.')[0] as string
-  const kind = entry.level === 'territory' ? 'territory' : 'Project'
+  const kind = entry.level === 'territory' ? 'territory' : entry.level === 'regular' ? 'regular' : 'Project'
   const scope =
-    entry.level === 'project'
-      ? `Project: ${entry.id.slice(territory.length + 1)}; work only this Project's records.`
-      : entry.parent
-        ? `Secondary State of play under ${main ?? territory} (${territory}): project management only for the work its work.md covers, within its own cap; the main State of play stays the owner's front door and owns cross-cutting decisions, so route those to it.`
-        : 'Project management only: priorities, the Project-work queue (cap three or four), decisions and releases; route real work to Project work.'
+    entry.level === 'regular'
+      ? 'Coordinate only this package and its declared scope. This opener selects coordination only when the owner explicitly chooses it; confirm the opening authority and the end condition for a bounded episode. Individual captures remain conversational.'
+      : entry.level === 'project'
+        ? `Project: ${entry.id.slice(territory.length + 1)}; work only this Project's records.`
+        : entry.parent
+          ? `Secondary State of play under ${main ?? territory} (${territory}): project management only for the work its work.md covers, within its own cap; the main State of play stays the owner's front door and owns cross-cutting decisions, so route those to it.`
+          : 'Project management only: priorities, the Project-work queue (cap three or four), decisions and releases; route real work to Project work.'
   return [
     `Bootstrap as ${entry.id} ${kind} work under ki-coordination.`,
     ROLE,
@@ -45,14 +47,9 @@ const opener = (entry: WorkDefinition, label: string, capital: string, main: str
   ].join('\n')
 }
 
-const rank: Readonly<Record<ThreadKind, number>> = { 'state-of-play': 0, secondary: 1, project: 2 }
+const rank: Readonly<Record<ThreadKind, number>> = { 'state-of-play': 0, secondary: 1, project: 2, regular: 3 }
 
-/**
- * Lists a territory's coordination threads, read from its Capital's work definitions: the main State of play, each
- * secondary, then each unfinished piece of Project work, each with its label and the exact openers that start or
- * resume it. A work whose state cannot be read still has its thread, its state null. Regular and ad hoc work have no
- * coordination thread and are left out.
- */
+/** Offers eligible packages and their openers; listing never opens a coordinating session. */
 export const threadPrompts = (
   work: readonly WorkDefinition[],
   states: ReadonlyMap<string, WorkStatusEntry['state']>,
@@ -63,11 +60,17 @@ export const threadPrompts = (
   const mainLabel = main && labelOf(main)
   const coveredBy = new Map(work.flatMap((entry) => entry.covers.map((covered) => [covered, entry.id] as const)))
   return work
-    .filter((entry) => entry.level !== 'regular' && states.get(entry.id) !== 'finished')
+    .filter((entry) => states.get(entry.id) !== 'finished')
     .map((entry): ThreadPrompt => {
       const label = labelOf(entry)
       const kind: ThreadKind =
-        entry.level === 'project' ? 'project' : isSecondaryStateOfPlay(entry.id) ? 'secondary' : 'state-of-play'
+        entry.level === 'regular'
+          ? 'regular'
+          : entry.level === 'project'
+            ? 'project'
+            : isSecondaryStateOfPlay(entry.id)
+              ? 'secondary'
+              : 'state-of-play'
       return {
         id: entry.id,
         label,

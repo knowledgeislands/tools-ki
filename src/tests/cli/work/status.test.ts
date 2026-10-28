@@ -522,10 +522,13 @@ describe('ki work status', () => {
       ['ex.sop.case', { level: 'territory', parent: 'ex', covers: '[Ex.A]' }, 'covers must list dotted work ids'],
       ['ex.hub', { level: 'territory' }, 'territory work id must be ex or ex.sop.<name>'],
       ['ex.sop.proj', { level: 'project' }, 'a ex.sop.<name> id is territory work'],
-      ['ex.proj', { parent: 'ex' }, 'parent and covers belong to a secondary State of play']
+      ['ex.proj', { covers: '[ex.other]' }, 'covers belongs to State of play']
     ]
     for (const [id, fields] of rejected) await writeWork(box, id, fields)
-    await box.project.write('repo/+/_WORK/main/work.md', workFile('main', { level: 'territory', covers: '[main.a]' }))
+    await box.project.write(
+      'repo/+/_WORK/main/work.md',
+      workFile('main', { level: 'territory', parent: 'main', covers: '[main.a]' })
+    )
 
     const json = await box.run('ki work status --repo repo --format json', { now })
 
@@ -541,12 +544,49 @@ describe('ki work status', () => {
     })
     for (const [id, , message] of rejected)
       expect(json.stderr).toContain(`ki: warning: +/_WORK/${id}/work.md: ${message}\n`)
-    expect(json.stderr).toContain(
-      'ki: warning: +/_WORK/main/work.md: the main State of play takes no parent or covers\n'
-    )
+    expect(json.stderr).toContain('ki: warning: +/_WORK/main/work.md: the main State of play takes no parent\n')
     expect(json.stderr).toContain(
       'ki: warning: +/_WORK/ex.sop.sites/work.md: covers ex.site-home, which ex.sop.labs already covers\n'
     )
+  })
+
+  test('preserves main coverage and regular supervision without creating another home', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', declaration())
+    await writeWork(box, 'ex', { level: 'territory', covers: '[ex.regular, ex.regular.intake, ex.project]' })
+    await writeWork(box, 'ex.regular', { level: 'regular', parent: 'ex' })
+    await writeWork(box, 'ex.regular.intake', { level: 'regular', parent: 'ex' })
+    await writeWork(box, 'ex.project', { parent: 'ex' })
+    await writeWork(box, 'ex.regular.secondary', { level: 'regular', parent: 'ex.sop.sites' })
+    for (const [id, parent] of [
+      ['ex.bad', 'other'],
+      ['ex.self', 'ex.self'],
+      ['ex.stray', 'other.sop.sites'],
+      ['ex.child', 'ex.project'],
+      ['ex.scalar', '[ex]']
+    ])
+      await writeWork(box, id as string, { level: 'regular', parent: parent as string })
+    const result = await box.run('ki work status --repo repo --format json', { now })
+    expect(result.exitCode).toBe(0)
+    const entries = JSON.parse(result.stdout).work
+    expect(entries.map((entry: { id: string }) => entry.id)).toEqual([
+      'ex',
+      'ex.project',
+      'ex.regular',
+      'ex.regular.intake',
+      'ex.regular.secondary'
+    ])
+    expect(entries[0]).toMatchObject({ parent: null, covers: ['ex.regular', 'ex.regular.intake', 'ex.project'] })
+    expect(entries[3]).toMatchObject({
+      level: 'regular',
+      parent: 'ex',
+      state: 'with-supervisor',
+      identity: 'example/principal',
+      path: '+/_WORK/ex.regular.intake/work.md'
+    })
+    expect(entries[4]).toMatchObject({ parent: 'ex.sop.sites' })
+    for (const id of ['ex.bad', 'ex.self', 'ex.stray', 'ex.child', 'ex.scalar'])
+      expect(result.stderr).toContain(`+/_WORK/${id}/work.md: parent must name a State of play of territory ex`)
   })
 
   test('lists each unfinished work for routing with its id, state, pending count and description on one line', async () => {
