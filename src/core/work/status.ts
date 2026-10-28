@@ -3,6 +3,7 @@ import { basename, join } from 'node:path'
 import { parse as parseToml } from 'smol-toml'
 import { parse } from 'yaml'
 import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
+import { KiError } from '../errors.ts'
 import { skillTable } from '../territory/declaration.ts'
 import { isMainStateOfPlay, workNames } from './identity.ts'
 
@@ -192,7 +193,7 @@ const statePlacement = (
   const territory = segments[0] as string
   const { parent, covers } = values
   if (level !== 'territory') {
-    if (isSecondaryStateOfPlay(id)) return `a ${territory}.${SECONDARY_SEGMENT}.<name> id is territory work`
+    if (segments[1] === SECONDARY_SEGMENT) return `a ${territory}.${SECONDARY_SEGMENT}.<name> id is territory work`
     if (covers !== undefined) return 'covers belongs to State of play'
     if (
       parent !== undefined &&
@@ -230,6 +231,9 @@ const workDefinition = (folder: string, values: Record<string, unknown>) => {
   if (typeof id !== 'string' || !WORK_ID.test(id)) return 'id must be a dotted work id'
   if (id !== folder) return `id ${id} must name its folder`
   if (!workLevels.includes(level as WorkLevel)) return `level must be one of ${workLevels.join(', ')}`
+  const kind = id.split('.')[1]
+  if ((kind === 'prj' && level !== 'project') || (kind === 'regular' && level !== 'regular'))
+    return 'work type segment must agree with level'
   if (typeof title !== 'string' || !title.trim()) return 'title must be a non-empty string'
   if (typeof worker !== 'string' || !HOLDER.test(worker)) return 'worker must name a holder'
   if (typeof supervisor !== 'string' || !HOLDER.test(supervisor)) return 'supervisor must name a holder'
@@ -263,6 +267,14 @@ export const readWorkDefinitions = async (root: string): Promise<readonly WorkDe
     const definition = values ? workDefinition(folder, values) : undefined
     if (definition && typeof definition !== 'string') work.push({ ...definition, path })
   }
+  const names = new Map<string, string>()
+  for (const definition of work)
+    for (const name of workNames(definition.id, definition.level)) {
+      const previous = names.get(name)
+      if (previous !== undefined && previous !== definition.id)
+        throw new KiError(`ambiguous work ${name}: ${previous} and ${definition.id}`, 2)
+      names.set(name, definition.id)
+    }
   return work
 }
 

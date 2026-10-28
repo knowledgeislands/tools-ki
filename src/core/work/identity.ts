@@ -15,7 +15,8 @@ export const workNames = (id: string, level: string): readonly string[] => {
     return [`${territory}.regular.main`, `${territory}.regular`]
   return [id]
 }
-export const isMainStateOfPlay = (id: string): boolean => !id.includes('.') || id.endsWith('.sop.main')
+export const isMainStateOfPlay = (id: string): boolean =>
+  !id.includes('.') || (id.split('.').length === 3 && id.endsWith('.sop.main'))
 export const projectSlug = (id: string): string =>
   id
     .split('.')

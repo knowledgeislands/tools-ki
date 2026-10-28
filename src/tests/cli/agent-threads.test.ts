@@ -1,6 +1,7 @@
 import { realpath, utimes } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { runCommand, type Sandbox, sandbox } from './_cli_helper.ts'
+import { memberConfiguration, registerEstate, writeCapital } from './_territory_helper.ts'
 
 const now = () => Date.parse('2026-10-07T19:30:00Z')
 
@@ -284,4 +285,29 @@ describe('typed work home continuity', () => {
     expect(result.exitCode).toBe(2)
     expect(result.stderr).toContain('ambiguous work')
   })
+})
+
+test('a member Project session homes in the declared Capital while a local regular exception keeps its home', async () => {
+  const box = await sandbox()
+  const capital = await writeCapital(box, { members: ['example/member'] })
+  await box.project.write('member/.ki.toml', memberConfiguration('example/member'))
+  const member = await realpath(`${box.project.path}/member`)
+  await registerEstate(box, [capital, member])
+  for (const root of ['capital', 'member']) await box.project.git(['-C', root, 'init', '-q'])
+  box.setRunner(runCommand)
+  const definition = (id: string, level: string): string =>
+    `---\nid: ${id}\nlevel: ${level}\ntitle: Work\nworker: agent\nsupervisor: owner\n---\n`
+  await box.project.write('capital/+/_WORK/ex.prj.tools/work.md', definition('ex.prj.tools', 'project'))
+  await box.project.write('member/+/_WORK/ex.regular.intake/work.md', definition('ex.regular.intake', 'regular'))
+  box.cd('member')
+  const named = await box.run('ki agent home tools --work ex.tools', { now })
+  expect(named.exitCode).toBe(0)
+  expect(named.stdout).toContain(`${capital}/+/_WORK/ex.prj.tools`)
+  const automatic = await box.run('ki agent home ex-tools', { now })
+  expect(automatic.exitCode).toBe(0)
+  expect(automatic.stdout).toContain(`${capital}/+/_WORK/ex.prj.tools`)
+  const regular = await box.run('ki agent home intake --work ex.regular.intake', { now })
+  expect(regular.exitCode).toBe(0)
+  expect(regular.stdout).toContain(`${member}/+/_WORK/ex.regular.intake`)
+  expect(await box.project.read('member/+/_WORK/ex.prj.tools/work.md').catch(() => undefined)).toBeUndefined()
 })

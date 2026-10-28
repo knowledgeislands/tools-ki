@@ -672,3 +672,18 @@ test('typed main, Project, regular and secondary shapes retain parent continuity
   expect(report.work.find((entry: { id: string }) => entry.id === 'ex.sop.main').parent).toBeNull()
   expect(report.work.find((entry: { id: string }) => entry.id === 'ex.sop.sites').parent).toBe('ex.sop.main')
 })
+
+test('typed status refuses duplicate old/new homes and excludes typed parent cycles', async () => {
+  const box = await sandbox()
+  await box.project.write('repo/.ki.toml', declaration(capital([])))
+  await writeWork(box, 'ex.sop.main', { level: 'territory', parent: 'ex.sop.main', covers: '[]' })
+  const cycle = await box.run('ki work status --repo repo --format json', { now })
+  expect(cycle.exitCode).toBe(0)
+  expect(JSON.parse(cycle.stdout).work).toEqual([])
+  expect(cycle.stderr).toContain('takes no parent')
+  await writeWork(box, 'ex.alpha')
+  await writeWork(box, 'ex.prj.alpha')
+  const duplicate = await box.run('ki work status --repo repo --format json', { now })
+  expect(duplicate.exitCode).toBe(2)
+  expect(duplicate.stderr).toContain('ambiguous work')
+})

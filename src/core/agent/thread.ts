@@ -3,6 +3,7 @@ import { dirname, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { gitWorkingTreeRoot } from '../runtime/git.ts'
 import { workNames } from '../work/identity.ts'
+import { capitalRoot } from '../work/registry.ts'
 import { isWorkId, readWorkDefinitions, WORK_DIRECTORY, workSlug } from '../work/status.ts'
 import { type AgentContext, git, localTime, read, runDirectory } from './context.ts'
 
@@ -45,7 +46,6 @@ const namesWork = (id: string, run: string): boolean =>
  */
 const resolvedWorkFolder = async (repository: string, id: string): Promise<string | undefined> => {
   const matches = (await readWorkDefinitions(repository)).filter((work) => workNames(work.id, work.level).includes(id))
-  if (matches.length > 1) throw new KiError(`ambiguous work ${id}: ${matches.map((work) => work.id).join(', ')}`, 2)
   return matches[0] === undefined ? undefined : workFolder(matches[0].id)
 }
 const runWorkFolder = async (repository: string, run: string): Promise<string> => {
@@ -314,15 +314,30 @@ export const threadHome = async (
   const { existing, repository } = await homeRepository(context, run, repo, launch)
   if (existing && isWorkHome(existing)) return write ? recordThread(context, run, existing) : existing
   // A retired home is followed into its work folder; read alone, one with none stays readable.
-  const folder = await runWorkFolder(repository, run).catch((error: unknown) => {
+  const resolved = await runHome(context, repository, run).catch((error: unknown) => {
     if (existing && !write && !requireWorkHome) return undefined
     throw error
   })
-  if (folder === undefined) return existing as ThreadHome
-  const home: ThreadHome = { repository, folder }
+  if (resolved === undefined) return existing as ThreadHome
+  const home: ThreadHome = resolved
   return write ? recordThread(context, run, home) : home
 }
 
+/** A member checkout is a session seat; a local regular exception always wins. */
+const runHome = async (context: AgentContext, repository: string, run: string): Promise<ThreadHome> => {
+  try {
+    return { repository, folder: await runWorkFolder(repository, run) }
+  } catch (error) {
+    // Ambiguity is not absence and must never trigger a different home.
+    if (!(error instanceof KiError) || !error.message.includes('names no work folder')) throw error
+    const capital = await capitalRoot(repository, context.stateDirectory)
+    if (typeof capital !== 'string' || capital === repository) throw error
+    const folder = await runWorkFolder(capital, run)
+    const work = (await readWorkDefinitions(capital)).find((work) => workFolder(work.id) === folder)
+    if (work?.level !== 'project') throw error
+    return { repository: capital, folder }
+  }
+}
 /** The recorded home, if any, and the repository that owns or will own the thread. */
 const homeRepository = async (
   context: AgentContext,
@@ -351,8 +366,19 @@ export const rehomeThread = async (
   repo?: string | undefined
 ): Promise<ThreadHome> => {
   if (!isWorkId(id)) throw new KiError(`--work must be a dotted work id: '${id}'`, 2)
-  const { repository } = await homeRepository(context, run, repo)
-  const folder = (await resolvedWorkFolder(repository, id)) ?? workFolder(id)
+  let { repository } = await homeRepository(context, run, repo)
+  let folder = (await resolvedWorkFolder(repository, id)) ?? workFolder(id)
+  if (!(await holdsWork(repository, folder.slice(`${WORK_DIRECTORY}/`.length)))) {
+    const capital = await capitalRoot(repository, context.stateDirectory)
+    if (typeof capital === 'string' && capital !== repository) {
+      const candidate = await resolvedWorkFolder(capital, id)
+      const work = (await readWorkDefinitions(capital)).find((work) => workFolder(work.id) === candidate)
+      if (work?.level === 'project') {
+        repository = capital
+        folder = workFolder(work.id)
+      }
+    }
+  }
   if (!(await holdsWork(repository, folder.slice(`${WORK_DIRECTORY}/`.length))))
     throw new KiError(`${join(repository, workFolder(id))} has no work.md; write the work file first`, 2)
   return recordThread(context, run, { repository, folder })

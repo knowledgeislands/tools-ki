@@ -418,3 +418,21 @@ describe('ki agent run events', () => {
     ])
   })
 })
+
+test('homes an in-flight report after a typed folder rename without rewriting launch identity', async () => {
+  const box = await sandbox()
+  await setupRun(box)
+  expect((await box.run('ki agent launch r one . task.md', { now })).exitCode).toBe(0)
+  const launch = await box.state.read('ki/agents/r/one.launch.json')
+  await box.project.git(['mv', '+/_WORK/ki.r', '+/_WORK/ki.prj.r'])
+  await box.project.write(
+    '+/_WORK/ki.prj.r/work.md',
+    '---\nid: ki.prj.r\nlevel: project\ntitle: R\nworker: agent\nsupervisor: owner\n---\n'
+  )
+  await box.state.write('ki/agents/r/one.report.md', '# Typed report\n')
+  await box.state.write('ki/agents/r/one.status', 'DONE\n')
+  expect((await box.run('ki agent status r', { now })).exitCode).toBe(0)
+  expect(await box.project.read('+/_WORK/ki.prj.r/one.report.md')).toBe('# Typed report\n')
+  expect(await box.project.read('+/_WORK/ki.r/one.report.md').catch(() => undefined)).toBeUndefined()
+  expect(await box.state.read('ki/agents/r/one.launch.json')).toBe(launch)
+})

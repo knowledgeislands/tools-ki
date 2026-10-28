@@ -42,6 +42,8 @@ Ready under the explicit owner-approved plan. Immutable source baseline `9cf919c
 
 ## Files touched
 
+Source-grounded follow-through adds `src/tests/cli/agent-events.test.ts` (report-homing seam) and `src/core/work/registry.ts` and `src/core/territory/resolution.ts`: reuse the existing declared Capital registry resolver for Project session seats and permit actual dotted work selectors. Hashes frozen separately before edits. No new lookup store or registry slug change.
+
 - `src/core/work/status.ts`
 - `src/core/work/prompts.ts`
 - `src/core/work/identity.ts`
@@ -76,11 +78,11 @@ Status accepts typed main SoP and parents; openers classify main correctly and r
 
 ### Verification
 
-Three focused CLI files: 25 tests pass. Installed TypeScript check passes. Mandatory check-only hooks run at commit. Unchanged GOV-232/CLI-173 optional-role evidence reused.
+Initial three focused CLI files: 25 tests pass. Final status/home/opener files: 27 tests pass. Event/report continuity file: 14 tests pass. Existing thread-home regression group: 7 tests pass. Follow-through covers explicit typed selectors, member Project session seats, retained member regular homes, duplicate-home rejection and in-flight report homing. A focused regression caught an overbroad local guard edit before integration; the original decision-match guard was restored, types and all seven affected checks pass. Installed TypeScript check passes. Mandatory check-only hooks run at commit. Unchanged GOV-232/CLI-173 optional-role evidence reused.
 
 ### Outstanding concerns
 
-Capital discovery for unrecorded member-seat launches and exact-session hook selection remain separate source-assessment needs. No blanket coordinator capability requirement added.
+Exact-session hook selection remains unsupported: the existing native binding contract explicitly says bindings are not yet shipped. No marker/store is invented. Default repository-wide status and no-argument prompt listing remain local; explicit typed selectors and Project launch homes resolve the declared Capital. No blanket coordinator capability requirement added.
 
 ### Post-change review
 

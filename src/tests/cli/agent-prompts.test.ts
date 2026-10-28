@@ -186,7 +186,7 @@ test('typed main is not secondary and typed Project opener keeps the registry sl
   await registerEstate(box, [await writeCapital(box)])
   await work(box, 'ex.sop.main', { level: 'territory', title: "'EX > SoP'", covers: '[ex.prj.tools]' })
   await work(box, 'ex.prj.tools', { level: 'project', title: "'EX > Tools'", parent: 'ex.sop.main', project: 'tools' })
-  const result = await box.run('ki agent prompts capital --format json', { now })
+  const result = await box.run('ki agent prompts ex.sop.main --format json', { now })
   expect(result.exitCode).toBe(0)
   const report = JSON.parse(result.stdout)
   expect(report.threads.find((entry: { id: string }) => entry.id === 'ex.sop.main').kind).toBe('state-of-play')

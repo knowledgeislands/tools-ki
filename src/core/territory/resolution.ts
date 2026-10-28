@@ -106,7 +106,7 @@ export const resolveTerritoryWorkCapital = async (
   try {
     return selectedCapital(found, selector).entry
   } catch (error) {
-    const holder = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(selector)
+    const holder = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*$/.test(selector)
       ? found.find((capital) => existsSync(join(capital.entry.path, '+', '_WORK', selector, 'work.md')))
       : undefined
     if (!holder) throw error

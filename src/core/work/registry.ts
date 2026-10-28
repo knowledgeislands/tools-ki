@@ -44,7 +44,10 @@ const territoryRoot = async (territory: string, stateDirectory: string): Promise
 }
 
 /** Finds the Capital checkout: the repository itself when it is the Capital, else its registered local checkout. */
-const capitalRoot = async (repository: string, stateDirectory: string): Promise<string | { unavailable: string }> => {
+export const capitalRoot = async (
+  repository: string,
+  stateDirectory: string
+): Promise<string | { unavailable: string }> => {
   const own = await declaredIdentity(repository)
   const capital = own?.capital
   if (typeof capital !== 'string') return { unavailable: 'the repository declares no ki-repo capital' }
