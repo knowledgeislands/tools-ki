@@ -232,7 +232,7 @@ const workDefinition = (folder: string, values: Record<string, unknown>) => {
   if (id !== folder) return `id ${id} must name its folder`
   if (!workLevels.includes(level as WorkLevel)) return `level must be one of ${workLevels.join(', ')}`
   const kind = id.split('.')[1]
-  if ((kind === 'prj' && level !== 'project') || (kind === 'regular' && level !== 'regular'))
+  if ((kind === 'prj' && level !== 'project') || ((kind === 'reg' || kind === 'regular') && level !== 'regular'))
     return 'work type segment must agree with level'
   if (typeof title !== 'string' || !title.trim()) return 'title must be a non-empty string'
   if (typeof worker !== 'string' || !HOLDER.test(worker)) return 'worker must name a holder'

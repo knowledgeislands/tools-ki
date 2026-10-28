@@ -194,3 +194,17 @@ test('typed main is not secondary and typed Project opener keeps the registry sl
     "Project: tools; work only this Project's records."
   )
 })
+
+test('reg opener retains regular form and optional coordination in a mixed tree', async () => {
+  const box = await territory()
+  await work(box, 'ex.reg.main', { level: 'regular', title: "'EX > Regular work'" })
+  await work(box, 'ex.regular.topic', { level: 'regular', title: "'EX > Topic'" })
+  const result = await box.run('ki agent prompts ex --format json', { now })
+  expect(result.exitCode, result.output).toBe(0)
+  const entries = JSON.parse(result.stdout).threads
+  for (const id of ['ex.reg.main', 'ex.regular.topic']) {
+    const entry = entries.find((value: { id: string }) => value.id === id)
+    expect(entry.kind).toBe('regular')
+    expect(entry.opener).toContain(`Bootstrap as ${id} regular work under ki-coordination.`)
+  }
+})

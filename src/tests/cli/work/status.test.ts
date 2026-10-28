@@ -657,15 +657,15 @@ test('typed main, Project, regular and secondary shapes retain parent continuity
   })
   await writeWork(box, 'ex.sop.sites', { level: 'territory', parent: 'ex.sop.main', covers: '[ex.prj.alpha]' })
   await writeWork(box, 'ex.prj.alpha', { parent: 'ex.sop.sites', project: 'alpha' })
-  await writeWork(box, 'ex.regular.main', { level: 'regular', parent: 'ex.sop.main' })
-  await writeWork(box, 'ex.regular.topic', { level: 'regular', parent: 'ex.sop.main' })
+  await writeWork(box, 'ex.reg.main', { level: 'regular', parent: 'ex.sop.main' })
+  await writeWork(box, 'ex.reg.topic', { level: 'regular', parent: 'ex.sop.main' })
   const result = await box.run('ki work status --repo repo --format json', { now })
   expect(result.exitCode).toBe(0)
   const report = JSON.parse(result.stdout)
   expect(report.work.map((entry: { id: string }) => entry.id)).toEqual([
     'ex.prj.alpha',
-    'ex.regular.main',
-    'ex.regular.topic',
+    'ex.reg.main',
+    'ex.reg.topic',
     'ex.sop.main',
     'ex.sop.sites'
   ])
@@ -683,6 +683,19 @@ test('typed status refuses duplicate old/new homes and excludes typed parent cyc
   expect(cycle.stderr).toContain('takes no parent')
   await writeWork(box, 'ex.alpha')
   await writeWork(box, 'ex.prj.alpha')
+  const duplicate = await box.run('ki work status --repo repo --format json', { now })
+  expect(duplicate.exitCode).toBe(2)
+  expect(duplicate.stderr).toContain('ambiguous work')
+})
+
+test('reg status rejects duplicate legacy topic homes and mismatched levels', async () => {
+  const box = await sandbox()
+  await box.project.write('repo/.ki.toml', declaration(capital([])))
+  await writeWork(box, 'ex.reg.topic', { level: 'project' })
+  const invalid = await box.run('ki work status --repo repo --format json', { now })
+  expect(invalid.stderr).toContain('work type segment must agree with level')
+  await writeWork(box, 'ex.reg.topic', { level: 'regular' })
+  await writeWork(box, 'ex.regular.topic', { level: 'regular' })
   const duplicate = await box.run('ki work status --repo repo --format json', { now })
   expect(duplicate.exitCode).toBe(2)
   expect(duplicate.stderr).toContain('ambiguous work')

@@ -8,11 +8,15 @@ export const workNames = (id: string, level: string): readonly string[] => {
     return [id]
   }
   if (level === 'project') {
-    if (parts.length === 2 && kind !== 'regular' && kind !== 'sop') return [`${territory}.prj.${kind}`, id]
+    if (parts.length === 2 && kind !== 'regular' && kind !== 'reg' && kind !== 'sop')
+      return [`${territory}.prj.${kind}`, id]
     if (parts.length === 3 && kind === 'prj') return [id, `${territory}.${name}`]
   }
-  if (level === 'regular' && (parts.length === 2 || (kind === 'regular' && name === 'main')))
-    return [`${territory}.regular.main`, `${territory}.regular`]
+  if (level === 'regular' && (parts.length === 2 || kind === 'reg' || kind === 'regular')) {
+    if (parts.length === 2 || name === 'main')
+      return [`${territory}.reg.main`, `${territory}.regular.main`, `${territory}.regular`]
+    return [`${territory}.reg.${name}`, `${territory}.regular.${name}`]
+  }
   return [id]
 }
 export const isMainStateOfPlay = (id: string): boolean =>

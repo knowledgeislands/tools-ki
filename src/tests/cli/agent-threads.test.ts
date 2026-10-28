@@ -311,3 +311,20 @@ test('a member Project session homes in the declared Capital while a local regul
   expect(regular.stdout).toContain(`${member}/+/_WORK/ex.regular.intake`)
   expect(await box.project.read('member/+/_WORK/ex.prj.tools/work.md').catch(() => undefined)).toBeUndefined()
 })
+
+test.each(['main', 'topic'])('reg %s and legacy aliases resolve one actual regular home', async (name) => {
+  const box = await sandbox()
+  await box.project.git(['init', '-q'])
+  box.setRunner(runCommand)
+  const id = `ki.reg.${name}`
+  await box.project.write(
+    `+/_WORK/${id}/work.md`,
+    `---\nid: ${id}\nlevel: regular\ntitle: Regular\nworker: agent\nsupervisor: owner\n---\n`
+  )
+  const names = name === 'main' ? [id, 'ki.regular.main', 'ki.regular'] : [id, 'ki.regular.topic']
+  for (const alias of names) {
+    const result = await box.run(`ki agent home regular --work ${alias}`, { now })
+    expect(result.exitCode, result.output).toBe(0)
+    expect(result.stdout).toContain(`/+/_WORK/${id}`)
+  }
+})

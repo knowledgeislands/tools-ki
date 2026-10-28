@@ -13,7 +13,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 9cf919cf70cebfb07f947dbdf867cc3c8f8cadd6
 created_at: 2026-10-28T22:02:19Z
-updated_at: 2026-10-28T22:12:08Z
+updated_at: 2026-10-28T22:34:10Z
 ---
 
 # Typed work naming readers
@@ -28,14 +28,18 @@ Owner authority: Principal Ways of working decisions, "Naming first, thread type
 
 ## Boundary
 
-Accept t.sop.main, t.prj.project, t.regular.main, t.regular.topic and secondary t.sop.name alongside legacy definitions. Preserve project slugs, levels, states, marks, native identities and immutable run evidence. No HNR mutation, permanent alias store, release, installation or provider action. Thread-home and hook changes only where existing exact source supports them; unsettled runtime design is a reported limitation.
+Accept t.sop.main, t.prj.project, t.reg.main, t.reg.topic, legacy t.regular.main, t.regular.topic and secondary t.sop.name alongside legacy definitions. Preserve project slugs, levels, states, marks, native identities and immutable run evidence. No HNR mutation, permanent alias store, release, installation or provider action. Thread-home and hook changes only where existing exact source supports them; unsettled runtime design is a reported limitation.
 
 ## Current state
 
-Ready under the explicit owner-approved plan. Immutable source baseline `9cf919cf70cebfb07f947dbdf867cc3c8f8cadd6`; exact owned paths and content hashes frozen in the run temporary baseline JSON before implementation.
+Rework authorised by the owner amendment "Three-letter reg and committed package notices - 28 October 2026". Return from Awaiting review to In progress; preserve the original baseline and delivered review evidence. The frozen amendment plan and current source hashes are recorded in this run temporary evidence. Work level remains `regular`; add `reg` canonical identity with old spellings readable. Diagnose historical control-home fencing and prove fresh-group recovery without editing old journals.
+
+Awaiting owner review after the approved reg amendment. Immutable source baseline `9cf919cf70cebfb07f947dbdf867cc3c8f8cadd6`; exact owned paths and content hashes frozen in the run temporary baseline JSON before implementation.
 
 ## Plan
 
+- [x] Add the bounded reg identity amendment and canonical naming wording.
+- [x] Verify mixed aliases, relationships, lookup, openers and control-home continuity; run required type checks and hooks.
 - [x] Update actual typed naming blockers and derived old/new home resolution.
 - [x] Exercise changed identities, continuity and ambiguous definitions with focused existing tests.
 - [x] Run required type checks and hooks, inspect exact commit paths and integrate verified support.
@@ -74,9 +78,13 @@ Typed name readers and run-home continuity delivered within the frozen seven pro
 
 ### Change Summary
 
+Reg amendment: main and topic aliases derive from actual regular definitions, including legacy regular/main/topic forms. Type/level mismatch is rejected. Mixed-tree status, legacy parent/covers, single-work home lookup and optional regular openers are exercised. Completed old-group history remains fenced after a mutable home change; a fresh group at the actual package passes ordinary home/machine checks and can queue work. No control journal, launch packet, ownership guard or native identity is rewritten. Source baseline and earlier green evidence above remain unchanged.
+
 Status accepts typed main SoP and parents; openers classify main correctly and retain the Project registry slug. Existing mutable home APIs and report-path readers follow moved work. Both old and canonical explicit home requests resolve to the one actual package; ambiguous physical homes fail.
 
 ### Verification
+
+Reg amendment verification: 23 existing status/home tests and 8 opener tests pass; one completed-history/fresh-group regression and six existing machine/home/identity queue guards pass. Installed TypeScript passes. Mandatory check-only hooks run at commit. Initial new opener fixture lacked the declared territory, corrected to reuse the existing territory fixture; no product workaround. Unchanged Capital/member and report-homing source retains the prior green evidence.
 
 Initial three focused CLI files: 25 tests pass. Final status/home/opener files: 27 tests pass. Event/report continuity file: 14 tests pass. Existing thread-home regression group: 7 tests pass. Follow-through covers explicit typed selectors, member Project session seats, retained member regular homes, duplicate-home rejection and in-flight report homing. A focused regression caught an overbroad local guard edit before integration; the original decision-match guard was restored, types and all seven affected checks pass. Installed TypeScript check passes. Mandatory check-only hooks run at commit. Unchanged GOV-232/CLI-173 optional-role evidence reused.
 

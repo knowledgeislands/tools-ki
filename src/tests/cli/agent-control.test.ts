@@ -5298,3 +5298,37 @@ test('older v2 history without failure identities remains readable', async () =>
   await f.box.state.write('ki/agents/r/events.history', JSON.stringify(checkpoint))
   expect((await f.run('ki agent status r')).exitCode).toBe(0)
 })
+
+test('completed renamed-package control history stays fenced while a fresh home group continues', async () => {
+  const f = await fixture()
+  await f.box.project.write(
+    '+/_WORK/ki.r/work.md',
+    '---\nid: ki.r\nlevel: project\ntitle: Work\nworker: agent\nsupervisor: owner\n---\n'
+  )
+  expect((await f.launch()).exitCode).toBe(0)
+  f.set({ empty: true })
+  await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
+  await f.box.state.write('ki/agents/r/worker.report.md', '# Done\n')
+  expect((await f.run('ki agent status r')).exitCode).toBe(0)
+  const journal = await f.box.state.read('ki/agents/r/control.journal.jsonl')
+  const packet = await f.box.state.read('ki/agents/r/worker.launch.json')
+  await rename(`${f.box.project.path}/+/_WORK/ki.r`, `${f.box.project.path}/+/_WORK/ki.prj.r`)
+  await f.box.project.write(
+    '+/_WORK/ki.prj.r/work.md',
+    '---\nid: ki.prj.r\nlevel: project\ntitle: Work\nworker: agent\nsupervisor: owner\n---\n'
+  )
+  expect((await f.run('ki agent home r --work ki.prj.r')).exitCode).toBe(0)
+  const refused = await f.run('ki agent queue r next brief.md --json')
+  expect(refused.exitCode).toBe(1)
+  expect(refused.stderr).toContain('control-home-unverified')
+  expect(await f.box.state.read('ki/agents/r/control.journal.jsonl')).toBe(journal)
+  expect(await f.box.state.read('ki/agents/r/worker.launch.json')).toBe(packet)
+  expect((await f.run('ki agent home r-current --work ki.prj.r')).exitCode).toBe(0)
+  const continued = await f.run('ki agent queue r-current next brief.md --json')
+  expect(continued.exitCode, continued.output).toBe(0)
+  const current = JSON.parse(await f.box.state.read('ki/agents/r-current/control.json'))
+  expect(current.work).toBe('ki.prj.r')
+  expect(current.workHome).toContain('/+/_WORK/ki.prj.r')
+  expect(current.machine).toBe((await f.state()).machine)
+  expect(await f.box.state.read('ki/agents/r/control.journal.jsonl')).toBe(journal)
+})
