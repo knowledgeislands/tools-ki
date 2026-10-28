@@ -241,3 +241,47 @@ describe('ki agent decide with a bare option letter', () => {
     expect(await box.project.read('elsewhere.md').catch(() => 'absent')).toBe('absent')
   })
 })
+
+describe('typed work home continuity', () => {
+  const definition = (id: string): string =>
+    `---\nid: ${id}\nlevel: project\ntitle: Ways\nworker: agent\nsupervisor: owner\n---\n`
+  test('legacy run and explicit names resolve moved homes without recreating the old folder', async () => {
+    const box = await sandbox()
+    await box.project.git(['init', '-q'])
+    box.setRunner(runCommand)
+    const repository = await realpath(box.project.path)
+    await box.project.write('+/_WORK/ki.prj.ways-of-working/work.md', definition('ki.prj.ways-of-working'))
+    await box.state.write(
+      'ki/agents/ways-of-working/thread.json',
+      JSON.stringify({ repository, folder: '+/_WORK/ki.ways-of-working' })
+    )
+    await box.state.write(
+      'ki/agents/ways-of-working/a.launch.json',
+      '{"token":"immutable-token","work":"ki.ways-of-working"}'
+    )
+    const original = await box.state.read('ki/agents/ways-of-working/a.launch.json')
+    for (const id of ['ki.ways-of-working', 'ki.prj.ways-of-working']) {
+      const home = await box.run(`ki agent home ways-of-working --work ${id}`, { now })
+      expect(home.exitCode).toBe(0)
+      expect(home.stdout).toContain('/+/_WORK/ki.prj.ways-of-working')
+    }
+    const decision = await box.run('ki agent decide ways-of-working Continue.', { now })
+    expect(decision.exitCode).toBe(0)
+    expect(await box.project.read('+/_WORK/ki.prj.ways-of-working/decisions.md')).toContain('Continue.')
+    expect(await box.project.read('+/_WORK/ki.ways-of-working/work.md').catch(() => undefined)).toBeUndefined()
+    expect(await box.state.read('ki/agents/ways-of-working/a.launch.json')).toBe(original)
+    expect((await box.run('ki agent home ki-ways-of-working', { now })).stdout).toContain(
+      '/+/_WORK/ki.prj.ways-of-working'
+    )
+  })
+  test('refuses two physical homes for the same work instead of guessing', async () => {
+    const box = await sandbox()
+    await box.project.git(['init', '-q'])
+    box.setRunner(runCommand)
+    for (const id of ['ki.ways-of-working', 'ki.prj.ways-of-working'])
+      await box.project.write(`+/_WORK/${id}/work.md`, definition(id))
+    const result = await box.run('ki agent home ways-of-working --work ki.ways-of-working', { now })
+    expect(result.exitCode).toBe(2)
+    expect(result.stderr).toContain('ambiguous work')
+  })
+})

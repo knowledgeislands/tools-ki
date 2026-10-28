@@ -2,7 +2,8 @@ import { appendFile, copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:
 import { dirname, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { gitWorkingTreeRoot } from '../runtime/git.ts'
-import { isWorkId, WORK_DIRECTORY, workSlug } from '../work/status.ts'
+import { workNames } from '../work/identity.ts'
+import { isWorkId, readWorkDefinitions, WORK_DIRECTORY, workSlug } from '../work/status.ts'
 import { type AgentContext, git, localTime, read, runDirectory } from './context.ts'
 
 /**
@@ -42,9 +43,20 @@ const namesWork = (id: string, run: string): boolean =>
  * The one work folder the run's name names, which a new run takes as its home and a run homed
  * in a retired folder follows. None, or two, leave the choice to `ki agent home --work`.
  */
+const resolvedWorkFolder = async (repository: string, id: string): Promise<string | undefined> => {
+  const matches = (await readWorkDefinitions(repository)).filter((work) => workNames(work.id, work.level).includes(id))
+  if (matches.length > 1) throw new KiError(`ambiguous work ${id}: ${matches.map((work) => work.id).join(', ')}`, 2)
+  return matches[0] === undefined ? undefined : workFolder(matches[0].id)
+}
 const runWorkFolder = async (repository: string, run: string): Promise<string> => {
+  const definitions = await readWorkDefinitions(repository)
   const candidates = (await readdir(join(repository, WORK_DIRECTORY)).catch(() => [])).filter(
-    (id) => isWorkId(id) && namesWork(id, run)
+    (id) =>
+      isWorkId(id) &&
+      (namesWork(id, run) ||
+        definitions.some(
+          (work) => work.id === id && workNames(work.id, work.level).some((name) => namesWork(name, run))
+        ))
   )
   const ids = (await Promise.all(candidates.map(async (id) => ((await holdsWork(repository, id)) ? [id] : [])))).flat()
   if (ids.length > 1)
@@ -212,7 +224,10 @@ export const readThread = async (context: AgentContext, run: string): Promise<Th
     throw new KiError(`${path} is not valid JSON`, 1)
   }
   if (!isHome(parsed)) throw new KiError(`${path} does not name a repository and folder`, 1)
-  return parsed
+  if (!isWorkHome(parsed)) return parsed
+  const id = parsed.folder.slice(`${WORK_DIRECTORY}/`.length)
+  const folder = await resolvedWorkFolder(parsed.repository, id)
+  return folder === undefined ? parsed : { repository: parsed.repository, folder }
 }
 
 const repositoryRoot = async (context: AgentContext, directory: string, label?: string): Promise<string> => {
@@ -297,7 +312,7 @@ export const threadHome = async (
   requireWorkHome = false
 ): Promise<ThreadHome> => {
   const { existing, repository } = await homeRepository(context, run, repo, launch)
-  if (existing && isWorkHome(existing)) return existing
+  if (existing && isWorkHome(existing)) return write ? recordThread(context, run, existing) : existing
   // A retired home is followed into its work folder; read alone, one with none stays readable.
   const folder = await runWorkFolder(repository, run).catch((error: unknown) => {
     if (existing && !write && !requireWorkHome) return undefined
@@ -337,9 +352,10 @@ export const rehomeThread = async (
 ): Promise<ThreadHome> => {
   if (!isWorkId(id)) throw new KiError(`--work must be a dotted work id: '${id}'`, 2)
   const { repository } = await homeRepository(context, run, repo)
-  if (!(await holdsWork(repository, id)))
+  const folder = (await resolvedWorkFolder(repository, id)) ?? workFolder(id)
+  if (!(await holdsWork(repository, folder.slice(`${WORK_DIRECTORY}/`.length))))
     throw new KiError(`${join(repository, workFolder(id))} has no work.md; write the work file first`, 2)
-  return recordThread(context, run, { repository, folder: workFolder(id) })
+  return recordThread(context, run, { repository, folder })
 }
 
 const recordThread = async (context: AgentContext, run: string, home: ThreadHome): Promise<ThreadHome> => {

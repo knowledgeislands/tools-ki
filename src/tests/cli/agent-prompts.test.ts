@@ -180,3 +180,17 @@ describe('ki agent prompts', () => {
     expect(malformed.exitCode).toBe(2)
   })
 })
+
+test('typed main is not secondary and typed Project opener keeps the registry slug', async () => {
+  const box = await sandbox()
+  await registerEstate(box, [await writeCapital(box)])
+  await work(box, 'ex.sop.main', { level: 'territory', title: "'EX > SoP'", covers: '[ex.prj.tools]' })
+  await work(box, 'ex.prj.tools', { level: 'project', title: "'EX > Tools'", parent: 'ex.sop.main', project: 'tools' })
+  const result = await box.run('ki agent prompts capital --format json', { now })
+  expect(result.exitCode).toBe(0)
+  const report = JSON.parse(result.stdout)
+  expect(report.threads.find((entry: { id: string }) => entry.id === 'ex.sop.main').kind).toBe('state-of-play')
+  expect(report.threads.find((entry: { id: string }) => entry.id === 'ex.prj.tools').opener).toContain(
+    "Project: tools; work only this Project's records."
+  )
+})

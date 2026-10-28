@@ -8,7 +8,7 @@ component: agent
 priority: high
 size: s
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 9cf919cf70cebfb07f947dbdf867cc3c8f8cadd6
@@ -36,9 +36,9 @@ Ready under the explicit owner-approved plan. Immutable source baseline `9cf919c
 
 ## Plan
 
-- [ ] Update actual typed naming blockers and derived old/new home resolution.
-- [ ] Exercise changed identities, continuity and ambiguous definitions with focused existing tests.
-- [ ] Run required type checks and hooks, inspect exact commit paths and integrate verified support.
+- [x] Update actual typed naming blockers and derived old/new home resolution.
+- [x] Exercise changed identities, continuity and ambiguous definitions with focused existing tests.
+- [x] Run required type checks and hooks, inspect exact commit paths and integrate verified support.
 
 ## Files touched
 
@@ -63,6 +63,32 @@ Folder worker owns physical moves. Home resolution must prevent old-folder recre
 ## Documentation impact
 
 Shared naming wording only as needed; no Principal canonical edit unless demonstrated necessary.
+
+## Review
+
+### Delivered
+
+Typed name readers and run-home continuity delivered within the frozen seven product/test paths. The new pure identity module derives old/new names from valid definitions; no alias store or identity history is written.
+
+### Change Summary
+
+Status accepts typed main SoP and parents; openers classify main correctly and retain the Project registry slug. Existing mutable home APIs and report-path readers follow moved work. Both old and canonical explicit home requests resolve to the one actual package; ambiguous physical homes fail.
+
+### Verification
+
+Three focused CLI files: 25 tests pass. Installed TypeScript check passes. Mandatory check-only hooks run at commit. Unchanged GOV-232/CLI-173 optional-role evidence reused.
+
+### Outstanding concerns
+
+Capital discovery for unrecorded member-seat launches and exact-session hook selection remain separate source-assessment needs. No blanket coordinator capability requirement added.
+
+### Post-change review
+
+No native or launch identity mutation; legacy run directories and tokens remain intact. Ready for folder publication and owner review, without release or installation.
+
+### Mini recap
+
+Folder-first support is bounded to current readers and mutable home pointers. Existing definitions provide the transition map; HNR remains untouched.
 
 ## Discussion
 

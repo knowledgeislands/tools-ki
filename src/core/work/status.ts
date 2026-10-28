@@ -4,6 +4,7 @@ import { parse as parseToml } from 'smol-toml'
 import { parse } from 'yaml'
 import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { skillTable } from '../territory/declaration.ts'
+import { isMainStateOfPlay, workNames } from './identity.ts'
 
 export const WORK_STATUS_SCHEMA = 'ki/work-status/v1' as const
 
@@ -114,7 +115,8 @@ export const isWorkId = (value: string): boolean => WORK_ID.test(value)
 export const SECONDARY_SEGMENT = 'sop'
 
 /** Whether the id names a secondary State of play, `<territory>.sop.<name>`. */
-export const isSecondaryStateOfPlay = (id: string): boolean => id.split('.')[1] === SECONDARY_SEGMENT
+export const isSecondaryStateOfPlay = (id: string): boolean =>
+  id.split('.')[1] === SECONDARY_SEGMENT && !isMainStateOfPlay(id)
 
 /** The work's slug, its id with each `.` written as `-`; never parsed back into an id. */
 export const workSlug = (id: string): string => id.replaceAll('.', '-')
@@ -197,28 +199,29 @@ const statePlacement = (
       (typeof parent !== 'string' ||
         !WORK_ID.test(parent) ||
         parent === id ||
-        (parent !== territory && !isSecondaryStateOfPlay(parent)) ||
+        (parent !== territory && parent !== `${territory}.sop.main` && !isSecondaryStateOfPlay(parent)) ||
         parent.split('.')[0] !== territory)
     )
       return `parent must name a State of play of territory ${territory}`
     return { parent: (parent as string | undefined) ?? null, covers: [] }
   }
-  const main = segments.length === 1
+  const main = isMainStateOfPlay(id)
   if (main && parent !== undefined) return 'the main State of play takes no parent'
   if (!main) {
     if (segments.length !== 3 || !isSecondaryStateOfPlay(id))
       return `territory work id must be ${territory} or ${territory}.${SECONDARY_SEGMENT}.<name>`
-    if (parent !== territory) return `parent must name the main State of play, ${territory}`
+    if (parent !== territory && parent !== `${territory}.sop.main`)
+      return `parent must name the main State of play, ${territory}`
   }
   if (main && covers === undefined) return { parent: null, covers: [] }
   if (!Array.isArray(covers) || (!main && !covers.length))
     return 'covers must list the work ids this State of play coordinates'
   for (const covered of covers) {
     if (typeof covered !== 'string' || !WORK_ID.test(covered)) return 'covers must list dotted work ids'
-    if (!covered.startsWith(`${territory}.`) || isSecondaryStateOfPlay(covered))
+    if (!covered.startsWith(`${territory}.`) || covered === `${territory}.sop.main` || isSecondaryStateOfPlay(covered))
       return `covers names ${covered}, which is not other work of territory ${territory}`
   }
-  return { parent: main ? null : territory, covers: covers as string[] }
+  return { parent: main ? null : (parent as string), covers: covers as string[] }
 }
 
 /** The work file's identity and supervision, or the reason it cannot be read. */
@@ -403,13 +406,22 @@ const checkpointEntry = (
 export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkStatus> => {
   const warnings: string[] = []
   const work: WorkStatusEntry[] = []
+  const definitions = await readWorkDefinitions(request.root)
   for (const folder of await directories(join(request.root, WORK_DIRECTORY))) {
     if (!(await isFile(join(request.root, WORK_DIRECTORY, folder, 'work.md')))) {
       warnings.push(`${WORK_DIRECTORY}/${folder}/ has no work.md`)
       continue
     }
     const items = request.runs
-      .filter((run) => run.folder === `${WORK_DIRECTORY}/${folder}`)
+      .filter(
+        (run) =>
+          run.folder === `${WORK_DIRECTORY}/${folder}` ||
+          definitions.some(
+            (definition) =>
+              definition.id === folder &&
+              workNames(definition.id, definition.level).some((name) => run.folder === `${WORK_DIRECTORY}/${name}`)
+          )
+      )
       .flatMap((run) =>
         run.agents.map(
           (agent): WorkStatusItem => ({
