@@ -8,12 +8,12 @@ component: agent
 priority: high
 size: s
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 7f91270b5009cc2c74f0ba53d52b71c7aa8f27be
 created_at: 2026-10-28T23:11:50Z
-updated_at: 2026-10-29T01:29:35Z
+updated_at: 2026-10-29T01:54:38Z
 ---
 
 # Footer and Markdown writers
@@ -32,19 +32,19 @@ Only footer rule, generated consumers and affected tests first. Keep report head
 
 ## Current state
 
-Immutable source baseline: `7f91270b5009cc2c74f0ba53d52b71c7aa8f27be`. It precedes this record's creation; no committed Ready-record snapshot is asserted. Independent review returned this record for structural repair. The original Goal remains unchanged and is not discharged by diagnosis or headings. Tools committed diagnosis only in `c8c50d51b7f68072cdfb104dd262123a3b0f91a5`. The existing local Harness dependency supplies the footer and exclusion fixes, but full original-goal fulfilment remains unproven; status remains In progress.
+Immutable source baseline: `7f91270b5009cc2c74f0ba53d52b71c7aa8f27be`. It precedes this record's creation; no committed Ready-record snapshot is asserted. The original Goal is unchanged. Tools originally delivered diagnosis only; this continuation now supplies executable local integration evidence against Tools source `3afba45d1e9594a04392427bf57998af35a76192` and installed Harness `07b9333a1f8bdbe40b8991ba2c3d8172670fe81a`. The final shared dependency was finished before verification. The bounded local original-scope outcome is demonstrated and is Awaiting review, not accepted. No Tools product source change was needed or made.
 
 ## Steps
 
 - [x] Freeze the native baseline and inspect scoped-verdict and writer ownership.
 - [x] Record the causal diagnosis and identify the delivered Harness footer and exclusion dependency.
 - [x] Establish the actual local Tools consumption boundary from committed source and the installed Harness symlink.
-- [ ] Demonstrate the original Goal end to end at the Tools boundary, including any remaining causal writer, exclusion or scoped-gate fault; repair only a concrete original-scope fault in a separately authorised source unit.
-- [ ] Complete original-scope verification and prepare a fully delivered review packet before Awaiting review.
+- [x] Demonstrate the original Goal at the local Tools boundary with the final shared assets: generated skeleton and composed footer, excluded capture preservation through audit and conform, malformed/valid staged Markdown and retained selection safeguards.
+- [x] Complete original-scope local verification and prepare the delivered review packet. No reproduced Tools causal source fault remains to repair; independent review and acceptance remain separate.
 
 ## Files touched
 
-Tools delivery `c8c50d51b7f68072cdfb104dd262123a3b0f91a5` changed only this native record; the separate reservation changed `docs/roadmap/_ISSUES.md`. No Tools source was changed. Harness footer/authoring source belongs to the dependency, not this repository. This repair touches only this native record.
+This continuation changes only this native record. Tools diagnosis and earlier packet repairs also changed this record alone; the separate reservation changed `docs/roadmap/_ISSUES.md`. Shared footer and authoring implementation remains Harness-owned. Disposable integration proofs and their logs remain in runtime storage and are not product tests or published payloads.
 
 ## Verify
 
@@ -52,7 +52,7 @@ Reuse unchanged naming and pure-rename evidence. Run focused affected tests and 
 
 ## Dependencies / blocks
 
-The compatible Harness owns shared footer assets and repository authoring semantics. Its delivered fixes already exist; their acceptance state is not a build-order blocker. This record does not assert cross-host freshness or estate-wide rollout.
+The compatible Harness owns shared footer assets and repository authoring semantics. The final method dependency is delivered at `07b9333a1f8bdbe40b8991ba2c3d8172670fe81a`, after the footer and exclusion fixes. Its actual installed symlink was frozen and consumed by the local proof. There is no remaining local build-order dependency. Cross-host freshness and estate rollout are outside this record's evidence.
 
 ## Documentation impact
 
@@ -76,42 +76,48 @@ Repair this existing record only; preserve its identity, immutable baseline and 
 
 ### Delivered
 
-Partial delivery only. Immutable baseline `7f91270b5009cc2c74f0ba53d52b71c7aa8f27be` predates record creation. Tools diagnosis commit `c8c50d51b7f68072cdfb104dd262123a3b0f91a5` changed this record alone; packet repair `32b913c68bb826687638ad81334b06dd97888aeb` also changed this record alone. Neither authored Harness source or completed the original Goal.
+The original Goal remains byte-identical. The footer and shared causal authoring fix are supplied by the existing Harness dependency, not authored in Tools. Footer commit `afb126f228c41286f1903ec7273b9eb8896af8e9`, exclusion commit `79c9e4cc13b2a26d927ad132929cf65ab2b0d2e9` and final method revision `07b9333a1f8bdbe40b8991ba2c3d8172670fe81a` are present locally. Tools consumes that final dependency through its installed Harness symlink. This continuation completes the missing local boundary evidence rather than relabelling diagnosis as implementation.
 
-The already-delivered Harness dependency supplies a concrete footer component locally: `src/commands/agent/index.ts` constructs the agent context with `harnessDirectory(context.paths.data, DEFAULT_HARNESS)`; `src/core/agent/runs.ts` resolves delegation assets from `AgentContext.harnessDirectory`, then reads `run-prompt.md` and `rules-${tier}.md`. The installed Harness path is a symlink to the local Harness primary checkout, which contains footer commit `afb126f228c41286f1903ec7273b9eb8896af8e9` and exclusion commit `79c9e4cc13b2a26d927ad132929cf65ab2b0d2e9`. This is local dependency consumption, not a Tools-authored implementation or proof of other hosts.
+The public in-process CLI generated a new prompt skeleton from that installed dependency and composed the actual push-tier footer with an injected process recorder. Both carry the canonical `🧵 <work-id>` rule; the composed footer matches the dependency's exact `## Rules` section after its documented relative-link resolution. No provider or live worker was invoked.
+
+The actual Tools authoring host, using the installed Harness catalogue, excluded a synthetic capture README from frontmatter findings and conform writes. Its quote and content bytes stayed identical after audit, dry-run proposals and applied conform; included new frontmatter lost the unnecessary quotes. The canonical staged Markdown hook rejected an included skipped heading, accepted its valid correction and preserved the staged excluded capture in both cases. Scoped-verdict regressions and legacy/selection safeguards remain enforced.
 
 ### Change Summary
 
-Restore the required native sections, four-word title and honest partial status. Keep the original Goal, identity, creation time and immutable baseline. Replace the earlier false assertion that the Goal had been narrowed with the actual unfinished scope. No Tools product change is made or invented.
+Add local executable integration evidence and move this unchanged-goal record to Awaiting review. Preserve identity, creation time and immutable baseline. Change no Tools source, shared asset, gate or test. The shared writer cause was Harness's separately walking frontmatter path ignoring repository exclusions; that dependency repair now reaches Tools. Report homing and adoption copy existing worker-authored bytes rather than authoring or normalising the footer. No speculative Tools repair is proposed.
 
 ### Verification
 
-Reuse the 28 October evidence: the representative Personal rig-terra scoped KB verdict had zero in-scope failures or warnings, with one unrelated failure and three warnings excluded. The actual canonical new-report hook rejected invalid Markdown and accepted its correction while preserving an excluded capture. Harness delivery owns its 15 footer checks, two repaired frontmatter cases and installed TypeScript result; these are not Tools product tests run by this repair.
+Frozen Tools source `3afba45d1e9594a04392427bf57998af35a76192`; installed Harness symlink resolves to its local primary checkout at `07b9333a1f8bdbe40b8991ba2c3d8172670fe81a`. `src/commands/agent/index.ts` constructs `AgentContext.harnessDirectory` from the default installed Harness path. `src/core/agent/runs.ts` reads `run-prompt.md` and the exact heading-delimited tier rules from that directory. Prompt generation and composition were exercised through the public CLI seam with disposable HOME/XDG roots and a fake process port, with zero real launches.
 
-Current source inspection: `src/core/repository/operations/verdict-scope.ts` narrows blocking findings while retaining whole-repository evaluation; `src/core/agent/events.ts` `homeReport` reads a worker-authored report and writes its unchanged text; `src/core/agent/thread.ts` `adoptStateFiles` copies existing report bytes. These paths do not author the footer or normalise Markdown. The installed Harness symlink and actual committed dependency objects establish only the local integration boundary. Record-only document/roadmap verdicts and normal hooks are recorded separately from reused implementation evidence. No aggregate build, coverage or estate audit is claimed.
+Three temporary integration proofs passed: actual installed skeleton/footer consumption; actual authoring audit, dry-run and applied conform with capture-byte preservation and included frontmatter correction; and the byte-exact canonical no-package staged Markdown hook's invalid/valid cases. The authoring fixture uses its declared `.rumdl.toml` exclusion and an evidenced owned-file exception. The hook proof stages newly authored Markdown and the excluded capture and invokes the hook directly without committing that fixture. Only a separate newly created synthetic prompt fixture receives its own baseline commit; no existing private fixture is committed or edited.
+
+Current existing Tools regressions: 40 passed across legacy compatibility, thread-home readers, scoped repository verdicts and work status; 11 passed for role-free tier preservation and frozen role-selection refusal, including unsupported schema, unknown role and missing authority file; three passed for dangling or unused authority/acceptance declarations. Scoped evaluation still evaluates the whole repository and filters only verdict attribution. Malformed Markdown enforcement is demonstrated by the declared staged hook, not inferred from a root-level mechanical finding outside a scoped verdict.
+
+The initial temporary proof used Node instead of the Harness-required Bun runtime and two over-specific fixture assertions; those setup failures were corrected before the final cases passed. No product failure was inferred from them. Earlier unchanged Harness footer/frontmatter/type evidence and final method source verification remain attributed to their owning runs. No duplicate aggregate suite, coverage, build or estate audit was run. Relevant native document checks and mandatory normal commit hooks accompany this record-only delivery.
 
 ### Outstanding concerns
 
-The original Goal remains unproven end to end at the Tools boundary. Diagnosis alone does not discharge it. No concrete original-scope causal Tools fault was established in the inspected writer or scoped-gate paths, so there is no supported source repair candidate to return. A new product change would require a demonstrated fault and a separate authorised source unit. This record remains In progress; no acceptance, cancellation or pruning occurs.
+Independent review and owner acceptance remain outstanding. This is local source/dependency integration evidence only: no cross-host freshness, HNR operation, global historical Markdown cleanliness, real first-send or provider/runtime service behaviour is claimed. Existing historical report bytes remain untouched. No concrete unmet Tools causal bug was reproduced, so there is no bounded product-source repair candidate to return.
 
 ### Post-change review
 
-The local dependency genuinely supplies the footer and authoring exclusion components, but that evidence cannot turn this diagnosis-only Tools delivery into completed original-scope work. This partial packet preserves the remaining verification and causal-repair obligation. It is not an acceptance-ready packet.
+The footer and shared authoring/exclusion outcome now has current executable evidence at Tools' consumption boundary. Included new content is checked and refused when malformed by the canonical staged hook; exclusions preserve captured evidence rather than weakening enforcement for authored content. The original Goal is fulfilled within its authorised local bounds through delivered dependency integration and current boundary verification. This packet requests independent review; it supplies no acceptance, cancellation or pruning authority.
 
 ### Mini recap
 
-Tools delivered diagnosis and this record repair. Harness delivered the shared footer and exclusion fixes. Local consumption is source- and symlink-grounded; full original-goal completion remains unproved. Retain In progress and bring the remaining original-scope evidence to independent review without allocating another record.
+Harness authored and delivered the shared footer and frontmatter exclusion repair. Tools originally diagnosed ownership; this continuation proves the final local dependency, actual host audit/conform and staged gate boundaries, preserving capture bytes and prior safeguards. Only this native record changes. Status is Awaiting review with the original Goal, baseline and creation identity intact.
 
 ## Discussion
 
 ### Writer ownership and causal scope
 
-The scoped-verdict path filters findings rather than Markdown; report homing copies worker-authored text. The separately walking frontmatter exclusion fault was repaired in Harness. No concrete causal Tools fault has been established in these paths.
+The scoped-verdict path filters findings rather than Markdown. `src/core/agent/events.ts` report homing reads worker-authored text and writes it unchanged; `src/core/agent/thread.ts` report adoption copies existing bytes. The separately walking frontmatter exclusion fault belongs to Harness and was repaired there. This continuation proves that repair's current local consumption without inventing a Tools writer defect or taking dependency authorship.
 
 ### Correction of the earlier scope claim
 
-The previous packet repair incorrectly asserted that the local Goal had been narrowed to diagnosis; the Goal was unchanged from creation. That assertion is withdrawn. The original footer and causal writer, exclusion and scoped-gate outcome remains the contract, and its remaining proof stays in this record's unchecked Steps.
+The earlier packet incorrectly asserted that the Goal had been narrowed to diagnosis. The Goal was unchanged from creation, and that assertion remains withdrawn. Diagnosis alone did not satisfy it. The later temporary integration proofs supply the missing local evidence against the unchanged footer, causal writer, exclusion and scoped-gate contract.
 
-### Independent review - 29 October 2026
+### Independent review and continuation - 29 October 2026
 
-The independent reviewer returned this record for ITEM-1 and ITEM-3 structure and the undisclosed Goal mismatch. This repair restores the authored structure while preserving that substantive finding. Shared Harness delivery and local consumption support a component, not closure of the original Tools Goal.
+Independent review-3 correctly returned the diagnosis-only packet for structural failures and an undisclosed Goal mismatch. The structural repair preserved In progress. This explicitly authorised evidence continuation waited for the final shared method dependency and completed the missing local boundary proofs. Awaiting review now rests on those demonstrated outcomes, not headings or a scope reduction; independent acceptance remains with the reviewer and owner.
