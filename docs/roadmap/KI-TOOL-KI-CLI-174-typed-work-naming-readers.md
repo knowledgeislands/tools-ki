@@ -8,12 +8,12 @@ component: agent
 priority: high
 size: s
 horizon: now
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked_by: []
 baseline_ref: 9cf919cf70cebfb07f947dbdf867cc3c8f8cadd6
 created_at: 2026-10-28T22:02:19Z
-updated_at: 2026-10-28T22:34:10Z
+updated_at: 2026-10-29T01:19:10Z
 ---
 
 # Typed work naming readers
@@ -103,3 +103,7 @@ Folder-first support is bounded to current readers and mutable home pointers. Ex
 ## Discussion
 
 No acceptance or terminal lifecycle change is authorised.
+
+### Independent review - 29 October 2026
+
+Independent review returns this record to In progress: the current roadmap audit fails ITEM-3 because required body sections are missing or named differently, and EXEC-4 because Documentation impact lacks its four required subsections. The six-part Review packet and immutable baseline are present; they do not waive these governing failures. Repair requires a separately briefed unit; no product failure is inferred from this structural result.

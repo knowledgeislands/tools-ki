@@ -8,12 +8,12 @@ component: agent
 priority: high
 size: s
 horizon: now
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked_by: []
 baseline_ref: 7f91270b5009cc2c74f0ba53d52b71c7aa8f27be
 created_at: 2026-10-28T23:11:50Z
-updated_at: 2026-10-29T01:10:03Z
+updated_at: 2026-10-29T01:19:10Z
 ---
 
 # Bare-ID footer and scoped Markdown writers
@@ -80,3 +80,7 @@ The current scoped verdict and report-copy path did not reproduce a defect requi
 ### Review packet repair
 
 The 29 October owner instruction authorises evidence authoring for this exact unfinished record under the original 28 October delivery and sleep continuation. The prior shared plan described Harness implementation as though Tools delivered it. The local goal and completed plan now describe the actual Tools diagnosis, and the six required Review subheadings and final Discussion restore the missing review packet. Identity, creation provenance, `baseline_ref` and `awaiting-review` are preserved; acceptance remains separate.
+
+### Independent review - 29 October 2026
+
+Independent review returns this record to In progress: the current roadmap audit fails ITEM-1 because the title exceeds four words and ITEM-3 because required body sections are absent. The repaired six-part packet does not waive these governing failures. Repair requires a separately briefed unit. The current Goal remains byte-identical to the original authored Goal and requires landing the footer and repairing shared causal writer, exclusion and scoped-gate paths. Tools delivered diagnosis only and this record alone; the repaired packet claims a narrowed local goal that was not enacted in Goal. This review cannot waive that unmet baseline outcome or replan it. Harness delivery is separate evidence and is not a Tools product change.

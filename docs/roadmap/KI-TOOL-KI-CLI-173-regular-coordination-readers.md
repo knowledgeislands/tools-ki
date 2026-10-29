@@ -8,13 +8,12 @@ project: tools-burndown
 component: agent
 priority: high
 size: s
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: a4b6953aba1edccfa50d4bbb885ca962fed648b4
 created_at: 2026-10-28T15:51:00Z
-updated_at: 2026-10-28T15:58:01Z
+updated_at: 2026-10-29T01:19:10Z
 ---
 
 # KI-TOOL-KI-CLI-173: Regular coordination readers
@@ -102,6 +101,14 @@ The changed reader matches the reviewed parent/coverage intent and retains visib
 
 Delivered eligibility, placement and a direct member-local path; limited automatic discovery is explicitly handed back. The complete worker inbox beside the launched prompt was read directly at verification boundaries: older named-run instructions are not applicable here, verification/install cautions were respected, and the current contract handoff to Harness remains informational with no dependency wait. No receipt of another owner's queue, mark move, acceptance or publication is claimed.
 
+## Done
+
+Accepted 2026-10-29 by Kris on the review packet above, under the 27 October ACCEPT-PRUNE-CONFIDENT instruction reaffirmed by the 29 October sleep continuation and independently verified in wow-sleep-review-3.
+
 ## Discussion
 
 Approved bounded plan is the read-back cited above; no repeat approval required. Exact home-discovery limitation remains with Tools owner rather than inventing a representation.
+
+### Independent review - 29 October 2026
+
+Independent review checked the delivery commit and current affected readers, the immutable execution baseline, the ordered six-part packet and the exact-record roadmap verdict. Current affected regressions pass; the repository authoring audit passes its mechanical checks. Automatic Capital-to-member discovery remains explicitly undelivered and outside this accepted bounded eligibility and placement outcome. No cross-host freshness or real first-send evidence is asserted.
