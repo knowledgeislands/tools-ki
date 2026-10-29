@@ -7,13 +7,12 @@ purpose: corrective
 component: agent
 priority: high
 size: s
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 9cf919cf70cebfb07f947dbdf867cc3c8f8cadd6
 created_at: 2026-10-28T22:02:19Z
-updated_at: 2026-10-29T01:29:35Z
+updated_at: 2026-10-29T02:07:12Z
 ---
 
 # Typed work naming readers
@@ -115,6 +114,10 @@ No native or launch identity mutation; legacy run directories and tokens remain 
 ### Mini recap
 
 Folder-first support is bounded to current readers and mutable home pointers. Existing definitions provide the transition map; HNR remains untouched.
+
+## Done
+
+Accepted 29 October 2026 by Kris under the still-live 27 October ACCEPT-PRUNE-CONFIDENT grant and explicit 29 October continuation, executed independently by wow-sleep-final-review on the review packet above.
 
 ## Discussion
 

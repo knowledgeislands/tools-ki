@@ -7,13 +7,12 @@ purpose: corrective
 component: agent
 priority: high
 size: s
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 7f91270b5009cc2c74f0ba53d52b71c7aa8f27be
 created_at: 2026-10-28T23:11:50Z
-updated_at: 2026-10-29T01:54:38Z
+updated_at: 2026-10-29T02:07:12Z
 ---
 
 # Footer and Markdown writers
@@ -107,6 +106,10 @@ The footer and shared authoring/exclusion outcome now has current executable evi
 ### Mini recap
 
 Harness authored and delivered the shared footer and frontmatter exclusion repair. Tools originally diagnosed ownership; this continuation proves the final local dependency, actual host audit/conform and staged gate boundaries, preserving capture bytes and prior safeguards. Only this native record changes. Status is Awaiting review with the original Goal, baseline and creation identity intact.
+
+## Done
+
+Accepted 29 October 2026 by Kris under the still-live 27 October ACCEPT-PRUNE-CONFIDENT grant and explicit 29 October continuation, executed independently by wow-sleep-final-review on the review packet above.
 
 ## Discussion
 
