@@ -8,12 +8,12 @@ component: agent
 priority: high
 size: s
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 9cf919cf70cebfb07f947dbdf867cc3c8f8cadd6
 created_at: 2026-10-28T22:02:19Z
-updated_at: 2026-10-29T01:19:10Z
+updated_at: 2026-10-29T01:29:35Z
 ---
 
 # Typed work naming readers
@@ -32,11 +32,11 @@ Accept t.sop.main, t.prj.project, t.reg.main, t.reg.topic, legacy t.regular.main
 
 ## Current state
 
-Rework authorised by the owner amendment "Three-letter reg and committed package notices - 28 October 2026". Return from Awaiting review to In progress; preserve the original baseline and delivered review evidence. The frozen amendment plan and current source hashes are recorded in this run temporary evidence. Work level remains `regular`; add `reg` canonical identity with old spellings readable. Diagnose historical control-home fencing and prove fresh-group recovery without editing old journals.
+Delivery is complete within the original boundary; independent review returned the record for authored structure only. This repair restores the required section names and documentation impact, without changing product behaviour or the retained implementation evidence. Immutable source baseline: `9cf919cf70cebfb07f947dbdf867cc3c8f8cadd6`. It precedes record creation and is not a committed Ready-record snapshot.
 
-Awaiting owner review after the approved reg amendment. Immutable source baseline `9cf919cf70cebfb07f947dbdf867cc3c8f8cadd6`; exact owned paths and content hashes frozen in the run temporary baseline JSON before implementation.
+The original naming delivery and owner-approved reg amendment remain the scope. Independent acceptance follows this record-only repair.
 
-## Plan
+## Steps
 
 - [x] Add the bounded reg identity amendment and canonical naming wording.
 - [x] Verify mixed aliases, relationships, lookup, openers and control-home continuity; run required type checks and hooks.
@@ -56,7 +56,7 @@ Source-grounded follow-through adds `src/tests/cli/agent-events.test.ts` (report
 - `src/tests/cli/agent-prompts.test.ts`
 - `src/tests/cli/agent-threads.test.ts`
 
-Generated coordination surfaces may change only through their canonical generator if naming wording affects them. This record is also owned.
+Harness owns canonical naming guidance and generated coordination surfaces; those are dependency evidence, not code authored in Tools. This native record is also owned.
 
 ## Verify
 
@@ -68,11 +68,27 @@ Folder worker owns physical moves. Home resolution must prevent old-folder recre
 
 ## Documentation impact
 
-Shared naming wording only as needed; no Principal canonical edit unless demonstrated necessary.
+### Decision Records
+
+No new decision: this delivery implements the existing owner-approved boundary.
+
+### Specifications
+
+No separate specification change; the preserved Goal and Boundary remain the delivery contract.
+
+### Guides
+
+Harness owns the canonical naming tables and generated coordination wording; Tools consumes that shared guidance. The retained review packet identifies the actual reader and home-resolution changes. No Principal canonical edits are part of this repair.
+
+### Roadmap
+
+Repair this existing record only; preserve its identity, immutable baseline and original Goal. No new record, acceptance, cancellation or pruning.
 
 ## Review
 
 ### Delivered
+
+Actual committed naming delivery: `195b84806b4585dcd49c82377d87763470a46ce0`, `8711051e6df2975eef777a571083280ea9a4c09d`, `7f91270b5009cc2c74f0ba53d52b71c7aa8f27be`. These objects and their actual changed paths ground the retained evidence.
 
 Typed name readers and run-home continuity delivered within the frozen seven product/test paths. The new pure identity module derives old/new names from valid definitions; no alias store or identity history is written.
 
@@ -107,3 +123,7 @@ No acceptance or terminal lifecycle change is authorised.
 ### Independent review - 29 October 2026
 
 Independent review returns this record to In progress: the current roadmap audit fails ITEM-3 because required body sections are missing or named differently, and EXEC-4 because Documentation impact lacks its four required subsections. The six-part Review packet and immutable baseline are present; they do not waive these governing failures. Repair requires a separately briefed unit; no product failure is inferred from this structural result.
+
+### Structural return repair - 29 October 2026
+
+Owner-authorised record-only repair restores the current ITEM-1/ITEM-3/EXEC-4 contract as applicable. The independent return above remains historical evidence. Actual delivery objects, not the four stale runtime authoring-path hashes, ground the retained packet. Original Goal, creation time and immutable baseline are preserved; no Ready snapshot or newly run product tests are asserted. Required document and roadmap verdicts and normal hooks must pass before this return to Awaiting review is committed; acceptance remains separate.
