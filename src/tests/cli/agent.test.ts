@@ -271,6 +271,39 @@ describe('ki agent launch', () => {
     expect(launch.environment['KI_AGENT_RUN']).toBe('r')
   })
 
+  const orcaIdentity = {
+    ORCA_AGENT_SESSION_ID: 'session',
+    ORCA_AGENT_SESSION_SPAWN_TOKEN: 'token',
+    ORCA_STRUCTURED_SESSION: '1',
+    ORCA_CHAT_SCRATCH_DIR: '/scratch'
+  }
+
+  test.each(['claude', 'codex'])(
+    "keeps the coordinator's Orca session identity out of the %s child and in the dispatcher",
+    async (runtime) => {
+      const box = await sandbox()
+      await setupDelegation(box)
+      box.setEnv({ ...orcaIdentity, ORCA_PANE_KEY: 'pane', ORCA_WORKTREE_ID: 'tree' })
+      const processes = fakeProcesses(box)
+      await box.project.write('task.md', '# Task: do it\n')
+      processes.alive.add(7)
+      await box.state.write('ki/agents/r/first.pid', '7\n')
+      await box.state.write('ki/agents/r/first.status', '19:00 UTC - building\n')
+
+      expect((await box.run(`ki agent launch r one . task.md --runtime ${runtime}`, { now })).exitCode).toBe(0)
+      expect(
+        (await box.run(`ki agent launch r two . task.md --runtime ${runtime} --wait-for first`, { now })).exitCode
+      ).toBe(0)
+
+      const [child, dispatcher] = processes.launches as [AgentLaunch, AgentLaunch]
+      expect(child.command).toBe(runtime)
+      for (const name of Object.keys(orcaIdentity)) expect(child.environment).not.toHaveProperty(name)
+      expect(child.environment).toMatchObject({ ORCA_PANE_KEY: 'pane', ORCA_WORKTREE_ID: 'tree', KI_AGENT_RUN: 'r' })
+      expect(dispatcher.command).toBe(box.executable)
+      expect(dispatcher.environment).toMatchObject({ ...orcaIdentity, ORCA_PANE_KEY: 'pane' })
+    }
+  )
+
   test.each([
     [
       'claude',
