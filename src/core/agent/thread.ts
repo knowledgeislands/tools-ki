@@ -1,7 +1,8 @@
 import { appendFile, copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { gitWorkingTreeRoot } from '../runtime/git.ts'
+import { requiredLocalRegistry } from '../storage/local-registry.ts'
 import { workNames } from '../work/identity.ts'
 import { capitalRoot } from '../work/registry.ts'
 import { isWorkId, readWorkDefinitions, WORK_DIRECTORY, workSlug } from '../work/status.ts'
@@ -190,6 +191,7 @@ export const adoptStateFiles = async (
       `${run} is homed in the retired ${home.folder}; record its work folder with ki agent home ${run} --work <id>`,
       2
     )
+  if (files.length) await requireRepository(run, home)
   const moved: string[] = []
   for (const file of files) {
     const target = join(threadPath(home), file)
@@ -224,10 +226,37 @@ export const readThread = async (context: AgentContext, run: string): Promise<Th
     throw new KiError(`${path} is not valid JSON`, 1)
   }
   if (!isHome(parsed)) throw new KiError(`${path} does not name a repository and folder`, 1)
-  if (!isWorkHome(parsed)) return parsed
-  const id = parsed.folder.slice(`${WORK_DIRECTORY}/`.length)
-  const folder = await resolvedWorkFolder(parsed.repository, id)
-  return folder === undefined ? parsed : { repository: parsed.repository, folder }
+  const home = await relocatedHome(context, run, parsed)
+  if (!isWorkHome(home)) return home
+  const id = home.folder.slice(`${WORK_DIRECTORY}/`.length)
+  const folder = await resolvedWorkFolder(home.repository, id)
+  return folder === undefined ? home : { repository: home.repository, folder }
+}
+
+/**
+ * A recorded home whose repository has moved is found again through the local
+ * repository registry, by the repository's key, and the new path recorded, so
+ * moving a checkout means updating the registry, not every run. A home whose
+ * repository is neither on disk nor registered is returned as recorded, and
+ * nothing writes into it: see requireRepository.
+ */
+const relocatedHome = async (context: AgentContext, run: string, home: ThreadHome): Promise<ThreadHome> => {
+  if (await exists(home.repository)) return home
+  const key = basename(home.repository)
+  const entry = (await requiredLocalRegistry(context.stateDirectory)).find((candidate) => candidate.key === key)
+  if (entry === undefined || !(await exists(entry.path))) return home
+  return recordThread(context, run, { repository: entry.path, folder: home.folder })
+}
+
+const exists = async (path: string): Promise<boolean> => (await stat(path).catch(() => undefined)) !== undefined
+
+/** Refuses to write into a home whose repository is gone, rather than recreate the old path. */
+const requireRepository = async (run: string, home: ThreadHome): Promise<void> => {
+  if (!(await exists(home.repository)))
+    throw new KiError(
+      `${run}'s home repository ${home.repository} is gone and ${basename(home.repository)} is not registered elsewhere; register it with ki registry add, or record a new home with ki agent home ${run} --work <id>`,
+      2
+    )
 }
 
 const repositoryRoot = async (context: AgentContext, directory: string, label?: string): Promise<string> => {
@@ -528,6 +557,7 @@ export const appendDecision = async (
   let path: string
   if (request.log === undefined) {
     const home = await threadHome(context, run, request.repo)
+    await requireRepository(run, home)
     adopted = await adoptStateFiles(context, run, home)
     path = decisionsLog(home)
   } else path = resolve(context.workingDirectory, request.log)

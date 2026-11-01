@@ -328,3 +328,45 @@ test.each(['main', 'topic'])('reg %s and legacy aliases resolve one actual regul
     expect(result.stdout).toContain(`/+/_WORK/${id}`)
   }
 })
+
+describe('a home whose repository moved', () => {
+  const definition = (id: string): string =>
+    `---\nid: ${id}\nlevel: regular\ntitle: Mail\nworker: agent\nsupervisor: owner\n---\n`
+
+  test('follows the local registry to the new checkout and never recreates the old path', async () => {
+    const box = await sandbox()
+    await box.project.git(['init', '-q'])
+    box.setRunner(runCommand)
+    const repository = await realpath(box.project.path)
+    const key = repository.split('/').pop() as string
+    const old = `/nonexistent-old-root/${key}`
+    await box.project.write('+/_WORK/hnr.reg.mail/work.md', definition('hnr.reg.mail'))
+    await box.state.write(
+      'ki/registry.toml',
+      `schema = 1\n\n[repositories."${key}"]\nrepository = "https://github.com/example/${key}"\npath = "${repository}"\n`
+    )
+    await box.state.write(
+      'ki/agents/mail/thread.json',
+      JSON.stringify({ repository: old, folder: '+/_WORK/hnr.reg.mail' })
+    )
+    await box.state.write('ki/agents/mail/tidy.report.md', '# Tidy\n')
+
+    const decision = await box.run('ki agent decide mail Continue.', { now })
+    expect(decision.exitCode).toBe(0)
+    expect(await box.project.read('+/_WORK/hnr.reg.mail/decisions.md')).toContain('Continue.')
+    expect(await box.project.read('+/_WORK/hnr.reg.mail/tidy.report.md')).toBe('# Tidy\n')
+    expect(JSON.parse(await box.state.read('ki/agents/mail/thread.json')).repository).toBe(repository)
+  })
+
+  test('refuses to write when the repository is gone and not registered', async () => {
+    const box = await sandbox()
+    await box.state.write(
+      'ki/agents/lost/thread.json',
+      JSON.stringify({ repository: '/nonexistent-old-root/lost-repo', folder: '+/_WORK/hnr.reg.lost' })
+    )
+    await box.state.write('ki/agents/lost/tidy.report.md', '# Tidy\n')
+    const decision = await box.run('ki agent decide lost Continue.', { now })
+    expect(decision.exitCode).toBe(2)
+    expect(decision.stderr).toContain('is gone')
+  })
+})
