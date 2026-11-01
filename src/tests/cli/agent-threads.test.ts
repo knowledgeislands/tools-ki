@@ -370,3 +370,21 @@ describe('a home whose repository moved', () => {
     expect(decision.stderr).toContain('is gone')
   })
 })
+
+test('a home whose repository is gone and unregistered may be re-recorded in a named repository', async () => {
+  const box = await sandbox()
+  await box.project.git(['init', '-q'])
+  box.setRunner(runCommand)
+  const repository = await realpath(box.project.path)
+  await box.project.write(
+    '+/_WORK/personal.reg.helper/work.md',
+    '---\nid: personal.reg.helper\nlevel: regular\ntitle: Helper\nworker: agent\nsupervisor: owner\n---\n'
+  )
+  await box.state.write(
+    'ki/agents/helper/thread.json',
+    JSON.stringify({ repository: '/nonexistent-old-root/renamed-away', folder: '+/_WORK/personal.reg.helper' })
+  )
+  const home = await box.run(`ki agent home helper --work personal.reg.helper --repo ${repository}`, { now })
+  expect(home.exitCode).toBe(0)
+  expect(JSON.parse(await box.state.read('ki/agents/helper/thread.json')).repository).toBe(repository)
+})

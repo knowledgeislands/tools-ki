@@ -377,9 +377,16 @@ const homeRepository = async (
   const existing = await readThread(context, run)
   const requested =
     repo === undefined ? undefined : await repositoryRoot(context, resolve(context.workingDirectory, repo), repo)
-  if (existing && requested !== undefined && requested !== existing.repository)
+  // A home whose repository is gone, as after a rename the registry cannot
+  // follow, may be re-recorded in the repository named explicitly.
+  const gone = existing !== undefined && !(await exists(existing.repository))
+  if (existing && !gone && requested !== undefined && requested !== existing.repository)
     throw new KiError(`${run} belongs to ${existing.repository}, not ${requested}`, 2)
-  if (existing) return { existing, repository: existing.repository }
+  if (existing && !gone) return { existing, repository: existing.repository }
+  if (gone)
+    return requested === undefined
+      ? { existing, repository: existing.repository }
+      : { existing: undefined, repository: requested }
   return { existing, repository: requested ?? (await launchRoot(context, run, launch)) }
 }
 
