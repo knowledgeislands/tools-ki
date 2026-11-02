@@ -62,8 +62,13 @@ export const granolaFixtureRunner = (fixture: GranolaFixture): GranolaFixtureRun
     if (fixture.responseWrapper === 'data') return result({ data: value })
     return result(value)
   }
-  const runner: Runner = async (command, arguments_) => {
+  const runner: Runner = async (command, arguments_, environment) => {
     if (command !== 'mcporter') return { exitCode: 1, output: `unexpected command ${command}` }
+    if (environment['MCPORTER_DISABLE_KEEPALIVE'] !== 'granola')
+      return {
+        exitCode: 1,
+        output: 'MCP operation failed (CLIENT_HTTP_NOT_IMPLEMENTED); the request was not replayed.'
+      }
     if (arguments_[0] === 'list')
       return result({
         tools: [...tools, ...(fixture.attachments ? ['get_meeting_attachment'] : [])]

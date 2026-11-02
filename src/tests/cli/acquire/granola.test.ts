@@ -1237,6 +1237,27 @@ describe('[ki acquire import --adapter granola]', () => {
     expect(source.calls.filter((call) => call.tool === 'get_meetings')).toHaveLength(2)
   })
 
+  test('reaches Granola directly rather than through a pooled mcporter connection', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      {
+        key: 'target',
+        repository: 'https://github.com/example/target',
+        path: repository,
+        unfoldered: true
+      }
+    ])
+    const source = granolaFixtureRunner({ meetings: [{ id: 'meeting-a', date: '2026-01-01', title: 'First' }] })
+    box.setEnv({ MCPORTER_DISABLE_KEEPALIVE: 'linear' })
+    box.setRunner(source.runner)
+
+    const acquired = await box.run(command(repository))
+
+    expect(acquired.exitCode, acquired.output).toBe(0)
+    expect(source.calls.map((call) => call.tool)).toContain('get_meetings')
+  })
+
   test('keeps captures unless refreshed and retains a transcript the provider withdraws', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('target')

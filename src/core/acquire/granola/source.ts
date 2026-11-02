@@ -227,6 +227,15 @@ const transcriptProjectionUnavailable = (projection: unknown): boolean => {
   )
 }
 
+// mcporter's daemon pools keep-alive connections, and a pooled `--no-oauth` connection keeps the bearer token it
+// started with; once Granola rejects that token every pooled call fails until the daemon restarts. A direct
+// connection reads the current cached token on each call and still never starts OAuth.
+const mcporter = (
+  runner: Runner,
+  arguments_: readonly string[],
+  environment: NodeJS.ProcessEnv
+): Promise<CommandResult> => runner('mcporter', arguments_, { ...environment, MCPORTER_DISABLE_KEEPALIVE: 'granola' })
+
 const rateLimited = (result: CommandResult): boolean =>
   result.exitCode !== 0 && /(?:rate limit exceeded|too many requests)/i.test(result.output)
 
@@ -283,7 +292,7 @@ const runGranolaCall = async (
   const base = retryBaseMilliseconds(environment)
   for (let attempt = 0; attempt < 4; attempt += 1) {
     await gate.beforeRequest()
-    const result = await runner('mcporter', command, environment)
+    const result = await mcporter(runner, command, environment)
     if (!rateLimited(result) || attempt === 3) return result
     gate.onRateLimit()
     await pause(base * 2 ** attempt)
@@ -309,7 +318,7 @@ const inspectSchema = async (
   runner: Runner,
   environment: NodeJS.ProcessEnv
 ): Promise<{ readonly sha256: string; readonly images: boolean; readonly marker: boolean }> => {
-  const result = await runner('mcporter', ['list', 'granola', '--schema', '--json', '--no-oauth'], environment)
+  const result = await mcporter(runner, ['list', 'granola', '--schema', '--json', '--no-oauth'], environment)
   if (result.exitCode !== 0)
     throw new KiError(`Granola MCP schema inspection failed: ${result.output.trim() || 'mcporter exited non-zero'}`)
   const response = record(parseJson(result.output, 'schema'), 'schema')

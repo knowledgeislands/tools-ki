@@ -10,7 +10,7 @@ The Granola adapter uses the locally installed `mcporter` executable and a confi
 mcporter auth granola
 ```
 
-Acquisition passes `--no-oauth` on every provider call. Missing or expired credentials fail visibly instead of opening a browser. Tokens never enter repository configuration or staged documents.
+Acquisition passes `--no-oauth` on every provider call. Missing or expired credentials fail visibly instead of opening a browser. It also sets `MCPORTER_DISABLE_KEEPALIVE=granola`, so each call opens its own connection with the current cached token rather than reusing a pooled daemon connection whose token Granola may since have rejected. Tokens never enter repository configuration or staged documents.
 
 ## Activate the repository adapter
 
