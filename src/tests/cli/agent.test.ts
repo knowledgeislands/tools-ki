@@ -1687,6 +1687,12 @@ describe('ki agent close', () => {
     await expect(box.root.read('gone/legal-principal/+/_WORK/lgl.sop.main/reports/a.report.md')).rejects.toThrow()
     await unchanged()
 
+    // A registered checkout that has since gone matches no home, and does not stop the check.
+    const registry = await box.state.read('ki/registry.toml')
+    await box.state.write(
+      'ki/registry.toml',
+      `${registry}\n[repositories."moved"]\nrepository = "https://github.com/example/moved"\npath = ${JSON.stringify(`${box.root.path}/moved`)}\n`
+    )
     const elsewhere = await box.root.mkdir('elsewhere')
     await home(elsewhere)
     const unregistered = await box.run('ki agent close r --reconciled', { now })

@@ -1,4 +1,4 @@
-import { realpath, utimes } from 'node:fs/promises'
+import { chmod, realpath, utimes } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { runCommand, type Sandbox, sandbox } from './_cli_helper.ts'
 import { memberConfiguration, registerEstate, writeCapital } from './_territory_helper.ts'
@@ -191,8 +191,13 @@ describe('ki agent decide with a bare option letter', () => {
     )
     await report(box, 'none.report.md', '## Queries\n\n### ELSE - Nothing\n', 3)
     await box.project.write('+/_WORK/ki.r/notes.md', '## Queries\n\n### PROBE - Pick\n')
+    await box.project.write('+/_WORK/ki.r/reports/notes.md', '## Queries\n\n### PROBE - Pick\n')
+    // A focus folder that cannot be read holds no report the decision can draw on.
+    await report(box, 'locked/hidden.report.md', '## Queries\n\n### PROBE - Pick\n', 1)
+    await chmod(`${box.project.path}/+/_WORK/ki.r/locked`, 0o000)
 
     expect((await box.run('ki agent decide r PROBE - a', { now })).exitCode).toBe(0)
+    await chmod(`${box.project.path}/+/_WORK/ki.r/locked`, 0o755)
     await box.run(['ki', 'agent', 'decide', 'r', 'PROBE — b)', '--home', 'docs/x.md', '--class', 'operational'], {
       now
     })
@@ -299,6 +304,7 @@ test('a member Project session homes in the declared Capital while a local regul
     `---\nid: ${id}\nlevel: ${level}\ntitle: Work\nworker: agent\nsupervisor: owner\n---\n`
   await box.project.write('capital/+/_WORK/ex.prj.tools/work.md', definition('ex.prj.tools', 'project'))
   await box.project.write('member/+/_WORK/ex.regular.intake/work.md', definition('ex.regular.intake', 'regular'))
+  await box.project.write('capital/+/_WORK/ex.reg.audit/work.md', definition('ex.reg.audit', 'regular'))
   box.cd('member')
   const named = await box.run('ki agent home tools --work ex.tools', { now })
   expect(named.exitCode).toBe(0)
@@ -309,6 +315,12 @@ test('a member Project session homes in the declared Capital while a local regul
   const regular = await box.run('ki agent home intake --work ex.regular.intake', { now })
   expect(regular.exitCode).toBe(0)
   expect(regular.stdout).toContain(`${member}/+/_WORK/ex.regular.intake`)
+  // A Capital regular is the Capital's own, never a member seat's home.
+  for (const command of ['ki agent home audit --work ex.reg.audit', 'ki agent home ex-reg-audit']) {
+    const capitalRegular = await box.run(command, { now })
+    expect(capitalRegular.exitCode, command).toBe(2)
+    expect(capitalRegular.stdout, command).not.toContain(capital)
+  }
   expect(await box.project.read('member/+/_WORK/ex.prj.tools/work.md').catch(() => undefined)).toBeUndefined()
 })
 

@@ -700,3 +700,18 @@ test('reg status rejects duplicate legacy topic homes and mismatched levels', as
   expect(duplicate.exitCode).toBe(2)
   expect(duplicate.stderr).toContain('ambiguous work')
 })
+
+test('an untyped three-part identity keeps only its own name and aliases no other work', async () => {
+  const box = await sandbox()
+  await box.project.write('repo/.ki.toml', declaration(capital([])))
+  await writeWork(box, 'ex.prj.alpha')
+  await writeWork(box, 'ex.lab.alpha')
+  await writeWork(box, 'ex.ops.alpha', { level: 'regular' })
+  const result = await box.run('ki work status --repo repo --format json', { now })
+  expect(result.exitCode, result.output).toBe(0)
+  expect(JSON.parse(result.stdout).work.map((entry: { id: string }) => entry.id)).toEqual([
+    'ex.lab.alpha',
+    'ex.ops.alpha',
+    'ex.prj.alpha'
+  ])
+})
