@@ -10,6 +10,7 @@ import {
   decisionName,
   decisionsLog,
   parseDecisions,
+  requireHome,
   type ThreadHome,
   threadHome,
   threadPath
@@ -230,7 +231,9 @@ const note = (
  * log or report the run kept in its state folder into the thread folder, which then needs
  * committing; beyond that move, on any blocker it reports every line and changes nothing. It
  * archives by default, so a run folder never goes while anything durable exists only inside
- * it, and deletes only on `--delete`.
+ * it, and deletes only on `--delete`. Before any of that it refuses a home whose repository is
+ * relative, gone, or in no registered repository, so that nothing is written where the home
+ * no longer is.
  */
 export const closeRun = async (context: AgentContext, request: CloseRequest): Promise<CloseResult> => {
   if (request.delete && request.compress) throw new KiError('--delete and --compress exclude each other', 2)
@@ -240,6 +243,8 @@ export const closeRun = async (context: AgentContext, request: CloseRequest): Pr
   if (!request.delete && (await stat(target).catch(() => undefined)))
     throw new KiError(`${request.run} is already archived at ${target}`, 1)
   const thread = await threadHome(context, request.run, request.repo, false)
+  // Checked before the gate, which moves state-folder files into the home.
+  await requireHome(context, request.run, thread)
   const gate = await gateLines(context, directory, thread, request)
   if (gate.lines.some((line) => !line.ok)) return { lines: gate.lines.map(render), outcome: undefined }
   const lines = [...gate.lines, ...(await removeTemporary(context, request.run))]

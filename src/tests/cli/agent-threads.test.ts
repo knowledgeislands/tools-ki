@@ -354,7 +354,7 @@ describe('a home whose repository moved', () => {
     const decision = await box.run('ki agent decide mail Continue.', { now })
     expect(decision.exitCode).toBe(0)
     expect(await box.project.read('+/_WORK/hnr.reg.mail/decisions.md')).toContain('Continue.')
-    expect(await box.project.read('+/_WORK/hnr.reg.mail/tidy.report.md')).toBe('# Tidy\n')
+    expect(await box.project.read('+/_WORK/hnr.reg.mail/reports/tidy.report.md')).toBe('# Tidy\n')
     expect(JSON.parse(await box.state.read('ki/agents/mail/thread.json')).repository).toBe(repository)
   })
 

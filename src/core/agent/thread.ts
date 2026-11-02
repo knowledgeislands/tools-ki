@@ -1,5 +1,5 @@
-import { appendFile, copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises'
-import { basename, dirname, join, resolve } from 'node:path'
+import { appendFile, copyFile, mkdir, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises'
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { gitWorkingTreeRoot } from '../runtime/git.ts'
 import { requiredLocalRegistry } from '../storage/local-registry.ts'
@@ -88,19 +88,83 @@ export const threadPath = (home: ThreadHome): string => join(home.repository, ho
 /** The run's decisions log in its tracked folder. */
 export const decisionsLog = (home: ThreadHome): string => join(threadPath(home), 'decisions.md')
 
-/** Where the named agent writes its final report. */
-export const reportPath = (home: ThreadHome, name: string): string => join(threadPath(home), `${name}.report.md`)
+/** The work folder's type and closed-list folders, none of which is ever a focus folder. */
+const typeFolders = new Set(['briefs', 'design', 'reports', 'findings', 'feedback'])
+
+/**
+ * The focus folder a brief sits in, `+/_WORK/<id>/<focus>/`, found by the work folder's name in
+ * the brief's path, so that a brief in a linked worktree or a moved checkout still names it.
+ */
+const briefFocus = (home: ThreadHome, brief: string | undefined): string | undefined => {
+  if (brief === undefined) return undefined
+  const marker = `/${home.folder}/`
+  const at = brief.lastIndexOf(marker)
+  if (at < 0) return undefined
+  const rest = brief.slice(at + marker.length).split('/')
+  return rest.length === 2 && rest[0] && !typeFolders.has(rest[0]) ? rest[0] : undefined
+}
+
+/**
+ * The folder, inside the work folder, where the named agent's report is homed: beside its brief
+ * in the focus folder the brief sits in, and otherwise `reports/`, never the top level. Kris set
+ * the layout under LAYOUT-PILLARS on 2 November 2026: "one flat folder per focus area holding
+ * briefs, reports and designs".
+ */
+export const reportFolder = (home: ThreadHome, brief?: string | undefined): string =>
+  briefFocus(home, brief) ?? 'reports'
+
+/** Where the launcher homes the named agent's final report. */
+export const reportPath = (home: ThreadHome, name: string, brief?: string | undefined): string =>
+  join(threadPath(home), reportFolder(home, brief), `${name}.report.md`)
+
+/**
+ * Every place a reader looks for the named agent's report, relative to the work folder: beside
+ * its brief, then `reports/`, then, for the layout's tolerance window, the top level.
+ */
+export const reportPlaces = (home: ThreadHome, name: string, brief?: string | undefined): readonly string[] => [
+  ...new Set([`${reportFolder(home, brief)}/${name}.report.md`, `reports/${name}.report.md`, `${name}.report.md`])
+]
+
+/**
+ * Every report in the work folder, relative to it: in each focus folder, in `reports/` and, for
+ * the tolerance window, at the top level.
+ */
+export const workReports = async (home: ThreadHome): Promise<readonly string[]> => {
+  const folder = threadPath(home)
+  const reports: string[] = []
+  for (const entry of await readdir(folder, { withFileTypes: true }).catch(() => []))
+    if (entry.isFile() && entry.name.endsWith('.report.md')) reports.push(entry.name)
+    else if (entry.isDirectory() && (entry.name === 'reports' || !typeFolders.has(entry.name)))
+      for (const file of await readdir(join(folder, entry.name)).catch(() => [] as string[]))
+        if (file.endsWith('.report.md')) reports.push(`${entry.name}/${file}`)
+  return reports
+}
+
+/** The brief the agent's launch recorded, absent from a launch made before it was recorded. */
+export const launchBrief = async (directory: string, name: string): Promise<string | undefined> => {
+  try {
+    const { request } = JSON.parse(String(await read(join(directory, `${name}.launch.json`)))) as {
+      readonly request?: { readonly brief?: unknown }
+    }
+    return typeof request?.brief === 'string' ? request.brief : undefined
+  } catch {
+    return undefined
+  }
+}
 
 /**
  * Whether Git knows the thread-folder file: staged or tracked in the index, or in any commit
  * reachable from a ref under the folder's present or any earlier name. A shallow clone that
  * lacks the commit answers no.
  */
-const held = async (context: AgentContext, home: ThreadHome, file: string): Promise<boolean> => {
-  const path = `${home.folder}/${file}`
-  const indexed = await git(context, home.repository, ['ls-files', '--', path])
+const held = async (context: AgentContext, home: ThreadHome, files: readonly string[]): Promise<boolean> => {
+  const indexed = await git(context, home.repository, [
+    'ls-files',
+    '--',
+    ...files.map((file) => `${home.folder}/${file}`)
+  ])
   if (indexed.exitCode === 0 && indexed.output.trim()) return true
-  const paths = (await earlierNames(context, home)).map((folder) => `${folder}/${file}`)
+  const paths = (await earlierNames(context, home)).flatMap((folder) => files.map((file) => `${folder}/${file}`))
   const logged = await git(context, home.repository, ['log', '-1', '--format=%H', '--all', '--', ...paths])
   return logged.exitCode === 0 && logged.output.trim() !== ''
 }
@@ -138,23 +202,27 @@ const earlierNames = async (context: AgentContext, home: ThreadHome): Promise<re
 }
 
 /**
- * Whether Git knows the thread-folder file with the contents of `source`: staged in the index, or
- * in any commit reachable from a ref, under the folder's present or any earlier name. A report
- * a relaunched agent wrote afresh is not held so, though an earlier attempt's report under its
- * name may be.
+ * Whether Git knows any of the thread-folder files, each relative to the folder, with the
+ * contents of `source`: staged in the index, or in any commit reachable from a ref, under the
+ * folder's present or any earlier name. A report a relaunched agent wrote afresh is not held so,
+ * though an earlier attempt's report under its name may be.
  */
 export const heldAs = async (
   context: AgentContext,
   home: ThreadHome,
-  file: string,
+  files: readonly string[],
   source: string
 ): Promise<boolean> => {
   // A failed hash gives an empty object, which neither the index nor history matches.
   const blob = (await git(context, home.repository, ['hash-object', '--', source])).output.trim()
-  const path = `${home.folder}/${file}`
-  const indexed = await git(context, home.repository, ['ls-files', '-s', '--', path])
-  if (indexed.exitCode === 0 && indexed.output.split(/\s+/)[1] === blob) return true
-  const paths = (await earlierNames(context, home)).map((folder) => `${folder}/${file}`)
+  const indexed = await git(context, home.repository, [
+    'ls-files',
+    '-s',
+    '--',
+    ...files.map((file) => `${home.folder}/${file}`)
+  ])
+  if (indexed.exitCode === 0 && indexed.output.split('\n').some((line) => line.split(/\s+/)[1] === blob)) return true
+  const paths = (await earlierNames(context, home)).flatMap((folder) => files.map((file) => `${folder}/${file}`))
   const logged = await git(context, home.repository, [
     'log',
     '-1',
@@ -173,8 +241,10 @@ export const heldAs = async (
  * their only writer and no thread copies them by hand. Kris settled this on 2026-10-14: "make
  * the launcher the only writer of the thread folder's log and report files". A file the
  * thread folder holds now, or has ever held in Git, supersedes its state-folder copy, which
- * stays to be archived with the run, so that a report the thread has retired stays retired.
- * Returns the names moved, in name order.
+ * stays to be archived with the run, so that a report the thread has retired stays retired. A
+ * report goes where the launcher homes it, beside its brief or in `reports/`, and a copy in any
+ * place a reader looks supersedes it. Returns the paths moved, relative to the thread folder, in
+ * name order.
  */
 export const adoptStateFiles = async (
   context: AgentContext,
@@ -194,14 +264,17 @@ export const adoptStateFiles = async (
   if (files.length) await requireRepository(run, home)
   const moved: string[] = []
   for (const file of files) {
-    const target = join(threadPath(home), file)
-    if (await stat(target).catch(() => undefined)) continue
-    if (await held(context, home, file)) continue
-    await mkdir(threadPath(home), { recursive: true })
+    const name = file.endsWith('.report.md') ? file.slice(0, -'.report.md'.length) : undefined
+    const brief = name === undefined ? undefined : await launchBrief(directory, name)
+    const places = name === undefined ? [file] : reportPlaces(home, name, brief)
+    const target = join(threadPath(home), places[0] as string)
+    if ((await Promise.all(places.map((place) => exists(join(threadPath(home), place))))).some(Boolean)) continue
+    if (await held(context, home, places)) continue
+    await mkdir(dirname(target), { recursive: true })
     // Copy then remove: the state folder and the repository may sit on different devices.
     await copyFile(join(directory, file), target)
     await rm(join(directory, file))
-    moved.push(file)
+    moved.push(places[0] as string)
   }
   return moved
 }
@@ -241,7 +314,8 @@ export const readThread = async (context: AgentContext, run: string): Promise<Th
  * nothing writes into it: see requireRepository.
  */
 const relocatedHome = async (context: AgentContext, run: string, home: ThreadHome): Promise<ThreadHome> => {
-  if (await exists(home.repository)) return home
+  // A relative home names no place of its own, so it is never followed: see requireRepository.
+  if (!isAbsolute(home.repository) || (await repositoryPresent(home.repository))) return home
   const key = basename(home.repository)
   const entry = (await requiredLocalRegistry(context.stateDirectory)).find((candidate) => candidate.key === key)
   if (entry === undefined || !(await exists(entry.path))) return home
@@ -250,11 +324,41 @@ const relocatedHome = async (context: AgentContext, run: string, home: ThreadHom
 
 const exists = async (path: string): Promise<boolean> => (await stat(path).catch(() => undefined)) !== undefined
 
-/** Refuses to write into a home whose repository is gone, rather than recreate the old path. */
+/** Whether the repository is an absolute path to an existing directory. */
+export const repositoryPresent = async (repository: string): Promise<boolean> =>
+  isAbsolute(repository) && (await stat(repository).catch(() => undefined))?.isDirectory() === true
+
+/**
+ * Refuses to write into a home whose repository is relative or gone, rather than recreate the
+ * old path: a relative one resolves against whatever directory the command runs in, and so once
+ * recreated another territory's tree inside the principal.
+ */
 const requireRepository = async (run: string, home: ThreadHome): Promise<void> => {
-  if (!(await exists(home.repository)))
+  if (!isAbsolute(home.repository))
+    throw new KiError(
+      `${run}'s home repository ${home.repository} is a relative path; record an absolute home with ki agent home ${run} --work <id> --repo <dir>`,
+      2
+    )
+  if (!(await repositoryPresent(home.repository)))
     throw new KiError(
       `${run}'s home repository ${home.repository} is gone and ${basename(home.repository)} is not registered elsewhere; register it with ki registry add, or record a new home with ki agent home ${run} --work <id>`,
+      2
+    )
+}
+
+/**
+ * Refuses, before anything moves, a home `close` would write into unless it is an existing
+ * absolute directory inside a repository the local registry holds.
+ */
+export const requireHome = async (context: AgentContext, run: string, home: ThreadHome): Promise<void> => {
+  await requireRepository(run, home)
+  const physical = await realpath(home.repository)
+  const registered = await Promise.all(
+    (await requiredLocalRegistry(context.stateDirectory)).map((entry) => realpath(entry.path).catch(() => undefined))
+  )
+  if (!registered.some((root) => root !== undefined && (physical === root || physical.startsWith(`${root}/`))))
+    throw new KiError(
+      `${run}'s home repository ${home.repository} is in no registered repository; register it with ki registry add, or record a new home with ki agent home ${run} --work <id> --repo <dir>`,
       2
     )
 }
@@ -379,7 +483,7 @@ const homeRepository = async (
     repo === undefined ? undefined : await repositoryRoot(context, resolve(context.workingDirectory, repo), repo)
   // A home whose repository is gone, as after a rename the registry cannot
   // follow, may be re-recorded in the repository named explicitly.
-  const gone = existing !== undefined && !(await exists(existing.repository))
+  const gone = existing !== undefined && !(await repositoryPresent(existing.repository))
   if (existing && !gone && requested !== undefined && requested !== existing.repository)
     throw new KiError(`${run} belongs to ${existing.repository}, not ${requested}`, 2)
   if (existing && !gone) return { existing, repository: existing.repository }
@@ -533,8 +637,8 @@ const resolveLetter = async (
   const thread = await readThread(context, run)
   const folder = thread && threadPath(thread)
   const reports: { readonly file: string; readonly at: number }[] = []
-  for (const file of folder ? await readdir(folder).catch(() => [] as string[]) : [])
-    if (file.endsWith('.report.md')) reports.push({ file, at: (await stat(join(folder as string, file))).mtimeMs })
+  for (const file of thread ? await workReports(thread) : [])
+    reports.push({ file, at: (await stat(join(folder as string, file))).mtimeMs })
   reports.sort((left, right) => right.at - left.at)
   for (const { file } of reports) {
     const options = queryOptions((await read(join(folder as string, file))) as string, tag)

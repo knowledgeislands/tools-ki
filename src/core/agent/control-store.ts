@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { appendFile, mkdir, readdir, readFile, realpath, rename, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readdir, readFile, realpath, rename, stat, writeFile } from 'node:fs/promises'
 import { hostname } from 'node:os'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import { KiError } from '../errors.ts'
 import { type AgentContext, checkName, instant, runDirectory } from './context.ts'
 import type { AgentEffectIdentity, AttemptIdentity, DependencyIdentity, ProcessIdentity } from './identities.ts'
@@ -64,6 +64,8 @@ export interface ControlStore {
   readonly schema: 'ki/agent-control-state/v1'
   readonly machine: string
   readonly workHome: string
+  /** Homes the record was made under before its repository moved; their attempts stay valid. */
+  readonly formerWorkHomes?: readonly string[] | undefined
   readonly work: string
   readonly attempts: Record<string, AttemptIdentity>
   readonly history: Record<string, AttemptIdentity>
@@ -265,7 +267,10 @@ export const loadControl = async (directory: string): Promise<ControlStore | und
       !parsed.entries ||
       !parsed.operations ||
       !Number.isSafeInteger(parsed.nextIdentity) ||
-      parsed.nextIdentity < 0
+      parsed.nextIdentity < 0 ||
+      (parsed.formerWorkHomes !== undefined &&
+        (!Array.isArray(parsed.formerWorkHomes) ||
+          parsed.formerWorkHomes.some((former) => typeof former !== 'string' || !isAbsolute(former))))
     )
       throw new Error('shape')
     if (
@@ -338,17 +343,62 @@ export const newStore = async (context: AgentContext, run: string): Promise<Cont
   })
 }
 
+/**
+ * Moves the run's control record to its recorded work home once the home the record was made
+ * under is gone, as after its repository moved. Only a record made on this machine for the same
+ * work moves, so the machine check stands; its attempts keep their identities, the old home
+ * listed as former. Returns the old home, or undefined when nothing moved: no record, one that
+ * already names the home, or one that may not move, which a later launch refuses by name.
+ */
+export const rehomeControl = async (context: AgentContext, run: string): Promise<string | undefined> => {
+  const directory = runDirectory(context, run)
+  if ((await controlRead(join(directory, 'control.json'))) === undefined) return undefined
+  return controlTransaction(
+    context,
+    run,
+    async () => {
+      const store = await loadControl(directory)
+      const { home, work } = await controlHome(context, run)
+      if (
+        !store ||
+        store.workHome === home ||
+        store.machine !== hostname() ||
+        store.work !== work ||
+        (await stat(store.workHome).catch(() => undefined)) !== undefined
+      )
+        return undefined
+      const moved: ControlStore = {
+        ...store,
+        workHome: home,
+        formerWorkHomes: [...(store.formerWorkHomes ?? []), store.workHome]
+      }
+      await verifyStore(context, run, moved)
+      await saveControl(directory, moved)
+      return store.workHome
+    },
+    100,
+    false
+  )
+}
+
 export const verifyStore = async (context: AgentContext, run: string, store: ControlStore): Promise<void> => {
   const { home, work } = await controlHome(context, run)
   if (store.machine !== hostname() || store.workHome !== home || store.work !== work)
     throw new KiError(
-      `control-home-unverified: foreign machine or changed work home (stored machine ${store.machine}; current machine ${hostname()})`,
-      1
+      `control-home-unverified: foreign machine or changed work home (stored machine ${store.machine}, home ${store.workHome}; current machine ${hostname()}, home ${home})`,
+      1,
+      store.machine === hostname() && store.work === work && store.workHome !== home
+        ? `once ${store.workHome} is gone, move the record with ki agent home ${run} --work ${work}`
+        : undefined
     )
+  const homes = [home, ...(store.formerWorkHomes ?? [])]
   if (
     [...Object.values(store.attempts), ...Object.values(store.history)].some(
       (attempt) =>
-        attempt.run !== run || attempt.work !== work || attempt.workHome !== home || attempt.machine !== store.machine
+        attempt.run !== run ||
+        attempt.work !== work ||
+        !homes.includes(attempt.workHome) ||
+        attempt.machine !== store.machine
     )
   )
     throw new KiError('ownership-unverified: attempt belongs to a different work or machine', 1)
@@ -398,7 +448,8 @@ export const controlTransaction = async <T>(
   context: AgentContext,
   run: string,
   action: (directory: string) => Promise<T>,
-  retries = 100
+  retries = 100,
+  verify = true
 ): Promise<T> => {
   const directory = runDirectory(context, run)
   await mkdir(directory, { recursive: true }).catch((error: unknown) => {
@@ -414,7 +465,7 @@ export const controlTransaction = async <T>(
     async () => {
       try {
         const recovered = await loadControl(directory)
-        if (recovered) await verifyStore(context, run, recovered)
+        if (recovered && verify) await verifyStore(context, run, recovered)
         activeTransactions.set(directory, recovered)
         return await action(directory)
       } finally {

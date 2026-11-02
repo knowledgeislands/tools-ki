@@ -2,6 +2,7 @@ import { basename, dirname } from 'node:path'
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { closeRun } from '../../core/agent/close.ts'
+import { rehomeControl } from '../../core/agent/control-store.ts'
 import {
   type AgentContext,
   type AuthorityTier,
@@ -408,9 +409,10 @@ export const createAgentCommand = (context: KiContext): Command => {
       .action(async (run: string, options: { work?: string; repo?: string }) => {
         if (options.work === undefined)
           return write(threadPath(await threadHome(agentContext(context), run, options.repo, false)))
-        write(
-          `Work folder of ${run} is now ${threadPath(await rehomeThread(agentContext(context), run, options.work, options.repo))}`
-        )
+        const agent = agentContext(context)
+        write(`Work folder of ${run} is now ${threadPath(await rehomeThread(agent, run, options.work, options.repo))}`)
+        const former = await rehomeControl(agent, run)
+        if (former !== undefined) write(`Control record of ${run} moved from ${former}`)
       })
   )
 

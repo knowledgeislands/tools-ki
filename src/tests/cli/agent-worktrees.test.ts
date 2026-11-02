@@ -1,4 +1,4 @@
-import { symlink } from 'node:fs/promises'
+import { realpath, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { expect, test } from 'vitest'
 import { type AgentLaunch, runCommand, sandbox } from './_cli_helper.ts'
@@ -71,6 +71,11 @@ test('launches in the recorded worktree, clones installed dependencies and links
   await box.state.write('ki/agents/r/worker.status', 'finished\nDONE\n')
   expect((await box.run('ki agent status r')).output).toContain('- [stranded] worker')
   expect((await box.run('ki agent status --all')).output).toContain('- [stranded] worker')
+  // `close` refuses a home in no registered repository.
+  await box.state.write(
+    'ki/registry.toml',
+    `schema = 1\n\n[repositories."project"]\nrepository = "https://github.com/example/project"\npath = ${JSON.stringify(await realpath(box.project.path))}\n`
+  )
   const close = await box.run('ki agent close r --reconciled')
   expect(close.exitCode).toBe(1)
   expect(close.output).toContain('blocker: worktrees/ holds worker.project')

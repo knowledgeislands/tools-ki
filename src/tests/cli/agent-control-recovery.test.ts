@@ -185,7 +185,7 @@ test('seventh-review concurrent checkpoint adoption cannot erase interrupted com
     .split('\n')
     .map((line: string) => JSON.parse(line))
   expect(events.filter((event: { kind: string }) => event.kind === 'done')).toHaveLength(1)
-  expect(await f.box.project.read('+/_WORK/ki.r/worker.report.md')).toBe('# Concurrent completion\n')
+  expect(await f.box.project.read('+/_WORK/ki.r/reports/worker.report.md')).toBe('# Concurrent completion\n')
 })
 
 test.each(['archive', 'preparation'])(

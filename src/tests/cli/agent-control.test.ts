@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { writeFileSync } from 'node:fs'
-import { chmod, mkdtemp, readdir, readFile, rename, rm, symlink, utimes } from 'node:fs/promises'
+import { chmod, mkdtemp, readdir, readFile, realpath, rename, rm, symlink, utimes } from 'node:fs/promises'
 import { hostname, tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, test } from 'vitest'
@@ -272,7 +272,7 @@ describe('fourth review blocking regressions', () => {
   test('a protected homed report cannot hide the current worker query', async () => {
     const f = await fixture(false)
     await f.launch()
-    await f.box.project.write('+/_WORK/ki.r/worker.report.md', '# Protected owner notes\n')
+    await f.box.project.write('+/_WORK/ki.r/reports/worker.report.md', '# Protected owner notes\n')
     await f.box.state.write(
       'ki/agents/r/worker.report.md',
       '# Done\n\n## Queries\n\n### CURRENT-QUERY - Needs attention\n'
@@ -283,7 +283,7 @@ describe('fourth review blocking regressions', () => {
     expect(
       (await f.events()).filter((event) => event.kind === 'needs-owner' && event.tag === 'CURRENT-QUERY')
     ).toHaveLength(1)
-    expect(await f.box.project.read('+/_WORK/ki.r/worker.report.md')).toBe('# Protected owner notes\n')
+    expect(await f.box.project.read('+/_WORK/ki.r/reports/worker.report.md')).toBe('# Protected owner notes\n')
   })
   test('unconfirmed native spawn cannot be settled by DONE files without owned scope evidence', async () => {
     const f = await fixture(false)
@@ -833,6 +833,11 @@ const fixture = async (managed = true) => {
   await box.project.write('+/_WORK/ki.r/work.md', '---\nid: ki.r\n---\n')
   await box.project.git(['add', '--', '+/_WORK/ki.r/work.md'])
   await box.project.git(['commit', '-q', '-m', 'base'])
+  // `close` refuses a home in no registered repository.
+  await box.state.write(
+    'ki/registry.toml',
+    `schema = 1\n\n[repositories."project"]\nrepository = "https://github.com/example/project"\npath = ${JSON.stringify(await realpath(box.project.path))}\n`
+  )
   await box.project.write('brief.md', '# Bounded task\n')
   await box.project.write('authority.md', '# Grant\n\nThe owner grants this bounded recovery.\n')
   for (const tier of ['none', 'push', 'prune', 'release'])
@@ -2498,7 +2503,7 @@ describe('agent control contract', () => {
     const f = await fixture()
     await f.launch()
     await f.box.state.write('ki/agents/r/worker.status', 'Complete\nDONE\n')
-    await f.box.project.write('+/_WORK/ki.r/worker.report.md', '# Result\n')
+    await f.box.project.write('+/_WORK/ki.r/reports/worker.report.md', '# Result\n')
     const status = await f.run('ki agent status r')
     expect(status.stdout).toContain('completion-unconfirmed')
     expect((await f.events()).filter((event) => event.kind === 'done')).toHaveLength(0)
@@ -3711,7 +3716,8 @@ test('review-3: machine binding refusal names both recorded and current machine'
   await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
   const result = await f.stop()
   expect(result.exitCode).toBe(1)
-  expect(result.output).toContain(`stored machine recorded-other-machine; current machine ${hostname()}`)
+  expect(result.output).toContain('stored machine recorded-other-machine, home ')
+  expect(result.output).toContain(`; current machine ${hostname()}, home `)
   expect(f.signals).toHaveLength(0)
 })
 
@@ -4797,7 +4803,7 @@ test.each(
       { seq: 3, terminal: false, statusLine: `12:01 UTC - ${kind}: ${text}` }
     ])
     expect((await f.events()).filter((event) => event.kind === 'done')).toHaveLength(1)
-    expect(await f.box.project.read('+/_WORK/ki.r/worker.report.md')).toBe('# Repeated progress completed\n')
+    expect(await f.box.project.read('+/_WORK/ki.r/reports/worker.report.md')).toBe('# Repeated progress completed\n')
     await rename(`${f.box.state.path}/ki/agents/r/events.state.json`, `${f.box.state.path}/ki/agents/r/snapshot.saved`)
     expect((await f.run('ki agent status r')).exitCode).toBe(0)
     expect((await f.events()).filter((event) => event.kind === 'done')).toHaveLength(1)
@@ -4828,7 +4834,7 @@ test.each([true, false])(
     await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
     f.set({ empty: true })
     expect((await f.run('ki agent status r')).exitCode).toBe(0)
-    await f.box.project.git(['add', '--', '+/_WORK/ki.r/worker.report.md'])
+    await f.box.project.git(['add', '--', '+/_WORK/ki.r/reports/worker.report.md'])
     await f.box.project.git(['commit', '-q', '-m', 'test: preserve successor report'])
     const closed = await f.run('ki agent close r')
     expect(closed.exitCode, closed.output).toBe(0)
@@ -4924,13 +4930,13 @@ test.each(
   expect(notified.exitCode, notified.output).toBe(0)
   expect(notified.output).toContain('done')
   expect(notified.output).not.toContain('ALL FINISHED')
-  expect(await f.box.project.read('+/_WORK/ki.r/worker.report.md')).toBe('# Upgrade result\n')
+  expect(await f.box.project.read('+/_WORK/ki.r/reports/worker.report.md')).toBe('# Upgrade result\n')
   // Retirement must survive further observations and snapshot reconstruction.
-  await rename(`${f.box.project.path}/+/_WORK/ki.r/worker.report.md`, `${f.box.project.path}/retired.md`)
+  await rename(`${f.box.project.path}/+/_WORK/ki.r/reports/worker.report.md`, `${f.box.project.path}/retired.md`)
   await f.box.state.write('ki/agents/r/worker.status', '12:01 UTC - milestone: later status\nDONE\n')
   await rename(`${f.box.state.path}/ki/agents/r/events.state.json`, `${f.box.state.path}/ki/agents/r/upgraded.saved`)
   expect((await f.run('ki agent status r')).exitCode).toBe(0)
-  expect(await f.box.project.read('+/_WORK/ki.r/worker.report.md').catch(() => undefined)).toBeUndefined()
+  expect(await f.box.project.read('+/_WORK/ki.r/reports/worker.report.md').catch(() => undefined)).toBeUndefined()
   expect((await f.events()).filter((event) => event.kind === 'done')).toHaveLength(1)
   expect((await f.run('ki agent wait r --next')).output).toContain('ALL FINISHED')
 })
@@ -4976,7 +4982,7 @@ test.each(
     const result = await f.run('ki agent wait r --next')
     expect(result.exitCode, result.output).toBe(0)
     expect(result.output).toContain('done')
-    expect(await f.box.project.read('+/_WORK/ki.r/worker.report.md')).toBe('# Recovered completion\n')
+    expect(await f.box.project.read('+/_WORK/ki.r/reports/worker.report.md')).toBe('# Recovered completion\n')
     await rename(`${f.box.state.path}/ki/agents/r/events.state.json`, `${f.box.state.path}/ki/agents/r/upgraded.saved`)
     expect((await f.run('ki agent status r')).exitCode).toBe(0)
     expect((await f.events()).filter((event) => event.kind === 'done')).toHaveLength(1)
@@ -5004,7 +5010,7 @@ test.each([true, false])('sixth-review untouched baseline failure relaunch upgra
   f.set({ empty: true })
   expect((await f.run('ki agent status r')).exitCode).toBe(0)
   expect((await f.events()).filter((event) => event.kind === 'done' && event.attempt === 2)).toHaveLength(1)
-  expect(await f.box.project.read('+/_WORK/ki.r/worker.report.md')).toBe('# Successor result\n')
+  expect(await f.box.project.read('+/_WORK/ki.r/reports/worker.report.md')).toBe('# Successor result\n')
 })
 
 test('sixth-review untouched baseline queue launch failure upgrades', async () => {
@@ -5055,7 +5061,7 @@ test.each([
   if (!completed.output.includes('done')) completed = await f.run('ki agent wait r --next')
   expect(completed.exitCode, completed.output).toBe(0)
   expect(completed.output).toContain('done')
-  expect(await f.box.project.read('+/_WORK/ki.r/worker.report.md')).toBe('# Verified completion\n')
+  expect(await f.box.project.read('+/_WORK/ki.r/reports/worker.report.md')).toBe('# Verified completion\n')
   expect((await f.events()).filter((event) => event.kind === 'done')).toHaveLength(1)
 })
 
@@ -5113,7 +5119,7 @@ test.each([
   f.set({ empty: true })
   expect((await f.run('ki agent status r')).exitCode).toBe(0)
   expect((await f.events()).filter((event) => event.kind === 'done')).toHaveLength(1)
-  expect(await f.box.project.read('+/_WORK/ki.r/worker.report.md')).toBe('# Completion\n')
+  expect(await f.box.project.read('+/_WORK/ki.r/reports/worker.report.md')).toBe('# Completion\n')
 })
 
 test.each(['no report', 'could not launch: brief missing'])(

@@ -50,7 +50,7 @@ import type { DependencyIdentity } from './identities.ts'
 import { type AgentEffort, type AgentRuntime, runtimeLaunch } from './runtimes.ts'
 import { ownershipLoss, ownsScope } from './scope.ts'
 import { requireSelection, resolveSelection, type SelectionRequest, sha256 } from './selection.ts'
-import { readThread, reportPath, type ThreadHome, threadHome, threadPath } from './thread.ts'
+import { readThread, reportPlaces, type ThreadHome, threadHome, threadPath } from './thread.ts'
 
 import { agentWorktree, agentWorktreeLines, prepareAgentWorktree, worktreeRepository } from './worktrees.ts'
 
@@ -66,6 +66,11 @@ export interface LaunchRequest extends SelectionRequest {
   readonly name: string
   readonly workdir: string
   readonly prompt: string
+  /**
+   * The brief as first given, before a queue copied it into the state folder: its report is
+   * homed beside it when it sits in a focus folder of the run's work folder.
+   */
+  readonly brief?: string | undefined
   readonly runtime: AgentRuntime
   readonly addDirs: readonly string[]
   readonly rules: AuthorityTier
@@ -167,10 +172,16 @@ const reportPaths = (body: string, name: string): readonly string[] => {
   return [...new Set([...body.matchAll(pattern)].map((match) => match[1] as string))]
 }
 
-/** Whether a report path's folder is the run's work folder, absolute or as written, or any `+/_WORK/<id>/`. */
+/**
+ * Whether a report path's folder is the run's work folder or one of its folders, absolute or as
+ * written, or any `+/_WORK/<id>/` or folder in one.
+ */
 const inWorkFolder = (path: string, thread: ThreadHome): boolean => {
   const folder = path.slice(0, path.lastIndexOf('/'))
-  return folder === thread.folder || folder === threadPath(thread) || /(?:^|\/)\+\/_WORK\/[^/]+$/.test(folder)
+  return (
+    [thread.folder, threadPath(thread)].some((work) => folder === work || folder.startsWith(`${work}/`)) ||
+    /(?:^|\/)\+\/_WORK\/[^/]+(?:\/[^/]+)?$/.test(folder)
+  )
 }
 
 /**
@@ -362,6 +373,7 @@ const validated = async (context: AgentContext, request: LaunchRequest): Promise
   requireSelection(selection)
   return {
     ...request,
+    brief: request.brief ?? resolve(context.workingDirectory, request.prompt),
     selection,
     runtime: selection.runtime,
     model: selection.model,
@@ -620,21 +632,30 @@ const packetFiles = ['pid', 'status', 'prompt.md', 'launch.json', 'report.md'] a
 
 const exists = async (path: string): Promise<boolean> => (await stat(path).catch(() => undefined)) !== undefined
 
-/** The files that take a name in this run: its state-folder packet and its thread-folder report. */
-const takenBy = async (directory: string, thread: ThreadHome, name: string): Promise<readonly string[]> => {
+/**
+ * The files that take a name in this run: its state-folder packet and its thread-folder report,
+ * beside the brief, in `reports/` or at the top level.
+ */
+const takenBy = async (
+  directory: string,
+  thread: ThreadHome,
+  name: string,
+  brief: string | undefined
+): Promise<readonly string[]> => {
   const files: string[] = []
   for (const suffix of packetFiles)
     if (await exists(join(directory, `${name}.${suffix}`))) files.push(`${name}.${suffix}`)
-  if (await exists(reportPath(thread, name))) files.push(`${thread.folder}/${name}.report.md`)
+  for (const place of reportPlaces(thread, name, brief))
+    if (await exists(join(threadPath(thread), place))) files.push(`${thread.folder}/${place}`)
   return files
 }
 
 /** Refuses a name that has already run, suggesting the first free `<name>-<n>` from 2. */
 const refuseTaken = async (directory: string, thread: ThreadHome, request: LaunchRequest): Promise<void> => {
-  const files = await takenBy(directory, thread, request.name)
+  const files = await takenBy(directory, thread, request.name, request.brief)
   if (!files.length) return
   let suffix = 2
-  while ((await takenBy(directory, thread, `${request.name}-${suffix}`)).length) suffix += 1
+  while ((await takenBy(directory, thread, `${request.name}-${suffix}`, request.brief)).length) suffix += 1
   throw new KiError(
     `${request.run}/${request.name} has already run (${files.join(', ')}); launch it as ${request.name}-${suffix} or pass --relaunch`,
     1
@@ -652,12 +673,13 @@ const setAside = async (
   thread: ThreadHome,
   request: LaunchRequest
 ): Promise<void> => {
-  const report = reportPath(thread, request.name)
-  if (await exists(report)) {
+  for (const place of reportPlaces(thread, request.name, request.brief)) {
+    const report = join(threadPath(thread), place)
+    if (!(await exists(report))) continue
     const status = await git(context, thread.repository, ['status', '--porcelain', '--', report])
     if (status.output.trim())
       throw new KiError(
-        `${request.run}/${request.name} cannot relaunch: ${thread.folder}/${request.name}.report.md has uncommitted changes`,
+        `${request.run}/${request.name} cannot relaunch: ${thread.folder}/${place} has uncommitted changes`,
         1
       )
   }

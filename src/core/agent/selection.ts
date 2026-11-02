@@ -7,6 +7,7 @@ import { runDirectory } from './context.ts'
 import { type AttemptIdentity, canonical, loadControl, verifyStore } from './control-store.ts'
 import type { AgentRole, ModelBinding } from './launch-evidence.ts'
 import type { AgentEffort, AgentRuntime } from './runtimes.ts'
+import { launchBrief, reportPlaces, workFolder } from './thread.ts'
 
 export { type AgentRole, agentRoles } from './launch-evidence.ts'
 
@@ -97,6 +98,15 @@ const object = (value: unknown): value is Record<string, unknown> =>
 const shape = (value: unknown, keys: readonly string[]): value is Record<string, unknown> =>
   object(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key))
 
+/** Each place in the attempt's work folder a reader looks for its report: beside its brief, `reports/`, the top level. */
+const reviewerReports = async (directory: string, attempt: AttemptIdentity): Promise<readonly string[]> => {
+  const folder = workFolder(attempt.work)
+  const home = { repository: attempt.workHome.slice(0, -folder.length - 1), folder }
+  return reportPlaces(home, attempt.agent, await launchBrief(directory, attempt.agent)).map((place) =>
+    join(attempt.workHome, place)
+  )
+}
+
 const acceptanceEvidence = async (
   context: AgentContext,
   path: string,
@@ -181,7 +191,7 @@ const acceptanceEvidence = async (
       const directory = runDirectory(context, reviewer.attempt.run)
       const paths: string[] = reviewer.current
         ? [
-            join(reviewer.attempt.workHome, `${reviewer.attempt.agent}.report.md`),
+            ...(await reviewerReports(directory, reviewer.attempt)),
             join(directory, `${reviewer.attempt.agent}.report.md`)
           ]
         : []

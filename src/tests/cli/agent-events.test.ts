@@ -1,4 +1,4 @@
-import { rm, utimes } from 'node:fs/promises'
+import { realpath, rename, rm, utimes } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { type AgentLaunch, runCommand, type Sandbox, sandbox } from './_cli_helper.ts'
 
@@ -142,20 +142,20 @@ describe('ki agent run events', () => {
       'one done: 19:40 UTC - reported\n',
       'one needs-owner: HOOK-FIX - Fix the hook\n'
     ])
-    expect(await box.project.read('+/_WORK/ki.r/one.report.md')).toBe(report)
+    expect(await box.project.read('+/_WORK/ki.r/reports/one.report.md')).toBe(report)
 
     // A thread-folder copy with uncommitted changes stays; one Git holds unchanged is replaced.
-    await box.project.write('+/_WORK/ki.r/edited.report.md', '# Edited by hand\n')
-    await box.project.write('+/_WORK/ki.r/again.report.md', '# Earlier attempt\n')
-    await box.project.git(['add', '--', '+/_WORK/ki.r/again.report.md'])
+    await box.project.write('+/_WORK/ki.r/reports/edited.report.md', '# Edited by hand\n')
+    await box.project.write('+/_WORK/ki.r/reports/again.report.md', '# Earlier attempt\n')
+    await box.project.git(['add', '--', '+/_WORK/ki.r/reports/again.report.md'])
     await box.project.git(['commit', '-q', '-m', 'earlier'])
     for (const name of ['edited', 'again']) {
       await box.state.write(`ki/agents/r/${name}.report.md`, `# ${name}\n`)
       await box.state.write(`ki/agents/r/${name}.status`, 'DONE\n')
     }
     await box.run('ki agent status r', { now })
-    expect(await box.project.read('+/_WORK/ki.r/edited.report.md')).toBe('# Edited by hand\n')
-    expect(await box.project.read('+/_WORK/ki.r/again.report.md')).toBe('# again\n')
+    expect(await box.project.read('+/_WORK/ki.r/reports/edited.report.md')).toBe('# Edited by hand\n')
+    expect(await box.project.read('+/_WORK/ki.r/reports/again.report.md')).toBe('# again\n')
   })
 
   test('leaves a retired report on snapshot recovery, homing a fresh one without replaying terminal events', async () => {
@@ -165,16 +165,16 @@ describe('ki agent run events', () => {
     await box.state.write('ki/agents/r/one.report.md', '# One\n')
     await box.state.write('ki/agents/r/one.status', 'DONE\n')
     await box.run('ki agent status r', { now })
-    await box.project.git(['add', '--', '+/_WORK/ki.r/one.report.md'])
+    await box.project.git(['add', '--', '+/_WORK/ki.r/reports/one.report.md'])
     await box.project.git(['commit', '-q', '-m', 'thread'])
-    await box.project.git(['rm', '-q', '+/_WORK/ki.r/one.report.md'])
+    await box.project.git(['rm', '-q', '+/_WORK/ki.r/reports/one.report.md'])
     await box.project.git(['commit', '-q', '-m', 'retire'])
 
     // The events log survives the snapshot, so derivation starts from empty and sees one end again.
     const replay = async () => {
       await rm(`${box.state.path}/ki/agents/r/events.state.json`)
       await box.run('ki agent status r', { now })
-      return box.project.read('+/_WORK/ki.r/one.report.md').catch(() => 'absent')
+      return box.project.read('+/_WORK/ki.r/reports/one.report.md').catch(() => 'absent')
     }
     expect(await replay()).toBe('absent')
     expect(await box.state.read('ki/agents/r/one.report.md')).toBe('# One\n')
@@ -187,8 +187,8 @@ describe('ki agent run events', () => {
     expect(await replay()).toBe('# One again\n')
 
     // Staged, then deleted from the working tree: the index alone holds it.
-    await box.project.git(['add', '--', '+/_WORK/ki.r/one.report.md'])
-    await rm(`${box.project.path}/+/_WORK/ki.r/one.report.md`)
+    await box.project.git(['add', '--', '+/_WORK/ki.r/reports/one.report.md'])
+    await rm(`${box.project.path}/+/_WORK/ki.r/reports/one.report.md`)
     processes.alive.clear()
     expect((await box.run('ki agent launch r one . task.md --relaunch', { now })).exitCode).toBe(0)
     await box.state.write('ki/agents/r/one.report.md', '# One again\n')
@@ -205,18 +205,18 @@ describe('ki agent run events', () => {
       await box.state.write(`ki/agents/r/${name}.status`, 'DONE\n')
     }
     await box.run('ki agent status r', { now })
-    expect(await box.project.read('+/_WORK/ki.r/swept.report.md')).toBe('# swept\n')
+    expect(await box.project.read('+/_WORK/ki.r/reports/swept.report.md')).toBe('# swept\n')
 
     // The coordinator sweeps one copy and commits a newer version of the other.
-    await rm(`${box.project.path}/+/_WORK/ki.r/swept.report.md`)
-    await box.project.git(['add', '--', '+/_WORK/ki.r/kept.report.md'])
+    await rm(`${box.project.path}/+/_WORK/ki.r/reports/swept.report.md`)
+    await box.project.git(['add', '--', '+/_WORK/ki.r/reports/kept.report.md'])
     await box.project.git(['commit', '-q', '-m', 'kept'])
-    await box.project.write('+/_WORK/ki.r/kept.report.md', '# kept, answered\n')
+    await box.project.write('+/_WORK/ki.r/reports/kept.report.md', '# kept, answered\n')
     await box.project.git(['commit', '-q', '-am', 'answered'])
 
     await box.run('ki agent status r', { now })
-    await expect(box.project.read('+/_WORK/ki.r/swept.report.md')).rejects.toThrow()
-    expect(await box.project.read('+/_WORK/ki.r/kept.report.md')).toBe('# kept, answered\n')
+    await expect(box.project.read('+/_WORK/ki.r/reports/swept.report.md')).rejects.toThrow()
+    expect(await box.project.read('+/_WORK/ki.r/reports/kept.report.md')).toBe('# kept, answered\n')
   })
 
   test('homes a report into a work folder Git has never held', async () => {
@@ -229,7 +229,7 @@ describe('ki agent run events', () => {
     await box.state.write('ki/agents/r/one.report.md', '# One\n')
     await box.state.write('ki/agents/r/one.status', 'DONE\n')
     await box.run('ki agent status r', { now })
-    expect(await box.project.read('+/_WORK/ki.r/one.report.md')).toBe('# One\n')
+    expect(await box.project.read('+/_WORK/ki.r/reports/one.report.md')).toBe('# One\n')
   })
 
   test("keeps a report retired under the work folder's earlier name retired after the folder is renamed", async () => {
@@ -259,6 +259,7 @@ describe('ki agent run events', () => {
     await box.state.write('ki/agents/r/one.status', 'DONE\n')
     expect((await box.run('ki agent status r', { now })).exitCode).toBe(0)
     expect((await kinds(box)).at(-1)).toBe('one done: DONE')
+    await expect(box.project.read('+/_WORK/ki.s/reports/one.report.md')).rejects.toThrow()
     await expect(box.project.read('+/_WORK/ki.s/one.report.md')).rejects.toThrow()
     await expect(box.project.read('+/_WORK/ki.r/one.report.md')).rejects.toThrow()
   })
@@ -432,7 +433,169 @@ test('homes an in-flight report after a typed folder rename without rewriting la
   await box.state.write('ki/agents/r/one.report.md', '# Typed report\n')
   await box.state.write('ki/agents/r/one.status', 'DONE\n')
   expect((await box.run('ki agent status r', { now })).exitCode).toBe(0)
-  expect(await box.project.read('+/_WORK/ki.prj.r/one.report.md')).toBe('# Typed report\n')
-  expect(await box.project.read('+/_WORK/ki.r/one.report.md').catch(() => undefined)).toBeUndefined()
+  expect(await box.project.read('+/_WORK/ki.prj.r/reports/one.report.md')).toBe('# Typed report\n')
+  expect(await box.project.read('+/_WORK/ki.r/reports/one.report.md').catch(() => undefined)).toBeUndefined()
   expect(await box.state.read('ki/agents/r/one.launch.json')).toBe(launch)
+})
+
+describe('where the launcher homes a report', () => {
+  const finish = async (box: Sandbox, name: string, body: string): Promise<void> => {
+    await box.state.write(`ki/agents/r/${name}.report.md`, body)
+    await box.state.write(`ki/agents/r/${name}.status`, 'DONE\n')
+    expect((await box.run('ki agent status r', { now })).exitCode).toBe(0)
+  }
+
+  test('beside a brief in a focus folder, and in reports/ for any other brief, never the top level', async () => {
+    const box = await sandbox()
+    await setupRun(box)
+    await box.project.write('+/_WORK/ki.r/observatory/one.brief.md', '# Task\n')
+    await box.project.write('+/_WORK/ki.r/briefs/two.md', '# Task\n')
+    expect((await box.run('ki agent launch r one . +/_WORK/ki.r/observatory/one.brief.md', { now })).exitCode).toBe(0)
+    expect((await box.run('ki agent launch r two . +/_WORK/ki.r/briefs/two.md', { now })).exitCode).toBe(0)
+    expect((await box.run('ki agent launch r three . task.md', { now })).exitCode).toBe(0)
+    await finish(box, 'one', '# One\n')
+    await finish(box, 'two', '# Two\n')
+    await finish(box, 'three', '# Three\n')
+
+    expect(await box.project.read('+/_WORK/ki.r/observatory/one.report.md')).toBe('# One\n')
+    expect(await box.project.read('+/_WORK/ki.r/reports/two.report.md')).toBe('# Two\n')
+    expect(await box.project.read('+/_WORK/ki.r/reports/three.report.md')).toBe('# Three\n')
+    for (const name of ['one', 'two', 'three'])
+      await expect(box.project.read(`+/_WORK/ki.r/${name}.report.md`)).rejects.toThrow()
+  })
+
+  test('beside the brief a queued launch was given, though the queue copies it', async () => {
+    const box = await sandbox()
+    await setupRun(box)
+    await box.project.write('+/_WORK/ki.r/observatory/one.brief.md', '# Task\n')
+    expect((await box.run('ki agent queue r one +/_WORK/ki.r/observatory/one.brief.md', { now })).exitCode).toBe(0)
+    expect((await box.run('ki agent dispatch r --max 1 --interval 1 --foreground', { now })).exitCode).toBe(0)
+    await finish(box, 'one', '# One\n')
+    expect(await box.project.read('+/_WORK/ki.r/observatory/one.report.md')).toBe('# One\n')
+  })
+
+  test('a focus-folder report takes its name, and a relaunch waits for its changes to be committed', async () => {
+    const box = await sandbox()
+    const processes = await setupRun(box)
+    await box.project.write('+/_WORK/ki.r/observatory/one.brief.md', '# Task\n')
+    await box.project.write('+/_WORK/ki.r/observatory/one.report.md', '# Earlier\n')
+    const taken = await box.run('ki agent launch r one . +/_WORK/ki.r/observatory/one.brief.md', { now })
+    expect(taken.exitCode).toBe(1)
+    expect(taken.stderr).toContain('+/_WORK/ki.r/observatory/one.report.md')
+    expect(taken.stderr).toContain('launch it as one-2')
+
+    processes.alive.clear()
+    const relaunch = await box.run('ki agent launch r one . +/_WORK/ki.r/observatory/one.brief.md --relaunch', {
+      now
+    })
+    expect(relaunch.exitCode).toBe(1)
+    expect(relaunch.stderr).toContain('+/_WORK/ki.r/observatory/one.report.md has uncommitted changes')
+  })
+
+  test('decide finds a query in a focus-folder report, and reads a report in reports/ or the top level', async () => {
+    const box = await sandbox()
+    await setupRun(box)
+    expect((await box.run('ki agent home r --work ki.r', { now })).exitCode).toBe(0)
+    const query = (tag: string) => `## Queries\n\n### ${tag} - Choose\n\n**Options**\n\na) Keep it\n\nb) Drop it\n`
+    await box.project.write('+/_WORK/ki.r/observatory/one.report.md', query('FOCUS-Q'))
+    await box.project.write('+/_WORK/ki.r/reports/two.report.md', query('TYPE-Q'))
+    await box.project.write('+/_WORK/ki.r/three.report.md', query('TOP-Q'))
+    for (const [tag, source] of [
+      ['FOCUS-Q', 'observatory/one.report.md'],
+      ['TYPE-Q', 'reports/two.report.md'],
+      ['TOP-Q', 'three.report.md']
+    ] as const) {
+      expect((await box.run(`ki agent decide r ${tag} - a`, { now })).exitCode).toBe(0)
+      expect(await box.project.read('+/_WORK/ki.r/decisions.md')).toContain(`source: +/_WORK/ki.r/${source}\n`)
+    }
+  })
+
+  test('the launcher reads a report it homed beside its brief once the state copy is gone', async () => {
+    const box = await sandbox()
+    await setupRun(box)
+    await box.project.write('+/_WORK/ki.r/observatory/one.brief.md', '# Task\n')
+    await box.run('ki agent launch r one . +/_WORK/ki.r/observatory/one.brief.md', { now })
+    await box.project.write('+/_WORK/ki.r/observatory/one.report.md', '## Queries\n\n### HOOK-FIX - Fix the hook\n')
+    await box.state.write('ki/agents/r/one.status', 'DONE\n')
+    expect([await wait(box), await wait(box)]).toEqual([
+      'one done: DONE\n',
+      'one needs-owner: HOOK-FIX - Fix the hook\n'
+    ])
+  })
+})
+
+describe('a run group whose repository moved', () => {
+  /** A repository holding the work, outside the sandbox project, at `<root>/<place>/repo`. */
+  const repository = async (box: Sandbox, place: string): Promise<string> => {
+    await box.root.git(['init', '-q'], `${place}/repo`)
+    await box.root.write(`${place}/repo/+/_WORK/ki.r/work.md`, '---\nid: ki.r\n---\n')
+    await box.root.write(`${place}/repo/task.md`, '# Task\n')
+    await box.root.git(['add', '--all'], `${place}/repo`)
+    await box.root.git(['commit', '-q', '-m', 'work'], `${place}/repo`)
+    return realpath(`${box.root.path}/${place}/repo`)
+  }
+
+  test('ki agent home moves the control record once the old home is gone, keeping the machine check', async () => {
+    const box = await sandbox()
+    const processes = await setupRun(box)
+    const old = await repository(box, 'old')
+    expect((await box.run(`ki agent launch r one ${old} ${old}/task.md --repo ${old}`, { now })).exitCode).toBe(0)
+    processes.alive.clear()
+    await box.state.write('ki/agents/r/one.status', 'DONE\n')
+    await rename(`${box.root.path}/old`, `${box.root.path}/new`)
+    const moved = await realpath(`${box.root.path}/new/repo`)
+    expect((await box.run(`ki agent home r --work ki.r --repo ${moved}`, { now })).stdout).toContain(
+      `Control record of r moved from ${old}/+/_WORK/ki.r\n`
+    )
+    const control = JSON.parse(await box.state.read('ki/agents/r/control.json'))
+    expect(control.workHome).toBe(`${moved}/+/_WORK/ki.r`)
+    expect(control.formerWorkHomes).toEqual([`${old}/+/_WORK/ki.r`])
+    expect(control.attempts.one.workHome).toBe(`${old}/+/_WORK/ki.r`)
+    expect((await box.run(`ki agent launch r two ${moved} ${moved}/task.md`, { now })).exitCode).toBe(0)
+    expect((await box.run(`ki agent home r --work ki.r`, { now })).stdout).not.toContain('Control record')
+  })
+
+  test('a record from another machine never moves', async () => {
+    const box = await sandbox()
+    const processes = await setupRun(box)
+    const old = await repository(box, 'old')
+    expect((await box.run(`ki agent launch r one ${old} ${old}/task.md --repo ${old}`, { now })).exitCode).toBe(0)
+    processes.alive.clear()
+    const control = JSON.parse(await box.state.read('ki/agents/r/control.json'))
+    await box.state.write('ki/agents/r/control.json', `${JSON.stringify({ ...control, machine: 'elsewhere.local' })}\n`)
+    await rename(`${box.root.path}/old`, `${box.root.path}/new`)
+    const moved = await realpath(`${box.root.path}/new/repo`)
+    expect((await box.run(`ki agent home r --work ki.r --repo ${moved}`, { now })).stdout).not.toContain(
+      'Control record'
+    )
+    expect(JSON.parse(await box.state.read('ki/agents/r/control.json')).workHome).toBe(`${old}/+/_WORK/ki.r`)
+    const refused = await box.run(`ki agent launch r two ${moved} ${moved}/task.md`, { now })
+    expect(refused.exitCode).toBe(1)
+    expect(refused.stderr).toContain('stored machine elsewhere.local')
+  })
+
+  test('a launch names both homes, and the record stays while the old home exists', async () => {
+    const box = await sandbox()
+    await setupRun(box)
+    const old = await repository(box, 'old')
+    expect((await box.run(`ki agent launch r one ${old} ${old}/task.md --repo ${old}`, { now })).exitCode).toBe(0)
+    const copy = await repository(box, 'copy')
+    // Recorded by hand, as a home moved before ki agent home moved control records.
+    await box.state.write(
+      'ki/agents/r/thread.json',
+      `${JSON.stringify({ repository: copy, folder: '+/_WORK/ki.r' })}\n`
+    )
+    const control = await box.state.read('ki/agents/r/control.json')
+
+    const refused = await box.run(`ki agent launch r two ${copy} ${copy}/task.md`, { now })
+    expect(refused.exitCode).toBe(1)
+    expect(refused.stderr).toContain(`home ${old}/+/_WORK/ki.r; current machine `)
+    expect(refused.stderr).toContain(`home ${copy}/+/_WORK/ki.r)`)
+    expect(refused.stderr).toContain(
+      `once ${old}/+/_WORK/ki.r is gone, move the record with ki agent home r --work ki.r`
+    )
+
+    expect((await box.run('ki agent home r --work ki.r', { now })).stdout).not.toContain('Control record')
+    expect(await box.state.read('ki/agents/r/control.json')).toBe(control)
+  })
 })

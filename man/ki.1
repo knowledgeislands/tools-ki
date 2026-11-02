@@ -1712,7 +1712,18 @@ to
 in the state folder, and the first command that sees its
 .B DONE
 copies the report into the tracked folder, unless the folder holds a copy
-with changes Git does not hold.
+with changes Git does not hold. The report goes beside its brief: into
+.I +/_WORK/<id>/<focus>/
+when the prompt file given to
+.B launch
+or
+.B queue
+sits in a focus folder of the work folder, and otherwise into
+.IR +/_WORK/<id>/reports/ ,
+never the work folder's top level. A reader looks for a report beside its
+brief, then in
+.IR reports/ ,
+then, for the layout's tolerance window, at the top level.
 .B ki
 is their only writer, so no thread copies them by hand, and never commits
 them; the thread commits them with its other work. The first
@@ -1802,8 +1813,9 @@ and
 refuse with exit 1, before anything is written, a brief that names the
 agent's own
 .I <name>.report.md
-in the run's work folder or any
-.IR +/_WORK/<id>/ ;
+in the run's work folder, any
+.IR +/_WORK/<id>/ ,
+or a folder in either;
 a relaunch is refused the same way, and the dispatcher records a queued brief
 it refuses as
 .BR failed .
@@ -1828,7 +1840,9 @@ Names are unique within a run: a name that has already run, shown by its
 .I .launch.json
 or
 .I .report.md
-in the state folder or its report in the thread folder, is refused with the
+in the state folder or its report in the work folder, beside its brief, in
+.I reports/
+or at the top level, is refused with the
 first free
 .I <name>-<n>
 suggestion and nothing changes; a
@@ -1840,8 +1854,8 @@ does not take a name.
 starts it again deliberately: the earlier state-folder packet, log included,
 moves into the first free
 .I <name>.prev-<n>/
-and nothing is deleted, but the relaunch is refused while the thread-folder
-report has uncommitted changes.
+and nothing is deleted, but the relaunch is refused while a work-folder copy
+of its report has uncommitted changes.
 .PP
 .B --worktree <repo>
 Create a linked worktree from the repository's committed HEAD at
@@ -2083,7 +2097,15 @@ record
 .I +/_WORK/<id>/
 as the home, for a new run or one homed elsewhere, once that folder holds
 .IR work.md ;
-it moves no file, so move the old folder's contents first.
+it moves no file, so move the old folder's contents first. When the run's
+control record still names the work home it was made under, and that home is
+gone, as after the repository moved, it moves the record to the recorded home
+and says so: only a record made on this machine for the same work moves, its
+attempts keeping their identities with the old home listed as former. A record
+from another machine, for other work, or whose old home still exists stays,
+and a launch refuses it with
+.IR control-home-unverified ,
+naming the stored and current machine and home.
 .TP
 .B ki agent new <run> <name> [--repo <dir>]
 Write a prompt skeleton from the
@@ -2115,7 +2137,8 @@ work's own log, it first moves any
 and
 .I <name>.report.md
 a run predating the tracked home kept in its state folder into the thread
-folder, where no copy exists and Git has never held one, and names them, so
+folder, each report where the launcher homes it, where no copy exists in any
+place a reader looks and Git has never held one, and names them, so
 the old numbered entries stay as history and a report the work has retired
 stays retired.
 .I "<TAG> - <letter>"
@@ -2123,7 +2146,9 @@ text, an owner's bare option letter, is logged as that option's
 .I "<letter>) <wording>"
 from the newest
 .I *.report.md
-in the work folder carrying a
+in the work folder's focus folders, its
+.I reports/
+or its top level carrying a
 .I <TAG>
 query, with a
 .I source:
@@ -2185,11 +2210,17 @@ file passes once that file exists, tracked or not; any other class,
 or none, needs a tracked path or a record. Every level-two heading in the
 log opens an entry, whether timestamped, dated or numbered; the gate names an
 entry by its number where it has one and otherwise by its heading.
+Before anything moves it refuses with exit 2 a home whose repository is a
+relative path, is not an existing directory, or lies in no repository the
+local registry holds, so that nothing is written where the home no longer is.
 It first moves into the thread folder any
 .I decisions.md
 or
 .I <name>.report.md
-that a run predating the tracked home kept in its state folder, printing an
+that a run predating the tracked home kept in its state folder, each report
+beside its brief or in
+.IR reports/ ,
+printing an
 .B ok
 line for each, so the folder then needs committing; a copy the thread folder
 holds, or has ever held in Git, supersedes the state folder's, which is

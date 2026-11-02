@@ -7,7 +7,16 @@ import { type AgentContext, git, instant, read } from './context.ts'
 import { loadControl, lostControlOperations } from './control-store.ts'
 import { withRunLock } from './locking.ts'
 import { ownershipLoss, ownsScope } from './scope.ts'
-import { followThread, heldAs, readThread, reportPath } from './thread.ts'
+import {
+  followThread,
+  heldAs,
+  launchBrief,
+  readThread,
+  reportPath,
+  reportPlaces,
+  repositoryPresent,
+  threadPath
+} from './thread.ts'
 
 export type EventKind =
   | 'launch'
@@ -687,35 +696,46 @@ export const reportQueries = (report: string): { readonly tag: string; readonly 
   return queries
 }
 
-/** The agent's report: in the thread folder, or in the state folder of a run older than its thread home. */
+/**
+ * The agent's report: in the state folder, or, for a run older than its thread home, in the
+ * thread folder, beside its brief, in `reports/` or at the top level.
+ */
 const reportOf = async (context: AgentContext, directory: string, name: string): Promise<string | undefined> => {
   const source = await read(join(directory, `${name}.report.md`))
   if (source !== undefined) return source
   const thread = await readThread(context, basename(directory))
-  return thread === undefined ? undefined : read(reportPath(thread, name))
+  if (thread === undefined) return undefined
+  for (const place of reportPlaces(thread, name, await launchBrief(directory, name))) {
+    const report = await read(join(threadPath(thread), place))
+    if (report !== undefined) return report
+  }
+  return undefined
 }
 
 /**
- * Copies the report the agent wrote in the state folder into the thread folder, where the
- * coordinator reads and commits it, so that the launcher stays its only writer. It runs once per
- * attempt, when the attempt first ends. A thread-folder copy with changes Git does not hold is
- * left alone; one Git holds unchanged, as after a relaunch, is replaced. A report Git already holds
- * with these contents, under the folder's present or an earlier name, is never written again: a
- * retired report stays retired, and a newer committed version is not overwritten by an older one.
- * A run homed in a retired `+/_THREADS/` folder follows its work folder, and one with none keeps
- * its report in the state folder.
+ * Copies the report the agent wrote in the state folder into the thread folder, beside its brief
+ * in the focus folder the brief sits in or else in `reports/`, where the coordinator reads and
+ * commits it, so that the launcher stays its only writer. It runs once per attempt, when the
+ * attempt first ends. A thread-folder copy with changes Git does not hold is left alone; one Git
+ * holds unchanged, as after a relaunch, is replaced. A report Git already holds with these
+ * contents, in any place a reader looks under the folder's present or an earlier name, is never
+ * written again: a retired report stays retired, and a newer committed version is not
+ * overwritten by an older one. A run homed in a retired `+/_THREADS/` folder follows its work
+ * folder, and one with none, or whose repository is relative or gone, keeps its report in the
+ * state folder.
  */
 const homeReport = async (context: AgentContext, directory: string, name: string): Promise<void> => {
   const source = join(directory, `${name}.report.md`)
   const report = await read(source)
   const thread = await followThread(context, basename(directory))
-  if (report === undefined || thread === undefined) return
-  const target = reportPath(thread, name)
+  if (report === undefined || thread === undefined || !(await repositoryPresent(thread.repository))) return
+  const brief = await launchBrief(directory, name)
+  const target = reportPath(thread, name, brief)
   if ((await read(target)) !== undefined) {
     const status = await git(context, thread.repository, ['status', '--porcelain', '--', target])
     if (status.output.trim()) return
   }
-  if (await heldAs(context, thread, `${name}.report.md`, source)) return
+  if (await heldAs(context, thread, reportPlaces(thread, name, brief), source)) return
   await mkdir(dirname(target), { recursive: true })
   await writeFile(target, report)
 }
