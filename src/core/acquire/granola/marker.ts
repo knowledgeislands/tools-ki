@@ -164,6 +164,8 @@ export const markGranola = async (
       if (transcript.state !== 'available' || sha256(stableJson(transcript.projection)) !== capture.transcriptSha256)
         throw new KiError('Granola source transcript changed or is unavailable')
       const inventory = granolaAttachmentInventory(detail.projection, meeting.projection)
+      /* v8 ignore next -- The detail and listing hashes above match a capture whose inventory reconciled when it was taken. */
+      if (inventory.difference) throw new KiError(inventory.difference)
       const images = await source.images(id, inventory.ids)
       const saved = manifest.assets
       if (

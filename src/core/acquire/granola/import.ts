@@ -42,6 +42,8 @@ export interface GranolaImportResult {
   readonly created: number
   readonly refreshed: number
   readonly kept: readonly { readonly id: string; readonly reason: string }[]
+  /** Meetings not captured because their screenshots do not reconcile; the rest of the run continues. */
+  readonly withheld: readonly { readonly id: string; readonly reason: string }[]
   readonly omissions: number
   readonly imageMeetings: number
   readonly images: number
@@ -157,6 +159,7 @@ export const importGranola = async (
     }
   }
 
+  const withheld: { id: string; reason: string }[] = []
   let created = 0
   let refreshed = 0
   let omissions = 0
@@ -174,6 +177,10 @@ export const importGranola = async (
         source.images && detail.state === 'available'
           ? granolaAttachmentInventory(detail.projection, meeting.projection)
           : undefined
+      if (inventory?.difference) {
+        withheld.push({ id: meeting.id, reason: inventory.difference })
+        continue
+      }
       const imageBlocks: readonly GranolaAttachmentImage[] | undefined =
         inventory && source.images ? await source.images(meeting.id, inventory.ids) : undefined
       const observed = await source.transcript(meeting.id)
@@ -233,6 +240,7 @@ export const importGranola = async (
     created,
     refreshed,
     kept,
+    withheld,
     omissions,
     imageMeetings,
     images,

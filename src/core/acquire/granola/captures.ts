@@ -26,9 +26,9 @@ const physicalFile = async (path: string): Promise<boolean> => {
   return Boolean(state?.isFile() && !state.isSymbolicLink())
 }
 
-/** Find every capture of the requested identities, wherever Acquire has filed it under the capture directory. */
+/** Find every capture of the requested identities, wherever Acquire has filed it under the capture or held directory. */
 export const granolaCaptureIndex = async (
-  layout: { readonly documents: string; readonly captures: string },
+  layout: { readonly documents: string; readonly captures: string; readonly held?: string },
   ids: readonly string[]
 ): Promise<ReadonlyMap<string, readonly string[]>> => {
   const wanted = new Set(ids)
@@ -50,8 +50,10 @@ export const granolaCaptureIndex = async (
       }
     }
   }
-  await verifyGranolaParents(join(layout.captures, 'meeting.md'))
-  if (await lstat(layout.captures).catch(() => undefined)) await walk(layout.captures)
+  for (const directory of layout.held ? [layout.captures, layout.held] : [layout.captures]) {
+    await verifyGranolaParents(join(directory, 'meeting.md'))
+    if (await lstat(directory).catch(() => undefined)) await walk(directory)
+  }
   return found
 }
 

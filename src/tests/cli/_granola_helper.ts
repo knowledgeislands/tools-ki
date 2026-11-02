@@ -26,6 +26,8 @@ export interface GranolaFixture {
   }) => readonly GranolaMeetingFixture[]
   readonly failDetailOnce?: string
   readonly rateLimitDetailOnce?: string
+  /** Advertise `get_meeting_attachment` and answer each requested identity with one PNG block. */
+  readonly attachments?: boolean
 }
 
 export interface GranolaFixtureRunner {
@@ -42,6 +44,8 @@ const result = (value: unknown): { readonly exitCode: number; readonly output: s
 
 const xmlAttribute = (value: string): string =>
   value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+
+const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jDbkAAAAASUVORK5CYII='
 
 const textResult = (text: string): { readonly exitCode: number; readonly output: string } =>
   result({ content: [{ type: 'text', text }] })
@@ -62,7 +66,7 @@ export const granolaFixtureRunner = (fixture: GranolaFixture): GranolaFixtureRun
     if (command !== 'mcporter') return { exitCode: 1, output: `unexpected command ${command}` }
     if (arguments_[0] === 'list')
       return result({
-        tools: tools
+        tools: [...tools, ...(fixture.attachments ? ['get_meeting_attachment'] : [])]
           .filter((name) => !fixture.missingTools?.includes(name))
           .map((name) => ({ name, inputSchema: { type: 'object', additionalProperties: false } }))
       })
@@ -152,6 +156,15 @@ export const granolaFixtureRunner = (fixture: GranolaFixture): GranolaFixtureRun
           )}`
         )
       return callResult(meeting?.transcript ?? { meeting_id: id, transcript: `Transcript for ${id}` })
+    }
+    if (tool === 'get_meeting_attachment' && fixture.attachments) {
+      const meetingId = String(parsed['meeting_id'])
+      return result({
+        content: (parsed['attachment_ids'] as readonly string[]).flatMap((attachmentId) => [
+          { type: 'image', mimeType: 'image/png', data: png },
+          { type: 'text', text: JSON.stringify({ meeting_id: meetingId, attachment_id: attachmentId }) }
+        ])
+      })
     }
     return { exitCode: 1, output: `unexpected tool ${tool}` }
   }

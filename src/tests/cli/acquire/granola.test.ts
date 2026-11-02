@@ -1560,7 +1560,7 @@ describe('[ki acquire central Granola inbox]', () => {
     expect(imported.exitCode, imported.output).toBe(0)
     expect(await lstat(join(repository, '.acquire')).catch(() => undefined)).toBeUndefined()
     const single = 'captures/legal/granola/2026-01-02--single--single/meeting.md'
-    const multiple = 'captures/_review/granola/2026-01-02--multiple--multiple/meeting.md'
+    const multiple = '_held/granola/2026-01-02--multiple--multiple/meeting.md'
     expect(await readFile(join(repository, single), 'utf8')).toContain('source_id: "single"')
     const markdown = await readFile(join(repository, multiple), 'utf8')
     expect(markdown).toContain('territory_names:\n  - "legal"\n  - "personal"')
@@ -1583,7 +1583,7 @@ describe('[ki acquire central Granola inbox]', () => {
     expect(await readFile(join(repository, 'README.md'), 'utf8')).toBe('Keep this repository')
   })
 
-  test('reports empty unmatched folders and keeps mixed memberships in review, including textual listing evidence', async () => {
+  test('reports empty unmatched folders and holds mixed memberships in _held/granola, including textual listing evidence', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('inbox')
     await setupReceivers(box, [
@@ -1616,12 +1616,119 @@ describe('[ki acquire central Granola inbox]', () => {
     expect(result.exitCode, result.output).toBe(0)
     expect(result.output).toContain('Unmatched folder: unknown · Empty unexpected folder')
     expect(result.output).toContain('Flagged: outside · unfoldered · 2026-01-02 · Title & detail')
-    const meetingPath = 'captures/_review/granola/2026-01-02--mixed--mixed/meeting.md'
+    const meetingPath = '_held/granola/2026-01-02--mixed--mixed/meeting.md'
     expect(await readFile(join(repository, meetingPath), 'utf8')).toContain('unmapped_folder_ids:\n  - "unknown"')
     box.setRunner(granolaFixtureRunner({ meetings: [], folders }).runner)
     const empty = await box.run(command(repository))
     expect(empty.exitCode, empty.output).toBe(0)
     expect(empty.output).toContain('Unmatched folder: unknown · Empty unexpected folder')
+  })
+
+  test('reconciles screenshot attachments to the listed count and withholds only a meeting whose attachments differ', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('inbox')
+    await setupReceivers(box, [
+      {
+        key: 'inbox',
+        repository: 'https://github.com/example/inbox',
+        path: repository,
+        folderIds: ['phase3'],
+        captureRoot: 'captures',
+        folderTerritories: { phase3: 'humans-not-robots' }
+      }
+    ])
+    const attachment = (index: number): string => `20000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`
+    const screenshots = (from: number, count: number) =>
+      Array.from({ length: count }, (_, index) => ({ id: attachment(from + index), type: 'screenshot' }))
+    const scenario = '4ffa813b-68a8-4bf0-b798-4793546c4d3a'
+    const differing = '10000000-0000-4000-8000-000000000002'
+    const plain = '10000000-0000-4000-8000-000000000003'
+    const meeting = (id: string, title: string, count: number, attachments: readonly unknown[]) => ({
+      id,
+      date: '2026-01-02',
+      title,
+      folderIds: ['phase3'],
+      listing: { screenshot_count: count, folders: [{ id: 'phase3' }] },
+      detail: { attachments }
+    })
+    // Shaped like the failing meeting: 25 screenshots, one identity repeated and one attachment that is not a screenshot.
+    const source = granolaFixtureRunner({
+      attachments: true,
+      folders: [{ id: 'phase3', title: 'Phase 3' }],
+      meetings: [
+        meeting(scenario, 'Scenario B preparation', 25, [
+          ...screenshots(0, 25),
+          { id: attachment(3), type: 'screenshot' },
+          { id: attachment(90), type: 'file' }
+        ]),
+        meeting(differing, 'Differing', 3, [...screenshots(30, 2), { id: 'not-a-uuid', type: 'screenshot' }]),
+        meeting(plain, 'Plain', 0, [])
+      ]
+    })
+    box.setRunner(source.runner)
+    const preview = await box.run(command(repository, '--dry-run'))
+    expect(preview.exitCode, preview.output).toBe(0)
+    expect(preview.output).toContain('Meetings: 2 new, 0 refreshed, 0 kept, 1 withheld')
+    expect(preview.output).toContain(
+      `Withheld: ${differing} · Granola lists 3 screenshots but the detail names 2 screenshot attachments; invalid identities: "not-a-uuid"; not captured until they match`
+    )
+    expect(preview.output).toContain('Attachments: 25 screenshots across 2 verified MCP inventories')
+    expect(await lstat(join(repository, 'captures')).catch(() => undefined)).toBeUndefined()
+    const requested = source.calls
+      .filter((call) => call.tool === 'get_meeting_attachment')
+      .flatMap((call) => call.arguments['attachment_ids'] as string[])
+    expect(requested).toEqual(screenshots(0, 25).map((entry) => entry.id))
+
+    const imported = await box.run(command(repository))
+    expect(imported.exitCode, imported.output).toBe(0)
+    const directory = join(repository, 'captures/humans-not-robots/granola')
+    const packages = (await readdir(directory)).sort()
+    expect(packages).toEqual([`2026-01-02--plain--${plain}`, `2026-01-02--scenario-b-preparation--${scenario}`])
+    const manifest = JSON.parse(
+      await readFile(join(directory, packages[1] as string, `${scenario}--attachments.json`), 'utf8')
+    )
+    expect(manifest.expected_count).toBe(25)
+    expect(manifest.assets).toHaveLength(25)
+  })
+
+  test('reports every kind of screenshot difference against the listed count', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('inbox')
+    await setupReceivers(box, [
+      {
+        key: 'inbox',
+        repository: 'https://github.com/example/inbox',
+        path: repository,
+        folderIds: ['one'],
+        captureRoot: 'captures',
+        folderTerritories: { one: 'legal' }
+      }
+    ])
+    const id = '10000000-0000-4000-8000-000000000004'
+    const repeated = '20000000-0000-4000-8000-000000000001'
+    const other = '20000000-0000-4000-8000-000000000002'
+    box.setRunner(
+      granolaFixtureRunner({
+        attachments: true,
+        folders: [{ id: 'one', title: 'Legal' }],
+        meetings: [
+          {
+            id,
+            date: '2026-01-02',
+            title: 'Repeated',
+            folderIds: ['one'],
+            listing: { screenshot_count: 3 },
+            detail: { attachments: [{ id: repeated }, { attachment_id: repeated }, { id: other, kind: 'document' }] }
+          }
+        ]
+      }).runner
+    )
+    const result = await box.run(command(repository))
+    expect(result.exitCode, result.output).toBe(0)
+    expect(result.output).toContain(
+      `Withheld: ${id} · Granola lists 3 screenshots but the detail names 1 screenshot attachments; repeated: ${repeated}; not screenshots: ${other} (document)`
+    )
+    expect(await lstat(join(repository, 'captures')).catch(() => undefined)).toBeUndefined()
   })
 
   test('keeps identities flaggable when listing titles or dates and folder titles are omitted', async () => {

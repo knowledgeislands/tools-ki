@@ -378,7 +378,42 @@ describe('[Granola screenshots and Acquired markers]', () => {
     expect(await exists(join(f.box.project.path, 'captures'))).toBe(false)
   })
 
-  test.each(['bad-id', 'duplicate', 'failure', 'missing', 'mime', 'base64', 'identity'])(
+  test.each(['bad-id', 'duplicate'])(
+    'withholds a note whose attachments differ and never marks it: %s',
+    async (imageError) => {
+      const f = await fixture({ images: 2, imageError })
+      const result = await f.box.run(f.command)
+      expect(result.exitCode, result.stderr).toBe(0)
+      expect(result.stdout).toContain('0 new, 0 refreshed, 0 kept, 1 withheld')
+      expect(result.stdout).toContain(
+        imageError === 'bad-id'
+          ? `Withheld: ${id} · Granola lists 2 screenshots but the detail names 0 screenshot attachments; invalid identities: "unsafe", "unsafe"`
+          : `Withheld: ${id} · Granola lists 2 screenshots but the detail names 1 screenshot attachments; repeated: ${assetId(0)}`
+      )
+      expect(await exists(join(f.box.project.path, 'captures'))).toBe(false)
+      expect(f.calls.some((call) => call.tool === 'get_meeting_attachment')).toBe(false)
+      const marked = await f.box.run([...f.mark, '--confirm'])
+      expect(marked.stdout).not.toContain('1 marked')
+      expect(f.calls.some((call) => call.tool === 'add_note_to_folder')).toBe(false)
+    }
+  )
+
+  test.each([
+    { attachments: [{}] },
+    `<meetings_data count="1"><meeting id="${id}"><attachment/></meeting></meetings_data>`
+  ])('withholds a note whose attachment carries no identity: %s', async (detail) => {
+    const f = await fixture({ images: 1 })
+    f.respond(
+      'get_meetings',
+      typeof detail === 'string' ? { content: [{ type: 'text', text: detail }] } : { meetings: [{ id, ...detail }] }
+    )
+    const result = await f.box.run([...f.command, '--refresh-acquired'])
+    expect(result.exitCode, result.stderr).toBe(0)
+    expect(result.stdout).toContain('invalid identities: ""')
+    expect(f.calls.some((call) => call.tool === 'add_note_to_folder')).toBe(false)
+  })
+
+  test.each(['failure', 'missing', 'mime', 'base64', 'identity'])(
     'preserves source and refuses an invalid image projection: %s',
     async (imageError) => {
       const f = await fixture({ images: 2, imageError })
@@ -649,16 +684,7 @@ describe('[Granola screenshots and Acquired markers]', () => {
     ['list_meeting_folders', { content: [{ type: 'text', text: 'notice {invalid}' }] }],
     ['list_meetings', { meetings: [{ id, folders: [{ id: 'personal' }], screenshot_count: -1 }] }],
     ['list_meetings', { meetings: [{ id, folders: [{ id: 'personal' }], screenshot_count: 'invalid' }] }],
-    ['get_meetings', { meetings: [{ id, attachments: {} }] }],
-    ['get_meetings', { meetings: [{ id, attachments: [{}] }] }],
-    [
-      'get_meetings',
-      {
-        content: [
-          { type: 'text', text: `<meetings_data count="1"><meeting id="${id}"><attachment/></meeting></meetings_data>` }
-        ]
-      }
-    ]
+    ['get_meetings', { meetings: [{ id, attachments: {} }] }]
   ])('refuses malformed or incomplete source evidence without marking: %s', async (tool, value) => {
     const f = await fixture({ images: 1 })
     f.respond(String(tool), value)

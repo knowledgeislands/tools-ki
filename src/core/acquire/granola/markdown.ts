@@ -1,4 +1,5 @@
 import { KiError } from '../../errors.ts'
+import { GRANOLA_HELD } from './layout.ts'
 import { attribute, decodeXml, record, stringField } from './projection.ts'
 import type { RoutedGranolaMeeting } from './routing.ts'
 import type { GranolaDetail, GranolaFolder, GranolaTranscript } from './source.ts'
@@ -204,9 +205,11 @@ export const renderGranolaMeeting = (options: {
   const filename = `${isoDate(date)}--${slug(title)}--${options.meeting.id}.md`
   if (filename.includes('/') || filename.includes('\\'))
     throw new KiError(`Granola meeting ${options.meeting.id} produced unsafe path`)
-  const path = options.captureRoot
-    ? `${options.captureRoot}/${options.meeting.territories.length === 1 && !options.meeting.unmappedFolderIds.length ? options.meeting.territories[0] : '_review'}/granola/${filename.slice(0, -3)}/meeting.md`
-    : filename
+  const path = !options.captureRoot
+    ? filename
+    : options.meeting.territories.length === 1 && !options.meeting.unmappedFolderIds.length
+      ? `${options.captureRoot}/${options.meeting.territories[0]}/granola/${filename.slice(0, -3)}/meeting.md`
+      : `${GRANOLA_HELD}/${filename.slice(0, -3)}/meeting.md`
   const frontmatter = [
     '---',
     'type: granola-meeting',

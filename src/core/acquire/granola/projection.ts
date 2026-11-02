@@ -30,6 +30,8 @@ export const attribute = (value: unknown, name: string): string | undefined => {
 export interface GranolaAttachmentInventory {
   readonly ids: readonly string[]
   readonly expected: number
+  /** Set when the listed screenshot count and the detail's attachment identities cannot be reconciled. */
+  readonly difference?: string
 }
 
 export interface GranolaAttachmentImage {
@@ -121,19 +123,46 @@ export const granolaScreenshotCount = (projection: unknown): number => {
 
 const attachmentId = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
 
+const screenshotTypes = new Set(['screenshot', 'image'])
+
+/**
+ * The listing gives only a screenshot count, so the detail's attachments are reconciled to it: an attachment typed as
+ * something other than a screenshot is not one, and a repeated identity is one attachment. Anything left over is a
+ * difference to report, never a reason to guess which attachments the count meant.
+ */
 export const granolaAttachmentInventory = (detail: unknown, listing: unknown): GranolaAttachmentInventory => {
   const expected = granolaScreenshotCount(listing)
-  let ids: string[]
+  let entries: { id: string; type?: string }[]
   if (typeof detail === 'string') {
-    ids = [...detail.matchAll(/<attachment\b([^>]*)>/g)].map((match) => attribute(match[0], 'id') ?? '')
+    entries = [...detail.matchAll(/<attachment\b([^>]*)>/g)].map((match) => {
+      const type = attribute(match[0], 'type')
+      return { id: attribute(match[0], 'id') ?? '', ...(type ? { type } : {}) }
+    })
   } else {
     const attachments = providerData(detail)?.['attachments'] ?? []
     if (!Array.isArray(attachments)) throw new KiError('Granola attachment inventory is malformed')
-    ids = attachments.map((value) => stringField(value, ['id', 'attachment_id']) ?? '')
+    entries = attachments.map((value) => {
+      const type = stringField(value, ['type', 'kind'])
+      return { id: stringField(value, ['id', 'attachment_id']) ?? '', ...(type ? { type } : {}) }
+    })
   }
-  if (ids.some((id) => !attachmentId.test(id)) || new Set(ids).size !== ids.length || ids.length !== expected)
-    throw new KiError('Granola attachment identities do not match the source screenshot count')
-  return { ids, expected }
+  const invalid = entries.filter((entry) => !attachmentId.test(entry.id)).map((entry) => JSON.stringify(entry.id))
+  const others = entries
+    .filter((entry) => attachmentId.test(entry.id) && entry.type && !screenshotTypes.has(entry.type.toLowerCase()))
+    .map((entry) => `${entry.id} (${entry.type})`)
+  const screenshots = entries
+    .filter((entry) => attachmentId.test(entry.id) && (!entry.type || screenshotTypes.has(entry.type.toLowerCase())))
+    .map((entry) => entry.id)
+  const ids = [...new Set(screenshots)]
+  if (!invalid.length && ids.length === expected) return { ids, expected }
+  const repeated = ids.filter((id) => screenshots.indexOf(id) !== screenshots.lastIndexOf(id))
+  const difference = [
+    `Granola lists ${expected} screenshots but the detail names ${ids.length} screenshot attachments`,
+    ...(repeated.length ? [`repeated: ${repeated.join(', ')}`] : []),
+    ...(invalid.length ? [`invalid identities: ${invalid.join(', ')}`] : []),
+    ...(others.length ? [`not screenshots: ${others.join(', ')}`] : [])
+  ].join('; ')
+  return { ids, expected, difference }
 }
 
 export const decodeGranolaImages = (

@@ -8,11 +8,20 @@ export const granolaCaptureRoot = (value: unknown): string | undefined => {
   return value as string | undefined
 }
 
-/** Capture paths are relative to `documents`; `captures` is the directory that holds them. */
-export const granolaLayout = (root: string, captureRoot?: string): { documents: string; captures: string } => ({
-  documents: captureRoot ? root : join(root, '+/_ACQUIRE/granola'),
-  captures: captureRoot ? join(root, captureRoot) : join(root, '+/_ACQUIRE/granola')
-})
+/** Packages for a meeting no single territory owns wait in the repository's top-level holding area. */
+export const GRANOLA_HELD = '_held/granola'
+
+/**
+ * Capture paths are relative to `documents`; `captures` and, beside a capture root, `held` are the directories that
+ * hold them.
+ */
+export const granolaLayout = (
+  root: string,
+  captureRoot?: string
+): { documents: string; captures: string; held?: string } =>
+  captureRoot
+    ? { documents: root, captures: join(root, captureRoot), held: join(root, GRANOLA_HELD) }
+    : { documents: join(root, '+/_ACQUIRE/granola'), captures: join(root, '+/_ACQUIRE/granola') }
 
 /** A safe leaf does not make symlinked parent directories safe. */
 export const verifyGranolaParents = async (path: string): Promise<void> => {

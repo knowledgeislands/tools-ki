@@ -93,8 +93,9 @@ const renderGranolaResult = (result: GranolaImportResult): string =>
       (meeting) =>
         `Flagged: ${meeting.id} · ${meeting.reason} · ${meeting.date ?? 'unknown date'} · ${meeting.title ?? 'unknown title'} · folders=${JSON.stringify(meeting.folderIds)}`
     ),
-    `Meetings: ${result.created} new, ${result.refreshed} refreshed, ${result.kept.length} kept`,
+    `Meetings: ${result.created} new, ${result.refreshed} refreshed, ${result.kept.length} kept, ${result.withheld.length} withheld`,
     ...result.kept.map((meeting) => `Kept: ${meeting.id} · ${meeting.reason}; not overwritten without --refresh`),
+    ...result.withheld.map((meeting) => `Withheld: ${meeting.id} · ${meeting.reason}; not captured until they match`),
     `Omissions: ${result.omissions}`,
     result.attachmentsAvailable
       ? `Attachments: ${result.images} screenshots across ${result.imageMeetings} verified MCP inventories`
