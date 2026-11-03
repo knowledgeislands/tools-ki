@@ -370,6 +370,92 @@ describe('a home whose repository moved', () => {
     expect(JSON.parse(await box.state.read('ki/agents/mail/thread.json')).repository).toBe(repository)
   })
 
+  test('rebinds to the checkout with the same origin and work folder, recording the move', async () => {
+    const box = await sandbox()
+    await box.project.git(['init', '-q'])
+    await box.project.git(['remote', 'add', 'origin', 'git@github.com:Example/Moved-Repo.git'])
+    box.setRunner(runCommand)
+    const repository = await realpath(box.project.path)
+    await box.project.write('+/_WORK/hnr.reg.mail/work.md', definition('hnr.reg.mail'))
+    // Registered under another key, as after a rename the key does not follow.
+    await box.state.write(
+      'ki/registry.toml',
+      `schema = 1\n\n[repositories."renamed"]\nrepository = "https://github.com/example/moved-repo"\npath = "${repository}"\n`
+    )
+    await box.state.write(
+      'ki/agents/mail/thread.json',
+      JSON.stringify({
+        repository: '/nonexistent-old-root/old-name',
+        folder: '+/_WORK/hnr.reg.mail',
+        origin: 'https://github.com/example/moved-repo'
+      })
+    )
+
+    const decision = await box.run('ki agent decide mail Continue.', { now })
+    expect(decision.exitCode, decision.output).toBe(0)
+    expect(await box.project.read('+/_WORK/hnr.reg.mail/decisions.md')).toContain('Continue.')
+    expect(JSON.parse(await box.state.read('ki/agents/mail/thread.json'))).toEqual({
+      repository,
+      folder: '+/_WORK/hnr.reg.mail',
+      origin: 'https://github.com/example/moved-repo'
+    })
+    expect(JSON.parse(await box.state.read('ki/agents/mail/thread-moves.jsonl'))).toEqual({
+      at: '2026-10-07T19:30:00Z',
+      from: '/nonexistent-old-root/old-name',
+      to: repository,
+      by: 'origin remote and work folder'
+    })
+  })
+
+  test('rebinds a home recorded before its origin to the current checkout of the same name', async () => {
+    const box = await sandbox()
+    await box.project.git(['init', '-q'])
+    const repository = await realpath(box.project.path)
+    const name = repository.split('/').pop() as string
+    await box.project.git(['remote', 'add', 'origin', `https://github.com/example/${name}`])
+    box.setRunner(runCommand)
+    await box.project.write('+/_WORK/hnr.reg.mail/work.md', definition('hnr.reg.mail'))
+    await box.state.write(
+      'ki/registry.toml',
+      'schema = 1\n\n[repositories."other"]\nrepository = "https://github.com/example/other"\npath = "/nonexistent-other"\n'
+    )
+    await box.state.write(
+      'ki/agents/mail/thread.json',
+      JSON.stringify({ repository: `/nonexistent-old-root/${name}`, folder: '+/_WORK/hnr.reg.mail' })
+    )
+
+    const home = await box.run('ki agent home mail', { now })
+    expect(home.exitCode, home.output).toBe(0)
+    expect(home.stdout).toBe(`${repository}/+/_WORK/hnr.reg.mail\n`)
+    expect(JSON.parse(await box.state.read('ki/agents/mail/thread.json')).origin).toBe(
+      `https://github.com/example/${name}`
+    )
+  })
+
+  test('does not rebind to a checkout with the same origin that lacks the work folder', async () => {
+    const box = await sandbox()
+    await box.project.git(['init', '-q'])
+    await box.project.git(['remote', 'add', 'origin', 'https://github.com/example/moved-repo'])
+    box.setRunner(runCommand)
+    await box.state.write(
+      'ki/registry.toml',
+      'schema = 1\n\n[repositories."other"]\nrepository = "https://github.com/example/other"\npath = "/nonexistent-other"\n'
+    )
+    await box.state.write(
+      'ki/agents/mail/thread.json',
+      JSON.stringify({
+        repository: '/nonexistent-old-root/old-name',
+        folder: '+/_WORK/hnr.reg.mail',
+        origin: 'https://github.com/example/moved-repo'
+      })
+    )
+    await box.state.write('ki/agents/mail/tidy.report.md', '# Tidy\n')
+    const decision = await box.run('ki agent decide mail Continue.', { now })
+    expect(decision.exitCode).toBe(2)
+    expect(decision.stderr).toContain('is gone')
+    expect(await box.state.read('ki/agents/mail/tidy.report.md')).toBe('# Tidy\n')
+  })
+
   test('refuses to write when the repository is gone and not registered', async () => {
     const box = await sandbox()
     await box.state.write(
@@ -380,6 +466,53 @@ describe('a home whose repository moved', () => {
     const decision = await box.run('ki agent decide lost Continue.', { now })
     expect(decision.exitCode).toBe(2)
     expect(decision.stderr).toContain('is gone')
+  })
+})
+
+describe('a home whose work was renamed', () => {
+  const definition = (id: string): string =>
+    `---\nid: ${id}\nlevel: project\ntitle: Site\nworker: agent\nsupervisor: owner\n---\n`
+
+  test('follows the rename the package history shows, through each later one', async () => {
+    const box = await sandbox()
+    await box.project.git(['init', '-q'])
+    box.setRunner(runCommand)
+    const repository = await realpath(box.project.path)
+    await box.project.write('+/_WORK/hnr.web/work.md', definition('hnr.web'))
+    await box.project.write('+/_WORK/hnr.web/state.md', '# State\n')
+    await box.project.git(['add', '--all'])
+    await box.project.git(['commit', '-q', '-m', 'work'])
+    await box.project.git(['mv', '+/_WORK/hnr.web', '+/_WORK/hnr.site'])
+    await box.project.git(['commit', '-q', '-m', 'rename'])
+    await box.project.git(['mv', '+/_WORK/hnr.site', '+/_WORK/hnr.prj.sites'])
+    await box.project.write('+/_WORK/hnr.prj.sites/work.md', definition('hnr.prj.sites'))
+    await box.project.git(['add', '--all'])
+    await box.project.git(['commit', '-q', '-m', 'rename again'])
+    await box.state.write('ki/agents/web/thread.json', JSON.stringify({ repository, folder: '+/_WORK/hnr.web' }))
+    await box.state.write('ki/agents/web/tidy.report.md', '# Tidy\n')
+
+    const decision = await box.run('ki agent decide web Continue.', { now })
+    expect(decision.exitCode, decision.output).toBe(0)
+    expect(await box.project.read('+/_WORK/hnr.prj.sites/reports/tidy.report.md')).toBe('# Tidy\n')
+    expect(JSON.parse(await box.state.read('ki/agents/web/thread.json')).folder).toBe('+/_WORK/hnr.prj.sites')
+    expect(await box.project.read('+/_WORK/hnr.web/decisions.md').catch(() => undefined)).toBeUndefined()
+  })
+
+  test('refuses with one repair command when the history shows no rename', async () => {
+    const box = await sandbox()
+    await box.project.git(['init', '-q'])
+    box.setRunner(runCommand)
+    const repository = await realpath(box.project.path)
+    await box.state.write('ki/agents/web/thread.json', JSON.stringify({ repository, folder: '+/_WORK/hnr.web' }))
+    await box.state.write('ki/agents/web/tidy.report.md', '# Tidy\n')
+
+    const decision = await box.run('ki agent decide web Continue.', { now })
+    expect(decision.exitCode).toBe(2)
+    expect(decision.stderr).toBe(
+      `ki: error: web's work folder +/_WORK/hnr.web is gone from ${repository}; record its work folder with ki agent home web --work <id>\n`
+    )
+    expect(await box.state.read('ki/agents/web/tidy.report.md')).toBe('# Tidy\n')
+    expect(await box.project.read('+/_WORK/hnr.web/decisions.md').catch(() => undefined)).toBeUndefined()
   })
 })
 

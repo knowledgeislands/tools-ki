@@ -1703,6 +1703,29 @@ describe('ki agent close', () => {
     expect(await box.state.read('ki/agents/r/thread.json')).toContain(elsewhere)
   })
 
+  test('gates before moving reports, so a close that fails leaves the state folder as it was', async () => {
+    const box = await sandbox()
+    await setupRepository(box)
+    await register(box)
+    fakeProcesses(box)
+    await box.state.write('ki/agents/r/a.pid', '10\n')
+    await box.state.write('ki/agents/r/a.status', '21:00 CEST - still writing\n')
+    await box.state.write('ki/agents/r/a.report.md', '# A\n')
+
+    const blocked = await box.run('ki agent close r', { now })
+    expect(blocked.exitCode).toBe(1)
+    expect(blocked.stdout).toContain(
+      'blocker: a exited without DONE\nok: no dispatcher running\nok: queue empty\nok: no worktrees\nok: reports/a.report.md stays in the state folder until the blockers above clear\n'
+    )
+    expect(await box.state.read('ki/agents/r/a.report.md')).toBe('# A\n')
+    await expect(box.project.read('+/_WORK/ki.r/reports/a.report.md')).rejects.toThrow()
+
+    const moved = await box.run('ki agent close r --accept-exited a', { now })
+    expect(moved.exitCode).toBe(1)
+    expect(moved.stdout).toContain('ok: moved reports/a.report.md from the state folder into +/_WORK/ki.r\n')
+    expect(await box.project.read('+/_WORK/ki.r/reports/a.report.md')).toBe('# A\n')
+  })
+
   test('treats a run with no log as housed and surfaces a git status failure', async () => {
     const box = await sandbox()
     await setupRepository(box)

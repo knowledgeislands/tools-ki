@@ -2099,13 +2099,26 @@ as the home, for a new run or one homed elsewhere, once that folder holds
 .IR work.md ;
 it moves no file, so move the old folder's contents first. When the run's
 control record still names the work home it was made under, and that home is
-gone, as after the repository moved, it moves the record to the recorded home
-and says so: only a record made on this machine for the same work moves, its
-attempts keeping their identities with the old home listed as former. A record
-from another machine, for other work, or whose old home still exists stays,
-and a launch refuses it with
+gone, it moves the record to the recorded home and says so: only a record made
+on this machine moves, its attempts keeping their identities with the old home
+and work listed as former. A record from another machine, or whose old home
+still exists, stays, and a launch refuses it with
 .IR control-home-unverified ,
 naming the stored and current machine and home.
+Without
+.BR --work ,
+a home needs no repair when its repository moved or its work was renamed:
+a gone repository is followed to the checkout the local registry holds under
+its folder's name, or else to the one registered repository or current
+checkout whose
+.B origin
+remote is the one
+.I thread.json
+recorded and which holds the work folder, the move logged in
+.IR thread-moves.jsonl ;
+a gone work folder is followed to the one its legacy names, or the commits
+renaming its files, lead to, and the control record follows with it. A rename
+nothing shows refuses any write into the gone folder and names this command.
 .TP
 .B ki agent new <run> <name> [--repo <dir>]
 Write a prompt skeleton from the
@@ -2212,8 +2225,10 @@ log opens an entry, whether timestamped, dated or numbered; the gate names an
 entry by its number where it has one and otherwise by its heading.
 Before anything moves it refuses with exit 2 a home whose repository is a
 relative path, is not an existing directory, or lies in no repository the
-local registry holds, so that nothing is written where the home no longer is.
-It first moves into the thread folder any
+local registry holds, and a log or report bound for a work folder gone from
+its repository, so that nothing is written where the home no longer is.
+Once the agent, dispatcher, queue, worktree and temporary-folder checks pass,
+it moves into the thread folder any
 .I decisions.md
 or
 .I <name>.report.md
@@ -2224,7 +2239,9 @@ printing an
 .B ok
 line for each, so the folder then needs committing; a copy the thread folder
 holds, or has ever held in Git, supersedes the state folder's, which is
-archived with the run.
+archived with the run. Until those checks pass, it prints an
+.B ok
+line for each such file staying in the state folder and moves none.
 Beyond that move, on any blocker the command prints every line, exits 1 and
 changes nothing.
 .B --reconciled

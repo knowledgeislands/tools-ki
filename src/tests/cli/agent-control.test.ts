@@ -5305,7 +5305,8 @@ test('older v2 history without failure identities remains readable', async () =>
   expect((await f.run('ki agent status r')).exitCode).toBe(0)
 })
 
-test('completed renamed-package control history stays fenced while a fresh home group continues', async () => {
+test('a renamed package carries its control record, completed history kept under the former work', async () => {
+  // LAUNCHER-PATHS addendum (1 Nov 2026): runs holding a record under an older work id were refused on relaunch.
   const f = await fixture()
   await f.box.project.write(
     '+/_WORK/ki.r/work.md',
@@ -5316,25 +5317,70 @@ test('completed renamed-package control history stays fenced while a fresh home 
   await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
   await f.box.state.write('ki/agents/r/worker.report.md', '# Done\n')
   expect((await f.run('ki agent status r')).exitCode).toBe(0)
-  const journal = await f.box.state.read('ki/agents/r/control.journal.jsonl')
   const packet = await f.box.state.read('ki/agents/r/worker.launch.json')
+  const before = JSON.parse(await f.box.state.read('ki/agents/r/control.json'))
   await rename(`${f.box.project.path}/+/_WORK/ki.r`, `${f.box.project.path}/+/_WORK/ki.prj.r`)
   await f.box.project.write(
     '+/_WORK/ki.prj.r/work.md',
     '---\nid: ki.prj.r\nlevel: project\ntitle: Work\nworker: agent\nsupervisor: owner\n---\n'
   )
-  expect((await f.run('ki agent home r --work ki.prj.r')).exitCode).toBe(0)
+  // `ki.r` is the legacy name of `ki.prj.r`, so the record follows without `ki agent home`.
+  const continued = await f.run('ki agent queue r next brief.md --json')
+  expect(continued.exitCode, continued.output).toBe(0)
+  const after = JSON.parse(await f.box.state.read('ki/agents/r/control.json'))
+  expect(after.work).toBe('ki.prj.r')
+  expect(after.formerWorks).toEqual(['ki.r'])
+  expect(after.workHome).toContain('/+/_WORK/ki.prj.r')
+  expect(after.formerWorkHomes).toEqual([before.workHome])
+  expect(after.history[before.attempts.worker.token]).toEqual(before.history[before.attempts.worker.token])
+  expect(await f.box.state.read('ki/agents/r/worker.launch.json')).toBe(packet)
+})
+
+test('a moved checkout carries its control record to the checkout with the same origin and work folder', async () => {
+  // LAUNCHER-PATHS (1 Nov 2026): launches were refused with control-home-unverified after checkouts moved.
+  const f = await fixture()
+  await f.box.project.git(['remote', 'add', 'origin', 'https://github.com/example/project'])
+  expect((await f.launch()).exitCode).toBe(0)
+  f.set({ empty: true })
+  await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
+  expect((await f.run('ki agent status r')).exitCode).toBe(0)
+  const before = JSON.parse(await f.box.state.read('ki/agents/r/control.json'))
+  const old = await realpath(f.box.project.path)
+  const moved = `${await realpath(f.box.root.path)}/moved-checkout`
+  await rename(old, moved)
+  f.box.cd('../moved-checkout')
+  await f.box.state.write(
+    'ki/registry.toml',
+    `schema = 1\n\n[repositories."renamed"]\nrepository = "https://github.com/example/project"\npath = ${JSON.stringify(moved)}\n`
+  )
+  const continued = await f.run('ki agent queue r next brief.md --json')
+  expect(continued.exitCode, continued.output).toBe(0)
+  const after = JSON.parse(await f.box.state.read('ki/agents/r/control.json'))
+  expect(after.workHome).toBe(`${moved}/+/_WORK/ki.r`)
+  expect(after.formerWorkHomes).toEqual([before.workHome])
+  expect(after.work).toBe('ki.r')
+  expect(JSON.parse(await f.box.state.read('ki/agents/r/thread-moves.jsonl'))).toMatchObject({
+    from: old,
+    to: moved,
+    by: 'origin remote and work folder'
+  })
+})
+
+test('a package renamed where its history does not show it names the one repair command', async () => {
+  const f = await fixture()
+  expect((await f.launch()).exitCode).toBe(0)
+  f.set({ empty: true })
+  await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
+  expect((await f.run('ki agent status r')).exitCode).toBe(0)
+  await rename(`${f.box.project.path}/+/_WORK/ki.r`, `${f.box.project.path}/+/_WORK/ki.other`)
+  await f.box.project.write('+/_WORK/ki.other/work.md', '---\nid: ki.other\n---\n')
   const refused = await f.run('ki agent queue r next brief.md --json')
   expect(refused.exitCode).toBe(1)
   expect(refused.stderr).toContain('control-home-unverified')
-  expect(await f.box.state.read('ki/agents/r/control.journal.jsonl')).toBe(journal)
-  expect(await f.box.state.read('ki/agents/r/worker.launch.json')).toBe(packet)
-  expect((await f.run('ki agent home r-current --work ki.prj.r')).exitCode).toBe(0)
-  const continued = await f.run('ki agent queue r-current next brief.md --json')
+  expect(refused.stderr).toContain('next: record the work folder with ki agent home r --work <id>')
+  expect((await f.run('ki agent home r --work ki.other')).exitCode).toBe(0)
+  const continued = await f.run('ki agent queue r next brief.md --json')
   expect(continued.exitCode, continued.output).toBe(0)
-  const current = JSON.parse(await f.box.state.read('ki/agents/r-current/control.json'))
-  expect(current.work).toBe('ki.prj.r')
-  expect(current.workHome).toContain('/+/_WORK/ki.prj.r')
-  expect(current.machine).toBe((await f.state()).machine)
-  expect(await f.box.state.read('ki/agents/r/control.journal.jsonl')).toBe(journal)
+  const store = JSON.parse(await f.box.state.read('ki/agents/r/control.json'))
+  expect([store.work, store.formerWorks]).toEqual(['ki.other', ['ki.r']])
 })

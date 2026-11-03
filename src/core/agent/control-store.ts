@@ -6,7 +6,7 @@ import { KiError } from '../errors.ts'
 import { type AgentContext, checkName, instant, runDirectory } from './context.ts'
 import type { AgentEffectIdentity, AttemptIdentity, DependencyIdentity, ProcessIdentity } from './identities.ts'
 import { withRunLock } from './locking.ts'
-import { readThread, type ThreadHome, threadPath } from './thread.ts'
+import { formerWorkIds, movedFrom, readThread, repositoryPresent, type ThreadHome, threadPath } from './thread.ts'
 
 export type { AttemptIdentity } from './identities.ts'
 
@@ -67,6 +67,8 @@ export interface ControlStore {
   /** Homes the record was made under before its repository moved; their attempts stay valid. */
   readonly formerWorkHomes?: readonly string[] | undefined
   readonly work: string
+  /** Ids the work had when earlier attempts were made, before it was renamed. */
+  readonly formerWorks?: readonly string[] | undefined
   readonly attempts: Record<string, AttemptIdentity>
   readonly history: Record<string, AttemptIdentity>
   readonly entries: Record<string, QueueIdentity>
@@ -270,7 +272,9 @@ export const loadControl = async (directory: string): Promise<ControlStore | und
       parsed.nextIdentity < 0 ||
       (parsed.formerWorkHomes !== undefined &&
         (!Array.isArray(parsed.formerWorkHomes) ||
-          parsed.formerWorkHomes.some((former) => typeof former !== 'string' || !isAbsolute(former))))
+          parsed.formerWorkHomes.some((former) => typeof former !== 'string' || !isAbsolute(former)))) ||
+      (parsed.formerWorks !== undefined &&
+        (!Array.isArray(parsed.formerWorks) || parsed.formerWorks.some((former) => typeof former !== 'string')))
     )
       throw new Error('shape')
     if (
@@ -312,8 +316,23 @@ export const loadControl = async (directory: string): Promise<ControlStore | und
 export const controlHome = async (context: AgentContext, run: string): Promise<{ home: string; work: string }> => {
   const thread = await readThread(context, run)
   if (!thread) throw new KiError('control-home-unverified: the run has no recorded work home', 1)
-  return verifyWorkHome(thread)
+  return verifyRunHome(run, thread)
 }
+
+/** verifyWorkHome, its refusal naming the one command that repairs it. */
+export const verifyRunHome = (run: string, thread: ThreadHome): Promise<{ home: string; work: string }> =>
+  verifyWorkHome(thread).catch(async (error: unknown) => {
+    if (!(error instanceof KiError) || error.next !== undefined) throw error
+    // Each refusal names the one command that repairs it.
+    const gone = !(await repositoryPresent(thread.repository))
+    throw new KiError(
+      gone ? `${error.message} (repository ${thread.repository} is gone)` : `${error.message} (${threadPath(thread)})`,
+      error.exitCode,
+      gone
+        ? `register the moved checkout with ki registry add, or record the home with ki agent home ${run} --work <id> --repo <dir>`
+        : `record the work folder with ki agent home ${run} --work <id>`
+    )
+  })
 
 export const verifyWorkHome = async (thread: ThreadHome): Promise<{ home: string; work: string }> => {
   const home = await realpath(threadPath(thread)).catch(() => undefined)
@@ -344,11 +363,66 @@ export const newStore = async (context: AgentContext, run: string): Promise<Cont
 }
 
 /**
- * Moves the run's control record to its recorded work home once the home the record was made
- * under is gone, as after its repository moved. Only a record made on this machine for the same
- * work moves, so the machine check stands; its attempts keep their identities, the old home
- * listed as former. Returns the old home, or undefined when nothing moved: no record, one that
- * already names the home, or one that may not move, which a later launch refuses by name.
+ * The control record moved to the run's recorded work home once the home it was made under is
+ * gone, as after its repository moved or its work was renamed, or undefined when it may not
+ * move. Only a record made on this machine moves, so the machine check stands; its attempts keep
+ * their identities, the old home and work listed as former. Without `named` the work must be the
+ * same or one the work was known by before, as its legacy names or package history show;
+ * `ki agent home --work` names the work, and so moves a record whose work the history does not
+ * show.
+ */
+const movedStore = async (
+  context: AgentContext,
+  run: string,
+  store: ControlStore,
+  named = false
+): Promise<ControlStore | undefined> => {
+  const { home, work } = await controlHome(context, run)
+  if (
+    store.workHome === home ||
+    store.machine !== hostname() ||
+    (await stat(store.workHome).catch(() => undefined)) !== undefined
+  )
+    return undefined
+  if (!named) {
+    // Unasked, a record follows only a move the launcher can explain: its old home is the work's
+    // folder, under its present or a former id, in the repository now recorded or one the run
+    // moved from; any other changed home is refused as before.
+    const thread = (await readThread(context, run)) as ThreadHome
+    if (store.work !== work && !(await formerWorkIds(context, thread)).includes(store.work)) return undefined
+    const repositories = [thread.repository, ...(await movedFrom(context, run))]
+    const folders = [...new Set([thread.folder, `+/_WORK/${store.work}`])]
+    if (!repositories.some((repository) => folders.some((folder) => join(repository, folder) === store.workHome)))
+      return undefined
+  }
+  return {
+    ...store,
+    workHome: home,
+    formerWorkHomes: [...(store.formerWorkHomes ?? []), store.workHome],
+    ...(store.work === work ? {} : { work, formerWorks: [...(store.formerWorks ?? []), store.work] })
+  }
+}
+
+/** The store, moved to the run's work home and saved when its old home is gone; see movedStore. */
+const followedStore = async (
+  context: AgentContext,
+  run: string,
+  directory: string,
+  store: ControlStore,
+  named = false
+): Promise<ControlStore> => {
+  const moved = await movedStore(context, run, store, named)
+  if (moved === undefined) return store
+  await verifyStore(context, run, moved)
+  await saveControl(directory, moved)
+  return moved
+}
+
+/**
+ * Moves the run's control record to its recorded work home, as `ki agent home --work` asks once
+ * the home the record was made under is gone. Returns the old home, or undefined when nothing
+ * moved: no record, one that already names the home, or one that may not move, which a later
+ * launch refuses by name.
  */
 export const rehomeControl = async (context: AgentContext, run: string): Promise<string | undefined> => {
   const directory = runDirectory(context, run)
@@ -358,23 +432,9 @@ export const rehomeControl = async (context: AgentContext, run: string): Promise
     run,
     async () => {
       const store = await loadControl(directory)
-      const { home, work } = await controlHome(context, run)
-      if (
-        !store ||
-        store.workHome === home ||
-        store.machine !== hostname() ||
-        store.work !== work ||
-        (await stat(store.workHome).catch(() => undefined)) !== undefined
-      )
-        return undefined
-      const moved: ControlStore = {
-        ...store,
-        workHome: home,
-        formerWorkHomes: [...(store.formerWorkHomes ?? []), store.workHome]
-      }
-      await verifyStore(context, run, moved)
-      await saveControl(directory, moved)
-      return store.workHome
+      if (!store) return undefined
+      const moved = await followedStore(context, run, directory, store, true)
+      return moved === store ? undefined : store.workHome
     },
     100,
     false
@@ -387,16 +447,17 @@ export const verifyStore = async (context: AgentContext, run: string, store: Con
     throw new KiError(
       `control-home-unverified: foreign machine or changed work home (stored machine ${store.machine}, home ${store.workHome}; current machine ${hostname()}, home ${home})`,
       1,
-      store.machine === hostname() && store.work === work && store.workHome !== home
-        ? `once ${store.workHome} is gone, move the record with ki agent home ${run} --work ${work}`
+      store.machine === hostname() && store.workHome !== home
+        ? `${(await stat(store.workHome).catch(() => undefined)) === undefined ? '' : `once ${store.workHome} is gone, `}move the record with ki agent home ${run} --work ${work}`
         : undefined
     )
   const homes = [home, ...(store.formerWorkHomes ?? [])]
+  const works = [work, ...(store.formerWorks ?? [])]
   if (
     [...Object.values(store.attempts), ...Object.values(store.history)].some(
       (attempt) =>
         attempt.run !== run ||
-        attempt.work !== work ||
+        !works.includes(attempt.work) ||
         !homes.includes(attempt.workHome) ||
         attempt.machine !== store.machine
     )
@@ -464,7 +525,9 @@ export const controlTransaction = async <T>(
     'control',
     async () => {
       try {
-        const recovered = await loadControl(directory)
+        const loaded = await loadControl(directory)
+        // A record whose home moved with its checkout or work follows it rather than refuse.
+        const recovered = loaded && verify ? await followedStore(context, run, directory, loaded) : loaded
         if (recovered && verify) await verifyStore(context, run, recovered)
         activeTransactions.set(directory, recovered)
         return await action(directory)

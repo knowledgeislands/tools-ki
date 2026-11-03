@@ -182,8 +182,14 @@ const gateLines = async (
   const worktrees = await entries(join(directory, 'worktrees'))
   lines.push(worktrees.length ? blocker(`worktrees/ holds ${listed(worktrees)}`) : ok('no worktrees'))
   lines.push(...(await temporaryLines(context, request)))
-  const adopted = await adoptStateFiles(context, request.run, thread)
-  lines.push(...adopted.map((file) => ok(`moved ${file} from the state folder into ${thread.folder}`)))
+  // Gated before the move, so that a close that fails leaves the state folder as it found it.
+  if (lines.some((line) => !line.ok)) {
+    const pending = await adoptStateFiles(context, request.run, thread, false)
+    lines.push(...pending.map((file) => ok(`${file} stays in the state folder until the blockers above clear`)))
+  } else {
+    const adopted = await adoptStateFiles(context, request.run, thread)
+    lines.push(...adopted.map((file) => ok(`moved ${file} from the state folder into ${thread.folder}`)))
+  }
   const decided = await decisionLines(context, thread, request)
   lines.push(...decided.lines, await folderLine(context, thread))
   return { lines, decisions: decided.decisions, log: decided.log }
@@ -227,9 +233,10 @@ const note = (
  * Retires a finished run's state folder once the reconcile gate passes: no agent or
  * dispatcher alive, every agent `DONE` or accepted, the queue and worktrees empty, every
  * decision housed, every agent's temporary folder empty, and the tracked thread folder
- * committed and clean; it then removes the run's temporary folders. It first moves any
- * log or report the run kept in its state folder into the thread folder, which then needs
- * committing; beyond that move, on any blocker it reports every line and changes nothing. It
+ * committed and clean; it then removes the run's temporary folders. Once the agents, queue,
+ * worktrees and temporary folders pass, it moves any log or report the run kept in its state
+ * folder into the thread folder, which then needs committing; beyond that move, on any blocker
+ * it reports every line and changes nothing. It
  * archives by default, so a run folder never goes while anything durable exists only inside
  * it, and deletes only on `--delete`. Before any of that it refuses a home whose repository is
  * relative, gone, or in no registered repository, so that nothing is written where the home

@@ -1,12 +1,12 @@
 import { appendFile, copyFile, mkdir, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
-import { gitWorkingTreeRoot } from '../runtime/git.ts'
+import { gitPrimaryWorkingTreeRoot, gitWorkingTreeRoot } from '../runtime/git.ts'
 import { requiredLocalRegistry } from '../storage/local-registry.ts'
 import { workNames } from '../work/identity.ts'
 import { capitalRoot } from '../work/registry.ts'
 import { isWorkId, readWorkDefinitions, WORK_DIRECTORY, workSlug } from '../work/status.ts'
-import { type AgentContext, git, localTime, read, runDirectory } from './context.ts'
+import { type AgentContext, git, instant, localTime, read, runDirectory } from './context.ts'
 
 /**
  * Where a run's knowledge files live: the owning repository's tracked work folder
@@ -21,6 +21,11 @@ export interface ThreadHome {
   readonly repository: string
   /** The thread folder, relative to the repository. */
   readonly folder: string
+  /**
+   * The repository's `origin` remote when the home was recorded, as `https://<host>/<owner>/<repo>`
+   * in lower case, by which a moved checkout is found again; absent from a home recorded before it.
+   */
+  readonly origin?: string | undefined
 }
 
 /** The work folder of the dotted work id, relative to the repository. */
@@ -79,7 +84,7 @@ export const followThread = async (context: AgentContext, run: string): Promise<
   const recorded = await readThread(context, run)
   if (recorded === undefined || isWorkHome(recorded)) return recorded
   const folder = await runWorkFolder(recorded.repository, run).catch(() => undefined)
-  return folder === undefined ? undefined : recordThread(context, run, { repository: recorded.repository, folder })
+  return folder === undefined ? undefined : recordThread(context, run, { ...recorded, folder })
 }
 
 /** The absolute thread folder. */
@@ -244,12 +249,13 @@ export const heldAs = async (
  * stays to be archived with the run, so that a report the thread has retired stays retired. A
  * report goes where the launcher homes it, beside its brief or in `reports/`, and a copy in any
  * place a reader looks supersedes it. Returns the paths moved, relative to the thread folder, in
- * name order.
+ * name order; with `move` false it moves nothing and returns the paths it would move.
  */
 export const adoptStateFiles = async (
   context: AgentContext,
   run: string,
-  home: ThreadHome
+  home: ThreadHome,
+  move = true
 ): Promise<readonly string[]> => {
   const directory = runDirectory(context, run)
   // Resolving the home records `thread.json`, so the state folder always exists here.
@@ -261,7 +267,7 @@ export const adoptStateFiles = async (
       `${run} is homed in the retired ${home.folder}; record its work folder with ki agent home ${run} --work <id>`,
       2
     )
-  if (files.length) await requireRepository(run, home)
+  if (files.length) await requireWorkFolder(run, home)
   const moved: string[] = []
   for (const file of files) {
     const name = file.endsWith('.report.md') ? file.slice(0, -'.report.md'.length) : undefined
@@ -270,11 +276,12 @@ export const adoptStateFiles = async (
     const target = join(threadPath(home), places[0] as string)
     if ((await Promise.all(places.map((place) => exists(join(threadPath(home), place))))).some(Boolean)) continue
     if (await held(context, home, places)) continue
+    moved.push(places[0] as string)
+    if (!move) continue
     await mkdir(dirname(target), { recursive: true })
     // Copy then remove: the state folder and the repository may sit on different devices.
     await copyFile(join(directory, file), target)
     await rm(join(directory, file))
-    moved.push(places[0] as string)
   }
   return moved
 }
@@ -302,24 +309,156 @@ export const readThread = async (context: AgentContext, run: string): Promise<Th
   const home = await relocatedHome(context, run, parsed)
   if (!isWorkHome(home)) return home
   const id = home.folder.slice(`${WORK_DIRECTORY}/`.length)
-  const folder = await resolvedWorkFolder(home.repository, id)
-  return folder === undefined ? home : { repository: home.repository, folder }
+  const folder =
+    (await resolvedWorkFolder(home.repository, id)) ??
+    ((await holdsWork(home.repository, id)) || !(await repositoryPresent(home.repository))
+      ? undefined
+      : await renamedWorkFolder(context, home.repository, id))
+  return folder === undefined ? home : { ...home, folder }
 }
 
 /**
- * A recorded home whose repository has moved is found again through the local
- * repository registry, by the repository's key, and the new path recorded, so
- * moving a checkout means updating the registry, not every run. A home whose
- * repository is neither on disk nor registered is returned as recorded, and
- * nothing writes into it: see requireRepository.
+ * The work folder a gone one was renamed to, as the package history shows it: the one folder
+ * every rename of its files leads to, followed through each later rename until a folder holds
+ * `work.md`. A history that shows none, or a split, leaves the choice to `ki agent home --work`.
+ */
+const renamedWorkFolder = async (
+  context: AgentContext,
+  repository: string,
+  id: string
+): Promise<string | undefined> => {
+  const seen = new Set([id])
+  for (let current = id; ; ) {
+    const from = `${workFolder(current)}/`
+    // `--full-diff` keeps the new side of a rename the pathspec alone would show as a deletion.
+    const renamed = await git(context, repository, [
+      'log',
+      '--all',
+      '-M',
+      '--full-diff',
+      '--diff-filter=R',
+      '--name-status',
+      '--format=',
+      '--',
+      from
+    ]).catch(() => undefined)
+    if (renamed?.exitCode !== 0) return undefined
+    const targets = new Set(
+      renamed.output.split('\n').flatMap((line) => {
+        const [, source = '', target = ''] = line.split('\t')
+        const next = target.split('/')[2]
+        return source.startsWith(from) && target.startsWith(`${WORK_DIRECTORY}/`) && next && next !== current
+          ? [next]
+          : []
+      })
+    )
+    const [next] = targets
+    if (targets.size !== 1 || next === undefined || seen.has(next)) return undefined
+    if (await holdsWork(repository, next)) return workFolder(next)
+    seen.add(next)
+    current = next
+  }
+}
+
+/**
+ * The ids the work in the home was known by before: its legacy names and the work folders the
+ * package history shows it renamed from, so that a control record made under one still binds.
+ */
+export const formerWorkIds = async (context: AgentContext, home: ThreadHome): Promise<readonly string[]> => {
+  const id = home.folder.slice(`${WORK_DIRECTORY}/`.length)
+  const definition = (await readWorkDefinitions(home.repository).catch(() => [])).find((work) => work.id === id)
+  const names = definition === undefined ? [] : workNames(definition.id, definition.level)
+  const folders = (await earlierNames(context, home)).filter((folder) => folder.startsWith(`${WORK_DIRECTORY}/`))
+  return [...new Set([...names, ...folders.map((folder) => folder.slice(`${WORK_DIRECTORY}/`.length))])].filter(
+    (name) => name !== id
+  )
+}
+
+/**
+ * A recorded home whose repository has moved is found again and the new path recorded, so moving
+ * a checkout means updating nothing by hand: Kris asked on 1 November 2026 for it to be fixed "so
+ * we don't have to deal with this every time". It is found through the local repository registry
+ * by the repository's key, or else as the one registered repository or current checkout with the
+ * same `origin` remote that holds the home's work folder. Each move is recorded in the run's
+ * `thread-moves.jsonl`. A home found neither way is returned as recorded, and nothing writes
+ * into it: see requireRepository.
  */
 const relocatedHome = async (context: AgentContext, run: string, home: ThreadHome): Promise<ThreadHome> => {
   // A relative home names no place of its own, so it is never followed: see requireRepository.
   if (!isAbsolute(home.repository) || (await repositoryPresent(home.repository))) return home
-  const key = basename(home.repository)
-  const entry = (await requiredLocalRegistry(context.stateDirectory)).find((candidate) => candidate.key === key)
-  if (entry === undefined || !(await exists(entry.path))) return home
-  return recordThread(context, run, { repository: entry.path, folder: home.folder })
+  const found = await movedRepository(context, home)
+  if (found === undefined) return home
+  await appendFile(
+    join(runDirectory(context, run), 'thread-moves.jsonl'),
+    `${JSON.stringify({ at: instant(context), from: home.repository, to: found.repository, by: found.by })}\n`
+  )
+  return recordThread(context, run, { ...home, repository: found.repository })
+}
+
+/** The repositories the run's home was recorded in before each move `thread-moves.jsonl` logs, oldest first. */
+export const movedFrom = async (context: AgentContext, run: string): Promise<readonly string[]> =>
+  ((await read(join(runDirectory(context, run), 'thread-moves.jsonl'))) ?? '').split('\n').flatMap((line) => {
+    try {
+      const { from } = JSON.parse(line) as { readonly from?: unknown }
+      return typeof from === 'string' ? [from] : []
+    } catch {
+      return []
+    }
+  })
+
+/** `https://<host>/<owner>/<repo>` in lower case, from an HTTPS or SSH remote, so that two spellings of one remote match. */
+export const remoteKey = (url: string): string =>
+  url
+    .trim()
+    .replace(/^ssh:\/\/git@([^/]+)\//, 'https://$1/')
+    .replace(/^git@([^:]+):/, 'https://$1/')
+    .replace(/\/+$/, '')
+    .replace(/\.git$/, '')
+    .toLowerCase()
+
+const originOf = async (context: AgentContext, repository: string): Promise<string | undefined> => {
+  const result = await git(context, repository, ['remote', 'get-url', 'origin']).catch(() => undefined)
+  return result?.exitCode === 0 && result.output.trim() ? remoteKey(result.output) : undefined
+}
+
+/** Whether the repository holds the home's work folder, under its id or a name it now goes by. */
+const holdsFolder = async (repository: string, folder: string): Promise<boolean> => {
+  const id = folder.slice(`${WORK_DIRECTORY}/`.length)
+  return (
+    (await holdsWork(repository, id)) || (await resolvedWorkFolder(repository, id).catch(() => undefined)) !== undefined
+  )
+}
+
+/**
+ * The checkout a gone repository moved to: the registered one under its key, or the one
+ * registered repository or current checkout whose `origin` is the one recorded, or, for a home
+ * recorded before its origin was, whose origin names a repository of the gone one's name, and
+ * which holds the home's work folder. Two such checkouts are no answer.
+ */
+const movedRepository = async (
+  context: AgentContext,
+  home: ThreadHome
+): Promise<{ readonly repository: string; readonly by: string } | undefined> => {
+  const name = basename(home.repository)
+  const registry = await requiredLocalRegistry(context.stateDirectory)
+  const keyed = registry.find((candidate) => candidate.key === name)
+  if (keyed !== undefined && (await exists(keyed.path))) return { repository: keyed.path, by: `registry key ${name}` }
+  const matches = (origin: string | undefined): boolean =>
+    origin !== undefined &&
+    (home.origin === undefined ? origin.split('/').pop() === name.toLowerCase() : origin === home.origin)
+  const current = await gitPrimaryWorkingTreeRoot(context.workingDirectory, context.runner, context.environment).catch(
+    () => undefined
+  )
+  const candidates = [
+    ...registry.filter((entry) => matches(remoteKey(entry.repository))).map((entry) => entry.path),
+    ...(current !== undefined && matches(await originOf(context, current)) ? [current] : [])
+  ]
+  const found = new Set<string>()
+  for (const candidate of candidates)
+    if ((await repositoryPresent(candidate)) && (!isWorkHome(home) || (await holdsFolder(candidate, home.folder))))
+      found.add(await realpath(candidate))
+  const [repository] = found
+  return found.size === 1 && repository !== undefined ? { repository, by: 'origin remote and work folder' } : undefined
 }
 
 const exists = async (path: string): Promise<boolean> => (await stat(path).catch(() => undefined)) !== undefined
@@ -342,6 +481,20 @@ const requireRepository = async (run: string, home: ThreadHome): Promise<void> =
   if (!(await repositoryPresent(home.repository)))
     throw new KiError(
       `${run}'s home repository ${home.repository} is gone and ${basename(home.repository)} is not registered elsewhere; register it with ki registry add, or record a new home with ki agent home ${run} --work <id>`,
+      2
+    )
+}
+
+/**
+ * Refuses to write into a home whose work folder is gone from its repository, rather than
+ * recreate it there: a work renamed where the package history does not show it needs its new id.
+ */
+const requireWorkFolder = async (run: string, home: ThreadHome): Promise<void> => {
+  await requireRepository(run, home)
+  const id = home.folder.slice(`${WORK_DIRECTORY}/`.length)
+  if (isWorkHome(home) && !(await holdsWork(home.repository, id)))
+    throw new KiError(
+      `${run}'s work folder ${home.folder} is gone from ${home.repository}; record its work folder with ki agent home ${run} --work <id>`,
       2
     )
 }
@@ -524,10 +677,14 @@ export const rehomeThread = async (
   return recordThread(context, run, { repository, folder })
 }
 
+/** Records the home with its repository's `origin`, read once when the home does not carry it already. */
 const recordThread = async (context: AgentContext, run: string, home: ThreadHome): Promise<ThreadHome> => {
+  const origin =
+    home.origin ?? ((await repositoryPresent(home.repository)) ? await originOf(context, home.repository) : undefined)
+  const recorded: ThreadHome = { repository: home.repository, folder: home.folder, ...(origin ? { origin } : {}) }
   await mkdir(runDirectory(context, run), { recursive: true })
-  await writeFile(threadFile(context, run), `${JSON.stringify(home)}\n`)
-  return home
+  await writeFile(threadFile(context, run), `${JSON.stringify(recorded)}\n`)
+  return recorded
 }
 
 /** The `ki-coordination` decision classes, which tell the `close` gate what home an entry needs. */
@@ -668,7 +825,7 @@ export const appendDecision = async (
   let path: string
   if (request.log === undefined) {
     const home = await threadHome(context, run, request.repo)
-    await requireRepository(run, home)
+    await requireWorkFolder(run, home)
     adopted = await adoptStateFiles(context, run, home)
     path = decisionsLog(home)
   } else path = resolve(context.workingDirectory, request.log)

@@ -34,8 +34,8 @@ import {
   pendingControl,
   type QueueIdentity,
   saveControl,
-  verifyStore,
-  verifyWorkHome
+  verifyRunHome,
+  verifyStore
 } from './control-store.ts'
 import {
   deriveEvents,
@@ -395,7 +395,7 @@ const preflight = async (context: AgentContext, candidate: LaunchRequest): Promi
   await footer(context, request.rules)
   await Promise.all((request.allow ?? []).map((name) => grant(context, name)))
   const thread = await threadHome(context, request.run, request.repo, false, request.workdir, true)
-  await verifyWorkHome(thread)
+  await verifyRunHome(request.run, thread)
   refuseWorkReport(body, runDirectory(context, request.run), thread, request.name)
   return request
 }
