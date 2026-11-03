@@ -294,6 +294,42 @@ describe('[ki acquire import --adapter granola]', () => {
     expect(failure.output).toContain('complete enumeration cannot be proven')
   })
 
+  test('splits a date window Granola pages, in structured and textual listings', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      { key: 'target', repository: 'https://github.com/example/target', path: repository, unfoldered: true }
+    ])
+    const meeting: GranolaMeetingFixture = { id: 'meeting-a', date: '2026-01-02', title: 'One' }
+    for (const format of ['structured', 'text'] as const) {
+      const source = granolaFixtureRunner({
+        meetings: [meeting],
+        meetingResponseFormat: format === 'text' ? 'text' : 'structured'
+      })
+      const windows: string[] = []
+      box.setRunner(async (command_, arguments_, environment) => {
+        const response = await source.runner(command_, arguments_, environment)
+        if (arguments_[1] !== 'granola.list_meetings') return response
+        const parsed = JSON.parse(String(arguments_[arguments_.indexOf('--args') + 1])) as Record<string, unknown>
+        windows.push(`${parsed['custom_start']}..${parsed['custom_end']}`)
+        if (parsed['custom_start'] !== '2026-01-01' || parsed['custom_end'] !== '2026-01-03') return response
+        const body = JSON.parse(response.output) as Record<string, unknown>
+        if (format === 'structured')
+          return { ...response, output: JSON.stringify({ ...body, pagination: { has_more: true } }) }
+        const [block] = body['content'] as { text: string }[]
+        return {
+          ...response,
+          output: JSON.stringify({
+            content: [{ type: 'text', text: `${block?.text}\n<pagination has_more="true" />` }]
+          })
+        }
+      })
+      const result = await box.run(command(repository, '--dry-run'))
+      expect(result.exitCode, result.output).toBe(0)
+      expect(windows).toEqual(['2026-01-01..2026-01-03', '2026-01-01..2026-01-02', '2026-01-02..2026-01-03'])
+    }
+  })
+
   test('fails closed on receiver conflicts and permits explicit intentional duplication', async () => {
     const box = await sandbox()
     const target = await box.root.mkdir('target')
@@ -1645,7 +1681,7 @@ describe('[ki acquire central Granola inbox]', () => {
     expect(empty.output).toContain('Unmatched folder: unknown · Empty unexpected folder')
   })
 
-  test('reconciles screenshot attachments to the listed count and withholds only a meeting whose attachments differ', async () => {
+  test('takes the attachment inventory as the reference and captures screenshots and photos only when every count agrees', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('inbox')
     await setupReceivers(box, [
@@ -1659,46 +1695,85 @@ describe('[ki acquire central Granola inbox]', () => {
       }
     ])
     const attachment = (index: number): string => `20000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`
-    const screenshots = (from: number, count: number) =>
-      Array.from({ length: count }, (_, index) => ({ id: attachment(from + index), type: 'screenshot' }))
-    const scenario = '4ffa813b-68a8-4bf0-b798-4793546c4d3a'
-    const differing = '10000000-0000-4000-8000-000000000002'
-    const plain = '10000000-0000-4000-8000-000000000003'
-    const meeting = (id: string, title: string, count: number, attachments: readonly unknown[]) => ({
+    // Granola's detail leaves screenshots untyped and marks only photos.
+    const listed = (from: number, count: number, type?: string) =>
+      Array.from({ length: count }, (_, index) => ({ id: attachment(from + index), ...(type ? { type } : {}) }))
+    const meeting = (
+      id: string,
+      title: string,
+      count: number | undefined,
+      attachments: readonly unknown[],
+      extra: Partial<GranolaMeetingFixture> = {}
+    ): GranolaMeetingFixture => ({
       id,
       date: '2026-01-02',
       title,
       folderIds: ['phase3'],
-      listing: { screenshot_count: count, folders: [{ id: 'phase3' }] },
-      detail: { attachments }
+      listing: { ...(count === undefined ? {} : { attachment_count: count }), folders: [{ id: 'phase3' }] },
+      detail: { attachments },
+      ...extra
     })
-    // Shaped like the failing meeting: 25 screenshots, one identity repeated and one attachment that is not a screenshot.
+    const scenario = '4ffa813b-68a8-4bf0-b798-4793546c4d3a'
+    const untyped = '10000000-0000-4000-8000-000000000002'
+    const short = '10000000-0000-4000-8000-000000000003'
+    const total = '10000000-0000-4000-8000-000000000004'
+    const omitted = '10000000-0000-4000-8000-000000000005'
+    const other = '10000000-0000-4000-8000-000000000006'
+    const plain = '10000000-0000-4000-8000-000000000007'
+    const disagree = '10000000-0000-4000-8000-000000000008'
+    const tooLarge = '10000000-0000-4000-8000-000000000009'
+    const noTotal = '10000000-0000-4000-8000-000000000010'
+    const video = '10000000-0000-4000-8000-000000000011'
+    const photos = listed(22, 3, 'photo')
     const source = granolaFixtureRunner({
       attachments: true,
       folders: [{ id: 'phase3', title: 'Phase 3' }],
       meetings: [
-        meeting(scenario, 'Scenario B preparation', 25, [
-          ...screenshots(0, 25),
-          { id: attachment(3), type: 'screenshot' },
-          { id: attachment(90), type: 'file' }
-        ]),
-        meeting(differing, 'Differing', 3, [...screenshots(30, 2), { id: 'not-a-uuid', type: 'screenshot' }]),
-        meeting(plain, 'Plain', 0, [])
+        // Shaped like Scenario B: more attachments than the detail used to name, photos among them, some left out.
+        meeting(scenario, 'Scenario B preparation', 25, [...listed(0, 22), ...photos], {
+          attachmentTypes: Object.fromEntries(photos.map((photo) => [photo.id, 'photo'])),
+          leftOut: [attachment(1), attachment(23)]
+        }),
+        meeting(untyped, 'Untyped', 2, listed(30, 2), { attachmentTypes: { [attachment(31)]: null } }),
+        meeting(short, 'Short', 3, listed(40, 2)),
+        meeting(total, 'Total', 2, listed(50, 2), { attachmentTotal: 3 }),
+        meeting(omitted, 'Omitted', 2, [...listed(60, 1), { id: 'not-a-uuid' }, ...listed(60, 1)]),
+        meeting(other, 'Other', 2, [...listed(70, 1), { id: attachment(71), kind: 'document' }]),
+        meeting(disagree, 'Disagree', 1, listed(80, 1, 'photo')),
+        meeting(tooLarge, 'Too large', 1, listed(90, 1), { tooLarge: [attachment(90)] }),
+        meeting(noTotal, 'No total', 1, listed(95, 1), { attachmentTotal: -1 }),
+        meeting(video, 'Video', 1, listed(97, 1), { attachmentTypes: { [attachment(97)]: 'video' } }),
+        meeting(plain, 'Plain', undefined, [])
       ]
     })
     box.setRunner(source.runner)
     const preview = await box.run(command(repository, '--dry-run'))
     expect(preview.exitCode, preview.output).toBe(0)
-    expect(preview.output).toContain('Meetings: 2 new, 0 refreshed, 0 kept, 1 withheld')
-    expect(preview.output).toContain(
-      `Withheld: ${differing} · Granola lists 3 screenshots but the detail names 2 screenshot attachments; invalid identities: "not-a-uuid"; not captured until they match`
+    expect(preview.output).toContain('Meetings: 2 new, 0 refreshed, 0 kept, 9 withheld')
+    const withheld = (id: string, reason: string) =>
+      expect(preview.output).toContain(`Withheld: ${id} · ${reason}; not captured until they match`)
+    withheld(untyped, `Granola's attachment tool gives no type for ${attachment(31)}`)
+    withheld(short, 'Granola counts 3 attachments but the detail names 2')
+    withheld(total, 'Granola counts 2 attachments but its attachment tool holds 3')
+    withheld(
+      omitted,
+      `Granola counts 2 attachments but the detail names 1; repeated: ${attachment(60)}; invalid identities: "not-a-uuid"`
     )
-    expect(preview.output).toContain('Attachments: 25 screenshots across 2 verified MCP inventories')
+    withheld(
+      other,
+      `Granola counts 2 attachments but the detail names 2; not screenshots or photos: ${attachment(71)} (document)`
+    )
+    withheld(disagree, `Granola's detail types ${attachment(80)} as photo but its attachment tool as screenshot`)
+    withheld(tooLarge, `Granola left out attachment ${attachment(90)} even when asked for it alone`)
+    withheld(noTotal, "Granola's attachment tool gave no total for the meeting")
+    withheld(video, `Granola's attachment tool types ${attachment(97)} as video`)
+    expect(preview.output).toContain('Attachments: 25 (22 screenshots, 3 photos) across 2 verified MCP inventories')
     expect(await lstat(join(repository, 'captures')).catch(() => undefined)).toBeUndefined()
+    // A batch that loses attachments is read again one attachment at a time.
     const requested = source.calls
-      .filter((call) => call.tool === 'get_meeting_attachment')
-      .flatMap((call) => call.arguments['attachment_ids'] as string[])
-    expect(requested).toEqual(screenshots(0, 25).map((entry) => entry.id))
+      .filter((call) => call.tool === 'get_meeting_attachment' && call.arguments['meeting_id'] === scenario)
+      .map((call) => (call.arguments['attachment_ids'] as string[] | undefined)?.length ?? 0)
+    expect(requested).toEqual([0, 5, 1, 1, 1, 1, 1, 5, 5, 5, 5, 1, 1, 1, 1, 1])
 
     const imported = await box.run(command(repository))
     expect(imported.exitCode, imported.output).toBe(0)
@@ -1710,9 +1785,17 @@ describe('[ki acquire central Granola inbox]', () => {
     )
     expect(manifest.expected_count).toBe(25)
     expect(manifest.assets).toHaveLength(25)
+    const types = manifest.assets.map((asset: { metadata: Record<string, unknown> }) => asset.metadata['type'])
+    expect(types.filter((type: string) => type === 'photo')).toHaveLength(3)
+    expect(types.filter((type: string) => type === 'screenshot')).toHaveLength(22)
+    // Signed links expire within minutes and open the file for anyone holding them, so they are not kept.
+    expect(JSON.stringify(manifest)).not.toContain('files.example.test')
+    expect(JSON.stringify(manifest)).not.toContain('url_expires_at')
+    const document = await readFile(join(directory, packages[1] as string, 'meeting.md'), 'utf8')
+    expect(document).toContain('attachment_state: verified-mcp')
   })
 
-  test('reports every kind of screenshot difference against the listed count', async () => {
+  test('withholds a meeting whose detail leaves attachments out even when read alone', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('inbox')
     await setupReceivers(box, [
@@ -1725,31 +1808,65 @@ describe('[ki acquire central Granola inbox]', () => {
         folderTerritories: { one: 'legal' }
       }
     ])
-    const id = '10000000-0000-4000-8000-000000000004'
-    const repeated = '20000000-0000-4000-8000-000000000001'
-    const other = '20000000-0000-4000-8000-000000000002'
-    box.setRunner(
-      granolaFixtureRunner({
-        attachments: true,
-        folders: [{ id: 'one', title: 'Legal' }],
-        meetings: [
-          {
-            id,
-            date: '2026-01-02',
-            title: 'Repeated',
-            folderIds: ['one'],
-            listing: { screenshot_count: 3 },
-            detail: { attachments: [{ id: repeated }, { attachment_id: repeated }, { id: other, kind: 'document' }] }
-          }
-        ]
-      }).runner
-    )
+    const id = '10000000-0000-4000-8000-000000000010'
+    const quiet = '10000000-0000-4000-8000-000000000011'
+    const runner = granolaFixtureRunner({
+      attachments: true,
+      meetingResponseFormat: 'text',
+      folders: [{ id: 'one', title: 'Legal' }],
+      meetings: [{ id, date: '2026-01-02', title: 'Capped', folderIds: ['one'] }]
+    }).runner
+    const calls: string[] = []
+    box.setRunner(async (command_, arguments_, environment) => {
+      const tool = String(arguments_[1] ?? '').replace('granola.', '')
+      const parsed = (
+        arguments_.includes('--args') ? JSON.parse(String(arguments_[arguments_.indexOf('--args') + 1])) : {}
+      ) as Record<string, unknown>
+      calls.push(`${tool}:${JSON.stringify(parsed['meeting_ids'] ?? '')}`)
+      if (tool === 'list_meetings' && parsed['folder_id'] !== undefined)
+        return {
+          exitCode: 0,
+          output: JSON.stringify({
+            content: [
+              {
+                type: 'text',
+                text: `<meetings_data count="2"><meeting id="${id}" title="Capped" date="2026-01-02" attachment_count="21"><folders><folder id="one" /></folders></meeting><meeting id="${quiet}" title="Quiet" date="2026-01-02"><folders><folder id="one" /></folders></meeting></meetings_data>`
+              }
+            ]
+          })
+        }
+      if (tool === 'list_meetings')
+        return {
+          exitCode: 0,
+          output: JSON.stringify({ content: [{ type: 'text', text: '<meetings_data count="0" />' }] })
+        }
+      if (tool === 'get_meetings') {
+        const ids = parsed['meeting_ids'] as string[]
+        const capped = `<meeting id="${id}" title="Capped" date="2026-01-02"><attachments attachments_omitted="1"><attachment id="20000000-0000-4000-8000-000000000001" at="0:00"></attachment></attachments></meeting>`
+        const meetings = ids.map((meetingId) =>
+          meetingId === id ? capped : `<meeting id="${quiet}" title="Quiet" date="2026-01-02"></meeting>`
+        )
+        return {
+          exitCode: 0,
+          output: JSON.stringify({
+            content: [
+              { type: 'text', text: `<meetings_data count="${ids.length}">${meetings.join('')}</meetings_data>` }
+            ]
+          })
+        }
+      }
+      return runner(command_, arguments_, environment)
+    })
     const result = await box.run(command(repository))
     expect(result.exitCode, result.output).toBe(0)
     expect(result.output).toContain(
-      `Withheld: ${id} · Granola lists 3 screenshots but the detail names 1 screenshot attachments; repeated: ${repeated}; not screenshots: ${other} (document)`
+      `Withheld: ${id} · Granola counts 21 attachments but the detail names 1; the detail left 1 out`
     )
-    expect(await lstat(join(repository, 'captures')).catch(() => undefined)).toBeUndefined()
+    // The batch read is repeated for the capped meeting alone before its inventory is judged.
+    expect(calls.filter((call) => call.startsWith('get_meetings'))).toEqual([
+      `get_meetings:${JSON.stringify([id, quiet])}`,
+      `get_meetings:${JSON.stringify([id])}`
+    ])
   })
 
   test('keeps identities flaggable when listing titles or dates and folder titles are omitted', async () => {

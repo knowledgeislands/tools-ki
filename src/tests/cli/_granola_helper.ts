@@ -9,6 +9,15 @@ export interface GranolaMeetingFixture {
   readonly detail?: Readonly<Record<string, unknown>>
   readonly detailUnavailable?: boolean
   readonly transcript?: Readonly<Record<string, unknown>> | null
+  /** The type the attachment tool gives each attachment; `null` sends it untyped. Unlisted ones are screenshots. */
+  readonly attachmentTypes?: Readonly<Record<string, string | null>>
+  /** The attachment tool's own total when browsing the meeting; defaults to the detail's attachment count, and a
+   * negative total leaves it out. */
+  readonly attachmentTotal?: number
+  /** Attachments the tool leaves out of any response that asks for more than one. */
+  readonly leftOut?: readonly string[]
+  /** Attachments the tool leaves out even when asked for alone. */
+  readonly tooLarge?: readonly string[]
 }
 
 export interface GranolaFixture {
@@ -164,11 +173,39 @@ export const granolaFixtureRunner = (fixture: GranolaFixture): GranolaFixtureRun
     }
     if (tool === 'get_meeting_attachment' && fixture.attachments) {
       const meetingId = String(parsed['meeting_id'])
+      const meeting = fixture.meetings.find((candidate) => candidate.id === meetingId)
+      const requested = parsed['attachment_ids'] as readonly string[] | undefined
+      // mcporter's JSON output keeps only the text blocks that are pure JSON whenever any are, as here.
+      if (!requested) {
+        const listed = meeting?.detail?.['attachments']
+        const total = meeting?.attachmentTotal ?? (Array.isArray(listed) ? listed.length : 0)
+        return result({
+          meeting_id: meetingId,
+          pagination: { total_count: total, has_more: total > 1, next_offset: 1 }
+        })
+      }
+      const leftOut = requested.filter(
+        (id) => meeting?.tooLarge?.includes(id) || (requested.length > 1 && meeting?.leftOut?.includes(id))
+      )
+      if (leftOut.length)
+        return result({ meeting_id: meetingId, left_out_attachment_ids: leftOut, next_step: 'Not an error' })
       return result({
-        content: (parsed['attachment_ids'] as readonly string[]).flatMap((attachmentId) => [
-          { type: 'image', mimeType: 'image/png', data: png },
-          { type: 'text', text: JSON.stringify({ meeting_id: meetingId, attachment_id: attachmentId }) }
-        ])
+        content: requested.flatMap((attachmentId) => {
+          const type = meeting?.attachmentTypes?.[attachmentId]
+          return [
+            { type: 'image', mimeType: 'image/png', data: png },
+            {
+              type: 'text',
+              text: `Data notice.\n${JSON.stringify({
+                meeting_id: meetingId,
+                attachment_id: attachmentId,
+                ...(type === null ? {} : { type: type ?? 'screenshot' }),
+                url: 'https://files.example.test/signed',
+                url_expires_at: '2026-11-03T20:07:52.878Z'
+              })}`
+            }
+          ]
+        })
       })
     }
     return { exitCode: 1, output: `unexpected tool ${tool}` }

@@ -5,6 +5,8 @@ import {
   completeGranolaTranscript,
   decodeGranolaImages,
   type GranolaAttachmentImage,
+  GranolaWithheld,
+  granolaAttachmentTotal,
   readGranolaFolders
 } from './projection.ts'
 
@@ -19,6 +21,8 @@ export interface GranolaOperationContext {
 
 export interface GranolaSource {
   readonly images?: (meetingId: string, ids: readonly string[]) => Promise<readonly GranolaAttachmentImage[]>
+  /** The attachment tool's own total of the meeting's viewable attachments, across every page. */
+  readonly attachmentTotal?: (meetingId: string) => Promise<number>
   readonly accountSha256: string
   readonly schemaSha256: string
   readonly folders: () => Promise<readonly GranolaFolder[]>
@@ -45,6 +49,8 @@ export interface GranolaMeeting {
 export interface GranolaResponse {
   readonly meetings: readonly GranolaMeeting[]
   readonly projectionSha256: string
+  /** Granola paged the window, so this response alone does not enumerate it. */
+  readonly hasMore?: boolean
 }
 
 export type GranolaTranscript =
@@ -166,6 +172,30 @@ const meetingCollection = (value: unknown, label: string): readonly GranolaMeeti
     id: identity(projection, ['id', 'meeting_id', 'document_id'], label === 'meetings' ? 'meeting' : label),
     projection
   }))
+}
+
+const pagedFurther = (value: unknown): boolean => {
+  if (typeof value === 'string') return /<pagination\b[^>]*\bhas_more=(['"])true\1/.test(value)
+  const pagination = (value as Readonly<Record<string, unknown>>)['pagination'] as
+    | Readonly<Record<string, unknown>>
+    | undefined
+  return pagination?.['has_more'] === true
+}
+
+/** A batched detail lists at most 20 attachments a meeting; a meeting read alone lists them all. */
+const attachmentsCapped = (projection: unknown): boolean =>
+  typeof projection === 'string'
+    ? /<attachments\b[^>]*\battachments_omitted=(['"])[1-9]/.test(projection)
+    : Boolean(
+        projection &&
+          typeof projection === 'object' &&
+          Number((projection as Record<string, unknown>)['attachments_omitted'] ?? 0) > 0
+      )
+
+/** mcporter's JSON output drops image blocks when a response also carries a pure JSON notice of left-out attachments. */
+const leftOutAttachments = (value: unknown): readonly string[] => {
+  const ids: unknown = Object(value)['left_out_attachment_ids']
+  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : []
 }
 
 const explicitlyUnavailableDetails = (value: unknown): ReadonlySet<string> => {
@@ -383,14 +413,27 @@ export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessE
                 return [...(await readBatch(selected.slice(0, middle))), ...(await readBatch(selected.slice(middle)))]
               }
               if (result.exitCode !== 0) throw new KiError(`Granola image read failed: ${result.output.trim()}`)
-              return decodeGranolaImages(parseJson(result.output, 'image'), meetingId, selected)
+              const parsed = parseJson(result.output, 'image')
+              const leftOut = leftOutAttachments(parsed)
+              if (leftOut.length && selected.length > 1) {
+                const images: GranolaAttachmentImage[] = []
+                for (const id of selected) images.push(...(await readBatch([id])))
+                return images
+              }
+              if (leftOut.length)
+                throw new GranolaWithheld(`Granola left out attachment ${selected[0]} even when asked for it alone`)
+              return decodeGranolaImages(parsed, meetingId, selected)
             }
             const images: GranolaAttachmentImage[] = []
             for (let index = 0; index < ids.length; index += 5) {
               images.push(...(await readBatch(ids.slice(index, index + 5))))
             }
             return images
-          }
+          },
+          attachmentTotal: async (meetingId: string) =>
+            granolaAttachmentTotal(
+              await call(runner, environment, 'get_meeting_attachment', { meeting_id: meetingId, limit: 1 }, gate)
+            )
         }
       : {}),
     folders: () =>
@@ -411,7 +454,8 @@ export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessE
       )
       return {
         meetings: meetingCollection(response, 'meetings'),
-        projectionSha256: sha256(stableJson(response))
+        projectionSha256: sha256(stableJson(response)),
+        ...(pagedFurther(response) ? { hasMore: true } : {})
       }
     },
     details: async (meetingIds) => {
@@ -420,7 +464,12 @@ export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessE
         throw new KiError('Granola meeting detail batch must contain between one and ten unique identities')
       const response = await call(runner, environment, 'get_meetings', { meeting_ids: meetingIds }, gate)
       const found = new Map(detailResponse(response, meetingIds))
-      const missing = meetingIds.filter((meetingId) => !found.has(meetingId))
+      const missing = meetingIds.filter((meetingId) => {
+        const detail = found.get(meetingId)
+        return (
+          !detail || (meetingIds.length > 1 && detail.state === 'available' && attachmentsCapped(detail.projection))
+        )
+      })
       for (const meetingId of missing) {
         const retry = await call(runner, environment, 'get_meetings', { meeting_ids: [meetingId] }, gate)
         const resolved = detailResponse(retry, [meetingId]).get(meetingId)

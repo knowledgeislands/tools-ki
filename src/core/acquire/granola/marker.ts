@@ -4,7 +4,14 @@ import type { Runner } from '../../runtime/runner.ts'
 import { type GranolaCapture, granolaCaptureIndex, readGranolaCapture } from './captures.ts'
 import { type GranolaMcpImageManifest, verifyGranolaMcpImages } from './images.ts'
 import { granolaLayout } from './layout.ts'
-import { attribute, granolaAttachmentInventory, granolaScreenshotCount, record, stringField } from './projection.ts'
+import {
+  attribute,
+  granolaAttachmentCount,
+  granolaAttachmentInventory,
+  granolaAttachmentTypes,
+  record,
+  stringField
+} from './projection.ts'
 import { granolaReceivers } from './routing.ts'
 import {
   type GranolaFolder,
@@ -111,7 +118,8 @@ export const markGranola = async (
   if (!target.acquiredFolderId) throw new KiError('Granola marking requires acquired_folder_id')
   const layout = granolaLayout(target.root, target.captureRoot)
   const source = await granolaSource(context.runner, context.environment)
-  if (!source.images) throw new KiError('Granola marking requires authoritative MCP screenshot access')
+  const { images: readImages, attachmentTotal } = source
+  if (!readImages || !attachmentTotal) throw new KiError('Granola marking requires authoritative MCP screenshot access')
   privateGranolaMarker(target.acquiredFolderId, await source.folders())
   const writer = options.confirm ? await granolaFolderMarker(context.runner, context.environment) : undefined
   const enumeration = await enumerateGranolaMeetings(source, interval)
@@ -145,7 +153,7 @@ export const markGranola = async (
         root: layout.documents,
         capture,
         id,
-        expectedImages: granolaScreenshotCount(meeting.projection),
+        expectedImages: granolaAttachmentCount(meeting.projection),
         runner: context.runner,
         environment: context.environment
       })
@@ -166,7 +174,10 @@ export const markGranola = async (
       const inventory = granolaAttachmentInventory(detail.projection, meeting.projection)
       /* v8 ignore next -- The detail and listing hashes above match a capture whose inventory reconciled when it was taken. */
       if (inventory.difference) throw new KiError(inventory.difference)
-      const images = await source.images(id, inventory.ids)
+      const total = inventory.expected ? await attachmentTotal(id) : 0
+      const images = total === inventory.expected ? await readImages(id, inventory.ids) : []
+      const typed = granolaAttachmentTypes(inventory, images, total)
+      if (typed.difference) throw new KiError(typed.difference)
       const saved = manifest.assets
       if (
         images.length !== saved.length ||

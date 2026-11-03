@@ -66,7 +66,7 @@ export const enumerateGranolaMeetings = async (
   const meetings = new Map<string, GranolaMeeting>()
   const visit = async (window: GranolaWindow): Promise<void> => {
     const response = await source.meetings(window, folderId)
-    const saturated = response.meetings.length === 100
+    const saturated = response.meetings.length === 100 || Boolean(response.hasMore)
     evidence.push({
       ...window,
       scope,

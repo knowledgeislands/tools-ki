@@ -7,7 +7,12 @@ import { storeGranolaMcpImages } from './images.ts'
 import { granolaLayout, verifyGranolaParents } from './layout.ts'
 import { renderGranolaMeeting } from './markdown.ts'
 import { privateGranolaMarker } from './marker.ts'
-import { type GranolaAttachmentImage, granolaAttachmentInventory } from './projection.ts'
+import {
+  type GranolaAttachmentImage,
+  GranolaWithheld,
+  granolaAttachmentInventory,
+  granolaAttachmentTypes
+} from './projection.ts'
 import { type FlaggedGranolaMeeting, granolaReceivers, routeGranolaMeetings } from './routing.ts'
 import {
   type GranolaOperationContext,
@@ -47,6 +52,8 @@ export interface GranolaImportResult {
   readonly omissions: number
   readonly imageMeetings: number
   readonly images: number
+  readonly screenshots: number
+  readonly photos: number
   readonly skipped: number
   readonly attachmentsAvailable: boolean
   readonly dryRun: boolean
@@ -165,6 +172,8 @@ export const importGranola = async (
   let omissions = 0
   let imageMeetings = 0
   let images = 0
+  let screenshots = 0
+  let photos = 0
   for (const batch of batches(pending, 10)) {
     const details = await source.details(batch.map((meeting) => meeting.id))
     for (const meeting of batch) {
@@ -181,8 +190,24 @@ export const importGranola = async (
         withheld.push({ id: meeting.id, reason: inventory.difference })
         continue
       }
-      const imageBlocks: readonly GranolaAttachmentImage[] | undefined =
-        inventory && source.images ? await source.images(meeting.id, inventory.ids) : undefined
+      let imageBlocks: readonly GranolaAttachmentImage[] | undefined
+      let counted = { screenshots: 0, photos: 0 }
+      if (inventory && source.images && source.attachmentTotal) {
+        try {
+          const total = inventory.expected ? await source.attachmentTotal(meeting.id) : 0
+          imageBlocks = total === inventory.expected ? await source.images(meeting.id, inventory.ids) : []
+          const typed = granolaAttachmentTypes(inventory, imageBlocks, total)
+          if (typed.difference) {
+            withheld.push({ id: meeting.id, reason: typed.difference })
+            continue
+          }
+          counted = typed
+        } catch (error) {
+          if (!(error instanceof GranolaWithheld)) throw error
+          withheld.push({ id: meeting.id, reason: error.message })
+          continue
+        }
+      }
       const observed = await source.transcript(meeting.id)
       // A refresh never discards a transcript the provider can no longer return.
       const retained = observed.state === 'unavailable' && current ? transcriptFromDocument(current.content) : undefined
@@ -219,6 +244,8 @@ export const importGranola = async (
           dryRun: Boolean(options.dryRun)
         })
         imageMeetings += 1
+        screenshots += counted.screenshots
+        photos += counted.photos
       }
       if (!options.dryRun) await writeDocument(join(root, documentPath), document.content)
       if (current) refreshed += 1
@@ -244,6 +271,8 @@ export const importGranola = async (
     omissions,
     imageMeetings,
     images,
+    screenshots,
+    photos,
     skipped,
     attachmentsAvailable: Boolean(source.images),
     dryRun: Boolean(options.dryRun)

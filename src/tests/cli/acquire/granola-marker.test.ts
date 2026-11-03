@@ -137,6 +137,15 @@ const fixture = async (settings: Settings = {}) => {
     const tool = String(arguments_[1]).replace('granola.', '')
     const args = JSON.parse(String(arguments_[arguments_.indexOf('--args') + 1])) as Record<string, unknown>
     calls.push({ tool, args })
+    // Browsing a meeting's attachments gives the attachment tool's own total, whatever its image responses do.
+    if (tool === 'get_meeting_attachment' && !args['attachment_ids'])
+      return (
+        responses.get('browse') ??
+        json({
+          meeting_id: id,
+          pagination: { total_count: note.images, has_more: note.images > 1, next_offset: 1 }
+        })
+      )
     const response = responses.get(tool)
     if (response) return response
     if (tool === 'get_account_info')
@@ -161,7 +170,7 @@ const fixture = async (settings: Settings = {}) => {
         date: '2026-10-06',
         title: 'Owner note',
         folders: note.folders.map((id) => ({ id })),
-        ...(note.images ? { screenshot_count: note.images } : {})
+        ...(note.images ? { attachment_count: note.images } : {})
       }
       const visible = !args['folder_id'] || note.folders.includes(String(args['folder_id']))
       const meetings = [
@@ -173,7 +182,7 @@ const fixture = async (settings: Settings = {}) => {
           content: [
             {
               type: 'text',
-              text: `<meetings_data count="${meetings.length}">${meetings.map((item) => `<meeting id="${item.id}" title="${item.title}" date="2026-10-06"${note.images ? ` screenshot_count="${note.images}"` : ''}><folders>${note.folders.map((folder) => `<folder id="${folder}"/>`).join('')}</folders></meeting>`).join('')}</meetings_data>`
+              text: `<meetings_data count="${meetings.length}">${meetings.map((item) => `<meeting id="${item.id}" title="${item.title}" date="2026-10-06"${note.images ? ` attachment_count="${note.images}"` : ''}><folders>${note.folders.map((folder) => `<folder id="${folder}"/>`).join('')}</folders></meeting>`).join('')}</meetings_data>`
             }
           ]
         })
@@ -242,7 +251,7 @@ const fixture = async (settings: Settings = {}) => {
               ]),
           {
             type: 'text',
-            text: `Data notice.\n${JSON.stringify({ meeting_id: id, attachment_id: settings.imageError === 'identity' ? shared : attachment, description: 'synthetic screenshot' })}`
+            text: `Data notice.\n${JSON.stringify({ meeting_id: id, attachment_id: settings.imageError === 'identity' ? shared : attachment, type: 'screenshot', description: 'synthetic screenshot' })}`
           }
         ])
       })
@@ -290,10 +299,10 @@ describe('[Granola screenshots and Acquired markers]', () => {
     const f = await fixture({ images: 8, pagedFolders: true })
     const imported = await f.box.run(f.command)
     expect(imported.exitCode, imported.stderr).toBe(0)
-    expect(imported.stdout).toContain('8 screenshots')
+    expect(imported.stdout).toContain('8 (8 screenshots, 0 photos)')
     expect(
       f.calls
-        .filter((call) => call.tool === 'get_meeting_attachment')
+        .filter((call) => call.tool === 'get_meeting_attachment' && call.args['attachment_ids'])
         .map((call) => (call.args['attachment_ids'] as string[]).length)
     ).toEqual([5, 3])
     expect(
@@ -387,8 +396,8 @@ describe('[Granola screenshots and Acquired markers]', () => {
       expect(result.stdout).toContain('0 new, 0 refreshed, 0 kept, 1 withheld')
       expect(result.stdout).toContain(
         imageError === 'bad-id'
-          ? `Withheld: ${id} · Granola lists 2 screenshots but the detail names 0 screenshot attachments; invalid identities: "unsafe", "unsafe"`
-          : `Withheld: ${id} · Granola lists 2 screenshots but the detail names 1 screenshot attachments; repeated: ${assetId(0)}`
+          ? `Withheld: ${id} · Granola counts 2 attachments but the detail names 0; invalid identities: "unsafe", "unsafe"`
+          : `Withheld: ${id} · Granola counts 2 attachments but the detail names 1; repeated: ${assetId(0)}`
       )
       expect(await exists(join(f.box.project.path, 'captures'))).toBe(false)
       expect(f.calls.some((call) => call.tool === 'get_meeting_attachment')).toBe(false)
@@ -478,6 +487,11 @@ describe('[Granola screenshots and Acquired markers]', () => {
     f.note.transcript = 'Me: hello\nThem: reply'
     f.setImageBytes(Buffer.concat([png, Buffer.from([0])]))
     expect((await f.box.run([...f.mark, '--confirm'])).stdout).toContain('screenshots differ')
+    f.setImageBytes(png)
+    f.respond('browse', ['Data notice.', { meeting_id: id, pagination: { total_count: 2 } }])
+    expect((await f.box.run([...f.mark, '--confirm'])).stdout).toContain(
+      'Granola counts 1 attachments but its attachment tool holds 2'
+    )
     expect(f.note.folders).toEqual(['personal'])
   })
 
@@ -566,7 +580,7 @@ describe('[Granola screenshots and Acquired markers]', () => {
     const result = await f.box.run(f.command)
     expect(result.exitCode, result.stderr).toBe(0)
     const sizes = f.calls
-      .filter((call) => call.tool === 'get_meeting_attachment')
+      .filter((call) => call.tool === 'get_meeting_attachment' && call.args['attachment_ids'])
       .map((call) => (call.args['attachment_ids'] as string[]).length)
     expect(sizes).toEqual([5, 2, 3, 1, 2, 3, 1, 2])
     const entry = { path: f.capture }
@@ -682,8 +696,8 @@ describe('[Granola screenshots and Acquired markers]', () => {
     ['list_meeting_folders', []],
     ['list_meeting_folders', { data: { folders: [] } }],
     ['list_meeting_folders', { content: [{ type: 'text', text: 'notice {invalid}' }] }],
-    ['list_meetings', { meetings: [{ id, folders: [{ id: 'personal' }], screenshot_count: -1 }] }],
-    ['list_meetings', { meetings: [{ id, folders: [{ id: 'personal' }], screenshot_count: 'invalid' }] }],
+    ['list_meetings', { meetings: [{ id, folders: [{ id: 'personal' }], attachment_count: -1 }] }],
+    ['list_meetings', { meetings: [{ id, folders: [{ id: 'personal' }], attachment_count: 'invalid' }] }],
     ['get_meetings', { meetings: [{ id, attachments: {} }] }]
   ])('refuses malformed or incomplete source evidence without marking: %s', async (tool, value) => {
     const f = await fixture({ images: 1 })
@@ -701,7 +715,10 @@ describe('[Granola screenshots and Acquired markers]', () => {
         mimeType: 'image/png',
         data: kind === 'noncanonical' ? 'AB==' : png.toString('base64')
       }
-      const metadata = { type: 'text', text: JSON.stringify({ meeting_id: id, attachment_id: assetId(0) }) }
+      const metadata = {
+        type: 'text',
+        text: JSON.stringify({ meeting_id: id, attachment_id: assetId(0), type: 'screenshot' })
+      }
       const response = {
         content: kind === 'empty' ? [] : kind === 'count' ? [image, metadata, image, metadata] : [image, metadata]
       }

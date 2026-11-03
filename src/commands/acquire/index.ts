@@ -98,7 +98,7 @@ const renderGranolaResult = (result: GranolaImportResult): string =>
     ...result.withheld.map((meeting) => `Withheld: ${meeting.id} · ${meeting.reason}; not captured until they match`),
     `Omissions: ${result.omissions}`,
     result.attachmentsAvailable
-      ? `Attachments: ${result.images} screenshots across ${result.imageMeetings} verified MCP inventories`
+      ? `Attachments: ${result.images} (${result.screenshots} screenshots, ${result.photos} photos) across ${result.imageMeetings} verified MCP inventories`
       : 'Attachments: not inventoried by Granola MCP; snapshot-bearing notes need separate image verification before deletion.',
     `Acquired: ${result.skipped} skipped on Acquired folder membership`,
     'Boundary: read-only Granola MCP; no source mutation, harvesting, cross-repository write, archive, or deletion.',
