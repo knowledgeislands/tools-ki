@@ -133,6 +133,17 @@ ki acquire mark --adapter granola --since YYYY-MM-DD --until YYYY-MM-DD --confir
 
 Add `--source <UUID...>` for an exact subset. The confirmed operation checks the account, private folder, the single committed capture and its files, available transcript, fresh source hashes against the capture, screenshot UUIDs and bytes, and unchanged original memberships. It invokes only additive membership, then verifies the union of original folders plus Acquired. Incomplete notes remain exceptions. Import never marks implicitly. A marker establishes neither receiver reconciliation nor deletion clearance.
 
+## Move captured notes from Triaged to Captured
+
+Instead of `acquired_folder_id`, a repository can declare `capture_moves`, pairing each territory's Triaged folder ID with its Captured folder ID. Pairs are declared by ID because renaming a folder keeps its ID. Both folders must be in `folder_ids` and mapped to the same territory, each folder appears once, and every Captured folder must be owner-controlled and private with audience `only you`. A repository uses `capture_moves` or `acquired_folder_id`, never both.
+
+```toml
+[skills.ki-acquire-granola.capture_moves]
+"<triaged-folder-id>" = "<captured-folder-id>"
+```
+
+Captured membership counts as done: import skips the meeting, as it skips Acquired members, and `ki acquire mark` reports it as already captured. Marking moves a meeting only from exactly one declared Triaged folder; a meeting in several Triaged folders, or in Triaged and Captured together, stays an exception with its reason. After the same checks as Acquired marking, `--confirm` adds the meeting to Captured and reads back its original folders plus Captured, and only then removes it from Triaged and reads back again. Both Granola folder tools must be available before any change. If a step fails or does not show, the meeting stays where it is, in Triaged or in both folders, and is reported; it is never left in neither. Marking never rewrites captures, so a capture's front matter keeps the Triaged folder until it is refreshed.
+
 ## Prepare manual retirement
 
 Granola exposes no supported archive or delete operation through its official MCP, so acquisition never deletes meetings. The accepted retirement path is a verified manual-release manifest followed by human deletion in Granola.

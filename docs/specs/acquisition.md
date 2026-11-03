@@ -146,9 +146,11 @@ _Evidence:_ Public in-process CLI fixtures establish the returned-byte boundary;
 
 Routine Granola import MUST skip Acquired members on that membership alone, without content reads or a preservation check, and MUST NOT flag them or change their captures. Explicit `--refresh-acquired` MUST bypass that skip and implies `--refresh`. Marking MUST remain a separate preview/`--confirm` action, require an owner-controlled private selector distinct from routing, and verify exactly one committed capture, fresh source hashes against its front matter and screenshot bytes before invoking only `add_note_to_folder`. Readback MUST preserve all original memberships. No marker confers reconciliation or retirement authority.
 
+A repository MAY instead declare `capture_moves`, pairing each selected Triaged folder ID with a selected, owner-controlled private Captured folder ID of the same territory, each folder used once; it MUST NOT also declare `acquired_folder_id`. Captured membership then counts as Acquired membership does for import and marking. A note MUST be moved only from exactly one declared Triaged folder; several Triaged folders, or Triaged and Captured together, MUST remain an exception. After the same verification, the confirmed move MUST require both `add_note_to_folder` and `remove_note_from_folder` before any write, add Captured and read back the original memberships plus Captured, and only then remove Triaged and read back again. A failed or unconfirmed step MUST stop that note, never leaving it in neither folder.
+
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/acquire/granola-marker.test.ts` preview, committed evidence, private folder, mutation allowlist, idempotence, membership-only skip, unchanged uncommitted capture, refresh, amendment, duplicated-capture and failed-marker cases.
+_Verify:_ `src/tests/cli/acquire/granola-marker.test.ts` preview, committed evidence, private folder, mutation allowlist, idempotence, membership-only skip, unchanged uncommitted capture, refresh, amendment, duplicated-capture, failed-marker and Triaged-to-Captured move cases.
 
 _Evidence:_ Synthetic public CLI tests exercise both read and explicitly confirmed write paths without live network access.
 
