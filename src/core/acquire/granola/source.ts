@@ -347,7 +347,12 @@ const call = async (
 const inspectSchema = async (
   runner: Runner,
   environment: NodeJS.ProcessEnv
-): Promise<{ readonly sha256: string; readonly images: boolean; readonly marker: boolean }> => {
+): Promise<{
+  readonly sha256: string
+  readonly images: boolean
+  readonly marker: boolean
+  readonly remover: boolean
+}> => {
   const result = await mcporter(runner, ['list', 'granola', '--schema', '--json', '--no-oauth'], environment)
   if (result.exitCode !== 0)
     throw new KiError(`Granola MCP schema inspection failed: ${result.output.trim() || 'mcporter exited non-zero'}`)
@@ -363,7 +368,8 @@ const inspectSchema = async (
   return {
     sha256: sha256(stableJson(selected)),
     images: Boolean(imageTool),
-    marker: tools.some((tool) => tool['name'] === 'add_note_to_folder')
+    marker: tools.some((tool) => tool['name'] === 'add_note_to_folder'),
+    remover: tools.some((tool) => tool['name'] === 'remove_note_from_folder')
   }
 }
 
@@ -377,6 +383,26 @@ export const granolaFolderMarker = async (
   const gate = requestGate(environment)
   return (meetingId, folderId) =>
     call(runner, environment, 'add_note_to_folder', { note_id: meetingId, folder_id: folderId }, gate)
+}
+
+/** The explicitly invoked writers for a Triaged-to-Captured move; both must exist before either runs. */
+export const granolaFolderMover = async (
+  runner: Runner,
+  environment: NodeJS.ProcessEnv
+): Promise<{
+  readonly add: (meetingId: string, folderId: string) => Promise<unknown>
+  readonly remove: (meetingId: string, folderId: string) => Promise<unknown>
+}> => {
+  const schema = await inspectSchema(runner, environment)
+  if (!schema.marker) throw new KiError('Granola does not advertise the explicit folder-marker tool')
+  if (!schema.remover) throw new KiError('Granola does not advertise the explicit folder-removal tool')
+  const gate = requestGate(environment)
+  return {
+    add: (meetingId, folderId) =>
+      call(runner, environment, 'add_note_to_folder', { note_id: meetingId, folder_id: folderId }, gate),
+    remove: (meetingId, folderId) =>
+      call(runner, environment, 'remove_note_from_folder', { note_id: meetingId, folder_id: folderId }, gate)
+  }
 }
 
 export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessEnv): Promise<GranolaSource> => {

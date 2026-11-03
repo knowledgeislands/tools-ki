@@ -29,6 +29,8 @@ interface Settings {
   markerError?: string
   private?: boolean
   captured?: boolean
+  moves?: boolean
+  removerError?: 'failure' | 'ignored'
 }
 
 const fixture = async (settings: Settings = {}) => {
@@ -43,7 +45,7 @@ const fixture = async (settings: Settings = {}) => {
       'ki-depends-on: []',
       'ki-acquire-adapter: granola',
       'ki-acquire-actions: [import, mark]',
-      'ki-acquire-repository-properties: [folder_ids, duplicate_folder_ids, unfoldered, residual, capture_root, folder_territories, acquired_folder_id]',
+      'ki-acquire-repository-properties: [folder_ids, duplicate_folder_ids, unfoldered, residual, capture_root, folder_territories, acquired_folder_id, capture_moves]',
       'ki-acquire-invocation-properties: [refresh-transcripts, refresh-acquired]',
       'ki-acquire-capabilities: [account, folders, meetings, details, transcripts, attachments]',
       'ki-acquire-omissions: [audio]',
@@ -64,13 +66,21 @@ const fixture = async (settings: Settings = {}) => {
       'primary_shape = "ki-repo-project"',
       'repository = "https://github.com/example/granola-marker"',
       '[skills.ki-acquire-granola]',
-      'folder_ids = ["personal"]',
+      settings.moves ? 'folder_ids = ["captured", "personal", "triaged"]' : 'folder_ids = ["personal"]',
       'capture_root = "captures"',
       'unfoldered = "flag"',
       'residual = "flag"',
-      ...(settings.marker === false ? [] : ['acquired_folder_id = "acquired"']),
+      ...(settings.marker === false || settings.moves ? [] : ['acquired_folder_id = "acquired"']),
       '[skills.ki-acquire-granola.folder_territories]',
-      'personal = "personal"'
+      'personal = "personal"',
+      ...(settings.moves
+        ? [
+            'triaged = "personal"',
+            'captured = "personal"',
+            '[skills.ki-acquire-granola.capture_moves]',
+            'triaged = "captured"'
+          ]
+        : [])
     ].join('\n')
   )
   await box.state.write(
@@ -79,7 +89,13 @@ const fixture = async (settings: Settings = {}) => {
   )
   const note = {
     id,
-    folders: settings.captured ? ['personal', 'acquired'] : ['personal'],
+    folders: settings.moves
+      ? settings.captured
+        ? ['captured']
+        : ['triaged']
+      : settings.captured
+        ? ['personal', 'acquired']
+        : ['personal'],
     notes: '## Notes\nOwner note',
     transcript: 'Me: hello\nThem: reply',
     images: settings.images ?? 0
@@ -151,7 +167,18 @@ const fixture = async (settings: Settings = {}) => {
     if (tool === 'get_account_info')
       return json({ email: 'owner@example.test', active_workspace: 'workspace', mcp_note_access: ['personal'] })
     if (tool === 'list_meeting_folders') {
-      const folders = [{ id: 'personal', title: 'Personal' }, folder]
+      const folders = [
+        { id: 'personal', title: 'Personal' },
+        folder,
+        ...(settings.moves
+          ? [
+              { id: 'triaged', title: 'Triaged - Personal' },
+              { ...folder, id: 'captured', title: 'Captured - Personal' },
+              { id: 'other-triaged', title: 'Triaged - Other' },
+              { ...folder, id: 'other-captured', title: 'Captured - Other' }
+            ]
+          : [])
+      ]
       if (settings.folderError === 'shape') return reply({ folders: {} })
       if (settings.folderError === 'missing') return reply({ folders: [{}] })
       if (settings.folderError === 'duplicate') return reply({ folders: [folder, folder] })
@@ -260,6 +287,11 @@ const fixture = async (settings: Settings = {}) => {
       if (settings.markerError === 'failure') return { exitCode: 1, output: 'Marker write rejected' }
       if (!settings.markerError) note.folders = [...new Set([...note.folders, String(args['folder_id'])])]
       return reply({ outcome: 'added', note_id: id, folder })
+    }
+    if (tool === 'remove_note_from_folder') {
+      if (settings.removerError === 'failure') return { exitCode: 1, output: 'Removal rejected' }
+      if (!settings.removerError) note.folders = note.folders.filter((item) => item !== String(args['folder_id']))
+      return reply({ outcome: 'removed', note_id: id, folder })
     }
     return { exitCode: 1, output: 'unexpected tool' }
   })
@@ -845,5 +877,187 @@ describe('[Granola screenshots and Acquired markers]', () => {
       `schema = 1\n[repositories.target]\nrepository = "https://github.com/example/granola-marker"\npath = ${JSON.stringify(f.box.project.path)}\n[repositories.peer]\nrepository = "https://github.com/example/granola-peer"\npath = ${JSON.stringify(peer)}\n`
     )
     expect((await f.box.run(f.command)).stderr).toContain('separate from every receiver')
+  })
+})
+
+describe('[Granola moves from Triaged to Captured]', () => {
+  const imported = async (settings: Settings = {}) => {
+    const f = await fixture({ moves: true, ...settings })
+    const result = await f.box.run(f.command)
+    expect(result.exitCode, result.stderr).toBe(0)
+    await f.commit()
+    return f
+  }
+  const writes = (f: Awaited<ReturnType<typeof fixture>>) =>
+    f.calls.filter((call) => ['add_note_to_folder', 'remove_note_from_folder'].includes(call.tool))
+
+  test('adds Captured, reads it back, then removes Triaged and reads that back', async () => {
+    const f = await imported({ images: 1 })
+    const preview = await f.box.run(f.mark)
+    expect(preview.exitCode, preview.stderr).toBe(0)
+    expect(preview.stdout).toContain('Captured folders: 1 Triaged-to-Captured pair')
+    expect(preview.stdout).toContain('1 verified, 0 moved, 0 already captured, 0 exceptions')
+    expect(preview.stdout).toContain('repeat with --confirm to move verified notes from Triaged to Captured')
+    expect(writes(f)).toEqual([])
+    const moved = await f.box.run([...f.mark, '--confirm'])
+    expect(moved.exitCode, moved.stderr).toBe(0)
+    expect(moved.stdout).toContain('1 verified, 1 moved, 0 already captured, 0 exceptions')
+    expect(moved.stdout).toContain('Each note left Triaged only after Captured was confirmed; no source deletion.')
+    expect(writes(f).map((call) => [call.tool, call.args['folder_id']])).toEqual([
+      ['add_note_to_folder', 'captured'],
+      ['remove_note_from_folder', 'triaged']
+    ])
+    expect(f.note.folders).toEqual(['captured'])
+    const again = await f.box.run([...f.mark, '--confirm'])
+    expect(again.stdout).toContain('0 moved, 1 already captured')
+    const before = f.calls.length
+    expect((await f.box.run(f.command)).stdout).toContain('1 skipped')
+    expect(f.calls.slice(before).some((call) => call.tool === 'get_meetings')).toBe(false)
+    expect((await f.box.run([...f.command, '--refresh-acquired'])).stdout).toContain('1 refreshed')
+  })
+
+  test('counts a meeting already in Captured as done for import and mark', async () => {
+    const f = await fixture({ moves: true, captured: true })
+    expect((await f.box.run(f.command)).stdout).toContain('1 skipped')
+    expect(await exists(join(f.box.project.path, f.capture))).toBe(false)
+    const result = await f.box.run([...f.mark, '--confirm'])
+    expect(result.exitCode, result.stderr).toBe(0)
+    expect(result.stdout).toContain('1 already captured')
+    expect(writes(f)).toEqual([])
+  })
+
+  test.each([
+    {
+      name: 'the add fails',
+      settings: { markerError: 'failure' },
+      folders: ['triaged'],
+      reason: 'Marker write rejected'
+    },
+    {
+      name: 'the add does not show',
+      settings: { markerError: 'ignored' },
+      folders: ['triaged'],
+      reason: 'Granola did not show the note in Captured with all its folders; it stays in Triaged'
+    },
+    {
+      name: 'the removal fails',
+      settings: { removerError: 'failure' },
+      folders: ['triaged', 'captured'],
+      reason: 'Removal rejected'
+    },
+    {
+      name: 'the removal does not show',
+      settings: { removerError: 'ignored' },
+      folders: ['triaged', 'captured'],
+      reason: 'Granola did not confirm the removal from Triaged'
+    }
+  ] as const)('never leaves a note in neither folder when $name', async ({ settings, folders, reason }) => {
+    const f = await imported(settings)
+    const result = await f.box.run([...f.mark, '--confirm'])
+    expect(result.exitCode).toBe(1)
+    expect(result.stdout).toContain('0 moved')
+    expect(result.stdout).toContain(`Not marked: ${id}`)
+    expect(result.stdout).toContain(reason)
+    expect(f.note.folders).toEqual(folders)
+    if (settings.markerError) expect(writes(f).map((call) => call.tool)).toEqual(['add_note_to_folder'])
+  })
+
+  test.each([
+    { folders: ['personal'], reason: 'The note is in no declared Triaged folder' },
+    { folders: ['triaged', 'other-triaged'], reason: 'The note is in several Triaged folders' },
+    { folders: ['triaged', 'captured'], reason: 'The note is in Triaged and Captured together' }
+  ])('refuses an unclear Triaged membership: $folders', async ({ folders, reason }) => {
+    const f = await imported()
+    const config = await f.box.project.read('.ki.toml')
+    await f.box.project.write(
+      '.ki.toml',
+      config
+        .replace('"triaged"]', '"triaged", "other-triaged", "other-captured"]')
+        .replace(
+          'triaged = "personal"',
+          'triaged = "personal"\n"other-triaged" = "personal"\n"other-captured" = "personal"'
+        )
+        .replace('triaged = "captured"', 'triaged = "captured"\n"other-triaged" = "other-captured"')
+    )
+    f.note.folders = folders
+    const result = await f.box.run([...f.mark, '--confirm'])
+    expect(result.exitCode).toBe(1)
+    expect(result.stdout).toContain(reason)
+    expect(writes(f)).toEqual([])
+  })
+
+  test('checks the removal tool and a private Captured folder before any write', async () => {
+    const f = await imported()
+    f.respond('schema', {
+      tools: [
+        'get_account_info',
+        'list_meetings',
+        'list_meeting_folders',
+        'get_meetings',
+        'get_meeting_transcript',
+        'get_meeting_attachment',
+        'add_note_to_folder'
+      ].map((name) => ({ name, inputSchema: { type: 'object' } }))
+    })
+    expect((await f.box.run(f.mark)).exitCode).toBe(0)
+    expect((await f.box.run([...f.mark, '--confirm'])).stderr).toContain('folder-removal tool')
+    f.respond('schema', {
+      tools: [
+        'get_account_info',
+        'list_meetings',
+        'list_meeting_folders',
+        'get_meetings',
+        'get_meeting_transcript',
+        'get_meeting_attachment',
+        'remove_note_from_folder'
+      ].map((name) => ({ name, inputSchema: { type: 'object' } }))
+    })
+    expect((await f.box.run([...f.mark, '--confirm'])).stderr).toContain('folder-marker tool')
+    expect(writes(f)).toEqual([])
+    const open = await fixture({ moves: true, private: false })
+    expect((await open.box.run(open.command)).stderr).toContain('private folder')
+    expect((await open.box.run([...open.mark, '--confirm'])).stderr).toContain('private folder')
+    expect(writes(open)).toEqual([])
+  })
+
+  test('keeps every existing check before a move', async () => {
+    const f = await imported()
+    f.note.folders = ['triaged', 'personal']
+    expect((await f.box.run([...f.mark, '--confirm'])).stdout).toContain('memberships changed')
+    expect(writes(f)).toEqual([])
+  })
+
+  test.each([
+    ['acquired_folder_id = "acquired"', 'either capture_moves or acquired_folder_id'],
+    ['[skills.ki-acquire-granola.capture_moves]\ntriaged = "triaged"', 'distinct'],
+    ['[skills.ki-acquire-granola.capture_moves]\ntriaged = "unselected"', 'selected'],
+    ['[skills.ki-acquire-granola.capture_moves]\nunselected = "captured"', 'selected'],
+    ['[skills.ki-acquire-granola.capture_moves]\ntriaged = 1', 'selected'],
+    ['[skills.ki-acquire-granola.capture_moves]\ntriaged = "captured"\npersonal = "captured"', 'distinct'],
+    ['[skills.ki-acquire-granola.capture_moves]\ntriaged = "captured"\ncaptured = "personal"', 'distinct'],
+    ['territory', 'same territory'],
+    ['no-root', 'capture_root'],
+    ['scalar', 'folder table']
+  ])('rejects an invalid capture_moves declaration: %s', async (change, message) => {
+    const f = await fixture({ moves: true })
+    const config = await f.box.project.read('.ki.toml')
+    const changed =
+      change === 'territory'
+        ? config.replace('captured = "personal"', 'captured = "legal"')
+        : change === 'no-root'
+          ? config
+              .replace('capture_root = "captures"\n', '')
+              .replace(/\[skills\.ki-acquire-granola\.folder_territories\][^[]*/, '')
+          : change === 'scalar'
+            ? config
+                .replace(/\[skills\.ki-acquire-granola\.capture_moves\][\s\S]*$/, '')
+                .replace('residual = "flag"', 'residual = "flag"\ncapture_moves = "triaged"')
+            : change.startsWith('acquired')
+              ? config.replace('residual = "flag"', `residual = "flag"\n${change}`)
+              : config.replace(/\[skills\.ki-acquire-granola\.capture_moves\][\s\S]*$/, change)
+    await f.box.project.write('.ki.toml', changed)
+    const result = await f.box.run(f.mark)
+    expect(result.exitCode).not.toBe(0)
+    expect(result.stderr).toContain(message)
   })
 })

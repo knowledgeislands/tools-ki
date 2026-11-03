@@ -17,6 +17,8 @@ export interface GranolaReceiver {
   readonly residual: boolean | 'flag'
   readonly captureRoot?: string
   readonly acquiredFolderId?: string
+  /** Each Triaged folder ID paired with its territory's Captured folder ID. */
+  readonly captureMoves: Readonly<Record<string, string>>
   readonly folderTerritories: Readonly<Record<string, string>>
 }
 
@@ -51,7 +53,8 @@ const CONFIG_KEYS = new Set([
   'residual',
   'capture_root',
   'acquired_folder_id',
-  'folder_territories'
+  'folder_territories',
+  'capture_moves'
 ])
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/
 
@@ -70,6 +73,30 @@ const identifiers = (value: unknown, name: string): readonly string[] => {
   if (new Set(items).size !== items.length)
     throw new KiError(`[skills.ki-acquire-granola].${name} must not repeat Granola ID`)
   return [...items].sort((left, right) => left.localeCompare(right, 'en'))
+}
+
+// Pairs are declared by ID because a renamed folder keeps its ID but changes its title.
+const movePairs = (
+  value: unknown,
+  folderIds: readonly string[],
+  territories: Readonly<Record<string, string>>
+): Readonly<Record<string, string>> => {
+  if (value === undefined) return {}
+  if (!Object.keys(territories).length)
+    throw new KiError('[skills.ki-acquire-granola].capture_moves requires capture_root and folder_territories')
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new KiError('[skills.ki-acquire-granola].capture_moves must be a Triaged-to-Captured folder table')
+  const pairs = value as Readonly<Record<string, unknown>>
+  for (const [triaged, captured] of Object.entries(pairs)) {
+    if (typeof captured !== 'string' || !folderIds.includes(triaged) || !folderIds.includes(captured))
+      throw new KiError('[skills.ki-acquire-granola].capture_moves must pair selected folder IDs')
+    if (territories[triaged] !== territories[captured])
+      throw new KiError('[skills.ki-acquire-granola].capture_moves must pair folders of the same territory')
+  }
+  const ids = [...Object.keys(pairs), ...Object.values(pairs)]
+  if (new Set(ids).size !== ids.length)
+    throw new KiError('[skills.ki-acquire-granola].capture_moves must use each folder once, as distinct folders')
+  return pairs as Readonly<Record<string, string>>
 }
 
 const receiver = async (root: string, required: boolean): Promise<GranolaReceiver | undefined> => {
@@ -106,6 +133,9 @@ const receiver = async (root: string, required: boolean): Promise<GranolaReceive
     )
   if (captureRoot && folderIds.some((id) => !folderTerritories[id]))
     throw new KiError('[skills.ki-acquire-granola].folder_territories must identify every selected folder')
+  const captureMoves = movePairs(skill.configuration['capture_moves'], folderIds, folderTerritories)
+  if (Object.keys(captureMoves).length && acquiredFolderId !== undefined)
+    throw new KiError('[skills.ki-acquire-granola] uses either capture_moves or acquired_folder_id, never both')
   const unfoldered = booleanValue(skill.configuration['unfoldered'], 'unfoldered')
   const residual = booleanValue(skill.configuration['residual'], 'residual')
   if (!folderIds.length && !unfoldered && !residual) {
@@ -121,6 +151,7 @@ const receiver = async (root: string, required: boolean): Promise<GranolaReceive
     residual,
     ...(captureRoot ? { captureRoot } : {}),
     ...(typeof acquiredFolderId === 'string' ? { acquiredFolderId } : {}),
+    captureMoves,
     folderTerritories
   }
 }

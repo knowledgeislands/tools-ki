@@ -93,7 +93,7 @@ const writeDocument = async (path: string, content: string): Promise<void> => {
 }
 
 /**
- * Acquire keeps no ledger: Acquired-folder membership alone marks a meeting dealt with, and an existing
+ * Acquire keeps no ledger: Acquired- or Captured-folder membership alone marks a meeting dealt with, and an existing
  * capture is never overwritten unless a refresh is explicitly requested. Git history holds earlier bytes.
  */
 export const importGranola = async (
@@ -131,15 +131,14 @@ export const importGranola = async (
   const observedAt = new Date(context.now()).toISOString()
 
   let skipped = 0
-  if (target.acquiredFolderId) {
-    privateGranolaMarker(target.acquiredFolderId, folders)
-    if (!options.refreshAcquired) {
-      // The validated private marker is one of the exhaustively enumerated folders.
-      const marked = folderMeetings.get(target.acquiredFolderId) as ReadonlyMap<string, unknown>
-      const selected = routing.selected.filter((meeting) => !marked.has(meeting.id))
-      skipped = routing.selected.length - selected.length
-      routing = { ...routing, selected }
-    }
+  const doneFolders = target.acquiredFolderId ? [target.acquiredFolderId] : Object.values(target.captureMoves)
+  for (const id of doneFolders) privateGranolaMarker(id, folders)
+  if (doneFolders.length && !options.refreshAcquired) {
+    // Each validated private marker or Captured folder is one of the exhaustively enumerated folders.
+    const done = doneFolders.map((id) => folderMeetings.get(id) as ReadonlyMap<string, unknown>)
+    const selected = routing.selected.filter((meeting) => !done.some((marked) => marked.has(meeting.id)))
+    skipped = routing.selected.length - selected.length
+    routing = { ...routing, selected }
   }
 
   const index = await granolaCaptureIndex(

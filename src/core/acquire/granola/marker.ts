@@ -18,6 +18,7 @@ import {
   type GranolaOperationContext,
   granolaDetailHash,
   granolaFolderMarker,
+  granolaFolderMover,
   granolaSource,
   sha256,
   stableJson
@@ -28,7 +29,9 @@ export const privateGranolaMarker = (id: string, folders: readonly GranolaFolder
   const folder = folders.find((candidate) => candidate.id === id)
   const data = record(folder?.projection)
   if (!folder || data?.['visibility'] !== 'private' || data['role'] !== 'owner' || data['audience'] !== 'only you')
-    throw new KiError('Acquired must be an owner-controlled private folder whose audience is only you')
+    throw new KiError(
+      'Acquired and Captured folders must be owner-controlled private folders whose audience is only you'
+    )
   return folder
 }
 
@@ -102,12 +105,18 @@ export interface GranolaMarkOptions {
 
 export interface GranolaMarkResult {
   readonly repository: string
-  readonly folder: string
+  /** The Acquired folder, when the repository marks by adding it. */
+  readonly folder?: string
+  /** The number of Triaged-to-Captured pairs, when the repository marks by moving. */
+  readonly pairs: number
   readonly ready: number
   readonly marked: number
   readonly already: number
   readonly exceptions: readonly { readonly id: string; readonly reason: string }[]
 }
+
+const membership = (folders: readonly string[]): string =>
+  stableJson([...folders].sort((left, right) => left.localeCompare(right, 'en')))
 
 export const markGranola = async (
   options: GranolaMarkOptions,
@@ -115,13 +124,25 @@ export const markGranola = async (
 ): Promise<GranolaMarkResult> => {
   const interval = granolaInterval(options.since, options.until)
   const { target } = await granolaReceivers({ repository: options.repository, ...context })
-  if (!target.acquiredFolderId) throw new KiError('Granola marking requires acquired_folder_id')
+  const moves = target.captureMoves
+  const pairs = Object.keys(moves).length
+  if (!target.acquiredFolderId && !pairs)
+    throw new KiError('Granola marking requires acquired_folder_id or capture_moves')
+  const doneFolders = target.acquiredFolderId ? [target.acquiredFolderId] : Object.values(moves)
   const layout = granolaLayout(target.root, target.captureRoot)
   const source = await granolaSource(context.runner, context.environment)
   const { images: readImages, attachmentTotal } = source
   if (!readImages || !attachmentTotal) throw new KiError('Granola marking requires authoritative MCP screenshot access')
-  privateGranolaMarker(target.acquiredFolderId, await source.folders())
-  const writer = options.confirm ? await granolaFolderMarker(context.runner, context.environment) : undefined
+  const checkFolders = async (): Promise<void> => {
+    const listed = await source.folders()
+    for (const folder of doneFolders) privateGranolaMarker(folder, listed)
+  }
+  await checkFolders()
+  const writer =
+    options.confirm && target.acquiredFolderId
+      ? await granolaFolderMarker(context.runner, context.environment)
+      : undefined
+  const mover = options.confirm && pairs ? await granolaFolderMover(context.runner, context.environment) : undefined
   const enumeration = await enumerateGranolaMeetings(source, interval)
   const sources = options.sources ?? [...enumeration.meetings.keys()]
   if (new Set(sources).size !== sources.length || sources.some((id) => !enumeration.meetings.has(id)))
@@ -137,11 +158,17 @@ export const markGranola = async (
       /* v8 ignore next -- validated source IDs index this unchanged enumeration map. */
       if (!meeting) throw new KiError('Granola source identity disappeared')
       const folders = granolaMeetingFolders(meeting.projection)
-      // Acquired membership alone marks a note dealt with; it needs no local evidence.
-      if (folders.includes(target.acquiredFolderId)) {
+      const triaged = folders.filter((folder) => Object.hasOwn(moves, folder))
+      // Acquired or Captured membership alone marks a note dealt with; it needs no local evidence.
+      if (folders.some((folder) => doneFolders.includes(folder))) {
+        if (triaged.length) throw new KiError('The note is in Triaged and Captured together')
         already += 1
         continue
       }
+      if (pairs && triaged.length !== 1)
+        throw new KiError(
+          triaged.length ? 'The note is in several Triaged folders' : 'The note is in no declared Triaged folder'
+        )
       const paths = index.get(id) ?? []
       if (paths.length !== 1)
         throw new KiError(paths.length ? 'Several captures exist for this note' : 'No capture exists for this note')
@@ -185,21 +212,47 @@ export const markGranola = async (
       )
         throw new KiError('Granola source screenshots differ from the committed capture')
       ready += 1
-      if (!writer) continue
-      privateGranolaMarker(target.acquiredFolderId, await source.folders())
-      await writer(id, target.acquiredFolderId)
-      const after = await enumerateGranolaMeetings(source, interval, target.acquiredFolderId)
-      const observed = after.meetings.get(id)
-      if (
-        !observed ||
-        stableJson(granolaMeetingFolders(observed.projection)) !==
-          stableJson([...folders, target.acquiredFolderId].sort((left, right) => left.localeCompare(right, 'en')))
-      )
-        throw new KiError('Granola marker addition did not preserve all original memberships')
-      marked += 1
+      if (writer && target.acquiredFolderId) {
+        await checkFolders()
+        await writer(id, target.acquiredFolderId)
+        const after = await enumerateGranolaMeetings(source, interval, target.acquiredFolderId)
+        const observed = after.meetings.get(id)
+        if (
+          !observed ||
+          stableJson(granolaMeetingFolders(observed.projection)) !== membership([...folders, target.acquiredFolderId])
+        )
+          throw new KiError('Granola marker addition did not preserve all original memberships')
+        marked += 1
+      } else if (mover) {
+        const from = triaged[0] as string
+        const to = moves[from] as string
+        // Captured is added and read back before Triaged is removed, so a note is never left in neither.
+        const shown = async (): Promise<string> => {
+          const observed = (await enumerateGranolaMeetings(source, interval, to)).meetings.get(id)
+          return observed ? stableJson(granolaMeetingFolders(observed.projection)) : ''
+        }
+        await checkFolders()
+        await mover.add(id, to)
+        if ((await shown()) !== membership([...folders, to]))
+          throw new KiError('Granola did not show the note in Captured with all its folders; it stays in Triaged')
+        await mover.remove(id, from).catch((error: unknown) => {
+          throw new KiError(`Removal from Triaged failed; the note is in both Triaged and Captured: ${String(error)}`)
+        })
+        if ((await shown()) !== membership([...folders.filter((folder) => folder !== from), to]))
+          throw new KiError('Granola did not confirm the removal from Triaged; the note was already shown in Captured')
+        marked += 1
+      }
     } catch (error) {
       exceptions.push({ id, reason: String(error) })
     }
   }
-  return { repository: target.repository, folder: target.acquiredFolderId, ready, marked, already, exceptions }
+  return {
+    repository: target.repository,
+    ...(target.acquiredFolderId ? { folder: target.acquiredFolderId } : {}),
+    pairs,
+    ready,
+    marked,
+    already,
+    exceptions
+  }
 }
