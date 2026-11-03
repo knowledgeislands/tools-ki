@@ -796,10 +796,12 @@ describe('[Granola screenshots and Acquired markers]', () => {
     f.respond('get_meeting_attachment', {
       content: [
         { type: 'image', mimeType: 'image/jpeg', data: Buffer.from([255, 216, 255, 0]).toString('base64') },
-        { type: 'text', text: JSON.stringify({ meeting_id: id, attachment_id: assetId(0) }) }
+        { type: 'text', text: JSON.stringify({ meeting_id: id, attachment_id: assetId(0), type: 'screenshot' }) }
       ]
     })
-    expect((await f.box.run(f.command)).exitCode).toBe(0)
+    const imported = await f.box.run(f.command)
+    expect(imported.exitCode).toBe(0)
+    expect(imported.stdout).toContain('1 (1 screenshots, 0 photos)')
     const invalid = await fixture()
     invalid.respond('list_meetings', {
       meetings: [{ id: 'invalid', date: '2026-10-06', folders: [{ id: 'personal' }] }]
