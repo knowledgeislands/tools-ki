@@ -1,5 +1,5 @@
-import { lstat, readdir, readFile } from 'node:fs/promises'
-import { join, relative } from 'node:path'
+import { lstat, open, readdir, readFile } from 'node:fs/promises'
+import { basename, join, relative } from 'node:path'
 import { KiError } from '../../errors.ts'
 import { verifyGranolaParents } from './layout.ts'
 
@@ -26,7 +26,27 @@ const physicalFile = async (path: string): Promise<boolean> => {
   return Boolean(state?.isFile() && !state.isSymbolicLink())
 }
 
-/** Find every capture of the requested identities, wherever Acquire has filed it under the capture or held directory. */
+/**
+ * A Granola capture may also be a pasted capture the import was folded into, such as `granola-meeting.md`, or any
+ * Markdown file whose front matter names Granola as its source; its `source_id` identifies the meeting.
+ */
+const frontMatterIdentity = async (path: string): Promise<string | undefined> => {
+  const handle = await open(path, 'r')
+  try {
+    const buffer = Buffer.alloc(4096)
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0)
+    const head = buffer.subarray(0, bytesRead).toString('utf8')
+    const end = head.indexOf('\n---\n')
+    if (!head.startsWith('---\n') || end === -1) return undefined
+    const frontMatter = head.slice(4, end + 1)
+    if (!/^source: "?granola"?$/m.test(frontMatter)) return undefined
+    return /^source_id: "([^"\\]+)"$/m.exec(frontMatter)?.[1]
+  } finally {
+    await handle.close()
+  }
+}
+
+/** Find every capture of the requested identities, wherever it is filed under the capture or held directory. */
 export const granolaCaptureIndex = async (
   layout: { readonly documents: string; readonly captures: string; readonly held?: string },
   ids: readonly string[]
@@ -47,6 +67,10 @@ export const granolaCaptureIndex = async (
       } else if (entry.isFile() && entry.name.endsWith('.md')) {
         const id = sourceIdentity(entry.name.slice(0, -3))
         if (id && wanted.has(id)) add(id, path)
+        else if (entry.name !== 'meeting.md' || !sourceIdentity(basename(directory))) {
+          const declared = await frontMatterIdentity(path)
+          if (declared && wanted.has(declared)) add(declared, path)
+        }
       }
     }
   }

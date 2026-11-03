@@ -1640,6 +1640,66 @@ describe('[ki acquire central Granola inbox]', () => {
     expect(await readFile(join(repository, 'README.md'), 'utf8')).toBe('Keep this repository')
   })
 
+  test('recognises folded, held and otherwise named captures by the meeting UUID in their front matter', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('inbox')
+    await setupReceivers(box, [
+      {
+        key: 'inbox',
+        repository: 'https://github.com/example/inbox',
+        path: repository,
+        folderIds: ['one'],
+        captureRoot: 'captures',
+        folderTerritories: { one: 'legal' }
+      }
+    ])
+    const folded = '10000000-0000-4000-8000-000000000021'
+    const held = '10000000-0000-4000-8000-000000000022'
+    const named = '10000000-0000-4000-8000-000000000023'
+    const foreign = '10000000-0000-4000-8000-000000000024'
+    const frontMatter = (id: string, source = 'granola') =>
+      [
+        '---',
+        'type: granola-meeting',
+        `source: ${source}`,
+        `source_id: ${JSON.stringify(id)}`,
+        '---',
+        '',
+        '# Meeting',
+        ''
+      ].join('\n')
+    const write = async (path: string, content: string) => {
+      await mkdir(dirname(join(repository, path)), { recursive: true })
+      await writeFile(join(repository, path), content)
+    }
+    await write('captures/legal/intake/2026-01-02-pasted-call/granola-meeting.md', frontMatter(folded))
+    await write('captures/legal/intake/2026-01-02-pasted-call/README.md', '# Pasted call\n')
+    await write('_held/legal/2026-01-02-held-call/meeting.md', frontMatter(held))
+    await write('captures/legal/intake/notes/call-notes.md', frontMatter(named))
+    // Another source's capture carrying the same identity field is not a Granola capture.
+    await write('captures/legal/intake/notes/other.md', frontMatter(foreign, 'otter'))
+    await write('captures/legal/intake/notes/empty.md', '')
+    const source = granolaFixtureRunner({
+      folders: [{ id: 'one', title: 'Legal' }],
+      meetings: [folded, held, named, foreign].map((id) => ({
+        id,
+        date: '2026-01-02',
+        title: 'Call',
+        folderIds: ['one']
+      }))
+    })
+    box.setRunner(source.runner)
+    const result = await box.run(command(repository))
+    expect(result.exitCode, result.output).toBe(0)
+    expect(result.output).toContain('Meetings: 1 new, 0 refreshed, 3 kept')
+    expect(result.output).toContain(`captures/legal/intake/2026-01-02-pasted-call/granola-meeting.md`)
+    expect(result.output).toContain(`_held/legal/2026-01-02-held-call/meeting.md`)
+    expect(result.output).toContain(`captures/legal/intake/notes/call-notes.md`)
+    expect(await readdir(join(repository, 'captures/legal/granola'))).toEqual([`2026-01-02--call--${foreign}`])
+    const detail = source.calls.filter((call) => call.tool === 'get_meetings')
+    expect(JSON.stringify(detail)).not.toContain(folded)
+  })
+
   test('reports empty unmatched folders and holds mixed memberships in _held/granola, including textual listing evidence', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('inbox')

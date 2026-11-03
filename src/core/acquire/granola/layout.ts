@@ -12,15 +12,15 @@ export const granolaCaptureRoot = (value: unknown): string | undefined => {
 export const GRANOLA_HELD = '_held/granola'
 
 /**
- * Capture paths are relative to `documents`; `captures` and, beside a capture root, `held` are the directories that
- * hold them.
+ * Capture paths are relative to `documents`; `captures` and, beside a capture root, the whole top-level `_held/` area
+ * are the directories that hold them, since a held meeting may wait under any territory's holding folder.
  */
 export const granolaLayout = (
   root: string,
   captureRoot?: string
 ): { documents: string; captures: string; held?: string } =>
   captureRoot
-    ? { documents: root, captures: join(root, captureRoot), held: join(root, GRANOLA_HELD) }
+    ? { documents: root, captures: join(root, captureRoot), held: join(root, '_held') }
     : { documents: join(root, '+/_ACQUIRE/granola'), captures: join(root, '+/_ACQUIRE/granola') }
 
 /** A safe leaf does not make symlinked parent directories safe. */
