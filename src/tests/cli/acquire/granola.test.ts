@@ -1700,6 +1700,93 @@ describe('[ki acquire central Granola inbox]', () => {
     expect(JSON.stringify(detail)).not.toContain(folded)
   })
 
+  test('records the note link, creation and last-updated times and the current folders', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('inbox')
+    await setupReceivers(box, [
+      {
+        key: 'inbox',
+        repository: 'https://github.com/example/inbox',
+        path: repository,
+        folderIds: ['triaged'],
+        captureRoot: 'captures',
+        folderTerritories: { triaged: 'legal' }
+      }
+    ])
+    const id = '10000000-0000-4000-8000-000000000031'
+    const textual = '10000000-0000-4000-8000-000000000032'
+    const runner = granolaFixtureRunner({
+      folders: [{ id: 'triaged', title: 'Triaged - Legal' }],
+      meetings: [
+        {
+          id,
+          date: '2026-01-02',
+          title: 'Structured',
+          folderIds: ['triaged'],
+          detail: {
+            created_at: '2026-01-02T10:07:12.631+00:00',
+            updated_at: '2026-01-03T10:05:32.862+00:00',
+            url: `https://notes.granola.ai/d/${id}`
+          }
+        }
+      ]
+    }).runner
+    box.setRunner(async (command_, arguments_, environment) => {
+      const tool = String(arguments_[1] ?? '').replace('granola.', '')
+      const parsed = (
+        arguments_.includes('--args') ? JSON.parse(String(arguments_[arguments_.indexOf('--args') + 1])) : {}
+      ) as Record<string, unknown>
+      const ids = parsed['meeting_ids'] as string[] | undefined
+      if (tool === 'get_meetings' && ids?.includes(textual))
+        return {
+          exitCode: 0,
+          output: JSON.stringify({
+            content: [
+              {
+                type: 'text',
+                text: `<meetings_data count="1"><meeting id="${textual}" title="Textual" date="Jan 2, 2026" created_at="2026-01-02T09:00:00.000+00:00" updated_at="2026-01-02T11:00:00.000+00:00" url="https://notes.granola.ai/d/${textual}"><summary>Notes</summary></meeting></meetings_data>`
+              }
+            ]
+          })
+        }
+      if (tool === 'list_meetings' && parsed['folder_id'] === 'triaged') {
+        const response = await runner(command_, arguments_, environment)
+        const listed = JSON.parse(response.output) as { meetings: unknown[] }
+        return {
+          exitCode: 0,
+          output: JSON.stringify({
+            meetings: [
+              ...listed.meetings,
+              { id: textual, title: 'Textual', date: '2026-01-02', folders: [{ id: 'triaged' }] }
+            ]
+          })
+        }
+      }
+      return runner(command_, arguments_, environment)
+    })
+    const result = await box.run(command(repository))
+    expect(result.exitCode, result.output).toBe(0)
+    const structured = await readFile(
+      join(repository, `captures/legal/granola/2026-01-02--structured--${id}/meeting.md`),
+      'utf8'
+    )
+    expect(structured).toContain(
+      [
+        'created_at: "2026-01-02T10:07:12.631+00:00"',
+        'updated_at: "2026-01-03T10:05:32.862+00:00"',
+        `note_url: "https://notes.granola.ai/d/${id}"`
+      ].join('\n')
+    )
+    expect(structured).toContain('folders:\n  - id: "triaged"\n    name: "Triaged - Legal"')
+    expect(structured).not.toMatch(/^ {2}- "(?:created_at|updated_at|source_url)"$/m)
+    const text = await readFile(
+      join(repository, `captures/legal/granola/2026-01-02--textual--${textual}/meeting.md`),
+      'utf8'
+    )
+    expect(text).toContain('updated_at: "2026-01-02T11:00:00.000+00:00"')
+    expect(text).toContain(`note_url: "https://notes.granola.ai/d/${textual}"`)
+  })
+
   test('reports empty unmatched folders and holds mixed memberships in _held/granola, including textual listing evidence', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('inbox')

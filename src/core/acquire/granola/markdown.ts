@@ -193,8 +193,23 @@ export const renderGranolaMeeting = (options: {
     ...participantLines(element(detail, 'known_participants'))
   ].filter((value, index, all) => all.indexOf(value) === index)
   const transcript = transcriptText(options.transcript)
+  const sourceValue = (names: readonly string[]): string | undefined =>
+    stringField(detail, names) ??
+    names.map((name) => attribute(detail, name)).find(Boolean) ??
+    stringField(options.meeting.projection, names) ??
+    names.map((name) => attribute(options.meeting.projection, name)).find(Boolean)
+  // The migration keeps when the note was made and last changed, and its link, so a capture can be matched and refreshed.
+  const times = {
+    created_at: sourceValue(['created_at']),
+    updated_at: sourceValue(['updated_at']),
+    source_url: sourceValue(['url', 'note_url'])
+  }
   const omissions = [
-    ...KNOWN_OMISSIONS.filter((omission) => omission !== 'attachments' || !options.attachmentsVerified),
+    ...KNOWN_OMISSIONS.filter(
+      (omission) =>
+        (omission !== 'attachments' || !options.attachmentsVerified) &&
+        !(omission in times && times[omission as keyof typeof times])
+    ),
     ...(options.detail.state === 'unavailable' ? ['meeting_detail'] : []),
     ...(transcript ? [] : ['transcript'])
   ].sort()
@@ -219,6 +234,9 @@ export const renderGranolaMeeting = (options: {
     `title: ${yamlString(title)}`,
     `meeting_date: ${yamlString(date)}`,
     `acquired_at: ${yamlString(options.acquiredAt)}`,
+    ...(times.created_at ? [`created_at: ${yamlString(times.created_at)}`] : []),
+    ...(times.updated_at ? [`updated_at: ${yamlString(times.updated_at)}`] : []),
+    ...(times.source_url ? [`note_url: ${yamlString(times.source_url)}`] : []),
     `source_account_sha256: ${yamlString(options.accountSha256)}`,
     `detail_sha256: ${yamlString(options.detailSha256)}`,
     `transcript_state: ${yamlString(options.transcriptState)}`,
