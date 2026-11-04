@@ -456,6 +456,32 @@ describe('a home whose repository moved', () => {
     expect(await box.state.read('ki/agents/mail/tidy.report.md')).toBe('# Tidy\n')
   })
 
+  test('does not rebind when the origin of the current checkout cannot be read', async () => {
+    const box = await sandbox()
+    await box.project.git(['init', '-q'])
+    await box.project.git(['remote', 'add', 'origin', 'https://github.com/example/moved-repo'])
+    box.setRunner(async (command, args, environment) => {
+      if (command === 'git' && args.includes('get-url')) throw new Error('git is not installed')
+      return runCommand(command, args, environment)
+    })
+    await box.project.write('+/_WORK/hnr.reg.mail/work.md', definition('hnr.reg.mail'))
+    await box.state.write(
+      'ki/registry.toml',
+      'schema = 1\n\n[repositories."other"]\nrepository = "https://github.com/example/other"\npath = "/nonexistent-other"\n'
+    )
+    await box.state.write(
+      'ki/agents/mail/thread.json',
+      JSON.stringify({
+        repository: '/nonexistent-old-root/old-name',
+        folder: '+/_WORK/hnr.reg.mail',
+        origin: 'https://github.com/example/moved-repo'
+      })
+    )
+    const decision = await box.run('ki agent decide mail Continue.', { now })
+    expect(decision.exitCode).toBe(2)
+    expect(decision.stderr).toContain('is gone')
+  })
+
   test('does not rebind to a checkout with the same origin whose work definitions cannot be read', async () => {
     const box = await sandbox()
     await box.project.git(['init', '-q'])

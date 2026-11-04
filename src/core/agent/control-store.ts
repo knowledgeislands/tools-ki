@@ -321,9 +321,8 @@ export const controlHome = async (context: AgentContext, run: string): Promise<{
 
 /** verifyWorkHome, its refusal naming the one command that repairs it. */
 export const verifyRunHome = (run: string, thread: ThreadHome): Promise<{ home: string; work: string }> =>
-  verifyWorkHome(thread).catch(async (error: unknown) => {
-    if (!(error instanceof KiError) || error.next !== undefined) throw error
-    // Each refusal names the one command that repairs it.
+  // verifyWorkHome refuses only with its own errors, none naming a repair; each gains the one that repairs it.
+  verifyWorkHome(thread).catch(async (error: KiError) => {
     const gone = !(await repositoryPresent(thread.repository))
     throw new KiError(
       gone ? `${error.message} (repository ${thread.repository} is gone)` : `${error.message} (${threadPath(thread)})`,
@@ -432,9 +431,8 @@ export const rehomeControl = async (context: AgentContext, run: string): Promise
     run,
     async () => {
       const store = await loadControl(directory)
-      if (!store) return undefined
-      const moved = await followedStore(context, run, directory, store, true)
-      return moved === store ? undefined : store.workHome
+      const moved = store && (await followedStore(context, run, directory, store, true))
+      return store === undefined || moved === store ? undefined : store.workHome
     },
     100,
     false

@@ -5353,17 +5353,51 @@ test('a moved checkout carries its control record to the checkout with the same 
     'ki/registry.toml',
     `schema = 1\n\n[repositories."renamed"]\nrepository = "https://github.com/example/project"\npath = ${JSON.stringify(moved)}\n`
   )
+  // A hand-edited line that names no repository is passed over.
+  await f.box.state.write('ki/agents/r/thread-moves.jsonl', '{"from":7}\n')
   const continued = await f.run('ki agent queue r next brief.md --json')
   expect(continued.exitCode, continued.output).toBe(0)
   const after = JSON.parse(await f.box.state.read('ki/agents/r/control.json'))
   expect(after.workHome).toBe(`${moved}/+/_WORK/ki.r`)
   expect(after.formerWorkHomes).toEqual([before.workHome])
   expect(after.work).toBe('ki.r')
-  expect(JSON.parse(await f.box.state.read('ki/agents/r/thread-moves.jsonl'))).toMatchObject({
+  const moves = (await f.box.state.read('ki/agents/r/thread-moves.jsonl')).trim().split('\n')
+  expect(JSON.parse(moves.at(-1) as string)).toMatchObject({
     from: old,
     to: moved,
     by: 'origin remote and work folder'
   })
+})
+
+test('a checkout moved where nothing registers it names both repairs', async () => {
+  const f = await fixture()
+  expect((await f.launch()).exitCode).toBe(0)
+  f.set({ empty: true })
+  await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
+  expect((await f.run('ki agent status r')).exitCode).toBe(0)
+  const old = await realpath(f.box.project.path)
+  await rename(old, `${await realpath(f.box.root.path)}/moved-checkout`)
+  f.box.cd('../moved-checkout')
+  const refused = await f.run('ki agent queue r next brief.md --json')
+  expect(refused.exitCode).toBe(1)
+  expect(refused.stderr).toContain(`(repository ${old} is gone)`)
+  expect(refused.stderr).toContain('next: register the moved checkout with ki registry add')
+})
+
+test('a record does not follow a home pointed by hand at work its history does not show', async () => {
+  const f = await fixture()
+  expect((await f.launch()).exitCode).toBe(0)
+  f.set({ empty: true })
+  await f.box.state.write('ki/agents/r/worker.status', 'DONE\n')
+  expect((await f.run('ki agent status r')).exitCode).toBe(0)
+  await rename(`${f.box.project.path}/+/_WORK/ki.r`, `${f.box.project.path}/+/_WORK/ki.other`)
+  await f.box.project.write('+/_WORK/ki.other/work.md', '---\nid: ki.other\n---\n')
+  const thread = JSON.parse(await f.box.state.read('ki/agents/r/thread.json'))
+  await f.box.state.write('ki/agents/r/thread.json', JSON.stringify({ ...thread, folder: '+/_WORK/ki.other' }))
+  const refused = await f.run('ki agent queue r next brief.md --json')
+  expect(refused.exitCode).toBe(1)
+  expect(refused.stderr).toContain('control-')
+  expect(JSON.parse(await f.box.state.read('ki/agents/r/control.json')).work).toBe('ki.r')
 })
 
 test('a package renamed where its history does not show it names the one repair command', async () => {

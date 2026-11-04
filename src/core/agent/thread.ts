@@ -372,7 +372,8 @@ const renamedWorkFolder = async (
  */
 export const formerWorkIds = async (context: AgentContext, home: ThreadHome): Promise<readonly string[]> => {
   const id = home.folder.slice(`${WORK_DIRECTORY}/`.length)
-  const definition = (await readWorkDefinitions(home.repository).catch(() => [])).find((work) => work.id === id)
+  // readThread has read these definitions already, so they read here too.
+  const definition = (await readWorkDefinitions(home.repository)).find((work) => work.id === id)
   const names = definition === undefined ? [] : workNames(definition.id, definition.level)
   const folders = (await earlierNames(context, home)).filter((folder) => folder.startsWith(`${WORK_DIRECTORY}/`))
   return [...new Set([...names, ...folders.map((folder) => folder.slice(`${WORK_DIRECTORY}/`.length))])].filter(
