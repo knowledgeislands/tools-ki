@@ -121,7 +121,7 @@ Three output controls are worth knowing:
 - `--progress never` suppresses the activity stream. Use it whenever output is captured rather than watched.
 - `--reporter-levels` selects which findings render; the default is `FAIL,WARN`.
 
-Redirected output with `--progress always` defaults to the single-row form, and `--progress-style single` requests it explicitly.
+Redirected output with `--progress always` defaults to the single-row form, and `--progress-style single` requests it explicitly. Under the default `--progress auto`, redirected output keeps standard output unchanged, but once a minute standard error names the step still running and how long it has taken, so a long step such as a full coverage run does not look like a hang.
 
 To make quiet output the default without adding flags to every call, as an agent harness might, set `KI_QUIET`:
 

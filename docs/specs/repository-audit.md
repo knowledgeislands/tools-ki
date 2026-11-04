@@ -84,11 +84,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REPO-AUDIT-008 — Honest interactive progress
 
-When repository progress is enabled, `ki repo audit` MUST render elapsed time and indeterminate activity without treating item counts or declared cost as estimated completion. Multi-skill progress MUST emit each evidence-ready skill once as a completed receipt, hide queued work, and collapse those temporary receipts into one aggregate evidence receipt.
+When repository progress is enabled, `ki repo audit` MUST render elapsed time and indeterminate activity without treating item counts or declared cost as estimated completion. Multi-skill progress MUST emit each evidence-ready skill once as a completed receipt, hide queued work, and collapse those temporary receipts into one aggregate evidence receipt. Under `--progress auto` outside a terminal, standard output MUST stay unchanged while standard error names the running activity and its elapsed time at least once a minute.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/repo/repo.test.ts` — `renders a compact TTY receipt stream without changing non-interactive output` and `uses the same activity bar regardless of declared item cost`; `src/tests/cli/repo/progress-stages.test.ts` — `keeps a counted evidence step indeterminate instead of treating it as estimated completion` and `shows evidence-ready skills as full receipts, then collapses them once`.
+_Verify:_ `src/tests/cli/repo/repo.test.ts` — `renders a compact TTY receipt stream without changing non-interactive output` and `uses the same activity bar regardless of declared item cost`; `src/tests/cli/repo/progress-stages.test.ts` — `keeps a counted evidence step indeterminate instead of treating it as estimated completion`, `shows evidence-ready skills as full receipts, then collapses them once` and `names a long evidence step on standard error outside a terminal, leaving standard output unchanged`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
