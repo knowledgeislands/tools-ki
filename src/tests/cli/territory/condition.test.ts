@@ -148,7 +148,8 @@ describe('[ki territory show island condition]', () => {
           health: UNKNOWN
         }
       ],
-      unregistered: []
+      unregistered: [],
+      absent: []
     })
   })
 

@@ -171,7 +171,10 @@ describe('[ki territory inspect]', () => {
     expect((await box.run('ki territory inspect team --target terminal --workspace anything')).exitCode).toBe(2)
     expect((await box.run('ki territory inspect team --target delta --workspace anything')).exitCode).toBe(2)
     expect((await box.run('ki territory inspect unknown --target vscode --workspace anything')).exitCode).toBe(2)
-    expect((await box.run('ki territory audit --estate')).exitCode).toBe(2)
+    const estate = await box.run('ki territory audit --estate')
+    expect(estate.exitCode).toBe(1)
+    expect(estate.stdout).toContain('member https://github.com/example/unavailable has no checkout at')
+    expect(estate.stdout).toContain('member https://github.com/example/linked cannot be read at')
   })
 
   test('observes explicit stable and preview Zed workspaces read-only', async () => {

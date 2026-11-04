@@ -105,9 +105,9 @@ describe('territory aliases', () => {
       'member/.ki.toml',
       `${memberConfiguration('example/member').replace('repo_code = "TEST"', 'repo_code = "TEST"\nterritory_aliases = []')}`
     )
-    const member = await box.run('ki territory roots -t team')
-    expect(member.exitCode).toBe(2)
-    expect(member.stderr).toContain('territory_aliases are permitted only in a territory Capital')
+    const member = await box.run('ki territory audit -t team')
+    expect(member.exitCode).toBe(1)
+    expect(member.stdout).toContain('territory_aliases are permitted only in a territory Capital')
   })
 
   test('fails closed on every collision in the shared selector namespace, before any selection', async () => {

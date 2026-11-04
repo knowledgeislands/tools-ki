@@ -5,7 +5,7 @@
 import { join } from 'node:path'
 import { REPOSITORY_DECLARATION_FILE, readRepositoryDeclaration } from '../configuration/index.ts'
 import { type AuditHealth, readAuditHealth } from '../repository/audit-health.ts'
-import type { TerritoryProfile, TerritoryRootKind } from './types.ts'
+import type { TerritoryAbsence, TerritoryProfile, TerritoryRootKind } from './types.ts'
 
 export type { AuditHealth } from '../repository/audit-health.ts'
 
@@ -33,6 +33,8 @@ export interface TerritoryReport {
     readonly health: AuditHealth
   }[]
   readonly unregistered: readonly string[]
+  /** Every member that could not be resolved and why, the unregistered included. */
+  readonly absent: readonly TerritoryAbsence[]
 }
 
 const isLevel = (value: unknown): value is MaturityLevel => MATURITY_LEVELS.some((level) => level === value)
@@ -69,5 +71,6 @@ export const territoryReport = async (profile: TerritoryProfile, stateDirectory:
       health: await readAuditHealth(stateDirectory, member.root)
     }))
   ),
-  unregistered: profile.unregistered ?? []
+  unregistered: profile.unregistered ?? [],
+  absent: profile.absent ?? []
 })

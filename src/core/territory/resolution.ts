@@ -1,23 +1,23 @@
 import { existsSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse } from 'smol-toml'
 import { DEFAULT_HARNESS, REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import { targetFromDirectory } from '../repository/location.ts'
 import { type LocalRegistryEntry, requiredLocalRegistry } from '../storage/index.ts'
-import { type TerritoryDeclaration, territoryDeclarationFrom } from './declaration.ts'
+import { claimedRepository, type TerritoryDeclaration, territoryDeclarationFrom } from './declaration.ts'
 import { matchesDirectoryName, validateFilters } from './filters.ts'
 import { readTerritoryRanking } from './ranking.ts'
-import type { TerritoryMember, TerritoryProfile } from './types.ts'
+import type { TerritoryAbsence, TerritoryMember, TerritoryProfile } from './types.ts'
 
 export interface TerritorySelection {
   readonly territory?: string
   readonly estate?: boolean
   readonly principals?: boolean
   readonly filters: readonly string[]
-  /** Report unregistered declared members on the profile instead of failing; for show and audit only. */
-  readonly unregistered?: 'report'
+  /** Report members that cannot be resolved on the profile instead of failing; for roots, show and audit only. */
+  readonly absent?: 'report'
 }
 /** Where selection reads the local registry and the user's territory ranking. */
 export interface TerritoryDirectories {
@@ -145,6 +145,52 @@ const rankedCapitals = async (
       warn?.(`territory ranking names ${handle}, which no registered Capital declares`)
   return { ordered: territoryOrder(found, ranking), ranking }
 }
+/** The identity a checkout's `.ki.toml` claims, or undefined where it has none readable. */
+const claimAt = async (path: string): Promise<string | undefined> => {
+  try {
+    return claimedRepository(parse(await readFile(join(path, REPOSITORY_DECLARATION_FILE), 'utf8')))
+  } catch {
+    return undefined
+  }
+}
+/** A selected member's checkout, held to its registered identity and, in a territory, to its Capital. */
+const memberOf = async (entry: LocalRegistryEntry, capital: Capital | undefined): Promise<TerritoryMember> => {
+  const member = await memberAt(entry, entry === capital?.entry ? 'owner' : 'member')
+  const declaration = await declarationAt(entry)
+  if (capital && declaration.capital !== capital.entry.repository)
+    throw new KiError(
+      `${entry.key}: declared Capital ${declaration.capital} differs from territory ${capital.handle}`,
+      2
+    )
+  return member
+}
+/** Why a registered member's checkout cannot be used, read from what failed when it was resolved. */
+const absenceOf = async (
+  entry: LocalRegistryEntry,
+  capital: Capital | undefined,
+  error: unknown
+): Promise<TerritoryAbsence> => {
+  const held = { identity: entry.repository, key: entry.key, path: entry.path }
+  if (!(await stat(entry.path).catch(() => undefined))?.isDirectory()) return { ...held, condition: 'missing' }
+  const claim = await claimAt(entry.path)
+  if (claim && claim !== entry.repository) return { ...held, condition: 'renamed', declared: claim }
+  const declared = await declarationAt(entry).then(
+    (declaration) => declaration.capital,
+    () => undefined
+  )
+  if (capital && declared && declared !== capital.entry.repository) return { ...held, condition: 'elsewhere', declared }
+  return { ...held, condition: 'unreadable', reason: (error as Error).message }
+}
+/** An unregistered member, or the registered checkout that now declares it under the name the registry still gives. */
+const unregisteredAbsence = async (
+  identity: string,
+  entries: readonly LocalRegistryEntry[]
+): Promise<TerritoryAbsence> => {
+  for (const entry of entries)
+    if ((await claimAt(entry.path)) === identity)
+      return { identity, condition: 'renamed', key: entry.key, path: entry.path, declared: entry.repository }
+  return { identity, condition: 'unregistered' }
+}
 const memberAt = async (entry: LocalRegistryEntry, kind: TerritoryMember['kind']): Promise<TerritoryMember> => {
   const target = await targetFromDirectory(
     entry.path,
@@ -194,29 +240,29 @@ export const resolveTerritory = async (
   const capital = selection.territory === undefined ? undefined : selectedCapital(ordered, selection.territory)
   const identities = capital?.declaration.territory.members ?? entries.map((entry) => entry.repository)
   // Registration completeness is authoritative before a basename filter can exclude anything,
-  // unless the caller reports the unregistered members itself.
+  // unless the caller reports the members it cannot resolve itself.
+  const report = selection.absent === 'report'
   const scoped: LocalRegistryEntry[] = []
-  const unregistered: string[] = []
+  const unregistered: TerritoryAbsence[] = []
   for (const identity of identities) {
     const entry = entries.find((candidate) => candidate.repository === identity)
     if (entry) scoped.push(entry)
-    else if (selection.unregistered === 'report') unregistered.push(identity)
+    else if (report) unregistered.push(await unregisteredAbsence(identity, entries))
     else throw new KiError(`territory ${capital?.handle} member ${identity} is not registered`, 2)
   }
   const selected = scoped.filter((entry) => matchesDirectoryName(entry.path, filters))
-  const missing = unregistered.filter((identity) => matchesDirectoryName(identity, filters))
-  if (!selected.length && !missing.length) throw noRepositoriesMatched()
+  const absent = unregistered.filter((absence) => matchesDirectoryName(absence.path ?? absence.identity, filters))
+  if (!selected.length && !absent.length) throw noRepositoriesMatched()
   const members: TerritoryMember[] = []
-  for (const entry of selected) {
-    const member = await memberAt(entry, entry === capital?.entry ? 'owner' : 'member')
-    const declaration = await declarationAt(entry)
-    if (capital && declaration.capital !== capital.entry.repository)
-      throw new KiError(
-        `${entry.key}: declared Capital ${declaration.capital} differs from territory ${capital.handle}`,
-        2
-      )
-    members.push(member)
-  }
+  for (const entry of selected)
+    try {
+      members.push(await memberOf(entry, capital))
+    } catch (error) {
+      if (!report) throw error
+      absent.push(await absenceOf(entry, capital, error))
+    }
+  absent.sort((left, right) => (left.identity < right.identity ? -1 : 1))
+  const missing = absent.filter((absence) => absence.condition === 'unregistered').map((absence) => absence.identity)
   // Estate roots follow the ranked territory declaring them, earliest rank first; unranked roots keep
   // code-point order after them. Each root's checkout identity was verified, so no two roots are equal.
   const rank = new Map<string, number>()
@@ -242,7 +288,8 @@ export const resolveTerritory = async (
     members,
     roots: members,
     system: !capital,
-    ...(missing.length ? { unregistered: missing } : {})
+    ...(missing.length ? { unregistered: missing } : {}),
+    ...(absent.length ? { absent } : {})
   }
 }
 export const listTerritories = async (

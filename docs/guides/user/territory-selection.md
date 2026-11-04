@@ -20,11 +20,21 @@ Use `ki territory open --principals --target zed` to open them in that order. Ze
 
 ## Consume roots safely
 
-Use `ki territory roots --null -t knowledge-islands -f tools-` for NUL-delimited absolute primary checkout roots. Buffer the complete output and check exit status before acting. This handles paths containing spaces or line feeds and gives no partial stdout on failure.
+Use `ki territory roots --null -t knowledge-islands -f tools-` for NUL-delimited absolute primary checkout roots. Buffer the complete output and check exit status before acting. This handles paths containing spaces or line feeds and gives no partial stdout on failure. A member that cannot be resolved is left out with a `ki: warning:` line on stderr, so read stderr too when every member matters.
 
 ## Verify and recover
 
-Use `ki territory audit -t knowledge-islands` to validate the selected territory. Missing registration fails before filters can exclude a member: register the canonical member identity first. An unavailable selected root or checkout identity/Capital mismatch fails before operations. A registered unavailable root excluded by a filter does not block the remaining selection.
+Use `ki territory audit -t knowledge-islands` to validate the selected territory. Each member it cannot resolve is a finding with its repair, and the other members are still checked:
+
+| Condition | What it means | Repair |
+| --- | --- | --- |
+| unregistered | No registry entry names it and no registered checkout declares it | Register its checkout with `ki registry add`, or drop it from `territory_members` if it was archived or deleted |
+| renamed | Its registry entry and its checkout's `.ki.toml` give different names | Bring `territory_members`, the registry and the `.ki.toml` to one name |
+| missing | Its registered checkout is no longer on disk | Clone it there again, or `ki registry remove` the entry |
+| unreadable | Its checkout cannot be read as that member | Restore its `.ki.toml` from the reason given |
+| elsewhere | Its checkout names another Capital | Move it to that territory's members, or correct its `capital` |
+
+Other commands that take `--territory`, such as `ki repo audit`, still fail before operations on any of these. A registered unavailable root excluded by a filter does not block the remaining selection.
 
 Use `ki territory open -t knowledge-islands --target zed` to open local roots. For a read-only projection comparison, use `ki territory inspect -t knowledge-islands --target vscode --workspace <absolute-code-workspace-file>` or select an explicit Zed workspace ID. Legacy Agora membership, inclusions and reference association commands are retired; existing historical local files remain untouched.
 

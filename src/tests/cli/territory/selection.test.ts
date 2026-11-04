@@ -77,22 +77,34 @@ describe('territory selection', () => {
     expect((await roots(box, '-t', 'ki')).exitCode).toBe(0)
     expect((await roots(box, '-t', 'renamed-capital')).exitCode).toBe(2)
   })
-  test('validates full membership registration before filtering and selected roots afterwards', async () => {
-    const { box, entries, member } = await fixture()
+  test('lists the resolvable roots and warns of each member it cannot resolve, after filtering', async () => {
+    const { box, capital, entries, member } = await fixture()
     await registry(box, entries.slice(0, 1))
-    const missing = await roots(box, '-t', 'ki', '--filter', 'Capital')
-    expect(missing.exitCode).toBe(2)
-    expect(missing.stdout).toBe('')
-    expect(missing.stderr).toContain('is not registered')
+    const unregistered = await roots(box, '-t', 'ki')
+    expect(unregistered.exitCode).toBe(0)
+    expect(unregistered.stdout).toBe(`${capital}\0`)
+    expect(unregistered.stderr).toBe(
+      `ki: warning: territory ki member ${home('example/member')} is not registered; register its checkout with ki registry add, or drop it from territory_members if it was archived or deleted\n`
+    )
+    expect((await roots(box, '-t', 'ki', '--filter', 'Capital')).stderr).toBe('')
+    const onlyAbsent = await roots(box, '-t', 'ki', '--filter', 'member')
+    expect(onlyAbsent.exitCode).toBe(0)
+    expect(onlyAbsent.stdout).toBe('')
     await registry(box, entries)
     await rm(member, { recursive: true })
-    expect((await roots(box, '-t', 'ki', '--filter', 'Capital')).exitCode).toBe(0)
+    expect((await roots(box, '-t', 'ki', '--filter', 'Capital')).stderr).toBe('')
     expect((await roots(box, '--estate', '--filter', 'Capital')).exitCode).toBe(0)
-    const unavailable = await roots(box, '-t', 'ki')
-    expect(unavailable.exitCode).toBe(2)
-    expect(unavailable.stdout).toBe('')
+    const gone = await roots(box, '-t', 'ki')
+    expect(gone.exitCode).toBe(0)
+    expect(gone.stdout).toBe(`${capital}\0`)
+    expect(gone.stderr).toBe(
+      `ki: warning: territory ki member ${home('example/member')} has no checkout at ${member}, its registered path; clone it there again, or remove member-key with ki registry remove\n`
+    )
+    expect((await roots(box, '--estate')).stderr).toContain('has no checkout at')
+    // Selections that read repositories rather than list them stay strict.
+    expect((await box.run(['ki', 'repo', 'audit', '-t', 'ki'])).stderr).toContain('physical directory')
   })
-  test('show and audit name each unregistered member, check the rest and exit 1 while roots stay strict', async () => {
+  test('show and audit name each unregistered member, check the rest and exit 1', async () => {
     const { box, entries } = await fixture()
     await registry(box, entries.slice(0, 1))
     const member = home('example/member')
@@ -105,7 +117,7 @@ describe('territory selection', () => {
     const audit = await box.run(['ki', 'territory', 'audit', '-t', 'ki'])
     expect(audit.exitCode).toBe(1)
     expect(audit.stdout).toBe(
-      `╭─ KI TERRITORY AUDIT\n├─ ki: incomplete\n│  ╰─ ✗ member ${member} is not registered; register its checkout with ki registry add\n╰─ summary: REPOSITORIES=1 FINDINGS=1\n`
+      `╭─ KI TERRITORY AUDIT\n├─ ki: incomplete\n│  ╰─ ✗ member ${member} is not registered; register its checkout with ki registry add, or drop it from territory_members if it was archived or deleted\n╰─ summary: REPOSITORIES=1 FINDINGS=1\n`
     )
     const onlyMissing = await box.run(['ki', 'territory', 'show', '-t', 'ki', '--filter', 'member'])
     expect(onlyMissing.exitCode).toBe(1)
@@ -116,8 +128,51 @@ describe('territory selection', () => {
     expect((await box.run(['ki', 'territory', 'audit', '-t', 'ki', '--filter', 'none'])).exitCode).toBe(2)
     expect((await box.run(['ki', 'repo', 'audit', '-t', 'ki'])).stderr).toContain('is not registered')
   })
+  test('show and audit tell a renamed member, a gone checkout and an unregistered one apart', async () => {
+    const { box, capital, entries, member } = await fixture()
+    // The Capital lists the new name and an archived member; the registry still holds the old name.
+    await box.project.write(
+      'Capital checkout/.ki.toml',
+      capitalConfiguration({
+        members: [home('example/archived'), home('example/capital'), home('example/gone'), home('example/renamed')]
+      }).replace('territory_name =', 'territory_prefix = "ki"\nterritory_name =')
+    )
+    await box.project.write('nested/Tool [*]\nname/.ki.toml', memberConfiguration('example/renamed'))
+    const gone = join(box.project.path, 'gone')
+    await registry(box, [...entries, { key: 'gone-key', repository: home('example/gone'), path: gone }])
+    const show = await box.run(['ki', 'territory', 'show', '-t', 'ki'])
+    expect(show.exitCode).toBe(1)
+    expect(show.stdout).toBe(
+      `╭─ KI TERRITORY\n├─ ki: Example territory\n│  ╰─ capital-key · maturity unknown · health unknown\n├─ unregistered\n│  ╰─ ${home('example/archived')}\n├─ renamed\n│  ╰─ ${home('example/renamed')}\n├─ missing\n│  ╰─ ${home('example/gone')}\n╰─ summary: REPOSITORIES=1 UNREGISTERED=1 RENAMED=1 MISSING=1\n`
+    )
+    const report = JSON.parse((await box.run(['ki', 'territory', 'show', '-t', 'ki', '--format', 'json'])).stdout)
+    expect(report.unregistered).toEqual([home('example/archived')])
+    expect(report.absent).toEqual([
+      { identity: home('example/archived'), condition: 'unregistered' },
+      { identity: home('example/gone'), condition: 'missing', key: 'gone-key', path: gone },
+      {
+        identity: home('example/renamed'),
+        condition: 'renamed',
+        key: 'member-key',
+        path: member,
+        declared: home('example/member')
+      }
+    ])
+    const audit = await box.run(['ki', 'territory', 'audit', '-t', 'ki'])
+    expect(audit.exitCode).toBe(1)
+    expect(audit.stdout).toContain('ki: incomplete')
+    expect(audit.stdout).toContain(
+      `✗ member ${home('example/renamed')} was renamed: member-key at ${member} goes by ${home('example/member')}`
+    )
+    expect(audit.stdout).toContain(`✗ member ${home('example/gone')} has no checkout at ${gone}`)
+    expect(audit.stdout).toContain('summary: REPOSITORIES=1 FINDINGS=3')
+    const listed = await roots(box, '-t', 'ki')
+    expect(listed.exitCode).toBe(0)
+    expect(listed.stdout).toBe(`${capital}\0`)
+    expect(listed.stderr.match(/ki: warning: /g)).toHaveLength(3)
+  })
   test('rejects ambiguous registry identities, duplicate handles, malformed Capitals and checkout disagreement', async () => {
-    const { box, entries } = await fixture()
+    const { box, capital, entries, member } = await fixture()
     await registry(box, [
       ...entries,
       { ...(entries[1] as (typeof entries)[number]), key: 'duplicate', path: join(box.project.path, 'other') }
@@ -142,16 +197,24 @@ describe('territory selection', () => {
     await registry(box, entries)
     await box.project.write('nested/Tool [*]\nname/.ki.toml', '[not valid TOML\n')
     const malformed = await roots(box, '-t', 'ki')
-    expect(malformed.stdout).toBe('')
+    expect(malformed.stdout).toBe(`${capital}\0`)
+    expect(malformed.stderr).toContain(`cannot be read at ${member}: member-key: `)
     expect(malformed.stderr).toContain('must be available and valid TOML')
-    expect((await roots(box, '-t', 'ki', '--filter', 'Capital')).exitCode).toBe(0)
+    expect((await roots(box, '-t', 'ki', '--filter', 'Capital')).stderr).toBe('')
+    expect((await box.run(['ki', 'repo', 'audit', '-t', 'ki'])).stderr).toContain('must be available and valid TOML')
     await box.project.write(
       'nested/Tool [*]\nname/.ki.toml',
       memberConfiguration('example/member', { capital: home('example/other') })
     )
-    expect((await roots(box, '-t', 'ki')).stderr).toContain('differs from territory')
+    expect((await roots(box, '-t', 'ki')).stderr).toContain(
+      `member ${home('example/member')} names Capital ${home('example/other')} in ${member}; move it to that territory's territory_members or correct its capital`
+    )
+    expect((await box.run(['ki', 'repo', 'audit', '-t', 'ki'])).stderr).toContain('differs from territory')
     await box.project.write('nested/Tool [*]\nname/.ki.toml', memberConfiguration('example/renamed'))
-    expect((await roots(box, '-t', 'ki')).stderr).toContain('differs from registered')
+    expect((await roots(box, '-t', 'ki')).stderr).toContain(
+      `member ${home('example/member')} was renamed: member-key at ${member} goes by ${home('example/renamed')}; bring territory_members, the registry and its .ki.toml to one name`
+    )
+    expect((await box.run(['ki', 'repo', 'audit', '-t', 'ki'])).stderr).toContain('differs from registered')
     await box.project.write(
       'Capital checkout/.ki.toml',
       capitalConfiguration().replace('territory_name =', 'territory_prefix = "Bad"\nterritory_name =')

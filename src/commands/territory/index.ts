@@ -11,6 +11,7 @@ import {
   territoryReport
 } from '../../core/territory/index.ts'
 import type { TerritorySelection } from '../../core/territory/resolution.ts'
+import type { TerritoryAbsence, TerritoryAbsenceCondition } from '../../core/territory/types.ts'
 import { renderTree } from '../presentation/index.ts'
 import { createTerritoryInspectCommand } from './inspect.ts'
 import { territoryOptions } from './selection.ts'
@@ -28,6 +29,30 @@ const auditEvidence = (health: AuditHealth): string =>
     : health.audit === 'incomplete'
       ? `incomplete ${health.observedAt}`
       : 'none recorded'
+
+/** What is wrong with one member, and what puts it right. */
+const absenceText = (absence: TerritoryAbsence): string => {
+  const { identity, key, path, declared } = absence
+  switch (absence.condition) {
+    case 'unregistered':
+      return `member ${identity} is not registered; register its checkout with ki registry add, or drop it from territory_members if it was archived or deleted`
+    case 'renamed':
+      return `member ${identity} was renamed: ${key} at ${path} goes by ${declared}; bring territory_members, the registry and its .ki.toml to one name`
+    case 'missing':
+      return `member ${identity} has no checkout at ${path}, its registered path; clone it there again, or remove ${key} with ki registry remove`
+    case 'unreadable':
+      return `member ${identity} cannot be read at ${path}: ${absence.reason}`
+    case 'elsewhere':
+      return `member ${identity} names Capital ${declared} in ${path}; move it to that territory's territory_members or correct its capital`
+  }
+}
+const CONDITIONS: readonly TerritoryAbsenceCondition[] = [
+  'unregistered',
+  'renamed',
+  'missing',
+  'unreadable',
+  'elsewhere'
+]
 
 type Options = TerritorySelection & {
   readonly filter: readonly string[]
@@ -52,9 +77,10 @@ export const createTerritoryCommand = (context: KiContext): Command => {
     territoryOptions(new Command('roots').description('write selected physical roots for machine consumption'))
       .option('-0, --null', 'terminate roots with NUL instead of line feeds')
       .action(async (options: Options) => {
-        const profile = await resolve(options)
+        const profile = await resolve({ ...options, absent: 'report' })
+        for (const absence of profile.absent ?? []) warn(`territory ${profile.id} ${absenceText(absence)}`)
         const separator = options.null ? '\0' : '\n'
-        context.stdout.write(`${profile.roots.map((root) => root.root).join(separator)}${separator}`)
+        context.stdout.write(profile.roots.map((root) => `${root.root}${separator}`).join(''))
       })
   )
   command.addCommand(
@@ -66,25 +92,29 @@ export const createTerritoryCommand = (context: KiContext): Command => {
           .default('text')
       )
       .action(async (options: Options & { readonly format: 'text' | 'json' }) => {
-        const profile = await resolve({ ...options, unregistered: 'report' })
+        const profile = await resolve({ ...options, absent: 'report' })
         const report = await territoryReport(profile, context.paths.state)
+        const absent = CONDITIONS.flatMap((condition) => {
+          const found = report.absent.filter((absence) => absence.condition === condition)
+          return found.length ? [{ condition, found }] : []
+        })
         context.stdout.write(
           options.format === 'json'
             ? `${JSON.stringify(report, null, 2)}\n`
-            : `${renderTree({ title: 'KI TERRITORY', entries: [{ label: `${report.territory.id}: ${report.territory.title}`, children: report.repositories.map((island) => ({ label: `${island.key} · maturity ${island.maturity.level ?? 'unknown'} · health ${HEALTH[island.health.state]}`, ...(options.verbose ? { children: [{ label: island.identity }, { label: island.root }, { label: `maturity: ${island.maturity.declaration}` }, { label: `audit: ${auditEvidence(island.health)}` }] } : {}) })) }, ...(report.unregistered.length ? [{ label: 'unregistered', children: report.unregistered.map((identity) => ({ label: identity })) }] : []), { label: `summary: REPOSITORIES=${report.repositories.length}${report.unregistered.length ? ` UNREGISTERED=${report.unregistered.length}` : ''}` }] }).join('\n')}\n`
+            : `${renderTree({ title: 'KI TERRITORY', entries: [{ label: `${report.territory.id}: ${report.territory.title}`, children: report.repositories.map((island) => ({ label: `${island.key} · maturity ${island.maturity.level ?? 'unknown'} · health ${HEALTH[island.health.state]}`, ...(options.verbose ? { children: [{ label: island.identity }, { label: island.root }, { label: `maturity: ${island.maturity.declaration}` }, { label: `audit: ${auditEvidence(island.health)}` }] } : {}) })) }, ...absent.map(({ condition, found }) => ({ label: condition, children: found.map((absence) => ({ label: absence.identity })) })), { label: `summary: REPOSITORIES=${report.repositories.length}${absent.map(({ condition, found }) => ` ${condition.toUpperCase()}=${found.length}`).join('')}` }] }).join('\n')}\n`
         )
-        if (report.unregistered.length) throw new KiExit(1)
+        if (absent.length) throw new KiExit(1)
       })
   )
   command.addCommand(
     territoryOptions(new Command('audit').description('validate a selected territory or estate')).action(
       async (options: Options) => {
-        const profile = await resolve({ ...options, unregistered: 'report' })
-        const unregistered = profile.unregistered ?? []
+        const profile = await resolve({ ...options, absent: 'report' })
+        const absent = profile.absent ?? []
         context.stdout.write(
-          `${renderTree({ title: 'KI TERRITORY AUDIT', entries: [{ label: `${profile.id}: ${unregistered.length ? 'incomplete' : 'healthy'}`, children: unregistered.map((identity) => ({ label: `✗ member ${identity} is not registered; register its checkout with ki registry add` })) }, { label: `summary: REPOSITORIES=${profile.roots.length} FINDINGS=${unregistered.length}` }] }).join('\n')}\n`
+          `${renderTree({ title: 'KI TERRITORY AUDIT', entries: [{ label: `${profile.id}: ${absent.length ? 'incomplete' : 'healthy'}`, children: absent.map((absence) => ({ label: `✗ ${absenceText(absence)}` })) }, { label: `summary: REPOSITORIES=${profile.roots.length} FINDINGS=${absent.length}` }] }).join('\n')}\n`
         )
-        if (unregistered.length) throw new KiExit(1)
+        if (absent.length) throw new KiExit(1)
       }
     )
   )
