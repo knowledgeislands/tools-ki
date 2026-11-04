@@ -2,14 +2,19 @@ import { readFile } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 
 const workflow = await readFile(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8')
+const kiVersion = await readFile(new URL('../../.github/ki-version', import.meta.url), 'utf8')
 
 describe('CI native gate', () => {
   test('keeps the released KI pin at the verified compatible baseline or newer', () => {
-    const pin = /^ {2}KI_VERSION: v(\d+)\.(\d+)\.\d+$/m.exec(workflow)
+    const pin = /^v(\d+)\.(\d+)\.\d+\n?$/.exec(kiVersion)
     expect(pin).not.toBeNull()
     const major = Number(pin?.[1])
     const minor = Number(pin?.[2])
     expect(major > 0 || (major === 0 && minor >= 12)).toBe(true)
+  })
+
+  test('reads the KI pin from .github/ki-version', () => {
+    expect(workflow).toContain("KI_VERSION=$(tr -d '[:space:]' < .github/ki-version)")
   })
 
   test('verifies the installed release before one native audit and manual lint', () => {
