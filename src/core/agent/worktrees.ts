@@ -115,6 +115,46 @@ export const agentWorktreeLines = async (
   return details.worktree === undefined ? [] : [await worktreeLine(context, details.worktree, name, stopped)]
 }
 
+/** A Git checkout one agent's launch lets it work in, as `--add-dir` granted it or as its working directory. */
+export interface AgentCheckout {
+  readonly agent: string
+  readonly role: 'worktree' | 'workdir' | 'added'
+  /** The checkout's top level, as Git reports it. */
+  readonly path: string
+}
+
+/**
+ * The checkouts an agent may be working in, read from its launch record: its run worktree, its
+ * working directory and each added directory, each once by its Git top level. A directory in no
+ * Git checkout, such as a temporary folder, is left out.
+ */
+export const agentCheckouts = async (
+  context: AgentContext,
+  directory: string,
+  name: string
+): Promise<readonly AgentCheckout[]> => {
+  const text = await readFile(join(directory, `${name}.launch.json`), 'utf8').catch(() => undefined)
+  if (text === undefined) return []
+  const details = JSON.parse(text) as {
+    readonly workdir?: string
+    readonly worktree?: AgentWorktree
+    readonly request?: { readonly addDirs?: readonly string[] }
+  }
+  const candidates: readonly (readonly [AgentCheckout['role'], string | undefined])[] = [
+    ['worktree', details.worktree?.path],
+    ['workdir', details.workdir],
+    ...(details.request?.addDirs ?? []).map((path) => ['added', path] as const)
+  ]
+  const checkouts: AgentCheckout[] = []
+  for (const [role, path] of candidates) {
+    if (path === undefined) continue
+    const root = await gitWorkingTreeRoot(path, context.runner, context.environment)
+    if (root !== undefined && !checkouts.some((checkout) => checkout.path === root))
+      checkouts.push({ agent: name, role, path: root })
+  }
+  return checkouts
+}
+
 const worktreeOwners = async (context: AgentContext): Promise<ReadonlyMap<string, boolean>> => {
   const owners = new Map<string, boolean>()
   for (const run of await readdir(agentsDirectory(context), { withFileTypes: true }).catch(() => [])) {

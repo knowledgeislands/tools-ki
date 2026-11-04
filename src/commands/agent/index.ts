@@ -16,6 +16,8 @@ import {
   listRuns,
   newPrompt,
   queueAgent,
+  type RunOverview,
+  runOverview,
   runStatus,
   sendLine,
   startDispatcher,
@@ -34,7 +36,7 @@ import {
   threadHome,
   threadPath
 } from '../../core/agent/thread.ts'
-import { estateWorktreeLines } from '../../core/agent/worktrees.ts'
+import { type AgentCheckout, estateWorktreeLines } from '../../core/agent/worktrees.ts'
 import { DEFAULT_HARNESS } from '../../core/configuration/declaration.ts'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../core/configuration/index.ts'
 import { grammarError, KiError, KiExit } from '../../core/errors.ts'
@@ -42,6 +44,9 @@ import { resolveRepository } from '../../core/repository/index.ts'
 import { harnessDirectory } from '../../core/storage/harness-paths.ts'
 import { resolveTerritoryWorkCapital } from '../../core/territory/resolution.ts'
 import { AGENT_PROMPTS_SCHEMA, threadPrompts } from '../../core/work/prompts.ts'
+
+const AGENT_STATUS_SCHEMA = 'ki/agent-status/v1' as const
+
 import { readWorkDefinitions, readWorkStatus } from '../../core/work/status.ts'
 import { controlCommands } from './control.ts'
 
@@ -256,39 +261,75 @@ export const createAgentCommand = (context: KiContext): Command => {
       })
   )
 
+  const checkoutLines = (checkouts: readonly AgentCheckout[] = []): readonly string[] =>
+    checkouts.map((checkout) => `- [checkout] ${checkout.agent} · ${checkout.role} · ${checkout.path}`)
+  const statusJson = (runs: readonly RunOverview[]): string =>
+    JSON.stringify(
+      {
+        schema: AGENT_STATUS_SCHEMA,
+        runs: runs.map((overview) => ({
+          run: overview.run,
+          home: overview.home ?? null,
+          items: overview.items,
+          checkouts: (overview.checkouts ?? []).map(({ agent, role, path }) => ({ agent, role, path }))
+        }))
+      },
+      null,
+      2
+    )
   command.addCommand(
     new Command('status')
       .description('print agent status and worktrees, or with no run every live or stranded run')
       .argument('[run]', 'run name; omitted, every run with an agent running or queued')
       .option('--all', 'with no run, also list the runs at rest')
       .option('--worktrees', 'list linked worktrees and non-default branches across the registered estate')
-      .action(async (run: string | undefined, options: { all?: boolean; worktrees?: boolean }) => {
-        if (options.worktrees) {
-          if (run !== undefined || options.all) throw grammarError('--worktrees takes no run name or --all')
-          const lines = await estateWorktreeLines(agentContext(context))
-          return write(lines.length ? lines.join('\n') : 'no linked worktrees or non-default branches')
+      .option('--checkouts', 'also list the Git checkouts each running or held agent may be working in')
+      .addOption(
+        new Option('--format <format>', 'text status or, with no run, the versioned ki/agent-status/v1 JSON')
+          .choices(['text', 'json'])
+          .default('text')
+      )
+      .action(
+        async (
+          run: string | undefined,
+          options: { all?: boolean; worktrees?: boolean; checkouts?: boolean; format: 'text' | 'json' }
+        ) => {
+          if (options.worktrees) {
+            if (run !== undefined || options.all || options.checkouts || options.format === 'json')
+              throw grammarError('--worktrees takes no run name, --all, --checkouts or --format json')
+            const lines = await estateWorktreeLines(agentContext(context))
+            return write(lines.length ? lines.join('\n') : 'no linked worktrees or non-default branches')
+          }
+          if (run !== undefined) {
+            if (options.all) throw grammarError('--all lists every run; give it without a run name')
+            if (options.format === 'json')
+              throw grammarError('--format json lists every run; give it without a run name')
+            for (const line of (await runStatus(agentContext(context), run)).lines) write(line)
+            if (options.checkouts)
+              for (const line of checkoutLines((await runOverview(agentContext(context), run, true)).checkouts))
+                write(line)
+            return
+          }
+          const json = options.format === 'json'
+          const runs = await listRuns(agentContext(context), options.all === true, json || options.checkouts === true)
+          if (json) return write(statusJson(runs))
+          if (!runs.length) return write(options.all ? 'no runs' : 'no live runs')
+          write(
+            runs
+              .map((overview) =>
+                [
+                  `${overview.run} (${overview.home ?? 'no work folder'})`,
+                  ...(overview.items.length
+                    ? overview.items.map((item) => `- [${item.kind}] ${item.agent} - ${item.what}`)
+                    : ['- [at rest]']),
+                  ...overview.worktrees,
+                  ...checkoutLines(overview.checkouts)
+                ].join('\n')
+              )
+              .join('\n\n')
+          )
         }
-        if (run !== undefined) {
-          if (options.all) throw grammarError('--all lists every run; give it without a run name')
-          for (const line of (await runStatus(agentContext(context), run)).lines) write(line)
-          return
-        }
-        const runs = await listRuns(agentContext(context), options.all === true)
-        if (!runs.length) return write(options.all ? 'no runs' : 'no live runs')
-        write(
-          runs
-            .map((overview) =>
-              [
-                `${overview.run} (${overview.home ?? 'no work folder'})`,
-                ...(overview.items.length
-                  ? overview.items.map((item) => `- [${item.kind}] ${item.agent} - ${item.what}`)
-                  : ['- [at rest]']),
-                ...overview.worktrees
-              ].join('\n')
-            )
-            .join('\n\n')
-        )
-      })
+      )
   )
 
   command.addCommand(

@@ -443,7 +443,7 @@ Keep up to the given number of queued agents running, detached.
 .B ki agent wait <run> [--next] [--interval <seconds>]
 Block until the next unseen run event, or until the whole run finishes.
 .TP
-.B ki agent status [<run>] [--all] [--worktrees]
+.B ki agent status [<run>] [--all] [--worktrees] [--checkouts] [--format text|json]
 Print each agent's latest status, or with no run every live thread.
 .TP
 .B ki agent prompts [<territory>] [--short] [--format text|json]
@@ -1968,7 +1968,7 @@ wait for the whole run. Either form prints
 .B ALL FINISHED
 when nothing is left to wait for.
 .TP
-.B ki agent status [<run>] [--all] [--worktrees]
+.B ki agent status [<run>] [--all] [--worktrees] [--checkouts] [--format text|json]
 Print each agent's latest status and worktree, flag any agent whose process
 exited
 without DONE, list the queue, and print each
@@ -1997,9 +1997,25 @@ agent's checkout is marked
 .BR stranded .
 .B --worktrees
 instead inventories every linked worktree and non-default local branch in
-the registered estate; it takes no run name or
-.BR --all .
+the registered estate; it takes no run name,
+.BR --all ,
+.B --checkouts
+or JSON.
 Unavailable Git facts are reported as unknown.
+.B --checkouts
+adds, for each running or held agent, one
+.I "- [checkout] <agent> · <role> · <path>"
+line per Git checkout it may be working in, by its top level: its run
+.BR worktree ,
+its
+.B workdir
+and each
+.B added
+directory, each once; a directory in no checkout is left out.
+.B --format json
+publishes the no-run listing as
+.BR ki/agent-status/v1 :
+each run's name, work folder or null, live items and checkouts.
 .TP
 .B ki agent prompts [<territory>] [--short] [--format text|json]
 Print, for the territory named by its handle, alias or territory work id,

@@ -52,7 +52,14 @@ import { ownershipLoss, ownsScope } from './scope.ts'
 import { requireSelection, resolveSelection, type SelectionRequest, sha256 } from './selection.ts'
 import { readThread, reportPlaces, type ThreadHome, threadHome, threadPath } from './thread.ts'
 
-import { agentWorktree, agentWorktreeLines, prepareAgentWorktree, worktreeRepository } from './worktrees.ts'
+import {
+  type AgentCheckout,
+  agentCheckouts,
+  agentWorktree,
+  agentWorktreeLines,
+  prepareAgentWorktree,
+  worktreeRepository
+} from './worktrees.ts'
 
 export type { AgentContext, AuthorityTier, GrantName } from './context.ts'
 export { authorityTiers, grantNames } from './context.ts'
@@ -1366,18 +1373,23 @@ export interface RunOverview {
   /** Running or held agents, then queued ones; empty for a run at rest. */
   readonly items: readonly RunItem[]
   readonly worktrees: readonly string[]
+  /** With `checkouts`, the Git checkouts each running or held agent may be working in. */
+  readonly checkouts?: readonly AgentCheckout[]
 }
 
 /** A run's running or held agents and its queue, read from packet files alone. */
-export const runOverview = async (context: AgentContext, run: string): Promise<RunOverview> => {
+export const runOverview = async (context: AgentContext, run: string, withCheckouts = false): Promise<RunOverview> => {
   const directory = runDirectory(context, run)
   const items: RunItem[] = []
   const worktrees: string[] = []
+  const checkouts: AgentCheckout[] = []
   for (const name of await agents(directory)) {
     const state = await agentState(context, directory, name)
     if (state.kind === 'running') items.push({ kind: 'running', agent: name, what: describe(state) })
     if (state.kind === 'blocked') items.push({ kind: 'blocked', agent: name, what: describe(state) })
     worktrees.push(...(await agentWorktreeLines(context, directory, name, state.kind !== 'running')))
+    if (withCheckouts && (state.kind === 'running' || state.kind === 'blocked'))
+      checkouts.push(...(await agentCheckouts(context, directory, name)))
   }
   for (const [position, request] of (await readQueue(context, directory)).entries())
     items.push({
@@ -1394,19 +1406,19 @@ export const runOverview = async (context: AgentContext, run: string): Promise<R
       items.push({ kind: 'running', agent: entry.name, what: 'claim-unconfirmed: recovery required' })
   }
   const thread = await readThread(context, run)
-  return { run, home: thread && threadPath(thread), items, worktrees }
+  return { run, home: thread && threadPath(thread), items, worktrees, ...(withCheckouts ? { checkouts } : {}) }
 }
 
 /**
  * Every run on this machine with an agent running or held or a non-empty queue; with `all`,
  * the runs at rest too. Archived runs are never listed, and nothing is written.
  */
-export const listRuns = async (context: AgentContext, all: boolean): Promise<RunOverview[]> => {
+export const listRuns = async (context: AgentContext, all: boolean, checkouts = false): Promise<RunOverview[]> => {
   const entries = await readdir(agentsDirectory(context), { withFileTypes: true }).catch(() => [])
   const runs = entries.filter((entry) => entry.isDirectory() && entry.name !== '_archive').map((entry) => entry.name)
   const overviews: RunOverview[] = []
   for (const run of runs.sort()) {
-    const overview = await runOverview(context, run)
+    const overview = await runOverview(context, run, checkouts)
     if (all || overview.items.length || overview.worktrees.length) overviews.push(overview)
   }
   return overviews

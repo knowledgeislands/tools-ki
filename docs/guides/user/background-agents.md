@@ -65,7 +65,9 @@ A name not yet launched keeps the gate waiting, so you may launch the dependent 
 
 Pass `--worktree <repo>` to `launch` or `queue` to start from that repository's committed HEAD in `<state>/agents/<run>/worktrees/<name>.<repo>`, on branch `run/<run>/<name>`. The launcher clones already installed dependencies and retains managed project skill links without installing anything. The launch record includes the source repository, branch, path and actual working directory. A held or queued agent creates its worktree when it starts.
 
-`ki agent status <run>` and the run listing show each recorded worktree's ahead and behind counts, uncommitted count and last-commit age. A stopped agent's worktree is marked `stranded`. `ki agent status --worktrees` inventories all linked worktrees and non-default local branches in the registered estate, including stranded checkouts; unavailable Git facts stay unknown. This option takes no run name or `--all`.
+`ki agent status <run>` and the run listing show each recorded worktree's ahead and behind counts, uncommitted count and last-commit age. A stopped agent's worktree is marked `stranded`. `ki agent status --worktrees` inventories all linked worktrees and non-default local branches in the registered estate, including stranded checkouts; unavailable Git facts stay unknown. This option takes no run name, `--all`, `--checkouts` or JSON.
+
+`--checkouts` adds a `- [checkout] <agent> · <role> · <path>` line for each Git checkout a running or held agent may be working in: its run `worktree`, its `workdir` and each `added` directory, by Git top level and each once. `ki agent status --format json` publishes the no-run listing as `ki/agent-status/v1`, each run with its `run`, `home` (null when it predates its work folder), `items` and `checkouts`, so a tool such as Agora can leave those checkouts alone while their runs go on.
 
 `ki agent close` checks the same worktree directory that launch records. Integrate verified work under `ki-git` and remove the run's merged worktrees before closing. A failed preparation retains its stranded checkout for inspection.
 

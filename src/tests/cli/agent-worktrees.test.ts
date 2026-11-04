@@ -81,6 +81,62 @@ test('launches in the recorded worktree, clones installed dependencies and links
   expect(close.output).toContain('blocker: worktrees/ holds worker.project')
 })
 
+test("lists each running agent's working checkouts, in text and as ki/agent-status/v1 JSON", async () => {
+  const { box, alive, prompt } = await fixture()
+  const other = await box.root.mkdir('other')
+  await box.root.git(['init', '-q', '-b', 'main'], 'other')
+  await box.root.mkdir('plain')
+  const project = await realpath(box.project.path)
+  const launched = await box.run([
+    'ki',
+    'agent',
+    'launch',
+    'r',
+    'worker',
+    '.',
+    prompt,
+    '--add-dir',
+    other,
+    '--add-dir',
+    '../plain',
+    '--add-dir',
+    '.'
+  ])
+  expect(launched.exitCode, launched.output).toBe(0)
+  const tree = await box.run(['ki', 'agent', 'launch', 'r', 'tree', '.', prompt, '--worktree', '.'])
+  expect(tree.exitCode, tree.output).toBe(0)
+  const path = await realpath(join(box.state.path, 'ki/agents/r/worktrees/tree.project'))
+  const expected = [
+    `- [checkout] tree · worktree · ${path}`,
+    `- [checkout] worker · workdir · ${project}`,
+    `- [checkout] worker · added · ${await realpath(other)}`
+  ]
+  const listing = await box.run('ki agent status --checkouts')
+  expect(listing.exitCode).toBe(0)
+  for (const line of expected) expect(listing.output).toContain(`${line}\n`)
+  expect((await box.run('ki agent status')).output).not.toContain('[checkout]')
+  const named = await box.run('ki agent status r --checkouts')
+  expect(named.output).toContain(`${expected.join('\n')}\n`)
+  expect((await box.run('ki agent status r')).output).not.toContain('[checkout]')
+  const report = JSON.parse((await box.run('ki agent status --format json')).stdout)
+  expect(report).toMatchObject({ schema: 'ki/agent-status/v1', runs: [{ run: 'r', home: expect.any(String) }] })
+  expect(report.runs[0].items.map((item: { agent: string }) => item.agent)).toEqual(['tree', 'worker'])
+  expect(report.runs[0].checkouts).toEqual([
+    { agent: 'tree', role: 'worktree', path },
+    { agent: 'worker', role: 'workdir', path: project },
+    { agent: 'worker', role: 'added', path: await realpath(other) }
+  ])
+  for (const args of ['r --format json', '--worktrees --checkouts', '--worktrees --format json'])
+    expect((await box.run(`ki agent status ${args}`)).exitCode).toBe(2)
+  // A finished agent is working in nothing; a launch record from before the field names none.
+  alive.clear()
+  await box.state.write('ki/agents/r/worker.status', 'finished\nDONE\n')
+  await box.state.write('ki/agents/r/tree.status', 'finished\nDONE\n')
+  const finished = JSON.parse((await box.run('ki agent status --all --format json')).stdout)
+  expect(finished.runs[0].checkouts).toEqual([])
+  expect(JSON.parse((await box.run('ki agent status --format json')).stdout)).toMatchObject({ runs: [{ run: 'r' }] })
+})
+
 test('rejects a non-repository worktree source before launch and preserves an existing branch on collision', async () => {
   const { box, prompt, launches } = await fixture()
   await box.root.mkdir('plain')
