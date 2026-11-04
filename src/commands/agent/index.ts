@@ -1,7 +1,7 @@
 import { basename, dirname } from 'node:path'
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { closeRun } from '../../core/agent/close.ts'
+import { closeAgents, closeRun } from '../../core/agent/close.ts'
 import { rehomeControl } from '../../core/agent/control-store.ts'
 import {
   type AgentContext,
@@ -466,8 +466,12 @@ export const createAgentCommand = (context: KiContext): Command => {
 
   command.addCommand(
     new Command('close')
-      .description("retire a finished run's state folder once its reconcile gate passes")
+      .description(
+        "retire a finished run's state folder once its reconcile gate passes, or only some of its agents while the rest run on"
+      )
       .argument('<run>', 'run name')
+      .option('--agent <name>', 'close this agent alone, leaving the run open; repeatable', collect, [])
+      .option('--finished', 'close every agent that finished with DONE, leaving the run open')
       .option('--delete', 'remove the state folder instead of archiving it')
       .option('--compress', 'archive the state folder as a tarball')
       .option('--accept-exited <name>', 'accept an agent that exited without DONE; repeatable', collect, [])
@@ -477,6 +481,8 @@ export const createAgentCommand = (context: KiContext): Command => {
         async (
           run: string,
           options: {
+            agent: readonly string[]
+            finished?: boolean
             delete?: boolean
             compress?: boolean
             acceptExited: readonly string[]
@@ -484,6 +490,21 @@ export const createAgentCommand = (context: KiContext): Command => {
             repo?: string
           }
         ) => {
+          if (options.agent.length || options.finished) {
+            if (options.delete || options.compress)
+              throw new KiError('--delete and --compress close a whole run, not --agent or --finished', 2)
+            const result = await closeAgents(agentContext(context), {
+              run,
+              repo: options.repo,
+              agents: options.agent,
+              finished: options.finished === true,
+              acceptExited: options.acceptExited,
+              reconciled: options.reconciled === true
+            })
+            for (const line of result.lines) write(line)
+            if (result.outcome === undefined) throw new KiError(`${run}: no agent closes until every blocker clears`, 1)
+            return write(result.outcome)
+          }
           const result = await closeRun(agentContext(context), {
             run,
             repo: options.repo,

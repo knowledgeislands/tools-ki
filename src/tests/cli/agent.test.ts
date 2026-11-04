@@ -1757,6 +1757,153 @@ describe('ki agent close', () => {
   })
 })
 
+describe('ki agent close --agent and --finished', () => {
+  /** Run r: a finished with its report in the state folder, b still running, c exited without DONE. */
+  const setupMixedRun = async (box: Sandbox) => {
+    await setupRepository(box)
+    await register(box)
+    const processes = fakeProcesses(box)
+    processes.alive.add(11)
+    await box.state.write('ki/agents/r/a.pid', '10\n')
+    await box.state.write('ki/agents/r/a.status', '21:00 CEST - final check\nDONE\n')
+    await box.state.write('ki/agents/r/a.prompt.md', '# A\n')
+    await box.state.write('ki/agents/r/a.log', 'log\n')
+    await box.state.write('ki/agents/r/a.report.md', '# Report A\n')
+    await box.state.mkdir('ki/agents/r/a.prev-1')
+    await box.state.write('ki/agents/r/b.pid', '11\n')
+    await box.state.write('ki/agents/r/b.status', '21:05 CEST - testing\n')
+    await box.state.write('ki/agents/r/c.pid', '12\n')
+    await box.state.write('ki/agents/r/c.status', '21:01 CEST - halfway\n')
+    await box.root.mkdir('tmp/ki-agents/r/a')
+    return processes
+  }
+  const closed = (box: Sandbox, name: string): string => runPath(box, `closed/${name}`)
+
+  test('closes the finished agents and leaves the live and exited ones, so the run stays open', async () => {
+    const box = await sandbox()
+    const processes = await setupMixedRun(box)
+
+    const result = await box.run('ki agent close r --finished', { now })
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toBe(
+      [
+        'ok: a finished',
+        'ok: moved reports/a.report.md from the state folder into +/_WORK/ki.r',
+        `ok: removed ${temporaryPath(box, 'a')}`,
+        `moved a's packet to ${closed(box, 'a')}; close note at ${closed(box, 'a')}/close.md`,
+        ''
+      ].join('\n')
+    )
+    expect(await box.project.read('+/_WORK/ki.r/reports/a.report.md')).toBe('# Report A\n')
+    expect((await readdir(closed(box, 'a'))).sort()).toEqual([
+      'a.log',
+      'a.pid',
+      'a.prev-1',
+      'a.prompt.md',
+      'a.status',
+      'close.md'
+    ])
+    expect(await box.state.read('ki/agents/r/closed/a/close.md')).toBe(
+      [
+        '# Close of agent a in run r',
+        '',
+        `Closed 2026-10-07T19:30:00Z by \`ki agent close --agent\`. moved a's packet to ${closed(box, 'a')}.`,
+        '',
+        '## Gate',
+        '',
+        '- ok: a finished',
+        '- ok: moved reports/a.report.md from the state folder into +/_WORK/ki.r',
+        `- ok: removed ${temporaryPath(box, 'a')}`,
+        ''
+      ].join('\n')
+    )
+    expect(await box.state.read('ki/agents/r/b.status')).toBe('21:05 CEST - testing\n')
+    expect((await box.run('ki agent status r', { now })).stdout).toBe(
+      'b: 21:05 CEST - testing\nc: EXITED WITHOUT DONE (21:01 CEST - halfway)\n'
+    )
+    expect((await box.run('ki agent close r --finished', { now })).stdout).toBe('no finished agent to close in r\n')
+
+    const exited = await box.run('ki agent close r --agent c', { now })
+    expect(exited.exitCode).toBe(1)
+    expect(exited.stdout).toBe('blocker: c exited without DONE\n')
+    expect(exited.stderr).toBe('ki: error: r: no agent closes until every blocker clears\n')
+    expect(await box.state.read('ki/agents/r/c.status')).toBe('21:01 CEST - halfway\n')
+    const accepted = await box.run('ki agent close r --accept-exited c --finished', { now })
+    expect(accepted.stdout).toBe(
+      `ok: c exited without DONE, accepted\nmoved c's packet to ${closed(box, 'c')}; close note at ${closed(box, 'c')}/close.md\n`
+    )
+
+    // The run's own close no longer sees the closed agents and archives them with the rest.
+    await box.project.git(['add', '--all'])
+    await box.project.git(['commit', '-q', '-m', 'thread'])
+    expect((await box.run('ki agent close r', { now })).stdout).toContain(
+      'blocker: b still running (pid 11)\nok: no dispatcher running'
+    )
+    processes.finish()
+    await box.state.write('ki/agents/r/b.status', 'DONE\n')
+    const run = await box.run('ki agent close r', { now })
+    expect(run.exitCode).toBe(0)
+    expect(run.stdout).toContain('ok: b finished\nok: no dispatcher running\n')
+    expect(await box.state.read('ki/agents/_archive/r/closed/a/a.status')).toBe('21:00 CEST - final check\nDONE\n')
+  })
+
+  test('reports every blocker of the named agents and changes nothing', async () => {
+    const box = await sandbox()
+    await setupMixedRun(box)
+    await box.state.write('ki/agents/r/queue.jsonl', '{"name":"d","waitFor":["a"]}\n{"name":"c","waitFor":[]}\n')
+    await box.state.mkdir('ki/agents/r/worktrees/a.project')
+    await box.root.write('tmp/ki-agents/r/a/draft.md', '# Draft\n')
+
+    const result = await box.run('ki agent close r --agent a --agent b --agent c', { now })
+
+    expect(result.exitCode).toBe(1)
+    expect(result.stdout).toBe(
+      [
+        'ok: a finished',
+        'blocker: queued d waits for a',
+        'blocker: worktrees/ holds a.project',
+        `blocker: temporary folder ${temporaryPath(box, 'a')} holds draft.md`,
+        'blocker: b still running (pid 11)',
+        'blocker: c exited without DONE',
+        'blocker: queue holds c',
+        'ok: reports/a.report.md stays in the state folder until the blockers above clear',
+        ''
+      ].join('\n')
+    )
+    expect(await box.state.read('ki/agents/r/a.report.md')).toBe('# Report A\n')
+    expect(await box.root.read('tmp/ki-agents/r/a/draft.md')).toBe('# Draft\n')
+    await expect(readdir(runPath(box, 'closed'))).rejects.toThrow()
+
+    const unknown = await box.run('ki agent close r --agent zzz', { now })
+    expect(unknown.exitCode).toBe(2)
+    expect(unknown.stderr).toBe('ki: error: no open agent zzz in r\n')
+    const whole = await box.run('ki agent close r --agent a --compress', { now })
+    expect(whole.exitCode).toBe(2)
+    expect(whole.stderr).toBe('ki: error: --delete and --compress close a whole run, not --agent or --finished\n')
+  })
+
+  test('counts a closed name as taken, and a relaunch reopens it', async () => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    await register(box)
+    const processes = fakeProcesses(box)
+    await box.project.write('task.md', '# Task\n')
+    expect((await box.run('ki agent launch r fix . task.md', { now })).exitCode).toBe(0)
+    processes.finish()
+    await box.state.write('ki/agents/r/fix.status', 'DONE\n')
+    expect((await box.run('ki agent close r --agent fix', { now })).exitCode).toBe(0)
+    expect((await box.run('ki agent status r', { now })).stdout).not.toContain('fix')
+
+    const again = await box.run('ki agent launch r fix . task.md', { now })
+    expect(again.stderr).toContain('closed/fix')
+    expect(again.stderr).toContain('pass --relaunch')
+    expect((await box.run('ki agent launch r fix . task.md --relaunch', { now })).exitCode).toBe(0)
+    expect((await box.run('ki agent status r', { now })).stdout).toContain('fix: ')
+    expect(JSON.parse((await box.state.read('ki/agents/r/fix.launch.json')) as string).identity.attempt).toBe(2)
+  })
+})
+
 describe('ki agent queue, dispatch and wait', () => {
   test('queues ready-made prompts and refuses duplicates', async () => {
     const box = await sandbox()

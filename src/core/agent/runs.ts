@@ -111,7 +111,21 @@ const minimumAttempt = async (context: AgentContext, directory: string, name: st
   const current = await read(join(directory, `${name}.pid`))
   const metadata = await read(join(directory, `${name}.launch.json`))
   let minimum = archives.length + (current !== undefined || metadata !== undefined ? 1 : 0) + 1
-  for (const folder of [directory, ...archives.map((folder) => join(directory, folder))]) {
+  // A packet closed on its own keeps its attempts, and any it had set aside, under `closed/<name>/`.
+  const closed = closedAgentDirectory(directory, name)
+  const closedArchives = (await readdir(closed).catch(() => [] as string[])).filter(
+    (file) => file.startsWith(`${name}.prev-`) && /^\d+$/.test(file.slice(`${name}.prev-`.length))
+  )
+  const closedCurrent =
+    (await read(join(closed, `${name}.pid`))) !== undefined ||
+    (await read(join(closed, `${name}.launch.json`))) !== undefined
+  minimum = Math.max(minimum, closedArchives.length + (closedCurrent ? 1 : 0) + 1)
+  for (const folder of [
+    directory,
+    ...archives.map((folder) => join(directory, folder)),
+    closed,
+    ...closedArchives.map((folder) => join(closed, folder))
+  ]) {
     const text = await read(join(folder, `${name}.launch.json`))
     if (text === undefined) continue
     const packet = JSON.parse(text) as { identity?: { attempt?: number } }
@@ -338,11 +352,25 @@ const describe = (state: AgentState): string =>
           ? (state.last ?? 'no status yet')
           : `EXITED WITHOUT DONE (${state.last ?? 'no status'})`
 
+/** The folder `ki agent close <run> --agent <name>` moves one agent's packet into. */
+export const closedAgentDirectory = (directory: string, name: string): string => join(directory, 'closed', name)
+
+/** The agents of a run that `close --agent` has retired. */
+export const closedAgents = async (directory: string): Promise<readonly string[]> =>
+  (await readdir(join(directory, 'closed'), { withFileTypes: true }).catch(() => []))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort()
+
+/** The run's agents, leaving out each one closed on its own unless a relaunch has given it a new packet. */
 export const agents = async (directory: string): Promise<string[]> => {
   const packet = (await readdir(directory))
     .filter((file) => file.endsWith('.pid') && file !== 'dispatch.pid')
     .map((file) => file.slice(0, -'.pid'.length))
-  return [...new Set([...packet, ...Object.keys((await loadControl(directory))?.attempts ?? {})])].sort()
+  const closed = new Set(await closedAgents(directory))
+  return [...new Set([...packet, ...Object.keys((await loadControl(directory))?.attempts ?? {})])]
+    .filter((name) => packet.includes(name) || !closed.has(name))
+    .sort()
 }
 
 /** The run's agents and their liveness, which event derivation and recording read. */
@@ -645,6 +673,7 @@ const takenBy = async (
   const files: string[] = []
   for (const suffix of packetFiles)
     if (await exists(join(directory, `${name}.${suffix}`))) files.push(`${name}.${suffix}`)
+  if (await exists(closedAgentDirectory(directory, name))) files.push(`closed/${name}`)
   for (const place of reportPlaces(thread, name, brief))
     if (await exists(join(threadPath(thread), place))) files.push(`${thread.folder}/${place}`)
   return files

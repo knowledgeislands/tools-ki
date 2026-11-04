@@ -458,8 +458,8 @@ Append a timestamped owner decision to the work's tracked log.
 .B ki agent reconcile <run> <entry> [<home>] [--class <class>]
 Write or replace one decision's durable home.
 .TP
-.B ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]
-Retire a finished run's state folder once its reconcile gate passes.
+.B ki agent close <run> [--agent <name>...] [--finished] [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]
+Retire a run's state folder, or some of its agents, once its gate passes.
 .TP
 .B ki agent sweep [--keep <n>] [--write]
 Remove closed runs beyond the newest kept and briefs a launch has superseded.
@@ -2200,7 +2200,7 @@ numbered log, the one numbered
 .IR <entry> ;
 an absent or ambiguous entry is refused.
 .TP
-.B ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]
+.B ki agent close <run> [--agent <name>...] [--finished] [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]
 Retire a finished run's state folder. The reconcile gate prints one line per
 check and must pass whole: every agent finished with
 .B DONE
@@ -2262,6 +2262,41 @@ and with
 .B --delete
 it is removed, each with the note at
 .IR _archive/<run>.close.md .
+With
+.B --agent <name>
+or
+.BR --finished ,
+close retires only those agents and the run stays open:
+each one named, every agent that finished with
+.BR DONE ,
+and each named in
+.BR --accept-exited .
+Each must have finished or be accepted, be neither queued nor awaited by a
+queued agent, and hold no
+.I worktrees/<name>.*
+entry and no output in its temporary folder, which
+.B --reconciled
+waives; decisions wait for the run's own close. On any blocker it prints
+every line, exits 1 and changes nothing. Otherwise it moves each agent's
+report into the work folder, which then needs committing, removes its
+temporary folder, and moves its packet, any
+.I <name>.prev-<n>/
+included, into
+.I closed/<name>/
+in the state folder with a
+.I close.md
+note. A closed agent leaves
+.BR status ,
+.B watch
+and the run's close, which archives
+.I closed/
+with the run; its name stays taken until
+.B --relaunch
+starts it again.
+.B --delete
+and
+.B --compress
+apply only to a whole run.
 .TP
 .B ki agent sweep [--keep <n>] [--write]
 Report what the agents directory has outlived: the closed runs in

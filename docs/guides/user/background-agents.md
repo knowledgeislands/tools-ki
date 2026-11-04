@@ -149,6 +149,19 @@ Before anything moves, `close` refuses with exit 2 a home whose repository is a 
 
 When the gate passes the state folder moves to `$KI_STATE_HOME/agents/_archive/<run>/` with a `close.md` note of the gate and each decision's home. `--compress` writes `_archive/<run>.tar.gz` and `--delete` removes the folder instead, each leaving the note at `_archive/<run>.close.md`. For a run that predates the tracked home, `close` first moves any `decisions.md` or `<name>.report.md` left in the state folder into the thread folder, each report beside its brief or in `reports/`, and prints an `ok` line for each, so commit the folder and run `close` again; a copy the thread folder holds, or has ever held in Git, supersedes the state folder's, which is archived with the run.
 
+## Close agents while the run goes on
+
+A run folder holding finished agents beside a live or blocked one cannot close whole. Close the finished ones on their own and leave the rest running:
+
+```sh
+ki agent close <run> --finished
+ki agent close <run> --agent <name> --accept-exited <other>
+```
+
+`--finished` takes every agent that ended with `DONE`, `--agent <name>` names one, and `--accept-exited <name>` takes one that exited without `DONE` once you have read its report; each is repeatable and they combine. Each agent must have finished or be accepted, be neither in the queue nor awaited by a queued agent, and hold no `worktrees/<name>.*` entry and no output in its temporary folder, which `--reconciled` waives. On any blocker the command prints every line, exits 1 and changes nothing. Decisions belong to the run, so their gate waits for the run's own close.
+
+Once the gate passes, close moves each agent's report into the work folder, which then needs committing, removes its temporary folder, and moves the rest of its packet, any `<name>.prev-<n>/` included, into `closed/<name>/` in the state folder with a `close.md` note of the gate. `status`, `watch` and the run's close stop seeing the agent, and the run's close archives `closed/` with everything else. The name stays taken: `launch` and `queue` refuse it, naming `closed/<name>`, until `--relaunch` starts it again, and the new attempt numbers on from the closed one. `--delete` and `--compress` apply only to a whole run.
+
 ## Sweep the agents directory
 
 `_archive/` and the open state folders keep what they no longer need: closed runs nobody will open again, and briefs from before a launch removed its own copy. Preview what has outlived its use, then remove it:

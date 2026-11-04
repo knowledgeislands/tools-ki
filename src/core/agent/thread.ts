@@ -249,18 +249,24 @@ export const heldAs = async (
  * stays to be archived with the run, so that a report the thread has retired stays retired. A
  * report goes where the launcher homes it, beside its brief or in `reports/`, and a copy in any
  * place a reader looks supersedes it. Returns the paths moved, relative to the thread folder, in
- * name order; with `move` false it moves nothing and returns the paths it would move.
+ * name order; with `move` false it moves nothing and returns the paths it would move. Given
+ * `agents`, it moves only those agents' reports and leaves `decisions.md`.
  */
 export const adoptStateFiles = async (
   context: AgentContext,
   run: string,
   home: ThreadHome,
-  move = true
+  move = true,
+  agents?: readonly string[]
 ): Promise<readonly string[]> => {
   const directory = runDirectory(context, run)
   // Resolving the home records `thread.json`, so the state folder always exists here.
   const files = (await readdir(directory))
-    .filter((file) => file === 'decisions.md' || file.endsWith('.report.md'))
+    .filter((file) =>
+      agents === undefined
+        ? file === 'decisions.md' || file.endsWith('.report.md')
+        : agents.some((name) => file === `${name}.report.md`)
+    )
     .sort()
   if (files.length && !isWorkHome(home))
     throw new KiError(

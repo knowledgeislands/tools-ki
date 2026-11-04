@@ -2,8 +2,8 @@ import { mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join } from 'node:path'
 import { KiError } from '../errors.ts'
 import { requiredLocalRegistry } from '../storage/local-registry.ts'
-import { type AgentContext, agentsDirectory, git, instant, read, temporaryRoot } from './context.ts'
-import { agentState, agents, existingRun, pidOf, readQueue, running } from './runs.ts'
+import { type AgentContext, agentsDirectory, git, instant, read, temporaryDirectory, temporaryRoot } from './context.ts'
+import { agentState, agents, closedAgentDirectory, existingRun, pidOf, readQueue, running } from './runs.ts'
 import {
   adoptStateFiles,
   type DecisionEntry,
@@ -281,4 +281,138 @@ export const closeRun = async (context: AgentContext, request: CloseRequest): Pr
   }
   await writeFile(notePath, note(context, request, outcome, lines, decisions, log))
   return { lines: lines.map(render), outcome: `${outcome}; close note at ${notePath}` }
+}
+
+export interface AgentCloseRequest {
+  readonly run: string
+  readonly repo?: string | undefined
+  /** The agents to close by name. */
+  readonly agents: readonly string[]
+  /** Also close every agent that finished with `DONE`. */
+  readonly finished: boolean
+  /** Agents that exited without `DONE` whose reports the owner has read; each is closed too. */
+  readonly acceptExited: readonly string[]
+  /** The owner waives the temporary-folder check; the close note records it. */
+  readonly reconciled: boolean
+}
+
+const agentFiles = ['pid', 'status', 'log', 'prompt.md', 'launch.json', 'report.md', 'queued.md', 'draft.md']
+
+/** One agent's packet in the state folder: its run files and any `<name>.prev-<n>/` it set aside. */
+const packetOf = async (directory: string, name: string): Promise<readonly string[]> =>
+  (await entries(directory)).filter((file) => {
+    if (!file.startsWith(`${name}.`)) return false
+    const suffix = file.slice(name.length + 1)
+    return agentFiles.includes(suffix) || /^prev-\d+$/.test(suffix)
+  })
+
+/** The gate lines of one agent: its state, the queue, its worktrees, its temporary folder. */
+const agentGate = async (
+  context: AgentContext,
+  directory: string,
+  request: AgentCloseRequest,
+  name: string,
+  queued: readonly { readonly name: string; readonly waitFor: readonly string[] }[]
+): Promise<readonly GateLine[]> => {
+  const lines: GateLine[] = []
+  const state = await agentState(context, directory, name)
+  if (state.kind === 'running')
+    lines.push(blocker(`${name} still running (pid ${await pidOf(join(directory, `${name}.pid`))})`))
+  else if (state.kind === 'blocked') lines.push(blocker(`${name} ${state.last}`))
+  else if (state.kind === 'finished') lines.push(ok(`${name} finished`))
+  else if (request.acceptExited.includes(name)) lines.push(ok(`${name} exited without DONE, accepted`))
+  else lines.push(blocker(`${name} exited without DONE`))
+  if (queued.some((entry) => entry.name === name)) lines.push(blocker(`queue holds ${name}`))
+  const waiting = queued.filter((entry) => entry.waitFor.includes(name)).map((entry) => entry.name)
+  if (waiting.length)
+    lines.push(blocker(`queued ${listed(waiting)} ${waiting.length === 1 ? 'waits' : 'wait'} for ${name}`))
+  const worktrees = (await entries(join(directory, 'worktrees'))).filter((entry) => entry.startsWith(`${name}.`))
+  if (worktrees.length) lines.push(blocker(`worktrees/ holds ${listed(worktrees)}`))
+  const temporary = temporaryDirectory(context, request.run, name)
+  const held = await entries(temporary)
+  if (held.length) {
+    const text = `temporary folder ${temporary} holds ${listed(held)}`
+    lines.push(request.reconciled ? ok(`${text}, waived by --reconciled`) : blocker(text))
+  }
+  const earlier = await entries(closedAgentDirectory(directory, name))
+  if (earlier.length) lines.push(blocker(`closed/${name} already holds an earlier close (${listed(earlier)})`))
+  return lines
+}
+
+const agentNote = (
+  context: AgentContext,
+  request: AgentCloseRequest,
+  name: string,
+  outcome: string,
+  lines: readonly GateLine[]
+): string =>
+  [
+    `# Close of agent ${name} in run ${request.run}`,
+    '',
+    `Closed ${instant(context)} by \`ki agent close --agent\`${request.reconciled ? ' with the temporary-folder check waived by the owner (`--reconciled`)' : ''}. ${outcome}.`,
+    '',
+    '## Gate',
+    '',
+    ...lines.map((line) => `- ${render(line)}`),
+    ''
+  ].join('\n')
+
+/**
+ * Retires some agents of a run while the rest of it stays open: each one named, every
+ * finished one on `finished`, and each accepted with `acceptExited`. Each must have finished
+ * with `DONE` or be accepted, be neither queued nor awaited by a queued agent, and hold no
+ * worktree and no temporary output. On any blocker it reports every line and changes nothing.
+ * Once the gate passes it moves each agent's report into the work folder, which then needs
+ * committing, removes its temporary folder, and moves the rest of its packet into
+ * `closed/<name>/` in the state folder with a `close.md` note, so that `status`, `watch` and the
+ * run's own close no longer see it and closing the run archives it with the rest. Decisions
+ * belong to the run, so their gate waits for the run's close.
+ */
+export const closeAgents = async (context: AgentContext, request: AgentCloseRequest): Promise<CloseResult> => {
+  const directory = await existingRun(context, request.run)
+  const names = await agents(directory)
+  for (const name of [...request.agents, ...request.acceptExited])
+    if (!names.includes(name)) throw new KiError(`no open agent ${name} in ${request.run}`, 2)
+  const finished: string[] = []
+  if (request.finished)
+    for (const name of names) if ((await agentState(context, directory, name)).kind === 'finished') finished.push(name)
+  const selected = [...new Set([...request.agents, ...request.acceptExited, ...finished])].sort()
+  if (!selected.length) return { lines: [], outcome: `no finished agent to close in ${request.run}` }
+  const thread = await threadHome(context, request.run, request.repo, false)
+  // Checked before the gate, which moves state-folder reports into the home.
+  await requireHome(context, request.run, thread)
+  const queued = await readQueue(context, directory)
+  const gates = new Map<string, readonly GateLine[]>()
+  for (const name of selected) gates.set(name, await agentGate(context, directory, request, name, queued))
+  const gate = [...gates.values()].flat()
+  if (gate.some((line) => !line.ok)) {
+    const pending = await adoptStateFiles(context, request.run, thread, false, selected)
+    return {
+      lines: [
+        ...gate,
+        ...pending.map((file) => ok(`${file} stays in the state folder until the blockers above clear`))
+      ].map(render),
+      outcome: undefined
+    }
+  }
+  const lines: GateLine[] = []
+  const closed: string[] = []
+  for (const name of selected) {
+    const own: GateLine[] = [...(gates.get(name) ?? [])]
+    const adopted = await adoptStateFiles(context, request.run, thread, true, [name])
+    own.push(...adopted.map((file) => ok(`moved ${file} from the state folder into ${thread.folder}`)))
+    const temporary = temporaryDirectory(context, request.run, name)
+    if (await stat(temporary).catch(() => undefined)) {
+      await rm(temporary, { recursive: true, force: true })
+      own.push(ok(`removed ${temporary}`))
+    }
+    const target = closedAgentDirectory(directory, name)
+    await mkdir(target, { recursive: true })
+    for (const file of await packetOf(directory, name)) await rename(join(directory, file), join(target, file))
+    const outcome = `moved ${name}'s packet to ${target}`
+    await writeFile(join(target, 'close.md'), agentNote(context, request, name, outcome, own))
+    lines.push(...own)
+    closed.push(`${outcome}; close note at ${join(target, 'close.md')}`)
+  }
+  return { lines: lines.map(render), outcome: closed.join('\n') }
 }
