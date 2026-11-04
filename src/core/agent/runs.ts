@@ -102,24 +102,20 @@ export const existingRun = async (context: AgentContext, run: string): Promise<s
 
 const lines = (text: string | undefined): string[] => (text ?? '').split('\n').filter((line) => line.trim())
 
+/** The `<name>.prev-<n>/` folders among a state folder's files. */
+const setAsideFolders = (files: readonly string[], name: string): readonly string[] =>
+  files.filter((file) => file.startsWith(`${name}.prev-`) && /^\d+$/.test(file.slice(`${name}.prev-`.length)))
+
 /** Legacy packet history consumes attempt numbers without conferring process ownership. */
 const minimumAttempt = async (context: AgentContext, directory: string, name: string): Promise<number> => {
   const files = await readdir(directory)
-  const archives = files.filter(
-    (file) => file.startsWith(`${name}.prev-`) && /^\d+$/.test(file.slice(`${name}.prev-`.length))
-  )
+  const archives = setAsideFolders(files, name)
   const current = await read(join(directory, `${name}.pid`))
   const metadata = await read(join(directory, `${name}.launch.json`))
   let minimum = archives.length + (current !== undefined || metadata !== undefined ? 1 : 0) + 1
   // A packet closed on its own keeps its attempts, and any it had set aside, under `closed/<name>/`.
   const closed = closedAgentDirectory(directory, name)
-  const closedArchives = (await readdir(closed).catch(() => [] as string[])).filter(
-    (file) => file.startsWith(`${name}.prev-`) && /^\d+$/.test(file.slice(`${name}.prev-`.length))
-  )
-  const closedCurrent =
-    (await read(join(closed, `${name}.pid`))) !== undefined ||
-    (await read(join(closed, `${name}.launch.json`))) !== undefined
-  minimum = Math.max(minimum, closedArchives.length + (closedCurrent ? 1 : 0) + 1)
+  const closedArchives = setAsideFolders(await readdir(closed).catch(() => [] as string[]), name)
   for (const folder of [
     directory,
     ...archives.map((folder) => join(directory, folder)),

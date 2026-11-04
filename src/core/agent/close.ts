@@ -152,6 +152,22 @@ const removeTemporary = async (context: AgentContext, run: string): Promise<read
   return folders.map((name) => ok(`removed ${join(root, name)}`))
 }
 
+/** Whether one agent may close: finished with `DONE`, or exited without it and accepted. */
+const stateLine = async (
+  context: AgentContext,
+  directory: string,
+  name: string,
+  acceptExited: readonly string[]
+): Promise<GateLine> => {
+  const state = await agentState(context, directory, name)
+  if (state.kind === 'running')
+    return blocker(`${name} still running (pid ${await pidOf(join(directory, `${name}.pid`))})`)
+  if (state.kind === 'blocked') return blocker(`${name} ${state.last}`)
+  if (state.kind === 'finished') return ok(`${name} finished`)
+  if (acceptExited.includes(name)) return ok(`${name} exited without DONE, accepted`)
+  return blocker(`${name} exited without DONE`)
+}
+
 const gateLines = async (
   context: AgentContext,
   directory: string,
@@ -166,15 +182,7 @@ const gateLines = async (
   const names = await agents(directory)
   for (const name of request.acceptExited)
     if (!names.includes(name)) throw new KiError(`no agent ${name} in ${request.run}`, 2)
-  for (const name of names) {
-    const state = await agentState(context, directory, name)
-    if (state.kind === 'running')
-      lines.push(blocker(`${name} still running (pid ${await pidOf(join(directory, `${name}.pid`))})`))
-    else if (state.kind === 'blocked') lines.push(blocker(`${name} ${state.last}`))
-    else if (state.kind === 'finished') lines.push(ok(`${name} finished`))
-    else if (request.acceptExited.includes(name)) lines.push(ok(`${name} exited without DONE, accepted`))
-    else lines.push(blocker(`${name} exited without DONE`))
-  }
+  for (const name of names) lines.push(await stateLine(context, directory, name, request.acceptExited))
   const dispatcher = await running(context, join(directory, 'dispatch.pid'))
   lines.push(dispatcher ? blocker(`dispatcher still running (pid ${dispatcher})`) : ok('no dispatcher running'))
   const queue = await readQueue(context, directory)
@@ -312,18 +320,11 @@ const agentGate = async (
   directory: string,
   request: AgentCloseRequest,
   name: string,
-  queued: readonly { readonly name: string; readonly waitFor: readonly string[] }[]
+  queued: readonly { readonly name: string; readonly waitFor?: readonly string[] | undefined }[]
 ): Promise<readonly GateLine[]> => {
-  const lines: GateLine[] = []
-  const state = await agentState(context, directory, name)
-  if (state.kind === 'running')
-    lines.push(blocker(`${name} still running (pid ${await pidOf(join(directory, `${name}.pid`))})`))
-  else if (state.kind === 'blocked') lines.push(blocker(`${name} ${state.last}`))
-  else if (state.kind === 'finished') lines.push(ok(`${name} finished`))
-  else if (request.acceptExited.includes(name)) lines.push(ok(`${name} exited without DONE, accepted`))
-  else lines.push(blocker(`${name} exited without DONE`))
+  const lines = [await stateLine(context, directory, name, request.acceptExited)]
   if (queued.some((entry) => entry.name === name)) lines.push(blocker(`queue holds ${name}`))
-  const waiting = queued.filter((entry) => entry.waitFor.includes(name)).map((entry) => entry.name)
+  const waiting = queued.filter((entry) => entry.waitFor?.includes(name)).map((entry) => entry.name)
   if (waiting.length)
     lines.push(blocker(`queued ${listed(waiting)} ${waiting.length === 1 ? 'waits' : 'wait'} for ${name}`))
   const worktrees = (await entries(join(directory, 'worktrees'))).filter((entry) => entry.startsWith(`${name}.`))
@@ -398,7 +399,7 @@ export const closeAgents = async (context: AgentContext, request: AgentCloseRequ
   const lines: GateLine[] = []
   const closed: string[] = []
   for (const name of selected) {
-    const own: GateLine[] = [...(gates.get(name) ?? [])]
+    const own = [...(gates.get(name) as readonly GateLine[])]
     const adopted = await adoptStateFiles(context, request.run, thread, true, [name])
     own.push(...adopted.map((file) => ok(`moved ${file} from the state folder into ${thread.folder}`)))
     const temporary = temporaryDirectory(context, request.run, name)

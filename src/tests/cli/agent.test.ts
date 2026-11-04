@@ -1851,7 +1851,10 @@ describe('ki agent close --agent and --finished', () => {
   test('reports every blocker of the named agents and changes nothing', async () => {
     const box = await sandbox()
     await setupMixedRun(box)
-    await box.state.write('ki/agents/r/queue.jsonl', '{"name":"d","waitFor":["a"]}\n{"name":"c","waitFor":[]}\n')
+    await box.state.write(
+      'ki/agents/r/queue.jsonl',
+      '{"name":"d","waitFor":["a"]}\n{"name":"e","waitFor":["a"]}\n{"name":"f","waitFor":["b"]}\n{"name":"c"}\n'
+    )
     await box.state.mkdir('ki/agents/r/worktrees/a.project')
     await box.root.write('tmp/ki-agents/r/a/draft.md', '# Draft\n')
 
@@ -1861,10 +1864,11 @@ describe('ki agent close --agent and --finished', () => {
     expect(result.stdout).toBe(
       [
         'ok: a finished',
-        'blocker: queued d waits for a',
+        'blocker: queued d, e wait for a',
         'blocker: worktrees/ holds a.project',
         `blocker: temporary folder ${temporaryPath(box, 'a')} holds draft.md`,
         'blocker: b still running (pid 11)',
+        'blocker: queued f waits for b',
         'blocker: c exited without DONE',
         'blocker: queue holds c',
         'ok: reports/a.report.md stays in the state folder until the blockers above clear',
@@ -1878,9 +1882,25 @@ describe('ki agent close --agent and --finished', () => {
     const unknown = await box.run('ki agent close r --agent zzz', { now })
     expect(unknown.exitCode).toBe(2)
     expect(unknown.stderr).toBe('ki: error: no open agent zzz in r\n')
-    const whole = await box.run('ki agent close r --agent a --compress', { now })
-    expect(whole.exitCode).toBe(2)
-    expect(whole.stderr).toBe('ki: error: --delete and --compress close a whole run, not --agent or --finished\n')
+    for (const flag of ['--delete', '--compress']) {
+      const whole = await box.run(`ki agent close r --agent a ${flag}`, { now })
+      expect(whole.exitCode).toBe(2)
+      expect(whole.stderr).toBe('ki: error: --delete and --compress close a whole run, not --agent or --finished\n')
+    }
+
+    // The owner may waive the temporary folder, which the note records, once nothing else blocks.
+    await box.state.write('ki/agents/r/queue.jsonl', '')
+    await rm(runPath(box, 'worktrees/a.project'), { recursive: true })
+    await box.state.write('ki/agents/r/closed/notes.txt', 'not an agent\n')
+    const waived = await box.run('ki agent close r --agent a --reconciled', { now })
+    expect(waived.exitCode).toBe(0)
+    expect(waived.stdout).toContain(
+      `ok: temporary folder ${temporaryPath(box, 'a')} holds draft.md, waived by --reconciled\n`
+    )
+    expect(await box.state.read('ki/agents/r/closed/a/close.md')).toContain(
+      'with the temporary-folder check waived by the owner (`--reconciled`)'
+    )
+    expect((await box.run('ki agent status r', { now })).stdout).toContain('b: 21:05 CEST - testing\n')
   })
 
   test('counts a closed name as taken, and a relaunch reopens it', async () => {
@@ -1889,10 +1909,16 @@ describe('ki agent close --agent and --finished', () => {
     await register(box)
     const processes = fakeProcesses(box)
     await box.project.write('task.md', '# Task\n')
+    const finish = async () => {
+      processes.finish()
+      await box.state.write('ki/agents/r/fix.status', 'DONE\n')
+    }
     expect((await box.run('ki agent launch r fix . task.md', { now })).exitCode).toBe(0)
-    processes.finish()
-    await box.state.write('ki/agents/r/fix.status', 'DONE\n')
+    await finish()
+    expect((await box.run('ki agent launch r fix . task.md --relaunch', { now })).exitCode).toBe(0)
+    await finish()
     expect((await box.run('ki agent close r --agent fix', { now })).exitCode).toBe(0)
+    expect(await readdir(runPath(box, 'closed/fix'))).toContain('fix.prev-1')
     expect((await box.run('ki agent status r', { now })).stdout).not.toContain('fix')
 
     const again = await box.run('ki agent launch r fix . task.md', { now })
@@ -1900,7 +1926,12 @@ describe('ki agent close --agent and --finished', () => {
     expect(again.stderr).toContain('pass --relaunch')
     expect((await box.run('ki agent launch r fix . task.md --relaunch', { now })).exitCode).toBe(0)
     expect((await box.run('ki agent status r', { now })).stdout).toContain('fix: ')
-    expect(JSON.parse((await box.state.read('ki/agents/r/fix.launch.json')) as string).identity.attempt).toBe(2)
+    expect(JSON.parse((await box.state.read('ki/agents/r/fix.launch.json')) as string).identity.attempt).toBe(3)
+
+    await finish()
+    const twice = await box.run('ki agent close r --agent fix', { now })
+    expect(twice.exitCode).toBe(1)
+    expect(twice.stdout).toContain('blocker: closed/fix already holds an earlier close (close.md, fix.launch.json,')
   })
 })
 
