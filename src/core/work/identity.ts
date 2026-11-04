@@ -1,5 +1,15 @@
+/**
+ * The parent package of a sub-package, `<parent id>.<parent focus id>` under a typed regular or Project package,
+ * as in `ex.reg.intake.viewer`; undefined for every other id.
+ */
+export const subPackageParent = (id: string): string | undefined => {
+  const parts = id.split('.')
+  return parts.length === 4 && (parts[1] === 'reg' || parts[1] === 'prj') ? parts.slice(0, 3).join('.') : undefined
+}
+
 /** Canonical and indefinitely readable work spellings, derived from a valid definition. */
 export const workNames = (id: string, level: string): readonly string[] => {
+  if (subPackageParent(id) !== undefined) return [id]
   const parts = id.split('.')
   const [territory, kind, name] = parts
   if (level === 'territory') {

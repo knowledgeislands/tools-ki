@@ -5,7 +5,7 @@ import { parse } from 'yaml'
 import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import { skillTable } from '../territory/declaration.ts'
-import { isMainStateOfPlay, workNames } from './identity.ts'
+import { isMainStateOfPlay, subPackageParent, workNames } from './identity.ts'
 
 export const WORK_STATUS_SCHEMA = 'ki/work-status/v1' as const
 
@@ -52,7 +52,7 @@ export interface WorkStatusEntry {
   /** The work's thread label from its work file, or null when it declares none and the title serves. */
   readonly label: string | null
   readonly theme: string | null
-  /** A secondary State of play's main State of play, its territory id; null for all other work. */
+  /** The State of play that supervises the work, or a sub-package's parent package; null where none is declared. */
   readonly parent: string | null
   /** The work ids a secondary State of play coordinates; empty for all other work. */
   readonly covers: readonly string[]
@@ -195,6 +195,11 @@ const statePlacement = (
   if (level !== 'territory') {
     if (segments[1] === SECONDARY_SEGMENT) return `a ${territory}.${SECONDARY_SEGMENT}.<name> id is territory work`
     if (covers !== undefined) return 'covers belongs to State of play'
+    const owner = subPackageParent(id)
+    if (owner !== undefined) {
+      if (parent !== owner) return `parent must name the sub-package's parent package, ${owner}`
+      return { parent: owner, covers: [] }
+    }
     if (
       parent !== undefined &&
       (typeof parent !== 'string' ||

@@ -2386,6 +2386,16 @@ id, a
 .I sop
 id at another level, or parent or covers anywhere else is an unreadable
 work file, and a work covered by two secondaries is a warning.
+.PP
+A sub-package,
+.IR "<parent id>.<focus id>" ,
+is a typed regular or Project package's own short-lived package for one
+of its focus areas, such as
+.IR <territory>.reg.<name>.<focus> ;
+its work file must name that package as
+.IR parent ,
+and it answers to no other name.
+.PP
 .I +/_WORK_REVIEW/
 is shown only as an awaiting-review count, and an unreadable work file is
 a warning that leaves the rest listed. Through the work model's tolerance

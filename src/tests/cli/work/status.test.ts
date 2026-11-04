@@ -701,6 +701,32 @@ test('reg status rejects duplicate legacy topic homes and mismatched levels', as
   expect(duplicate.stderr).toContain('ambiguous work')
 })
 
+test('a sub-package names its parent package and aliases no other work', async () => {
+  const box = await sandbox()
+  await box.project.write('repo/.ki.toml', declaration(capital([])))
+  await writeWork(box, 'ex.reg.intake', { level: 'regular' })
+  await writeWork(box, 'ex.reg.intake.viewer', { level: 'regular', parent: 'ex.reg.intake' })
+  await writeWork(box, 'ex.prj.alpha')
+  await writeWork(box, 'ex.prj.alpha.site', { parent: 'ex.prj.alpha' })
+  await writeWork(box, 'ex.reg.intake.stray', { level: 'regular', parent: 'ex.sop.main' })
+  await writeWork(box, 'ex.reg.intake.loose', { level: 'regular' })
+  const result = await box.run('ki work status --repo repo --format json', { now })
+  expect(result.exitCode, result.output).toBe(0)
+  const entries = JSON.parse(result.stdout).work
+  expect(entries.map((entry: { id: string }) => entry.id)).toEqual([
+    'ex.prj.alpha',
+    'ex.prj.alpha.site',
+    'ex.reg.intake',
+    'ex.reg.intake.viewer'
+  ])
+  expect(entries[1]).toMatchObject({ level: 'project', parent: 'ex.prj.alpha' })
+  expect(entries[3]).toMatchObject({ level: 'regular', parent: 'ex.reg.intake' })
+  for (const id of ['ex.reg.intake.stray', 'ex.reg.intake.loose'])
+    expect(result.stderr).toContain(
+      `+/_WORK/${id}/work.md: parent must name the sub-package's parent package, ex.reg.intake`
+    )
+})
+
 test('an untyped three-part identity keeps only its own name and aliases no other work', async () => {
   const box = await sandbox()
   await box.project.write('repo/.ki.toml', declaration(capital([])))
