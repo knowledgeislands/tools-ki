@@ -1,12 +1,19 @@
 import type { KiContext } from '../../../../context.ts'
-import { progressLine, type RenderOptions } from './rendering.ts'
+import { heartbeatLine, progressLine, type RenderOptions } from './rendering.ts'
 
 const REFRESH_INTERVAL_MS = 250
+const HEARTBEAT_INTERVAL_MS = 60_000
 const CLEAR_LINE = '\r\x1b[2K'
 const CURSOR_HIDE = '\x1b[?25l'
 const CURSOR_SHOW = '\x1b[?25h'
 
 type Placement = RenderOptions['placement']
+
+/**
+ * How the display reaches its reader: a live terminal row, one plain line per change, or a
+ * heartbeat that names the current activity on standard error once a minute and nothing else.
+ */
+export type DisplayMode = 'interactive' | 'plain' | 'heartbeat'
 
 interface Activity {
   readonly label: string
@@ -26,11 +33,10 @@ export interface ProgressDisplay {
 }
 
 /** Owns the terminal mechanics for a receipt stream with at most one mutable row. */
-export const createProgressDisplay = (
-  context: KiContext,
-  labelWidth: number,
-  interactive: boolean
-): ProgressDisplay => {
+export const createProgressDisplay = (context: KiContext, labelWidth: number, mode: DisplayMode): ProgressDisplay => {
+  const interactive = mode === 'interactive'
+  const heartbeat = mode === 'heartbeat'
+  const stream = heartbeat ? context.stderr : context.stdout
   let tick = 0
   let current: Activity | undefined
   let liveRow = false
@@ -38,69 +44,77 @@ export const createProgressDisplay = (
   let cursorHidden = false
 
   const renderOptions = (label: string, placement: Placement = 'root'): RenderOptions => ({
-    columns: context.stdout.columns,
+    columns: stream.columns,
     label: label.padEnd(labelWidth),
     placement,
     tick
   })
   const hideCursor = (): void => {
     if (!interactive || cursorHidden) return
-    context.stdout.write(CURSOR_HIDE)
+    stream.write(CURSOR_HIDE)
     cursorHidden = true
   }
   const showCursor = (): void => {
     if (!cursorHidden) return
-    context.stdout.write(CURSOR_SHOW)
+    stream.write(CURSOR_SHOW)
     cursorHidden = false
   }
   const writeLive = (line: string): void => {
     hideCursor()
-    context.stdout.write(interactive ? `${CLEAR_LINE}${line}` : `${line}\n`)
+    stream.write(interactive ? `${CLEAR_LINE}${line}` : `${line}\n`)
     liveRow = interactive
   }
   const renderActivity = (activity: Activity): void => {
     tick += 1
-    writeLive(progressLine({ complete: 0, total: undefined, text: activity.text() }, renderOptions(activity.label)))
+    const options = renderOptions(activity.label)
+    writeLive(
+      heartbeat
+        ? heartbeatLine(activity.text(), options)
+        : progressLine({ complete: 0, total: undefined, text: activity.text() }, options)
+    )
   }
   const commit = (line: string): void => {
     hideCursor()
-    context.stdout.write(`${interactive ? CLEAR_LINE : ''}${line}${interactive ? '\r\n' : '\n'}`)
+    stream.write(`${interactive ? CLEAR_LINE : ''}${line}${interactive ? '\r\n' : '\n'}`)
     liveRow = false
   }
   const releaseInterrupt = context.onInterrupt(() => {
     showCursor()
-    if (liveRow) context.stdout.write('\n')
+    if (liveRow) stream.write('\n')
     liveRow = false
   })
-  const releaseInterval = interactive
-    ? context.startInterval(REFRESH_INTERVAL_MS, () => {
-        if (current) renderActivity(current)
-      })
-    : undefined
+  const releaseInterval =
+    interactive || heartbeat
+      ? context.startInterval(interactive ? REFRESH_INTERVAL_MS : HEARTBEAT_INTERVAL_MS, () => {
+          if (current) renderActivity(current)
+        })
+      : undefined
 
   return {
     activity: (label, text) => {
       current = { label, text }
-      renderActivity(current)
+      if (!heartbeat) renderActivity(current)
     },
     receipt: (label, text, options = {}) => {
       current = undefined
+      if (heartbeat) return
       tick += 1
       commit(progressLine({ complete: 1, total: 1, text }, renderOptions(label, options.placement)))
       if (options.temporary && interactive) temporaryRows += 1
     },
     failure: (label, text, placement = 'root') => {
       current = undefined
+      if (heartbeat) return
       tick += 1
       commit(progressLine({ complete: 0, total: 1, text }, renderOptions(label, placement)))
     },
     collapseTemporary: () => {
       current = undefined
       if (!interactive) return
-      if (liveRow) context.stdout.write(CLEAR_LINE)
+      if (liveRow) stream.write(CLEAR_LINE)
       liveRow = false
       if (!temporaryRows) return
-      context.stdout.write(`\x1b[${temporaryRows}A${`${CLEAR_LINE}\r\n`.repeat(temporaryRows)}\x1b[${temporaryRows}A`)
+      stream.write(`\x1b[${temporaryRows}A${`${CLEAR_LINE}\r\n`.repeat(temporaryRows)}\x1b[${temporaryRows}A`)
       temporaryRows = 0
     },
     finish: () => {

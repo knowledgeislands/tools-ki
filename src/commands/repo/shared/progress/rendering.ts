@@ -64,3 +64,7 @@ export const progressLine = (model: BarModel, { columns, label, placement, tick 
 export const elapsedTenths = (milliseconds: number): number => Math.round(Math.max(0, milliseconds) / 100)
 export const formatTenths = (tenths: number): string => `${(tenths / 10).toFixed(1)}s`
 export const elapsed = (milliseconds: number): string => formatTenths(elapsedTenths(milliseconds))
+
+/** A heartbeat line has no bar to animate and nothing to fit, so its whole status text stays readable. */
+export const heartbeatLine = (text: string, { label, placement }: RenderOptions): string =>
+  `${treeProgressPrefix(label, placement)}${text}`

@@ -207,6 +207,47 @@ describe('[ki repo audit evidence progress]', () => {
     expect(result.output).not.toContain('├─ progress')
   })
 
+  // AUDIT-HANG: a coverage run inside the evidence span can last many minutes; outside a
+  // terminal the audit printed nothing in that time and read as hung after listing its skills.
+  test('names a long evidence step on standard error outside a terminal, leaving standard output unchanged', async () => {
+    const box = await withRubric(`
+      emit?.({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
+      emit?.({ kind: 'step', label: 'vitest run --coverage', code: 'TEST-5' })
+      globalThis.kiHeartbeat?.()
+      emit?.({ kind: 'stage', edge: 'end', label: 'engineering evidence' })
+    `)
+    const heartbeat = globalThis as { kiHeartbeat?: () => void }
+    let clock = 0
+    const beat = (handler: () => void): void => {
+      heartbeat.kiHeartbeat = () => {
+        clock += 61_000
+        handler()
+      }
+    }
+
+    try {
+      const quiet = await box.run('ki repo audit', { now: () => clock })
+      const slow = await box.run('ki repo audit', { now: () => clock, captureInterval: beat })
+      let offered = false
+      const never = await box.run('ki repo audit --progress never', {
+        captureInterval: () => {
+          offered = true
+        }
+      })
+
+      expect(slow.exitCode).toBe(0)
+      expect(slow.stdout).toBe(quiet.stdout)
+      expect(quiet.stderr).toBe('')
+      expect(visibleLines(slow.stderr)).toEqual([
+        expect.stringMatching(/^├─ ✦ ki-example +engineering evidence vitest run --coverage · 61\.0s$/)
+      ])
+      expect(never.stderr).toBe('')
+      expect(offered).toBe(false)
+    } finally {
+      delete heartbeat.kiHeartbeat
+    }
+  })
+
   test.each([
     ["emit('not an object')", 'is not an object'],
     ["emit({ kind: 'step' })", 'has no label'],

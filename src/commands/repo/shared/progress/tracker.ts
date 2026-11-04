@@ -34,10 +34,12 @@ export const createProgressTracker = (
   phase: OperationPhase,
   completionPlacement: CompletionPlacement
 ): ProgressTracker | undefined => {
-  const enabled = options.progress === 'always' || (options.progress === 'auto' && context.stdout.isTTY === true)
-  if (!enabled) return undefined
+  if (options.progress === 'never') return undefined
 
   const interactive = context.stdout.isTTY === true
+  // A plain stream under `auto` keeps its output unchanged but still shows it is alive: a
+  // step such as a full coverage run can last many minutes and otherwise reads as a hang.
+  const mode = interactive ? 'interactive' : options.progress === 'always' ? 'plain' : 'heartbeat'
   const detailedEvidence = (options.progressStyle ?? (interactive ? 'multi' : 'single')) === 'multi'
   const started = context.now()
   let phaseStarted = started
@@ -45,7 +47,7 @@ export const createProgressTracker = (
   const phaseDurations = new Map<ProgressPhase, number>()
   const operationPhase = phase
   const labelWidth = Math.max(9, phase.length + 2, ...skills.map((skill) => skill.name.length + 2))
-  const display = createProgressDisplay(context, labelWidth, interactive)
+  const display = createProgressDisplay(context, labelWidth, mode)
   const stages = new Map<string, readonly string[]>()
   let loadingTotal = skills.length
   let loadingShown = false
