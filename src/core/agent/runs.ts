@@ -1373,8 +1373,8 @@ export interface RunOverview {
   /** Running or held agents, then queued ones; empty for a run at rest. */
   readonly items: readonly RunItem[]
   readonly worktrees: readonly string[]
-  /** With `checkouts`, the Git checkouts each running or held agent may be working in. */
-  readonly checkouts?: readonly AgentCheckout[]
+  /** The Git checkouts each running or held agent may be working in; read only when asked, else empty. */
+  readonly checkouts: readonly AgentCheckout[]
 }
 
 /** A run's running or held agents and its queue, read from packet files alone. */
@@ -1406,7 +1406,7 @@ export const runOverview = async (context: AgentContext, run: string, withChecko
       items.push({ kind: 'running', agent: entry.name, what: 'claim-unconfirmed: recovery required' })
   }
   const thread = await readThread(context, run)
-  return { run, home: thread && threadPath(thread), items, worktrees, ...(withCheckouts ? { checkouts } : {}) }
+  return { run, home: thread && threadPath(thread), items, worktrees, checkouts }
 }
 
 /**

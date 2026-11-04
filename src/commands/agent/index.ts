@@ -261,7 +261,7 @@ export const createAgentCommand = (context: KiContext): Command => {
       })
   )
 
-  const checkoutLines = (checkouts: readonly AgentCheckout[] = []): readonly string[] =>
+  const checkoutLines = (checkouts: readonly AgentCheckout[]): readonly string[] =>
     checkouts.map((checkout) => `- [checkout] ${checkout.agent} · ${checkout.role} · ${checkout.path}`)
   const statusJson = (runs: readonly RunOverview[]): string =>
     JSON.stringify(
@@ -271,7 +271,7 @@ export const createAgentCommand = (context: KiContext): Command => {
           run: overview.run,
           home: overview.home ?? null,
           items: overview.items,
-          checkouts: (overview.checkouts ?? []).map(({ agent, role, path }) => ({ agent, role, path }))
+          checkouts: overview.checkouts.map(({ agent, role, path }) => ({ agent, role, path }))
         }))
       },
       null,

@@ -128,7 +128,16 @@ test("lists each running agent's working checkouts, in text and as ki/agent-stat
   ])
   for (const args of ['r --format json', '--worktrees --checkouts', '--worktrees --format json'])
     expect((await box.run(`ki agent status ${args}`)).exitCode).toBe(2)
-  // A finished agent is working in nothing; a launch record from before the field names none.
+  // A run from before work folders and launch records: its agents name no checkout and its home is null.
+  await box.state.write('ki/agents/legacy/old.pid', '1001\n')
+  await box.state.write('ki/agents/legacy/old.status', 'working\n')
+  await box.state.write('ki/agents/legacy/old.launch.json', '{}\n')
+  await box.state.write('ki/agents/legacy/bare.pid', '1002\n')
+  await box.state.write('ki/agents/legacy/bare.status', 'working\n')
+  const legacy = JSON.parse((await box.run('ki agent status --format json')).stdout).runs[0]
+  expect(legacy).toMatchObject({ run: 'legacy', home: null, checkouts: [] })
+  expect(legacy.items.map((item: { agent: string }) => item.agent)).toEqual(['bare', 'old'])
+  // A finished agent is working in nothing.
   alive.clear()
   await box.state.write('ki/agents/r/worker.status', 'finished\nDONE\n')
   await box.state.write('ki/agents/r/tree.status', 'finished\nDONE\n')
