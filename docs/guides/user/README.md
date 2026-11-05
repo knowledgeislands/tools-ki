@@ -17,8 +17,6 @@ If `ki` is not yet on this machine, or you have never run it, read these three i
 
 ## Bring material in
 
-- [Import a local ChatGPT capture](chatgpt-capture.md) — assemble a conforming capture directory and turn it into a Knowledge Exchange Package, entirely locally.
-- [Acquire Granola meetings](granola-acquisition.md) — activate the adapter, import read-only meeting evidence, resume interrupted work, and govern reset or disposition.
 - [Standing knowledge intake](standing-knowledge-intake.md) — establish reciprocal knowledge grants and capture commit-pinned provenance into an existing note.
 
 ## Govern work across repositories

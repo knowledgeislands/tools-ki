@@ -34,7 +34,7 @@ Unbuilt or uncertain behaviour belongs in an area's unnumbered `## Gaps` section
 
 | File                     | Prefix       | Covers                                                         |
 | ------------------------ | ------------ | -------------------------------------------------------------- |
-| acquisition.md           | `ACQUIRE`    | Provider-neutral acquisition adapters and checkpoint recovery  |
+| acquisition.md           | `ACQUIRE`    | Retired acquisition requirements                               |
 | agoras.md | `AGORA` | Deprecated Agora selection requirements |
 | territories.md | `TERRITORY` | Capital-derived selection and literal filters |
 | bootstrap.md             | `BOOT`       | First-time user activation and refresh                         |

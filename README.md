@@ -10,34 +10,13 @@ Optional `ki kb index`, `ki kb search` and `ki kb status` operate one explicitly
 
 [Arcadia Principal](https://github.com/knowledgeislands/ki-principal) remains the source of Knowledge Islands philosophy and model, and its [Engineering Practice](https://github.com/knowledgeislands/ki-principal/blob/main/Pillars/Engineering%20Practice/Engineering%20Practice.md) translates that philosophy into engineering practice. The [KI Website](https://github.com/knowledgeislands/ki-website) may vendor source-labelled CLI material for public publication, while this repository remains canonical for the executable and its release artifacts. The mirrored [ecosystem decision](https://github.com/knowledgeislands/ki-principal/blob/main/Admin/Governance/Decisions/GDR-KI-PRINCIPAL-006-knowledge-islands-ecosystem-fundamentals.md) defines the six authorities and publication flows.
 
-The active TypeScript command host provides local capability, repository, Territory, and trade operations, plus an action-first, provider-neutral `ki acquire` surface backed by verified Harness adapter declarations. The sections below describe the current public surface; use `ki --help` or the tracked [ki(1) manual](man/ki.1) for exact grammar.
+The active TypeScript command host provides local capability, repository, Territory, and trade operations. Source acquisition has moved to the assistant's `ki-muninn` (krisb/assistant); `ki acquire` now only says so and exits non-zero. The sections below describe the current public surface; use `ki --help` or the tracked [ki(1) manual](man/ki.1) for exact grammar.
 
 ## Getting started
 
 If `ki` is not yet installed, read [install ki and run it for the first time](docs/guides/user/getting-started.md). It covers installing a signed release, creating the user environment with `ki bootstrap`, registering a repository, and verifying each step. The rest of the [user guides](docs/guides/user/README.md) carry the procedures for everything described below.
 
 Once installed, run `ki -h` for an alphabetical command list, then `ki <command> -h` for the selected command's options. The manual groups commands by purpose. `ki docs` locates the fuller references.
-
-## Acquire local ChatGPT capture
-
-Assemble a capture directory in the controlled `ki-chatgpt-capture` format, then import it into a new output directory:
-
-```sh
-ki acquire import --adapter chatgpt --capture ./capture --output ./conversation.kep
-```
-
-Use `--dry-run` to validate without creating output. The command is local only: it does not contact ChatGPT, automate a browser, read credentials, discover repositories, or extract knowledge. The capture layout, its metadata fields, and the validation failures you may hit are documented in [import a local ChatGPT capture](docs/guides/user/chatgpt-capture.md).
-
-## Acquire Granola meetings
-
-With the official Granola MCP configured as `granola` in `mcporter`, inspect and acquire complete selected history into the current registered repository's Harbour:
-
-```sh
-ki acquire list
-ki acquire import --adapter granola --since 2023-01-01
-```
-
-Use `--repo /path/to/repository` to select another eligible receiver and `--dry-run` to perform all reads and verification without writing. Routine acquisition revalidates mutable meeting detail, reuses verified transcripts, journals interrupted work, stages one Markdown document per selected identity, and advances its receiver-local checkpoint only after complete verification. Desktop screenshots use the separate `ki acquire images` handoff because Granola MCP omits attachments. It never mutates Granola or writes another repository. Adapter activation, receiver selectors, screenshot export, transcript refresh, disposition, reset, and interrupted-import recovery are documented in [Acquire Granola meetings](docs/guides/user/granola-acquisition.md).
 
 ## Manage installed capabilities
 
