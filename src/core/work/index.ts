@@ -3,6 +3,7 @@ export {
   compareSelection,
   holdReasons,
   isOpenWorkItem,
+  WORK_ITEM_ASSIGNEE,
   workItemHorizons,
   workItemLane,
   workItemLanes,

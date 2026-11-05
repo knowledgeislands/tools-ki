@@ -166,7 +166,7 @@ changing repository or registry state.
 Record selected physical KI repository roots, then reconcile only their
 proven KI-managed projections.
 .TP
-.B ki repo [repo-options] roadmap list [--horizon <horizons>] [--status <status>] [--by <grouping>] [--format <text|json>] [--links <compact|all>]
+.B ki repo [repo-options] roadmap list [--horizon <horizons>] [--status <status>] [--assignee <holder>] [--by <grouping>] [--format <text|json>] [--links <compact|all>]
 List governed work items in a framed deterministic lane and lifecycle tree
 without changing their lifecycle.
 .TP
@@ -1003,7 +1003,7 @@ unsupported lockfiles and unrecognised package or Knip configurations refuse
 publication. A dry run reports each planned write, removal and binding and
 changes nothing.
 .TP
-.B ki repo [repo-options] roadmap list [--horizon <horizons>] [--status <status>] [--by <grouping>] [--format <text|json>] [--links <compact|all>]
+.B ki repo [repo-options] roadmap list [--horizon <horizons>] [--status <status>] [--assignee <holder>] [--by <grouping>] [--format <text|json>] [--links <compact|all>]
 List canonical governed work items from every selected repository without
 changing their lifecycle. The framed text output names each selected repository,
 then groups items by lane: open adopted records by horizon \fBnow\fR,
@@ -1031,6 +1031,11 @@ and \fB--status\fR filter by lane and lifecycle before rendering; unsupported
 values fail with a usage error rather than an empty result.
 \fB--horizon\fR accepts a comma-separated list, such as \fBnow,next\fR, or a
 repeated flag, and keeps records in any named lane.
+Each record shows its \fBassignee\fR, the work-model holder that has it, after
+its size. \fB--assignee\fR keeps records held by one holder, \fBowner\fR,
+\fBwork/<id>\fR, \fBrun/<name>\fR, \fBperson/<handle>\fR or \fBrepo/<name>\fR,
+or \fBnone\fR for records without one; any other value is a usage error. An
+open record without an assignee is listed as an assignee-window gap.
 \fB--by project\fR
 groups text output by each record's \fBproject\fR across the whole selected
 set, and implies \fB--aggregate\fR; groups from the same Project in different

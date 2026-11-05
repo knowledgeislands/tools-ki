@@ -20,6 +20,7 @@ import {
   roadmapReport,
   roadmapStatisticsForSelection,
   UNASSIGNED_GROUP,
+  WORK_ITEM_ASSIGNEE,
   type WorkItem,
   type WorkItemGroup,
   type WorkItemHold,
@@ -41,6 +42,7 @@ interface RoadmapOptions {
   readonly by?: string
   readonly horizon?: readonly string[]
   readonly status?: string
+  readonly assignee?: string
   readonly aggregate?: boolean
   readonly icons?: boolean
   readonly format?: string
@@ -531,6 +533,7 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
     .option('--aggregate', 'render one selected-set roadmap inventory')
     .option('--horizon <horizons>', 'only items at these horizons: comma-separated or repeated', collectHorizons)
     .option('--status <status>', 'only items at this status')
+    .option('--assignee <holder>', 'only items held by this assignee, or none for unassigned items')
     .addOption(byOption('group text output across the selected set; implies --aggregate'))
     .option('--no-icons', 'omit decorative trade badge icons')
     .option('--format <text|json>', 'render roadmap evidence as text or versioned JSON', 'text')
@@ -545,10 +548,15 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
       const horizons = selectedHorizons(options.horizon)
       if (options.status && !workItemStatuses.includes(options.status as (typeof workItemStatuses)[number]))
         throw grammarError(`roadmap list --status must be one of ${workItemStatuses.join(', ')}`)
+      if (options.assignee && options.assignee !== 'none' && !WORK_ITEM_ASSIGNEE.test(options.assignee))
+        throw grammarError(
+          'roadmap list --assignee must be owner, work/<id>, run/<name>, person/<handle>, repo/<name> or none'
+        )
       if (options.by && options.format === 'json') throw grammarError('roadmap list --by applies only to text output')
       const { estate, results } = await listRoadmap(operationContext(context), selectedRepositories(), {
         horizons,
         status: options.status,
+        ...(options.assignee ? { assignee: options.assignee } : {}),
         includeProjection: options.format === 'json',
         ...(options.by ? { by: options.by as RoadmapGrouping } : {})
       })

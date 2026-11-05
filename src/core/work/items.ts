@@ -32,6 +32,7 @@ const optionalFields = [
   'component',
   'priority',
   'size',
+  'assignee',
   'resolution',
   'resolution_target',
   'waiting_on_trades',
@@ -84,6 +85,8 @@ export type WorkItemPriority = (typeof workItemPriorities)[number]
 /** Relative end-to-end effort, smallest first; `xl` is not one record and is split before Ready. */
 export const workItemSizes = ['s', 'm', 'l', 'xl'] as const
 export type WorkItemSize = (typeof workItemSizes)[number]
+/** The work model's holder values a record's `assignee` takes: `owner`, `work/<id>`, `run/<name>`, `person/<handle>` or `repo/<name>`. */
+export const WORK_ITEM_ASSIGNEE = /^(?:owner|(?:work|run|person|repo)\/[A-Za-z0-9][A-Za-z0-9._-]*)$/
 export const holdReasons = ['waiting-for', 'parked'] as const
 export type HoldReason = (typeof holdReasons)[number]
 export const workItemResolutions = ['obsolete', 'rejected', 'duplicate', 'merged', 'superseded'] as const
@@ -154,6 +157,8 @@ export interface WorkItem {
   /** As written; an absent priority reads as `medium`. */
   readonly priority?: WorkItemPriority
   readonly size?: WorkItemSize
+  /** Who holds the record, a work-model holder; fixed once the record is in progress. */
+  readonly assignee?: string
   readonly hold?: WorkItemHold
   readonly resolution?: (typeof workItemResolutions)[number]
   readonly resolutionTarget?: string
@@ -166,7 +171,7 @@ export interface WorkItem {
   readonly taskLinks?: TaskLinks
   /** Deprecated shapes this record still carries, in a stable order; absent when it has none. */
   readonly legacy?: readonly string[]
-  /** The field migration window's gaps, in the harness roadmap checker's words; absent when it has none. */
+  /** The field migration and assignee windows' gaps, in the harness roadmap checker's words; absent when it has none. */
   readonly gaps?: readonly string[]
 }
 
@@ -439,7 +444,13 @@ const migrationGaps = (fields: Readonly<WorkItemFields>, status: WorkItemStatus)
     ...(retired
       ? [`retired: horizon '${fields.horizon}'; use ${retiredHorizonUse[fields.horizon as LegacyWorkItemHorizon]}`]
       : []),
-    ...window.map((gap) => `migration window: ${gap}`)
+    ...window.map((gap) => `migration window: ${gap}`),
+    // The assignee window, opened on 2026-11-05, runs on the same terms as the field migration window.
+    ...(fields.assignee === undefined && !closed
+      ? [
+          'assignee window: an open record should declare an assignee: owner, work/<id>, run/<name>, person/<handle> or repo/<name>'
+        ]
+      : [])
   ]
 }
 
@@ -501,6 +512,9 @@ export const parseWorkItem = (
   if (fields.size !== undefined && !workItemSizes.includes(fields.size as WorkItemSize))
     throw itemError(file, 'size must be s, m, l or xl')
   const size = fields.size as WorkItemSize | undefined
+  if (fields.assignee !== undefined && !WORK_ITEM_ASSIGNEE.test(fields.assignee))
+    throw itemError(file, 'assignee must be owner, work/<id>, run/<name>, person/<handle> or repo/<name>')
+  const assignee = fields.assignee
   if (size === 'xl' && status === 'ready')
     throw itemError(file, 'a ready record must not be size xl; split it before Ready')
   const purpose = enumField(fields, 'purpose', workItemPurposes, file)
@@ -527,6 +541,7 @@ export const parseWorkItem = (
     ...(component ? { component } : {}),
     ...(priority ? { priority } : {}),
     ...(size ? { size } : {}),
+    ...(assignee ? { assignee } : {}),
     ...(fields.hold ? { hold: fields.hold } : {}),
     ...(resolution ? { resolution } : {}),
     ...(target ? { resolutionTarget: target } : {}),

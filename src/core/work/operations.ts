@@ -71,6 +71,8 @@ export interface RoadmapListOptions {
   /** Any of these placements; empty or absent selects every placement. */
   readonly horizons?: readonly string[]
   readonly status?: string
+  /** A work-model holder, or `none` for records without an assignee. */
+  readonly assignee?: string
   readonly includeProjection?: boolean
   readonly by?: RoadmapGrouping
 }
@@ -191,7 +193,9 @@ const filterItems = (items: readonly WorkItem[], options: RoadmapListOptions): r
     const lane = workItemLane(item)
     const status = lane === 'triage' ? 'triage' : item.status
     return (
-      (!options.horizons?.length || options.horizons.includes(lane)) && (!options.status || status === options.status)
+      (!options.horizons?.length || options.horizons.includes(lane)) &&
+      (!options.status || status === options.status) &&
+      (!options.assignee || (item.assignee ?? 'none') === options.assignee)
     )
   })
 

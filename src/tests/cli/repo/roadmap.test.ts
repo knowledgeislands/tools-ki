@@ -606,7 +606,7 @@ describe('[ki repo roadmap]', () => {
 
     expect(text).toEqual({
       exitCode: 0,
-      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-KI-CLI-003 [draft] Inspect governed work\n├─ gaps (1)\n│  ╰─ ! KI-TOOL-KI-CLI-003: migration window: a record should declare size: s, m, l or xl\n├─ trades (0)\n│  ├─ import (0)\n│  ╰─ export (0)\n╰─ summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0 GAPS=1 TRADES=0 IMPORTS=0 EXPORTS=0\n`
+      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-KI-CLI-003 [draft] Inspect governed work\n├─ gaps (2)\n│  ├─ ! KI-TOOL-KI-CLI-003: migration window: a record should declare size: s, m, l or xl\n│  ╰─ ! KI-TOOL-KI-CLI-003: assignee window: an open record should declare an assignee: owner, work/<id>, run/<name>, person/<handle> or repo/<name>\n├─ trades (0)\n│  ├─ import (0)\n│  ╰─ export (0)\n╰─ summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0 GAPS=1 TRADES=0 IMPORTS=0 EXPORTS=0\n`
     })
     expect(accepted.output).toContain('KI-TOOL-KI-CLI-010 [awaiting-review] Cleanup')
     expect(accepted.output).toContain('summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0')
@@ -646,8 +646,12 @@ describe('[ki repo roadmap]', () => {
           component: null,
           priority: 'medium',
           size: null,
+          assignee: null,
           legacy: [],
-          gaps: ['migration window: a record should declare size: s, m, l or xl'],
+          gaps: [
+            'migration window: a record should declare size: s, m, l or xl',
+            'assignee window: an open record should declare an assignee: owner, work/<id>, run/<name>, person/<handle> or repo/<name>'
+          ],
           blocks: [],
           blockedBy: ['KI-OTHER-999'],
           createdAt: '2026-09-01T00:00:00Z',
@@ -1017,18 +1021,19 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/repo"\n'
     )
     const items: readonly Record<string, string | undefined>[] = [
-      { id: 'KI-TOOL-KI-CLI-003', title: 'Now low', horizon: 'now', priority: 'low', size: 's' },
+      { id: 'KI-TOOL-KI-CLI-003', title: 'Now low', horizon: 'now', priority: 'low', size: 's', assignee: 'owner' },
       {
         id: 'KI-TOOL-KI-CLI-004',
         title: 'Next blocked high',
         priority: 'high',
         size: 's',
+        assignee: 'work/ki.sop.main',
         blocked_by: '[KI-TOOL-KI-CLI-007]'
       },
-      { id: 'KI-TOOL-KI-CLI-005', title: 'Next medium large', size: 'l' },
-      { id: 'KI-TOOL-KI-CLI-006', title: 'Next medium small', priority: 'medium', size: 's' },
-      { id: 'KI-TOOL-KI-CLI-007', title: 'Next high', priority: 'high', size: 'xl' },
-      { id: 'KI-TOOL-KI-CLI-008', title: 'Next unsized', priority: 'high' }
+      { id: 'KI-TOOL-KI-CLI-005', title: 'Next medium large', size: 'l', assignee: 'owner' },
+      { id: 'KI-TOOL-KI-CLI-006', title: 'Next medium small', priority: 'medium', size: 's', assignee: 'owner' },
+      { id: 'KI-TOOL-KI-CLI-007', title: 'Next high', priority: 'high', size: 'xl', assignee: 'run/roadmap-assignee' },
+      { id: 'KI-TOOL-KI-CLI-008', title: 'Next unsized', priority: 'high', assignee: 'person/krisb' }
     ]
     for (const fields of items) await box.project.write(`repo/docs/roadmap/${fields['id']}-item.md`, item(fields))
 
@@ -1038,13 +1043,13 @@ describe('[ki repo roadmap]', () => {
     expect(result.exitCode).toBe(0)
     const expectedOrder = [
       'now (1)',
-      'KI-TOOL-KI-CLI-003 [draft] Now low · low · size s',
+      'KI-TOOL-KI-CLI-003 [draft] Now low · low · size s · owner',
       'next (5)',
-      'KI-TOOL-KI-CLI-007 [draft] Next high · high · size xl',
-      'KI-TOOL-KI-CLI-008 [draft] Next unsized · high',
-      'KI-TOOL-KI-CLI-006 [draft] Next medium small · size s',
-      'KI-TOOL-KI-CLI-005 [draft] Next medium large · size l',
-      'KI-TOOL-KI-CLI-004 [draft] Next blocked high · high · size s',
+      'KI-TOOL-KI-CLI-007 [draft] Next high · high · size xl · run/roadmap-assignee',
+      'KI-TOOL-KI-CLI-008 [draft] Next unsized · high · person/krisb',
+      'KI-TOOL-KI-CLI-006 [draft] Next medium small · size s · owner',
+      'KI-TOOL-KI-CLI-005 [draft] Next medium large · size l · owner',
+      'KI-TOOL-KI-CLI-004 [draft] Next blocked high · high · size s · work/ki.sop.main',
       'gaps (1)',
       '! KI-TOOL-KI-CLI-008: migration window: a record should declare size: s, m, l or xl'
     ]
@@ -1058,7 +1063,7 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('summary: ITEMS=6 NOW=1 NOT_DONE=6 DONE=0 GAPS=1 ')
     const parsed = JSON.parse(json.output)
     expect(parsed.items.map((entry: { id: string }) => entry.id)).toEqual(items.map((fields) => fields['id']))
-    expect(parsed.items[0]).toMatchObject({ priority: 'low', size: 's', gaps: [] })
+    expect(parsed.items[0]).toMatchObject({ priority: 'low', size: 's', assignee: 'owner', gaps: [] })
     expect(parsed.items[2]).toMatchObject({ priority: 'medium', size: 'l' })
     expect(parsed.items[5]).toMatchObject({
       priority: 'high',
@@ -1106,12 +1111,12 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/repo"\n'
     )
     const items: readonly Record<string, string | undefined>[] = [
-      { id: 'KI-TOOL-KI-CLI-003', kind: undefined, size: 's' },
-      { id: 'KI-TOOL-KI-CLI-004', size: 's', initiative: 'foundations' },
-      { id: 'KI-TOOL-KI-CLI-005', size: 's', project: 'ways-of-working', theme: 'foundations' },
-      { id: 'KI-TOOL-KI-CLI-006', size: 's', purpose: 'adoption' },
-      { id: 'KI-TOOL-KI-CLI-007', size: 's', horizon: 'waiting-for' },
-      { id: 'KI-TOOL-KI-CLI-008', horizon: undefined, status: 'triage', kind: undefined },
+      { id: 'KI-TOOL-KI-CLI-003', kind: undefined, size: 's', assignee: 'owner' },
+      { id: 'KI-TOOL-KI-CLI-004', size: 's', assignee: 'owner', initiative: 'foundations' },
+      { id: 'KI-TOOL-KI-CLI-005', size: 's', assignee: 'owner', project: 'ways-of-working', theme: 'foundations' },
+      { id: 'KI-TOOL-KI-CLI-006', size: 's', assignee: 'owner', purpose: 'adoption' },
+      { id: 'KI-TOOL-KI-CLI-007', size: 's', assignee: 'owner', horizon: 'waiting-for' },
+      { id: 'KI-TOOL-KI-CLI-008', horizon: undefined, status: 'triage', kind: undefined, assignee: 'owner' },
       { id: 'KI-TOOL-KI-CLI-009', horizon: undefined, status: 'done', kind: undefined },
       { id: 'KI-TOOL-KI-CLI-010', horizon: undefined, status: 'cancelled', resolution: 'obsolete' }
     ]
@@ -1143,6 +1148,64 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain(' GAPS=6 ')
     expect(summary.output).toContain('Gaps: 6 record(s) in the field migration window; ki repo roadmap list names each')
     expect(JSON.parse(json.output).items.at(-1).gaps).toEqual([])
+  })
+
+  test('shows each assignee, filters by it, and rejects a value outside the holder vocabulary', async () => {
+    const box = await sandbox()
+    await box.project.write(
+      'repo/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/repo"\n'
+    )
+    const items: readonly Record<string, string | undefined>[] = [
+      { id: 'KI-TOOL-KI-CLI-003', title: 'Owner work', size: 's', assignee: 'owner' },
+      { id: 'KI-TOOL-KI-CLI-004', title: 'Package work', size: 's', assignee: 'work/personal.reg.household-terra' },
+      { id: 'KI-TOOL-KI-CLI-005', title: 'Unassigned work', size: 's' },
+      { id: 'KI-TOOL-KI-CLI-006', title: 'Closed work', horizon: undefined, status: 'done' }
+    ]
+    for (const fields of items) await box.project.write(`repo/docs/roadmap/${fields['id']}-item.md`, item(fields))
+
+    const all = await box.run('ki repo --repo repo roadmap list --no-icons')
+    const held = await box.run('ki repo --repo repo roadmap list --assignee work/personal.reg.household-terra')
+    const none = await box.run('ki repo --repo repo roadmap list --assignee none')
+    const invalid = await box.run('ki repo --repo repo roadmap list --assignee Kris')
+    const json = await box.run('ki repo --repo repo roadmap list --format json --assignee owner')
+
+    expect(all.exitCode).toBe(0)
+    expect(all.output).toContain('KI-TOOL-KI-CLI-003 [draft] Owner work · size s · owner')
+    expect(all.output).toContain('KI-TOOL-KI-CLI-004 [draft] Package work · size s · work/personal.reg.household-terra')
+    expect(all.output).toContain('gaps (1)')
+    expect(all.output).toContain(
+      '! KI-TOOL-KI-CLI-005: assignee window: an open record should declare an assignee: owner, work/<id>, run/<name>, person/<handle> or repo/<name>'
+    )
+    expect(all.output).not.toMatch(/! KI-TOOL-KI-CLI-006/)
+    expect(held.output).toContain('KI-TOOL-KI-CLI-004')
+    expect(held.output).not.toMatch(/KI-TOOL-KI-CLI-00[356]/)
+    expect(none.output).toMatch(/KI-TOOL-KI-CLI-005 .*\n[\s\S]*KI-TOOL-KI-CLI-006/)
+    expect(none.output).not.toMatch(/KI-TOOL-KI-CLI-00[34] /)
+    expect(invalid).toEqual({
+      exitCode: 2,
+      output:
+        'ki: error: roadmap list --assignee must be owner, work/<id>, run/<name>, person/<handle>, repo/<name> or none\n'
+    })
+    expect(JSON.parse(json.output).items).toEqual([
+      expect.objectContaining({ id: 'KI-TOOL-KI-CLI-003', assignee: 'owner' })
+    ])
+  })
+
+  test('rejects an assignee outside the holder vocabulary in a record', async () => {
+    const box = await sandbox()
+    await box.project.write(
+      'repo/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
+    )
+    await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-item.md', item({ size: 's', assignee: 'Kris' }))
+
+    const result = await box.run('ki repo --repo repo roadmap list --no-icons')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain(
+      'work item KI-TOOL-KI-CLI-003-item.md assignee must be owner, work/<id>, run/<name>, person/<handle> or repo/<name>'
+    )
   })
 
   test('includes registered inbound and outbound trade context for each selected repository', async () => {

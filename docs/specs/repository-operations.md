@@ -312,6 +312,16 @@ _Verify:_ `src/tests/cli/git/check-message.test.ts` — `passes %j silently`, `r
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### REPO-OPS-031 — Assignee field
+
+`ki repo roadmap list` MUST accept the optional `assignee` record field in both local adapters, holding one work-model holder value: `owner`, `work/<id>`, `run/<name>`, `person/<handle>` or `repo/<name>`. It MUST reject any other value as unreadable and MUST NOT warn of the field as an unknown KB Streams field. Text output MUST show each record's assignee after its size. `--assignee <holder>` MUST keep only records with that assignee, `--assignee none` only records without one, and any other value MUST be a usage error. Through the Harness roadmap standard's assignee window it MUST list an open record without an assignee as a gap in the Harness roadmap checker's wording, MUST exempt done and cancelled records, and MUST NOT change the exit status for it. The JSON projection MUST add `assignee`, `null` when unset, to every item. The lock on an in-progress record's assignee is the Harness roadmap checker's audit, not a listing concern.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `shows each assignee, filters by it, and rejects a value outside the holder vocabulary`, `rejects an assignee outside the holder vocabulary in a record`, and `accepts priority and size and orders each lane by holds, priority, then size`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

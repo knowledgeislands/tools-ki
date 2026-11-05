@@ -43,7 +43,8 @@ export const renderRoadmapItem = (item: WorkItem, options: RoadmapTextOptions): 
   const placement = options.lane && lane !== item.status ? ` @ ${lane}` : ''
   const priority = item.priority && item.priority !== 'medium' ? ` · ${item.priority}` : ''
   const size = item.size ? ` · size ${item.size}` : ''
-  const label = `${item.id} [${item.status}${placement}] ${item.title}${priority}${size}${item.legacy ? ' · legacy' : ''}`
+  const assignee = item.assignee ? ` · ${item.assignee}` : ''
+  const label = `${item.id} [${item.status}${placement}] ${item.title}${priority}${size}${assignee}${item.legacy ? ' · legacy' : ''}`
   const links = linkedTasks(item)
   const first = links[0]
   if (!first) return { label }

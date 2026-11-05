@@ -37,6 +37,7 @@ interface RoadmapReport {
     readonly component: string | null
     readonly priority: WorkItemPriority
     readonly size: WorkItemSize | null
+    readonly assignee: string | null
     readonly hold?: WorkItemHold
     readonly resolution?: string
     readonly resolutionTarget?: string
@@ -86,6 +87,7 @@ export const roadmapReport = (results: readonly RoadmapListResult[]): RoadmapRep
       component: item.component ?? null,
       priority: item.priority ?? 'medium',
       size: item.size ?? null,
+      assignee: item.assignee ?? null,
       ...(item.hold ? { hold: item.hold } : {}),
       ...(item.resolution ? { resolution: item.resolution } : {}),
       ...(item.resolutionTarget ? { resolutionTarget: item.resolutionTarget } : {}),
