@@ -14,25 +14,6 @@ export const HARNESS_DECLARATION_FILE = '.ki.toml'
 export const supportedRuntimes = ['claude-code', 'claude-desktop', 'chatgpt-codex'] as const
 export type SupportedRuntime = (typeof supportedRuntimes)[number]
 
-export const acquisitionActions = ['import', 'mark'] as const
-export type AcquisitionAction = (typeof acquisitionActions)[number]
-
-export interface AcquisitionAdapterDeclaration {
-  readonly adapter: string
-  readonly actions: readonly AcquisitionAction[]
-  readonly repositoryProperties: readonly string[]
-  readonly invocationProperties: readonly string[]
-  readonly capabilities: readonly string[]
-  readonly omissions: readonly string[]
-  readonly mutationBoundary: 'read-only' | 'explicit-marker'
-  readonly checkpoint: string
-  readonly resetScopes: readonly string[]
-}
-
-export type AcquisitionAdapterMetadata =
-  | { readonly state: 'valid'; readonly declaration: AcquisitionAdapterDeclaration }
-  | { readonly state: 'invalid'; readonly reason: string }
-
 export interface HarnessCapability {
   readonly kind: 'skill'
   readonly name: string
@@ -44,8 +25,6 @@ export interface HarnessCapability {
   readonly supportedRuntimes?: readonly SupportedRuntime[]
   /** Payload-relative path to the skill's canonical `scripts/rubric/items/index.ts` catalogue, when it provides one. */
   readonly rubricModule?: string
-  /** Verified machine-readable acquisition declaration; prose is never consulted at runtime. */
-  readonly acquisition?: AcquisitionAdapterMetadata
 }
 
 export interface InstalledHarness {
@@ -124,92 +103,6 @@ const frontmatter = (text: string, path: string): Record<string, string> => {
     metadata[key] = line.slice(separator + 1).trim()
   }
   return metadata
-}
-
-const frontmatterList = (value: string | undefined): readonly string[] | undefined => {
-  if (value === undefined || !/^\[[^\]]*\]$/.test(value)) return undefined
-  return value
-    .slice(1, -1)
-    .split(',')
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-}
-
-const acquisitionMetadata = (metadata: Readonly<Record<string, string>>): AcquisitionAdapterMetadata | undefined => {
-  const fields = Object.keys(metadata).filter((key) => key.startsWith('ki-acquire-'))
-  if (!fields.length) return undefined
-  const required = [
-    'ki-acquire-adapter',
-    'ki-acquire-actions',
-    'ki-acquire-repository-properties',
-    'ki-acquire-invocation-properties',
-    'ki-acquire-capabilities',
-    'ki-acquire-omissions',
-    'ki-acquire-mutation-boundary',
-    'ki-acquire-checkpoint',
-    'ki-acquire-reset-scopes'
-  ]
-  const unsupported = fields.find((field) => !required.includes(field))
-  if (unsupported) return { state: 'invalid', reason: `unsupported field ${unsupported}` }
-  const missing = required.find((field) => metadata[field] === undefined)
-  if (missing) return { state: 'invalid', reason: `missing field ${missing}` }
-
-  const adapter = metadata['ki-acquire-adapter'] as string
-  const actions = frontmatterList(metadata['ki-acquire-actions'])
-  const repositoryProperties = frontmatterList(metadata['ki-acquire-repository-properties'])
-  const invocationProperties = frontmatterList(metadata['ki-acquire-invocation-properties'])
-  const capabilities = frontmatterList(metadata['ki-acquire-capabilities'])
-  const omissions = frontmatterList(metadata['ki-acquire-omissions'])
-  const resetScopes = frontmatterList(metadata['ki-acquire-reset-scopes'])
-  const lists = [actions, repositoryProperties, invocationProperties, capabilities, omissions, resetScopes]
-  if (!/^[a-z][a-z0-9-]*$/.test(adapter))
-    return { state: 'invalid', reason: 'adapter must be lower-case hyphenated ID' }
-  if (lists.some((list) => list === undefined))
-    return { state: 'invalid', reason: 'list fields must use flow-list syntax' }
-  const verifiedLists = lists as readonly (readonly string[])[]
-  if (verifiedLists.some((list) => new Set(list).size !== list.length)) {
-    return { state: 'invalid', reason: 'list fields must not repeat values' }
-  }
-  const [
-    verifiedActions,
-    verifiedRepositoryProperties,
-    verifiedInvocationProperties,
-    verifiedCapabilities,
-    verifiedOmissions,
-    verifiedResetScopes
-  ] = verifiedLists
-  if (
-    !verifiedActions?.length ||
-    verifiedActions.some((action) => !acquisitionActions.includes(action as AcquisitionAction))
-  ) {
-    return { state: 'invalid', reason: 'actions must be a non-empty list of import, mark' }
-  }
-  const mutationBoundary = metadata['ki-acquire-mutation-boundary']
-  if (mutationBoundary !== 'read-only' && mutationBoundary !== 'explicit-marker')
-    return { state: 'invalid', reason: 'mutation boundary must be read-only or explicit-marker' }
-  if (verifiedActions.includes('mark') !== (mutationBoundary === 'explicit-marker'))
-    return { state: 'invalid', reason: 'mark requires an explicit-marker boundary, and only mark may declare it' }
-  const checkpoint = metadata['ki-acquire-checkpoint'] as string
-  if (!/^[a-z][a-z0-9-]*$/.test(checkpoint))
-    return { state: 'invalid', reason: 'checkpoint must be lower-case hyphenated ID' }
-  const property = /^[a-z][a-z0-9_-]*$/
-  if (verifiedLists.slice(1).some((list) => list.some((entry) => !property.test(entry)))) {
-    return { state: 'invalid', reason: 'property and capability values must be lower-case hyphenated IDs' }
-  }
-  return {
-    state: 'valid',
-    declaration: {
-      adapter,
-      actions: verifiedActions as readonly AcquisitionAction[],
-      repositoryProperties: verifiedRepositoryProperties as readonly string[],
-      invocationProperties: verifiedInvocationProperties as readonly string[],
-      capabilities: verifiedCapabilities as readonly string[],
-      omissions: verifiedOmissions as readonly string[],
-      mutationBoundary,
-      checkpoint,
-      resetScopes: verifiedResetScopes as readonly string[]
-    }
-  }
 }
 
 const frontmatterDependencies = (
@@ -299,7 +192,6 @@ const skillCapability = async (root: string, source: string, files: readonly str
       false
     ),
     supportedRuntimes: frontmatterSupportedRuntimes(metadata['ki-supported-runtimes'], file),
-    acquisition: acquisitionMetadata(metadata),
     ...(rubricModule ? { rubricModule } : {})
   }
 }

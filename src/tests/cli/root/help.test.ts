@@ -10,12 +10,27 @@ describe('[ki --help]', () => {
     expect(unknown.exitCode).toBe(2)
     expect(unknown.output).toContain('unknown help topic: harness unknown')
   })
+  test('answers a moved command with one line naming its new home', async () => {
+    const box = await sandbox()
+    for (const command of [
+      'ki acquire',
+      'ki acquire import --adapter granola --since 2026-01-01',
+      'ki acquire --help'
+    ]) {
+      const moved = await box.run(command)
+      expect(moved.exitCode).toBe(1)
+      expect(moved.stderr).toBe(
+        "ki: acquisition has moved to the assistant's ki-muninn (krisb/assistant); `ki acquire` no longer runs it\n"
+      )
+    }
+    expect((await box.run('ki help')).output).not.toMatch(/^ {2}acquire /m)
+  })
   test('prints root and nested command help through universal --help', async () => {
     const box = await sandbox()
     const root = await box.run('ki')
     const help = await box.run('ki --help')
     const management = await box.run('ki harness --help')
-    const nested = await box.run('ki acquire import --help')
+    const nested = await box.run('ki repo trade list --help')
     const list = await box.run('ki inventory --help')
     const install = await box.run('ki harness install --help')
     const reinstall = await box.run('ki harness reinstall --help')
@@ -44,7 +59,7 @@ describe('[ki --help]', () => {
 
     expect(root.output).toContain('Usage: ki')
     expect(help.exitCode).toBe(0)
-    expect(help.output).toContain('acquire')
+    expect(help.output).toContain('agent')
     expect(help.output).not.toMatch(/^ {2}manage /m)
     expect(help.output).toContain('docs')
     expect(management.output).toContain('search')

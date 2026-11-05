@@ -1,6 +1,5 @@
 import type { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { createAcquireCommand } from '../acquire/index.ts'
 import { createAgentCommand } from '../agent/index.ts'
 import { createBootstrapCommand } from '../bootstrap/index.ts'
 import { createDevCommand } from '../dev/index.ts'
@@ -21,7 +20,6 @@ import { type RootCommandName, rootCommandNames } from './catalogue.ts'
 type RootCommandFactory = (context: KiContext) => Command
 
 const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
-  acquire: (context) => createAcquireCommand(context),
   agent: (context) => createAgentCommand(context),
   bootstrap: (context) => createBootstrapCommand(context),
   territory: (context) => createTerritoryCommand(context),

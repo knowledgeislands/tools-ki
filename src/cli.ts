@@ -114,12 +114,22 @@ const needsMcpInventory = (arguments_: readonly string[]): boolean => {
   return !['help', 'doctor', 'diag', 'repair', 'git'].includes(arguments_[0] as string)
 }
 
+/** Commands that have left `ki`, each answered with one line naming its new home. */
+const movedCommands: ReadonlyMap<string, string> = new Map([
+  ['acquire', "acquisition has moved to the assistant's ki-muninn (krisb/assistant); `ki acquire` no longer runs it"]
+])
+
 export const run = async (arguments_: readonly string[], context: KiContext): Promise<number> => {
   const program = createProgram(context)
   /* v8 ignore next -- V8 reports a non-existent third outcome for this complete boolean condition. */
   if (!arguments_.length) {
     program.outputHelp()
     return 0
+  }
+  const moved = movedCommands.get(arguments_[0] as string)
+  if (moved) {
+    context.stderr.write(`ki: ${moved}\n`)
+    return 1
   }
   try {
     // Help, version, recovery diagnostics, and the commit-msg check must remain reachable with malformed MCP binding

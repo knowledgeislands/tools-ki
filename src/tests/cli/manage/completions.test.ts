@@ -6,9 +6,6 @@ import { sandbox } from '../_cli_helper.ts'
 const execute = promisify(execFile)
 
 const commandPaths = [
-  'acquire',
-  'acquire list',
-  'acquire import',
   'territory',
   'territory audit',
   'territory inspect',
@@ -135,11 +132,7 @@ describe('[ki completion]', () => {
     expect(bash.output).toContain("'territory inspect:--target') printf '%s\\n' 'zed vscode'")
     expect(zsh.output).toContain("'territory inspect') printf '%s\\n' '-t --territory --filter --target --workspace'")
     expect(bash.output).toContain("'territory inspect:--workspace')")
-    expect(zsh.output).toContain("'acquire list')")
-    expect(zsh.output).toContain("'acquire import')")
-    expect(zsh.output).toContain("'acquire mark')")
     expect(zsh.output).toContain("'dev local')")
-    expect(zsh.output).toContain('import:acquire source material into repository Harbour')
     expect(zsh.output).toContain('-h:display help for command')
     expect(zsh.output).toContain("_describe -t ki-commands 'command or option' candidates")
     expect(zsh.output).toContain('trade:submit and inspect typed cross-repository work and knowledge trades')
@@ -151,7 +144,6 @@ describe('[ki completion]', () => {
     )
     expect(bash.output).toContain("'repo trade standing capture:--capture')")
     expect(bash.output).toContain("'repo trade policy compare:--baseline')")
-    expect(bash.output).toContain("'acquire list')")
     expect(bash.output).toContain("'repo batch') printf '%s\\n' 'close prepare run validate'")
     expect(bash.output).toContain("'repo batch prepare:--item')")
     expect(bash.output).toContain("'repo batch prepare:--repo')")
@@ -166,7 +158,6 @@ describe('[ki completion]', () => {
     expect(bash.output).toContain("'repo roadmap stats:--format')")
     expect(bash.output).toContain("'mcp install:--auth') printf '%s\\n' 'github-cli'")
     expect(bash.output).toContain("'mcp list:--format') printf '%s\\n' 'text json'")
-    expect(bash.output).toContain("'acquire import:--output')")
     expect(bash.output).toContain("'-V --version -h --help'")
     expect(bash.output).toContain('compgen -f')
     expect(bash.output).toContain('complete -F _ki ki')
@@ -175,7 +166,6 @@ describe('[ki completion]', () => {
       expect(zsh.output).toContain(`'${path}')`)
     }
     for (const output of [bash.output, zsh.output]) {
-      expect(output).toContain("'acquire import:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'repo:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'agent launch:--worktree') printf '%s\\n' 'path'")
       expect(output).toContain("'agent queue:--worktree') printf '%s\\n' 'path'")
@@ -185,7 +175,7 @@ describe('[ki completion]', () => {
       expect(output).toContain("'registry list:--format') printf '%s\\n' 'text json'")
       expect(output).toContain("'repo roadmap list:--format') printf '%s\\n' 'text json'")
       expect(output).toContain("'repo store list:--format') printf '%s\\n' 'text json'")
-      expect(output).toContain("'acquire import:--capture') printf '%s\\n' 'path'")
+      expect(output).toContain("'repo trade standing capture:--capture') printf '%s\\n' 'path'")
       expect(output).toContain("'docs:0') printf '%s\\n' 'overview site manual roadmap'")
       expect(output).toContain("'mcp update:--auth') printf '%s\\n' 'github-cli'")
       expect(output).toContain(

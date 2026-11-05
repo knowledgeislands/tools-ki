@@ -1024,6 +1024,11 @@ releases = [
       ['a missing skill name', '---\nki-depends-on: []\n---\n', 'must declare name'],
       ['an ignored frontmatter line', '---\nnot metadata\nki-depends-on: []\n---\n', 'must declare name'],
       [
+        'a repeated frontmatter field',
+        '---\nname: ki-example\nname: ki-example\nki-depends-on: []\n---\n',
+        'repeats frontmatter field name'
+      ],
+      [
         'an invalid dependency declaration',
         '---\nname: ki-example\nki-depends-on: ki-other\n---\n',
         'must declare ki-depends-on as a flow list'

@@ -4,7 +4,6 @@ import { buildCommandInventory, renderCommandInventory } from '../../../../scrip
 import { sandbox } from '../_cli_helper.ts'
 
 const rootHelpCommands = [
-  'acquire',
   'agent',
   'bootstrap',
   'cleanup',
@@ -93,7 +92,6 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   'repo trade policy': ['check', 'compare', 'show'],
   'repo trade routes': ['check', 'list'],
   'repo trade standing': ['capture', 'check', 'list'],
-  acquire: ['images', 'import', 'list', 'mark'],
   agent: [
     'close',
     'decide',
@@ -247,7 +245,6 @@ describe('[ki command inventory]', () => {
     expect(manual.indexOf('.SS Repository options')).toBeLessThan(manual.indexOf('.SS Repository management'))
     expect(manual.indexOf('.SS Repository management')).toBeLessThan(manual.indexOf('.SS Registry management'))
     expect(manual.indexOf('.SS Trades')).toBeLessThan(manual.indexOf('.SS Territory management'))
-    expect(manual.indexOf('.SS Territory management')).toBeLessThan(manual.indexOf('.SS Acquisition'))
     expect(changelog.indexOf('#### Territory management')).toBeLessThan(changelog.indexOf('#### Repository options'))
     expect(changelog.indexOf('#### Repository options')).toBeLessThan(changelog.indexOf('#### Repository management'))
     expect(changelog.indexOf('#### Repository management')).toBeLessThan(changelog.indexOf('#### Registry management'))

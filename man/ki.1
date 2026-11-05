@@ -390,26 +390,6 @@ condition, and the rest are written.
 Open the selected repositories through an explicit existing local adapter.
 Each target's project list follows the selection order; Zed, which prepends
 each folder, is opened in reverse.
-.SS Acquisition
-\&
-.TP
-.B ki acquire images
-.RI --adapter\ granola\ [--repo\ <path>]\ --source\ <uuid>\ --directory\ <path>\ --expected\ <count>\ [--dry-run]
-.TP
-.B ki acquire list
-.RI [--repo\ <path>]
-.TP
-.B ki acquire import
-.RI [--adapter\ <name>|--all]\ [--repo\ <path>]\ [--since\ <date>]\ [--until\ <date>]\ [--dry-run]
-.TP
-.B ki acquire mark
-.RI --adapter\ granola\ [--repo\ <path>]\ [--since\ <date>]\ [--until\ <date>]\ [--source\ <UUID...>]\ [--confirm]
-Preview notes eligible for the configured private Acquired folder. With
-.B --confirm
-add only that membership after verifying committed local captures, complete
-transcripts, fresh source hashes, and screenshot UUIDs and bytes. Preserve
-all original folders and read back the result. Exceptions remain unmarked.
-A progress marker grants no source retirement or reconciliation authority.
 .SS Background agents
 \&
 .TP
@@ -1633,75 +1613,6 @@ condition, and the rest are written.
 Open the selected repositories through an explicit existing local adapter.
 Each target's project list follows the selection order; Zed, which prepends
 each folder, is opened in reverse.
-.SS Acquisition
-\&
-.PP
-Acquisition is action-first and adapter-driven. Installed Harness skills
-publish verified machine-readable adapter declarations; repository
-configuration enables them.
-.TP
-.B ki acquire images
-.RI --adapter\ granola\ [--repo\ <path>]\ --source\ <uuid>\ --directory\ <path>\ --expected\ <count>\ [--dry-run]
-Verify UUID-named image exports from the Granola desktop app against an
-already acquired meeting. Preserve their exact bytes and a checksum manifest
-beside its Markdown in the receiving Knowledge Base. The expected count is
-observed in the desktop Images stack, not supplied by Granola MCP.
-.TP
-.B ki acquire list
-.RI [--repo\ <path>]
-List enabled, available, and invalid acquisition adapters with owning
-skill, actions, configuration, executable status, and activation guidance.
-.TP
-.B ki acquire import
-.RI [--adapter\ <name>|--all]\ [--repo\ <path>]\ [--since\ <date>]\ [--until\ <date>]\ [--dry-run]
-Run one selected adapter, every applicable enabled adapter, or infer the
-sole enabled adapter. Adapter-specific invocation properties require
-explicit
-.BR --adapter .
-ChatGPT accepts
-.B --capture
-and
-.BR --output .
-Granola accepts
-.B --refresh
-and
-.BR --refresh-acquired .
-.TP
-.B ki acquire mark
-.RI --adapter\ granola\ [--repo\ <path>]\ [--since\ <date>]\ [--until\ <date>]\ [--source\ <UUID...>]\ [--confirm]
-Preview notes eligible for the configured private Acquired folder. With
-.B --confirm
-add only that membership after verifying committed local captures, complete
-transcripts, fresh source hashes, and screenshot UUIDs and bytes. Preserve
-all original folders and read back the result. Exceptions remain unmarked.
-A progress marker grants no source retirement or reconciliation authority.
-.PP
-Granola import uses only allowlisted read-only MCP operations. It
-enumerates complete global and folder identity evidence and keeps no
-acquisition ledger, checkpoint or journal: the committed capture is the
-record. Meetings in the configured Acquired folder are skipped on
-membership alone. Each new meeting is written to its folder-mapped capture
-path, and an existing capture, found by its UUID wherever it has been filed,
-is never overwritten unless
-.B --refresh
-is given; a refresh rewrites it in place and keeps a transcript the
-provider no longer returns. By default it stages meeting Markdown beneath
-.IR +/_ACQUIRE/granola/ .
-A configured capture_root and complete folder_territories table receive
-several folders as one package per meeting UUID, retaining every membership.
-The unfoldered and residual selectors also accept "flag", which reports
-identities without reading their details or transcripts; unmatched live
-folders are reported even when empty. Multiple territories or unmapped
-folder memberships require review.
-MCP screenshots are decoded, identity-checked and retained as exact returned
-bytes with checksum manifests, including verified zero-image inventories.
-A configured acquired_folder_id is progress metadata distinct from routing.
-.B --refresh-acquired
-deliberately reads marked notes again and implies
-.BR --refresh .
-Conflicting receiver mappings fail closed. Only the separate confirmed mark
-action adds membership; import never mutates Granola. No action edits notes,
-removes folders, archives, deletes, or switches accounts or workspaces.
 .SS Background agents
 \&
 .PP
