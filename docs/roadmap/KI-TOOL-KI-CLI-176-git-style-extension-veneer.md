@@ -24,7 +24,7 @@ Kris proposed it on 5 November 2026 through personal.reg.assistant-terra (ATER-0
 
 Each extension lives and is versioned with its owner, and `ki` keeps only the shared core. Today `src/cli.ts` turns an unknown subcommand into `error: unknown command '<name>'`; that is the point where dispatch would look for `ki-<name>`.
 
-The first outside extension is `ki-muninn` (Muninn, Odin's raven of memory), the assistant's capture CLI, in krisb/assistant `packages/`; its repository would be `tools-ki-muninn` if it graduates. `ki-huginn` (Huginn, thought) is reserved as a placeholder for curation.
+The first outside extension is `ki-muninn` (Muninn, Odin's raven of memory), the Inbox's capture CLI, in krisb/inbox `packages/`; its repository would be `tools-ki-muninn` if it graduates. `ki-huginn` (Huginn, thought) is reserved as a placeholder for curation.
 
 ## Boundary
 
@@ -32,7 +32,7 @@ Dispatch and listing only: no extension registry, installer, version negotiation
 
 ## Dependencies / blocks
 
-krisb/assistant must ship a `ki-muninn` executable for the first real extension; until then a test fixture stands in.
+krisb/inbox must ship a `ki-muninn` executable for the first real extension; until then a test fixture stands in.
 
 `ki acquire` can retire once `ki-muninn` holds both Granola and ChatGPT acquisition. As of ATER-023 (5 November 2026, 02:03 GMT) munin, then in krisb/assistant `prototype/munin/`, holds Granola acquisition for the assistant; ChatGPT is still outstanding. Retiring `ki acquire` needs a separate owner decision on how the Harness `ki-acquire`, `ki-acquire-chatgpt` and `ki-acquire-granola` skills follow.
 

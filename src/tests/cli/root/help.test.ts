@@ -20,7 +20,7 @@ describe('[ki --help]', () => {
       const moved = await box.run(command)
       expect(moved.exitCode).toBe(1)
       expect(moved.stderr).toBe(
-        "ki: acquisition has moved to the assistant's ki-muninn (krisb/assistant); `ki acquire` no longer runs it\n"
+        "ki: acquisition has moved to the Inbox's ki-muninn (krisb/inbox); `ki acquire` no longer runs it\n"
       )
     }
     expect((await box.run('ki help')).output).not.toMatch(/^ {2}acquire /m)

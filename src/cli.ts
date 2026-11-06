@@ -116,7 +116,7 @@ const needsMcpInventory = (arguments_: readonly string[]): boolean => {
 
 /** Commands that have left `ki`, each answered with one line naming its new home. */
 const movedCommands: ReadonlyMap<string, string> = new Map([
-  ['acquire', "acquisition has moved to the assistant's ki-muninn (krisb/assistant); `ki acquire` no longer runs it"]
+  ['acquire', "acquisition has moved to the Inbox's ki-muninn (krisb/inbox); `ki acquire` no longer runs it"]
 ])
 
 export const run = async (arguments_: readonly string[], context: KiContext): Promise<number> => {
