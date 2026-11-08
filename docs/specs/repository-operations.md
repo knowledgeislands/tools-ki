@@ -322,6 +322,16 @@ _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `shows each assignee, filters
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### REPO-OPS-032 — Change-document base check
+
+`ki work base` MUST read, without fetching or changing anything, every `*.change.md` under `+/_WORK/` in each registered repository, or only in the repository `--repo` names, and every `*.design.md` there that carries a `Base:` line, and MUST skip a document whose `Status:` line says graduated. For each other document it MUST resolve the `Base: <repository>@<commit>` line's repository by registry key, and MUST report the document as moved, naming each touched file, or file under a touched folder, that `git diff --name-status --find-renames` shows modified, added, deleted or renamed between the base and that checkout's `origin/main`; as current when none moved; and as unknown, with its reason and never as a pass, when the `Base:` or `Touches:` line is missing or malformed, the base repository is unregistered, the checkout has no `origin/main`, the base commit is missing or not on `origin/main`, or the `Touches:` line names files in another repository. It MUST exit 0 when every checked document is current and 1 otherwise, and `--format json` MUST write the versioned `ki/work-base/v1` report.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/work/base.test.ts` — `reports moved, renamed, deleted and current documents against origin/main, and skips the graduated`, `reports unknown, never a pass, where the base or the touched files cannot be checked`, `renders the text report and exits 0 when every document is current`, `renders moved files and unknown reasons as text and exits 1`, `reads only the repository --repo names, keyed by the registry or else by its folder name`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

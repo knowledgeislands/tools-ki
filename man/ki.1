@@ -457,6 +457,9 @@ Remove closed runs beyond the newest kept and briefs a launch has superseded.
 .TP
 .B ki work status [--repo <dir>] [--format text|json] [--view views|routing]
 Show a repository's work by view, read-only, from its work files.
+.TP
+.B ki work base [--repo <dir>] [--format text|json]
+Flag change documents whose touched files moved since their base.
 .SS Estate convergence
 \&
 .TP
@@ -2369,6 +2372,62 @@ role, target, blocking,
 since, received, beat, method_read, messages (the pending count), path
 (the file its state came from) and items, and sends the warnings to
 standard error.
+.TP
+.B ki work base [--repo <dir>] [--format text|json]
+Read every change document,
+.IR *.change.md ,
+under
+.I +/_WORK/
+in every repository the local registry holds, or only in the
+repository
+.B --repo
+names, and every design note,
+.IR *.design.md ,
+that already carries a
+.B Base:
+line, and check each against its base under the
+.B ki-authoring
+document-types standard. A document's
+.B Base: <repository>@<commit>
+line names a registered checkout by its registry key and the commit it
+was written against; its
+.B Touches:
+line names the files it changes, each backticked or in a comma
+separated list, and an
+.I <owner>/<name>
+entry whose owner owns a registered repository names the repository the
+entries after it belong to. A document whose
+.B Status:
+line says graduated is skipped. Each other document is
+.B moved
+when a touched file, or a file under a touched folder, was modified,
+added, deleted or renamed, either way, between the base and the
+checkout's
+.IR origin/main ,
+as
+.B git diff --name-status --find-renames
+reports it;
+.B current
+when none was; or
+.BR unknown ,
+never a pass, with the reason: a missing or malformed
+.B Base:
+or
+.B Touches:
+line, a base repository not in the registry, a checkout with no
+.IR origin/main ,
+a base commit not in the checkout or not on its
+.I origin/main
+(unpushed, or on another branch), or touched files in another
+repository. The command fetches nothing, so fetch the base checkout
+first for a current answer, and changes nothing.
+.B --format json
+writes the versioned
+.I ki/work-base/v1
+report, each document with its repository, path, base, touches, status,
+verdict, files and reason, and the graduated documents. The command
+exits 0 when every checked document is current and 1 when any is moved
+or unknown.
 .SS Estate convergence
 \&
 .PP

@@ -1,9 +1,18 @@
-import { resolve } from 'node:path'
+import { basename, resolve } from 'node:path'
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { workRuns } from '../../core/agent/runs.ts'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../core/configuration/index.ts'
+import { KiExit } from '../../core/errors.ts'
 import { resolveRepository } from '../../core/repository/index.ts'
+import { requiredLocalRegistry } from '../../core/storage/index.ts'
+import {
+  type BaseCheckDocument,
+  type BaseCheckReport,
+  type BaseMovedFile,
+  type BaseVerdict,
+  checkChangeDocumentBases
+} from '../../core/work/base.ts'
 import {
   deriveWorkViews,
   readWorkStatus,
@@ -81,8 +90,38 @@ const renderWorkStatus = (status: WorkStatus, now: Date, view: TextView): string
   return renderTree({ title: `${title} ${status.report.repository}`, entries }).join('\n')
 }
 
+const baseVerdicts: readonly BaseVerdict[] = ['moved', 'unknown', 'current']
+
+const movedFile = (file: BaseMovedFile): TreeEntry => ({
+  label: `${file.path} ${file.change}${file.to === undefined ? '' : ` to ${file.to}`}`
+})
+
+const baseDocument = (document: BaseCheckDocument): TreeEntry => ({
+  label: `${document.repository} · ${document.path}${document.base ? ` · ${document.base.repository}@${document.base.commit}` : ''}`,
+  ...(document.reason === null ? {} : { continuation: [document.reason] }),
+  children: document.files.map(movedFile)
+})
+
+/** Moved, unknown and current documents, the graduated count and a summary line. */
+const renderBaseCheck = (report: BaseCheckReport): string => {
+  const counts = baseVerdicts.map(
+    (verdict) => [verdict, report.documents.filter((document) => document.verdict === verdict)] as const
+  )
+  const entries: TreeEntry[] = counts.map(([verdict, documents]) => ({
+    label: `${verdict} (${documents.length})`,
+    children: documents.map(baseDocument)
+  }))
+  entries.push({ label: `graduated, not checked (${report.graduated.length})` })
+  entries.push({
+    label: `summary: DOCUMENTS=${report.documents.length} ${counts.map(([verdict, documents]) => `${verdict.toUpperCase()}=${documents.length}`).join(' ')} GRADUATED=${report.graduated.length}`
+  })
+  return renderTree({ title: 'KI WORK BASE', entries }).join('\n')
+}
+
 export const createWorkCommand = (context: KiContext): Command => {
-  const command = new Command('work').description('read the work model: work packages, their state and views')
+  const command = new Command('work').description(
+    'read the work model: work packages, their state and views, and change-document bases'
+  )
   command.addCommand(
     new Command('status')
       .description(
@@ -123,6 +162,40 @@ export const createWorkCommand = (context: KiContext): Command => {
             for (const warning of status.warnings) context.stderr.write(`ki: warning: ${warning}\n`)
         }
       )
+  )
+  command.addCommand(
+    new Command('base')
+      .description(
+        "flag change documents whose touched files have moved on their base repository's origin/main, read-only"
+      )
+      .option('--repo <dir>', "read only this repository's change documents; default, every registered repository")
+      .addOption(
+        new Option('--format <format>', 'text report or the versioned ki/work-base/v1 JSON')
+          .choices(['text', 'json'])
+          .default('text')
+      )
+      .action(async (options: { readonly repo?: string; readonly format: 'text' | 'json' }) => {
+        const registry = await requiredLocalRegistry(context.paths.state)
+        const repositories =
+          options.repo === undefined
+            ? registry
+            : await resolveRepository({
+                repository: resolve(context.workingDirectory, options.repo),
+                workingDirectory: context.workingDirectory,
+                homeDirectory: context.homeDirectory
+              }).then(({ root }) => [
+                { key: registry.find((entry) => entry.path === root)?.key ?? basename(root), path: root }
+              ])
+        const report = await checkChangeDocumentBases({
+          repositories,
+          checkouts: registry,
+          runner: context.runner,
+          environment: context.environment
+        })
+        if (options.format === 'json') context.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
+        else context.stdout.write(`${renderBaseCheck(report)}\n`)
+        if (report.documents.some((document) => document.verdict !== 'current')) throw new KiExit(1)
+      })
   )
   return command
 }

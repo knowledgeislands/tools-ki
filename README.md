@@ -126,6 +126,13 @@ ki work status --format json
 ki work status --view routing
 ```
 
+`ki work base` reads every change document, `*.change.md`, under `+/_WORK/` in each registered repository, and each design note that already carries a `Base:` line, and flags those whose touched files have moved since their base. It resolves the `Base: <repository>@<commit>` line in that registered checkout, skips a document whose `Status:` says graduated, and compares the `Touches:` files between the base and the checkout's `origin/main`, renames and deletions included. Each document is moved, with its files, current, or unknown, with the reason, never a pass, where the base is missing, unpushed or not in the checkout. It fetches nothing, so fetch the base checkout first. It exits 1 when any document is moved or unknown; `--format json` writes the versioned `ki/work-base/v1` report and `--repo <dir>` reads one repository only.
+
+```sh
+ki work base
+ki work base --repo ~/workspaces/personal/inbox --format json
+```
+
 ## Check commit messages
 
 `ki git check-message <file>` checks a commit message against the deterministic `ki-git` rules, so that a repository's committed `.githooks/commit-msg` needs no package. A pass is silent; a failure exits 1 naming the rule and the remedy.
