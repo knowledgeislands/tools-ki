@@ -386,9 +386,46 @@ describe('ki work status', () => {
     for (const [folder, , message] of states)
       expect(json.stderr).toContain(`ki: warning: +/_WORK/${folder}/state.md: ${message}`)
     expect(json.stderr).not.toContain('carries state fields')
-    expect(json.stderr).toContain('ki: warning: +/_WORK/ex.n/ has no work.md\n')
+    expect(json.stderr).toContain('ki: warning: +/_WORK/ex.n/ has no _index.md or work.md\n')
     expect(text.stdout).toContain(`├─ warnings (${cases.length + states.length + 1})`)
     expect(text.stdout).toContain('│  ├─ ! +/_WORK/ex.a/work.md: has no YAML front matter')
+  })
+
+  test('reads _index.md as the entry file, work.md where it is absent, and flags a folder holding both', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', declaration())
+    await box.project.write('repo/+/_WORK/ex.new/_index.md', workFile('ex.new', { title: "'EX > new'" }))
+    await writeWork(box, 'ex.old', { title: "'EX > old'" })
+    await box.project.write('repo/+/_WORK/ex.both/_index.md', workFile('ex.both', { title: "'EX > index'" }))
+    await box.project.write('repo/+/_WORK/ex.both/work.md', workFile('ex.other', { title: "'EX > former'" }))
+    await box.project.write('repo/+/_WORK/ex.pack/_index.md', workFile('ex.pack'))
+    await box.project.write(
+      'repo/+/_WORK/ex.pack/state.md',
+      '---\nid: ex.pack\nstate: with-worker\nsince: 2026-10-18T02:00:00Z\n---\n'
+    )
+    await box.project.write('repo/+/_WORK/ex.pack/messages.md', '# Messages\n\n- one\n')
+    await box.project.write('repo/+/_WORK_REVIEW/ex.done/_index.md', workFile('ex.done'))
+    await box.project.write('repo/+/_WORK_REVIEW/ex.older/work.md', workFile('ex.older'))
+
+    const json = await box.run('ki work status --repo repo --format json', { now })
+
+    expect(json.exitCode).toBe(0)
+    const work = JSON.parse(json.stdout).work as readonly { id: string; title: string; path: string }[]
+    expect(work.map(({ id, title, path }) => ({ id, title, path }))).toEqual([
+      { id: 'ex.both', title: 'EX > index', path: '+/_WORK/ex.both/_index.md' },
+      { id: 'ex.new', title: 'EX > new', path: '+/_WORK/ex.new/_index.md' },
+      { id: 'ex.old', title: 'EX > old', path: '+/_WORK/ex.old/work.md' },
+      { id: 'ex.pack', title: 'EX > ex.pack', path: '+/_WORK/ex.pack/state.md' }
+    ])
+    expect(json.stderr).toBe(
+      [
+        'ki: warning: +/_WORK/ex.both/ holds both _index.md and work.md; _index.md governs, so remove work.md',
+        'ki: warning: +/_WORK/ex.pack/_index.md: carries state fields beside state.md; state.md governs',
+        ''
+      ].join('\n')
+    )
+    const text = await box.run('ki work status --repo repo', { now })
+    expect(text.stdout).toContain('├─ awaiting review (2)')
   })
 
   test('reads thread-model checkpoints through the tolerance window, warning of each new home', async () => {
@@ -447,7 +484,7 @@ describe('ki work status', () => {
     })
     expect(byId['ex.regular.registry-removal']).toMatchObject({ level: 'regular', state: 'with-supervisor' })
     expect(json.stderr).toContain(
-      'ki: warning: +/_CHECKPOINTS/_state-of-play.md is a thread-model checkpoint; move it to +/_WORK/ex/work.md\n'
+      'ki: warning: +/_CHECKPOINTS/_state-of-play.md is a thread-model checkpoint; move it to +/_WORK/ex/_index.md\n'
     )
     expect(json.stderr).toContain('ki: warning: +/_CHECKPOINTS/undated.md: updated_at must be a UTC time\n')
     expect(json.stderr).not.toContain('README')

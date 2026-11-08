@@ -35,7 +35,7 @@ const opener = (entry: WorkDefinition, label: string, capital: string, main: str
       : entry.level === 'project'
         ? `Project: ${projectSlug(entry.id)}; work only this Project's records.`
         : entry.parent
-          ? `Secondary State of play under ${main ?? territory} (${territory}): project management only for the work its work.md covers, within its own cap; the main State of play stays the owner's front door and owns cross-cutting decisions, so route those to it.`
+          ? `Secondary State of play under ${main ?? territory} (${territory}): project management only for the work its _index.md covers, within its own cap; the main State of play stays the owner's front door and owns cross-cutting decisions, so route those to it.`
           : 'Project management only: priorities, the Project-work queue (cap three or four), decisions and releases; route real work to Project work.'
   return [
     `Bootstrap as ${entry.id} ${kind} work under ki-coordination.`,

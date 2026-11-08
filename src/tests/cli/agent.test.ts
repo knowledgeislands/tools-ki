@@ -977,7 +977,7 @@ describe('ki agent thread home', () => {
     expect(later.exitCode).toBe(2)
     expect(later.stderr).toBe(refuse('s', other))
     expect((await box.run(`ki agent decide s Text. --repo ${other}`, { now })).stderr).toBe(
-      `ki: error: s names no work folder in ${other}; write +/_WORK/<id>/work.md, then ki agent home s --work <id>\n`
+      `ki: error: s names no work folder in ${other}; write +/_WORK/<id>/_index.md, then ki agent home s --work <id>\n`
     )
     await box.root.write('other/+/_WORK/ki.s/work.md', '---\nid: ki.s\n---\n')
     expect((await box.run(`ki agent decide s Text. --repo ${other}`, { now })).stdout).toBe(
@@ -1021,7 +1021,7 @@ describe('ki agent thread home', () => {
       `${JSON.stringify({ repository, folder: '+/_WORK/ki.ways-of-working' })}\n`
     )
     expect((await box.run('ki agent home ki-empty', { now })).stderr).toBe(
-      `ki: error: ki-empty names no work folder in ${repository}; write +/_WORK/<id>/work.md, then ki agent home ki-empty --work <id>\n`
+      `ki: error: ki-empty names no work folder in ${repository}; write +/_WORK/<id>/_index.md, then ki agent home ki-empty --work <id>\n`
     )
     expect((await box.run('ki agent home ways-of-working', { now })).stdout).toBe(
       `${repository}/+/_WORK/ki.ways-of-working\n`
@@ -1038,6 +1038,10 @@ describe('ki agent thread home', () => {
       `Work folder of ki-a-b is now ${repository}/+/_WORK/ki.a-b\n`
     )
     expect((await box.run('ki agent home ki-a-b', { now })).stdout).toBe(`${repository}/+/_WORK/ki.a-b\n`)
+
+    // The entry file _index.md names a work folder as its former name work.md does.
+    await box.project.write('+/_WORK/ki.empty/_index.md', '---\nid: ki.empty\n---\n')
+    expect((await box.run('ki agent home ki-empty', { now })).stdout).toBe(`${repository}/+/_WORK/ki.empty\n`)
   })
 
   test('follows a retired home into its work folder, refuses one with none, and re-homes on --work, moving no file', async () => {
@@ -1061,7 +1065,7 @@ describe('ki agent thread home', () => {
     // One with no work folder to follow stays readable, but nothing is launched or written into it.
     await box.state.write('ki/agents/old/thread.json', `${JSON.stringify({ repository, folder: '+/_THREADS/old' })}\n`)
     expect((await box.run('ki agent home old', { now })).stdout).toBe(`${repository}/+/_THREADS/old\n`)
-    const refusal = `ki: error: old names no work folder in ${repository}; write +/_WORK/<id>/work.md, then ki agent home old --work <id>\n`
+    const refusal = `ki: error: old names no work folder in ${repository}; write +/_WORK/<id>/_index.md, then ki agent home old --work <id>\n`
     expect(await box.run('ki agent decide old Text.', { now })).toMatchObject({ exitCode: 2, stderr: refusal })
     expect(await box.run('ki agent launch old one . task.md', { now })).toMatchObject({ exitCode: 2, stderr: refusal })
     expect(await box.state.read('ki/agents/old/one.prompt.md').catch(() => 'absent')).toBe('absent')
@@ -1072,10 +1076,12 @@ describe('ki agent thread home', () => {
     expect(invalid.stderr).toBe("ki: error: --work must be a dotted work id: 'Ways_Of_Working'\n")
     const missing = await box.run('ki agent home r --work ki.s', { now })
     expect(missing.exitCode).toBe(2)
-    expect(missing.stderr).toBe(`ki: error: ${repository}/+/_WORK/ki.s has no work.md; write the work file first\n`)
+    expect(missing.stderr).toBe(
+      `ki: error: ${repository}/+/_WORK/ki.s has no _index.md or work.md; write the work file first\n`
+    )
     expect(await box.state.read('ki/agents/r/thread.json')).toContain('"folder":"+/_WORK/ki.r"')
 
-    await box.project.write('+/_WORK/ki.s/work.md', '---\nid: ki.s\n---\n')
+    await box.project.write('+/_WORK/ki.s/_index.md', '---\nid: ki.s\n---\n')
     expect((await box.run('ki agent home r --work ki.s', { now })).stdout).toBe(
       `Work folder of r is now ${repository}/+/_WORK/ki.s\n`
     )

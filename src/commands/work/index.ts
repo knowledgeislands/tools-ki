@@ -85,7 +85,9 @@ export const createWorkCommand = (context: KiContext): Command => {
   const command = new Command('work').description('read the work model: work packages, their state and views')
   command.addCommand(
     new Command('status')
-      .description("show a repository's work by view, read-only, from each +/_WORK/<id>/ state.md or work.md")
+      .description(
+        "show a repository's work by view, read-only, from each +/_WORK/<id>/ state.md, _index.md or work.md"
+      )
       .option('--repo <dir>', "repository holding the work folders; default, the working directory's KI repository")
       .addOption(
         new Option('--format <format>', 'text views or the versioned ki/work-status/v1 JSON')

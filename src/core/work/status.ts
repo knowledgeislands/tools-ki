@@ -5,6 +5,7 @@ import { parse } from 'yaml'
 import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import { skillTable } from '../territory/declaration.ts'
+import { bothEntryFilesWarning, LEGACY_WORK_ENTRY_FILE, WORK_ENTRY_FILE, workEntryFile } from './entry.ts'
 import { isMainStateOfPlay, subPackageParent, workNames } from './identity.ts'
 
 export const WORK_STATUS_SCHEMA = 'ki/work-status/v1' as const
@@ -164,7 +165,11 @@ const directories = async (path: string): Promise<readonly string[]> =>
 
 const isFile = async (path: string): Promise<boolean> => (await lstat(path).catch(() => undefined))?.isFile() === true
 
-/** The fields a package keeps in `state.md`; any of them left in its `work.md` is stale. */
+/** Whether the path is a file, following a symbolic link as reading it does. */
+const readsAsFile = async (path: string): Promise<boolean> =>
+  (await stat(path).catch(() => undefined))?.isFile() === true
+
+/** The fields a package keeps in `state.md`; any of them left in its entry file is stale. */
 const STATE_FIELDS = ['state', 'target', 'hold', 'blocking', 'since', 'received', 'beat', 'mark', 'method_read']
 
 /** A revision as written, a bare number such as an all-digit short hash read back as its digits. */
@@ -267,7 +272,8 @@ export type WorkDefinition = Exclude<ReturnType<typeof workDefinition>, string> 
 export const readWorkDefinitions = async (root: string): Promise<readonly WorkDefinition[]> => {
   const work: WorkDefinition[] = []
   for (const folder of await directories(join(root, WORK_DIRECTORY))) {
-    const path = `${WORK_DIRECTORY}/${folder}/work.md`
+    const entry = await workEntryFile(join(root, WORK_DIRECTORY, folder), readsAsFile)
+    const path = `${WORK_DIRECTORY}/${folder}/${entry?.name ?? WORK_ENTRY_FILE}`
     const values = frontmatter(await readFile(join(root, path), 'utf8').catch(() => ''))
     const definition = values ? workDefinition(folder, values) : undefined
     if (definition && typeof definition !== 'string') work.push({ ...definition, path })
@@ -317,24 +323,26 @@ const workState = (values: Record<string, unknown>, worker: string, supervisor: 
 
 /**
  * Reads one work folder in either shape the work-package standard allows: a package, told by its `state.md`, takes
- * its state fields from that file and its queue from `messages.md`; a single-file folder takes both from `work.md`.
- * Returns the entry, if any, and the warnings that name each file it could not read.
+ * its state fields from that file and its queue from `messages.md`; a single-file folder takes both from its entry
+ * file, `_index.md` or the former `work.md`. Returns the entry, if any, and the warnings that name each file it could
+ * not read.
  */
 const workEntry = async (
   root: string,
   folder: string,
+  file: string,
   identity: string,
   items: readonly WorkStatusItem[]
 ): Promise<{ readonly entry?: WorkStatusEntry; readonly warnings: readonly string[] }> => {
   const relative = (name: string): string => `${WORK_DIRECTORY}/${folder}/${name}`
   const read = (name: string): Promise<string> => readFile(join(root, WORK_DIRECTORY, folder, name), 'utf8')
-  const text = await read('work.md')
+  const text = await read(file)
   const values = frontmatter(text)
-  if (!values) return { warnings: [`${relative('work.md')}: has no YAML front matter`] }
+  if (!values) return { warnings: [`${relative(file)}: has no YAML front matter`] }
   const definition = workDefinition(folder, values)
-  if (typeof definition === 'string') return { warnings: [`${relative('work.md')}: ${definition}`] }
+  if (typeof definition === 'string') return { warnings: [`${relative(file)}: ${definition}`] }
   const packaged = await isFile(join(root, WORK_DIRECTORY, folder, 'state.md'))
-  const source = relative(packaged ? 'state.md' : 'work.md')
+  const source = relative(packaged ? 'state.md' : file)
   const stateValues = packaged ? frontmatter(await read('state.md')) : values
   if (!stateValues) return { warnings: [`${source}: has no YAML front matter`] }
   if (packaged && stateValues['id'] !== folder)
@@ -345,7 +353,7 @@ const workEntry = async (
   const stale = packaged && STATE_FIELDS.some((field) => field in values)
   return {
     entry: { identity, ...definition, ...state, messages: pending(queue), path: source, items },
-    warnings: stale ? [`${relative('work.md')}: carries state fields beside state.md; state.md governs`] : []
+    warnings: stale ? [`${relative(file)}: carries state fields beside state.md; state.md governs`] : []
   }
 }
 
@@ -425,10 +433,12 @@ export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkSt
   const work: WorkStatusEntry[] = []
   const definitions = await readWorkDefinitions(request.root)
   for (const folder of await directories(join(request.root, WORK_DIRECTORY))) {
-    if (!(await isFile(join(request.root, WORK_DIRECTORY, folder, 'work.md')))) {
-      warnings.push(`${WORK_DIRECTORY}/${folder}/ has no work.md`)
+    const file = await workEntryFile(join(request.root, WORK_DIRECTORY, folder), isFile)
+    if (!file) {
+      warnings.push(`${WORK_DIRECTORY}/${folder}/ has no ${WORK_ENTRY_FILE} or ${LEGACY_WORK_ENTRY_FILE}`)
       continue
     }
+    if (file.both) warnings.push(bothEntryFilesWarning(`${WORK_DIRECTORY}/${folder}`))
     const items = request.runs
       .filter(
         (run) =>
@@ -453,7 +463,7 @@ export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkSt
           })
         )
       )
-    const read = await workEntry(request.root, folder, request.identity, items)
+    const read = await workEntry(request.root, folder, file.name, request.identity, items)
     warnings.push(...read.warnings)
     if (read.entry) work.push(read.entry)
   }
@@ -484,7 +494,9 @@ export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkSt
         warnings.push(`${CHECKPOINTS_DIRECTORY}/${name}: ${entry}`)
         continue
       }
-      warnings.push(`${entry.path} is a thread-model checkpoint; move it to ${WORK_DIRECTORY}/${entry.id}/work.md`)
+      warnings.push(
+        `${entry.path} is a thread-model checkpoint; move it to ${WORK_DIRECTORY}/${entry.id}/${WORK_ENTRY_FILE}`
+      )
       work.push(entry)
     }
   }
@@ -492,7 +504,9 @@ export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkSt
     await Promise.all(
       (
         await directories(join(request.root, WORK_REVIEW_DIRECTORY))
-      ).map((folder) => isFile(join(request.root, WORK_REVIEW_DIRECTORY, folder, 'work.md')))
+      ).map(
+        async (folder) => (await workEntryFile(join(request.root, WORK_REVIEW_DIRECTORY, folder), isFile)) !== undefined
+      )
     )
   ).filter(Boolean).length
   return {

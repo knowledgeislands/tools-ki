@@ -4,9 +4,14 @@ import { memberConfiguration, registerEstate, writeCapital } from './_territory_
 
 const now = () => Date.parse('2026-10-24T09:00:00Z')
 
-const work = (box: Sandbox, id: string, fields: Readonly<Record<string, string>>) =>
+const work = (
+  box: Sandbox,
+  id: string,
+  fields: Readonly<Record<string, string>>,
+  file: '_index.md' | 'work.md' = 'work.md'
+) =>
   box.project.write(
-    `capital/+/_WORK/${id}/work.md`,
+    `capital/+/_WORK/${id}/${file}`,
     `---\n${Object.entries({
       id,
       worker: 'agent',
@@ -23,14 +28,15 @@ const territory = async (): Promise<Sandbox> => {
   const box = await sandbox()
   await registerEstate(box, [await writeCapital(box)])
   await work(box, 'ex', { level: 'territory', title: "'EX > SoP'", label: "'EX > SoP (host)'" })
-  await work(box, 'ex.sop.sites', {
-    level: 'territory',
-    title: "'EX > SoP (sites)'",
-    parent: 'ex',
-    covers: '[ex.site-home]'
-  })
+  // The entry file is _index.md; work.md, its former name, still reads through the rollout.
+  await work(
+    box,
+    'ex.sop.sites',
+    { level: 'territory', title: "'EX > SoP (sites)'", parent: 'ex', covers: '[ex.site-home]' },
+    '_index.md'
+  )
   await work(box, 'ex.site-home', { level: 'project', title: "'EX > Sites > Home'" })
-  await work(box, 'ex.tools', { level: 'project', title: "'EX > Tools'" })
+  await work(box, 'ex.tools', { level: 'project', title: "'EX > Tools'" }, '_index.md')
   await work(box, 'ex.vague', { level: 'project', title: "'EX > Vague'", state: 'pending' })
   await work(box, 'ex.old', { level: 'project', title: "'EX > Old'", state: 'finished' })
   await work(box, 'ex.regular.tidy', { level: 'regular', title: "'EX > Tidy'" })
@@ -184,7 +190,7 @@ describe('ki agent prompts', () => {
 test('typed main is not secondary and typed Project opener keeps the registry slug', async () => {
   const box = await sandbox()
   await registerEstate(box, [await writeCapital(box)])
-  await work(box, 'ex.sop.main', { level: 'territory', title: "'EX > SoP'", covers: '[ex.prj.tools]' })
+  await work(box, 'ex.sop.main', { level: 'territory', title: "'EX > SoP'", covers: '[ex.prj.tools]' }, '_index.md')
   await work(box, 'ex.prj.tools', { level: 'project', title: "'EX > Tools'", parent: 'ex.sop.main', project: 'tools' })
   const result = await box.run('ki agent prompts ex.sop.main --format json', { now })
   expect(result.exitCode).toBe(0)
@@ -206,5 +212,30 @@ test('reg opener retains regular form and optional coordination in a mixed tree'
     const entry = entries.find((value: { id: string }) => value.id === id)
     expect(entry.kind).toBe('regular')
     expect(entry.opener).toContain(`Bootstrap as ${id} regular work under ki-coordination.`)
+  }
+})
+
+test('selects the territory by a work id in either entry file, reading _index.md where a folder holds both', async () => {
+  const box = await sandbox()
+  await registerEstate(box, [await writeCapital(box)])
+  await work(box, 'ex.sop.main', { level: 'territory', title: "'EX > SoP'" }, '_index.md')
+  await work(box, 'ex.prj.tools', { level: 'project', title: "'EX > Tools'", parent: 'ex.sop.main' })
+  await work(box, 'ex.prj.both', { level: 'project', title: "'EX > Index'", parent: 'ex.sop.main' }, '_index.md')
+  await work(box, 'ex.prj.both', { level: 'project', title: "'EX > Former'", parent: 'ex.sop.main' })
+
+  const byIndex = await box.run('ki agent prompts ex.sop.main --format json', { now })
+  const byFormer = await box.run('ki agent prompts ex.prj.tools --format json', { now })
+
+  for (const result of [byIndex, byFormer]) {
+    expect(result.exitCode).toBe(0)
+    expect(result.stderr).toBe(
+      'ki: warning: +/_WORK/ex.prj.both/ holds both _index.md and work.md; _index.md governs, so remove work.md\n'
+    )
+    const threads = JSON.parse(result.stdout).threads as readonly { id: string; label: string }[]
+    expect(threads.map(({ id, label }) => [id, label])).toEqual([
+      ['ex.sop.main', 'EX > SoP'],
+      ['ex.prj.both', 'EX > Index'],
+      ['ex.prj.tools', 'EX > Tools']
+    ])
   }
 })

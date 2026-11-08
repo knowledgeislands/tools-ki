@@ -3,6 +3,7 @@ import { appendFile, mkdir, readdir, readFile, realpath, rename, stat, writeFile
 import { hostname } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { KiError } from '../errors.ts'
+import { WORK_ENTRY_FILES } from '../work/entry.ts'
 import { type AgentContext, checkName, instant, runDirectory } from './context.ts'
 import type { AgentEffectIdentity, AttemptIdentity, DependencyIdentity, ProcessIdentity } from './identities.ts'
 import { withRunLock } from './locking.ts'
@@ -333,11 +334,20 @@ export const verifyRunHome = (run: string, thread: ThreadHome): Promise<{ home: 
     )
   })
 
+/** The work home's entry file, `_index.md` before the former `work.md`, or undefined when it holds neither. */
+const readEntryFile = async (home: string): Promise<string | undefined> => {
+  for (const name of WORK_ENTRY_FILES) {
+    const text = await readFile(join(home, name), 'utf8').catch(() => undefined)
+    if (text !== undefined) return text
+  }
+  return undefined
+}
+
 export const verifyWorkHome = async (thread: ThreadHome): Promise<{ home: string; work: string }> => {
   const home = await realpath(threadPath(thread)).catch(() => undefined)
   if (!home) throw new KiError('control-home-unverified: the recorded work home is unavailable', 1)
   const work = thread.folder.startsWith('+/_WORK/') ? thread.folder.slice('+/_WORK/'.length) : undefined
-  const text = await readFile(join(home, 'work.md'), 'utf8').catch(() => undefined)
+  const text = await readEntryFile(home)
   if (text === undefined) throw new KiError('control-home-unverified: work record is unavailable', 1)
   const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text)?.[1]
   const recorded = /^id:\s*([^\s]+)\s*$/m.exec(frontmatter ?? '')?.[1]

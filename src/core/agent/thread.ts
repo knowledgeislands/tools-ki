@@ -3,6 +3,7 @@ import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { gitPrimaryWorkingTreeRoot, gitWorkingTreeRoot } from '../runtime/git.ts'
 import { requiredLocalRegistry } from '../storage/local-registry.ts'
+import { LEGACY_WORK_ENTRY_FILE, WORK_ENTRY_FILE, workEntryFile } from '../work/entry.ts'
 import { workNames } from '../work/identity.ts'
 import { capitalRoot } from '../work/registry.ts'
 import { isWorkId, readWorkDefinitions, WORK_DIRECTORY, workSlug } from '../work/status.ts'
@@ -34,9 +35,12 @@ export const workFolder = (id: string): string => `${WORK_DIRECTORY}/${id}`
 /** Whether the home is a work folder, rather than a retired `+/_THREADS/` or `+/_CHECKPOINTS/` one. */
 export const isWorkHome = (home: ThreadHome): boolean => home.folder.startsWith(`${WORK_DIRECTORY}/`)
 
-/** Whether the repository holds the work's `work.md`. */
+/** Whether the repository holds the work's entry file, `_index.md` or the former `work.md`. */
 const holdsWork = async (repository: string, id: string): Promise<boolean> =>
-  (await stat(join(repository, workFolder(id), 'work.md')).catch(() => undefined))?.isFile() === true
+  (await workEntryFile(
+    join(repository, workFolder(id)),
+    async (path) => (await stat(path).catch(() => undefined))?.isFile() === true
+  )) !== undefined
 
 /**
  * Whether the run's name names the work: its slug, as `ki-coordination` names a work's
@@ -69,7 +73,7 @@ const runWorkFolder = async (repository: string, run: string): Promise<string> =
     throw new KiError(`${run} names ${ids.sort().join(' and ')}; choose one with ki agent home ${run} --work <id>`, 2)
   if (ids.length === 0)
     throw new KiError(
-      `${run} names no work folder in ${repository}; write +/_WORK/<id>/work.md, then ki agent home ${run} --work <id>`,
+      `${run} names no work folder in ${repository}; write +/_WORK/<id>/${WORK_ENTRY_FILE}, then ki agent home ${run} --work <id>`,
       2
     )
   return workFolder(ids[0] as string)
@@ -326,7 +330,8 @@ export const readThread = async (context: AgentContext, run: string): Promise<Th
 /**
  * The work folder a gone one was renamed to, as the package history shows it: the one folder
  * every rename of its files leads to, followed through each later rename until a folder holds
- * `work.md`. A history that shows none, or a split, leaves the choice to `ki agent home --work`.
+ * its entry file. A history that shows none, or a split, leaves the choice to
+ * `ki agent home --work`.
  */
 const renamedWorkFolder = async (
   context: AgentContext,
@@ -656,8 +661,8 @@ const homeRepository = async (
 
 /**
  * Records `+/_WORK/<id>/` as the run's home, for a new run or one homed elsewhere, once the
- * repository holds the work's `work.md`. It moves no file: the work folder's owner moves the
- * thread folder's contents, and the home then follows them.
+ * repository holds the work's entry file, `_index.md` or the former `work.md`. It moves no file:
+ * the work folder's owner moves the thread folder's contents, and the home then follows them.
  */
 export const rehomeThread = async (
   context: AgentContext,
@@ -680,7 +685,10 @@ export const rehomeThread = async (
     }
   }
   if (!(await holdsWork(repository, folder.slice(`${WORK_DIRECTORY}/`.length))))
-    throw new KiError(`${join(repository, workFolder(id))} has no work.md; write the work file first`, 2)
+    throw new KiError(
+      `${join(repository, workFolder(id))} has no ${WORK_ENTRY_FILE} or ${LEGACY_WORK_ENTRY_FILE}; write the work file first`,
+      2
+    )
   return recordThread(context, run, { repository, folder })
 }
 

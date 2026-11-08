@@ -1,4 +1,4 @@
-.TH KI 1 "2026-10-21" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-11-08" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -2039,6 +2039,9 @@ without recording it. With
 record
 .I +/_WORK/<id>/
 as the home, for a new run or one homed elsewhere, once that folder holds
+its entry file,
+.I _index.md
+or the former
 .IR work.md ;
 it moves no file, so move the old folder's contents first. When the run's
 control record still names the work home it was made under, and that home is
@@ -2299,12 +2302,16 @@ applies to the text form only.
 A work package, a folder holding
 .IR state.md ,
 takes its state from that file, which must name the folder's id, and its
-identity and routing description from
+identity and routing description from its entry file, with a warning when
+the entry file still carries a state field; a single-file work folder takes
+both from its entry file.
+The entry file is
+.IR _index.md ,
+or
 .IR work.md ,
-with a warning when
-.I work.md
-still carries a state field; a single-file work folder takes both from
-.IR work.md .
+its former name, where the folder holds no
+.IR _index.md ;
+a folder holding both is a warning.
 A work with lines waiting in its
 .I messages.md
 queue, or a single-file work file's

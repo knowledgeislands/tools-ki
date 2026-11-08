@@ -1931,6 +1931,13 @@ describe('agent control contract', () => {
     expect(await f.box.state.read('ki/agents/r/control.lock')).toContain('old')
   })
 
+  test('verifies the work home by its _index.md, else its former work.md', async () => {
+    const f = await fixture()
+    await f.launch()
+    await rename(`${f.box.project.path}/+/_WORK/ki.r/work.md`, `${f.box.project.path}/+/_WORK/ki.r/_index.md`)
+    expect((await f.stop()).exitCode).toBe(0)
+  })
+
   test.each(['thread', 'home', 'record'] as const)(
     'an unavailable %s refuses control before effects',
     async (variant) => {
@@ -2243,7 +2250,7 @@ describe('agent control contract', () => {
     expect(f.signals).toHaveLength(1)
   })
 
-  test.each(['machine', 'run', 'name', 'home', 'id', 'counter'] as const)(
+  test.each(['machine', 'run', 'name', 'home', 'id', 'index', 'counter'] as const)(
     'refuses a queue with changed %s before dispatch',
     async (variant) => {
       const f = await fixture()
@@ -2255,6 +2262,8 @@ describe('agent control contract', () => {
       if (variant === 'name') entry.request.name = 'foreign'
       if (variant === 'home') store.workHome = '/missing'
       if (variant === 'id') await f.box.project.write('+/_WORK/ki.r/work.md', '---\nid: ki.foreign\n---\n')
+      // The _index.md governs a folder that also still holds work.md.
+      if (variant === 'index') await f.box.project.write('+/_WORK/ki.r/_index.md', '---\nid: ki.foreign\n---\n')
       if (variant === 'counter') store.nextIdentity = Number.MAX_SAFE_INTEGER
       await f.box.state.write('ki/agents/r/control.json', JSON.stringify(store))
       const result = await f.run(
