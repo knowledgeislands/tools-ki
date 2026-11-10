@@ -68,7 +68,7 @@ jobs:
           - os: macos-latest
             bun-target: bun-darwin-x64
             asset-target: darwin-x64
-          - os: macos-14
+          - os: macos-15
             bun-target: bun-darwin-arm64
             asset-target: darwin-arm64
     steps:
