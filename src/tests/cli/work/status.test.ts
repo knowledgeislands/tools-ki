@@ -1,4 +1,4 @@
-import { mkdir, realpath, utimes } from 'node:fs/promises'
+import { mkdir } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 
@@ -50,11 +50,8 @@ const checkpoint = (fields: readonly string[], status?: string): string =>
 const writeWork = (box: Sandbox, id: string, fields?: Readonly<Record<string, string>>) =>
   box.project.write(`repo/+/_WORK/${id}/work.md`, workFile(id, fields))
 
-const alive = (box: Sandbox, pids: readonly number[]): void =>
-  box.setAgentProcesses({ launch: async () => 0, alive: (pid) => pids.includes(pid), sleep: async () => {} })
-
 describe('ki work status', () => {
-  test('reads every work file into ki/work-status/v1 with its live runs, and counts work awaiting review', async () => {
+  test('reads every work file into ki/work-status/v1 and counts work awaiting review', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki.toml', declaration())
     await writeWork(box, 'ex.alpha', {
@@ -85,34 +82,6 @@ describe('ki work status', () => {
     await writeWork(box, 'ex.iota', { state: 'with-supervisor', supervisor: 'run/coordinator' })
     await box.project.write('repo/+/_WORK_REVIEW/ex.old/work.md', workFile('ex.old'))
     await mkdir(`${box.project.path}/repo/+/_WORK_REVIEW/ex.empty`, { recursive: true })
-    const root = await realpath(`${box.project.path}/repo`)
-    alive(box, [11, 12, 13, 14])
-    await box.state.write(
-      'ki/agents/ex-alpha/thread.json',
-      JSON.stringify({ repository: root, folder: '+/_WORK/ex.alpha' })
-    )
-    for (const [name, pid] of [
-      ['fresh', 11],
-      ['slow', 12],
-      ['silent', 13]
-    ] as const)
-      await box.state.write(`ki/agents/ex-alpha/${name}.pid`, `${pid}\n`)
-    await box.state.write('ki/agents/ex-alpha/fresh.status', '03:58 BST - building\n')
-    await box.state.write('ki/agents/ex-alpha/slow.status', '03:30 BST - thinking\n')
-    const state = `${box.state.path}/ki/agents/ex-alpha`
-    await utimes(`${state}/fresh.status`, new Date(NOW - 60_000), new Date(NOW - 60_000))
-    await utimes(`${state}/slow.status`, new Date(NOW - 30 * 60_000), new Date(NOW - 30 * 60_000))
-    await box.state.write(
-      'ki/agents/other/thread.json',
-      JSON.stringify({ repository: root, folder: '+/_THREADS/other' })
-    )
-    await box.state.write('ki/agents/other/a.pid', '14\n')
-    await box.state.write('ki/agents/other/a.status', '03:59 BST - elsewhere\n')
-    await box.state.write('ki/agents/queued/queue.jsonl', '{"name":"x","waitFor":[]}\n')
-    await box.state.write(
-      'ki/agents/queued/thread.json',
-      JSON.stringify({ repository: root, folder: '+/_WORK/ex.beta' })
-    )
 
     const json = await box.run('ki work status --repo repo --format json', { now })
     const text = await box.run('ki work status --repo repo', { now })
@@ -146,19 +115,7 @@ describe('ki work status', () => {
       method_read: null,
       messages: 0,
       path: '+/_WORK/ex.alpha/work.md',
-      items: [
-        {
-          id: 'ex-alpha/fresh',
-          kind: 'run',
-          holder: 'run/ex-alpha',
-          role: 'worker',
-          state: 'with-worker',
-          target: null,
-          blocking: false,
-          since: '2026-10-18T02:59:00Z'
-        },
-        expect.objectContaining({ id: 'ex-alpha/slow', since: '2026-10-18T02:30:00Z' })
-      ]
+      items: []
     })
     expect(byId['ex.beta'].items).toEqual([])
     expect(byId['ex.gamma']).toMatchObject({ holder: 'owner', role: 'supervisor', blocking: true })
@@ -181,15 +138,13 @@ describe('ki work status', () => {
         '├─ with you (2)',
         '│  ├─ 👤 ex.regular · owner · since 2026-10-17T02:00:00Z',
         '│  ╰─ 👤 ex.gamma · owner · since 2026-10-18T02:00:00Z',
-        '├─ stuck (2)',
-        '│  ├─ ⏳ ex-alpha/slow · run/ex-alpha · since 2026-10-18T02:30:00Z',
+        '├─ stuck (1)',
         '│  ╰─ ⏳ ex.beta · agent · since 2026-10-18T02:00:00Z',
         '├─ blocked (2)',
         '│  ├─ ⛔ ex.epsilon · run/review · since 2026-10-18T02:00:00Z',
         '│  ╰─ ⛔ ex.gamma · owner · since 2026-10-18T02:00:00Z',
-        '├─ moving (4)',
+        '├─ moving (3)',
         '│  ├─ 🤖 ex.alpha · agent · since 2026-10-18T02:00:00Z',
-        '│  ├─ 🤖 ex-alpha/fresh · run/ex-alpha · since 2026-10-18T02:59:00Z',
         '│  ├─ 🤖 ex.delta · agent · since 2026-10-18T02:00:00Z',
         '│  ╰─ 🤖 ex.iota · run/coordinator · since 2026-10-18T02:00:00Z',
         '├─ on hold (3)',
@@ -197,7 +152,7 @@ describe('ki work status', () => {
         '│  ├─ ⏸️ ex.eta · nobody · since 2026-10-18T02:00:00Z',
         '│  ╰─ ⏸️ ex.zeta · nobody · since 2026-09-01T00:00:00Z',
         '├─ awaiting review (1)',
-        '╰─ summary: WORK=11 WITH_YOU=2 STUCK=2 BLOCKED=2 MOVING=4 ON_HOLD=3 REVIEW=1',
+        '╰─ summary: WORK=11 WITH_YOU=2 STUCK=1 BLOCKED=2 MOVING=3 ON_HOLD=3 REVIEW=1',
         ''
       ].join('\n')
     )

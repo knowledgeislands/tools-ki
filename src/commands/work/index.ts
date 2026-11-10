@@ -1,7 +1,6 @@
 import { basename, resolve } from 'node:path'
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { workRuns } from '../../core/agent/runs.ts'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../core/configuration/index.ts'
 import { KiExit } from '../../core/errors.ts'
 import { resolveRepository } from '../../core/repository/index.ts'
@@ -22,7 +21,6 @@ import {
   type WorkViewLine,
   workViews
 } from '../../core/work/status.ts'
-import { agentContext } from '../agent/index.ts'
 import { presentation, renderTree, type TreeEntry } from '../presentation/index.ts'
 
 const viewLabels: Readonly<Record<WorkView, { readonly glyph: string; readonly label: string; readonly key: string }>> =
@@ -153,8 +151,7 @@ export const createWorkCommand = (context: KiContext): Command => {
           const status = await readWorkStatus({
             root: location.root,
             identity: repository.slice('https://github.com/'.length),
-            now,
-            runs: await workRuns(agentContext(context), location.root)
+            now
           })
           if (options.format === 'json') context.stdout.write(`${JSON.stringify(status.report, null, 2)}\n`)
           else context.stdout.write(`${renderWorkStatus(status, now, options.view)}\n`)

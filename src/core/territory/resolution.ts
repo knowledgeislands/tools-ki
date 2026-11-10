@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs'
 import { readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse } from 'smol-toml'
@@ -6,7 +5,6 @@ import { DEFAULT_HARNESS, REPOSITORY_DECLARATION_FILE } from '../configuration/i
 import { KiError } from '../errors.ts'
 import { targetFromDirectory } from '../repository/location.ts'
 import { type LocalRegistryEntry, requiredLocalRegistry } from '../storage/index.ts'
-import { WORK_ENTRY_FILES } from '../work/entry.ts'
 import { claimedRepository, type TerritoryDeclaration, territoryDeclarationFrom } from './declaration.ts'
 import { matchesDirectoryName, validateFilters } from './filters.ts'
 import { readTerritoryRanking } from './ranking.ts'
@@ -95,27 +93,6 @@ const selectedCapital = (found: readonly Capital[], selector: string): Capital =
 }
 export const resolveTerritoryCapital = async (stateDirectory: string, handle: string): Promise<LocalRegistryEntry> =>
   selectedCapital(await capitals(await requiredLocalRegistry(stateDirectory)), handle).entry
-/**
- * The Capital a handle, declared alias or territory work id selects: `hnr` names the Capital whose
- * `+/_WORK/hnr/_index.md`, or the former `work.md`, holds that territory's main State of play.
- */
-export const resolveTerritoryWorkCapital = async (
-  stateDirectory: string,
-  selector: string
-): Promise<LocalRegistryEntry> => {
-  const found = await capitals(await requiredLocalRegistry(stateDirectory))
-  try {
-    return selectedCapital(found, selector).entry
-  } catch (error) {
-    const holder = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*$/.test(selector)
-      ? found.find((capital) =>
-          WORK_ENTRY_FILES.some((name) => existsSync(join(capital.entry.path, '+', '_WORK', selector, name)))
-        )
-      : undefined
-    if (!holder) throw error
-    return holder.entry
-  }
-}
 /**
  * Ranked handles lead in ranking order. The rest follow the derived order: the Capital whose
  * territory holds the canonical KI Harness, then territory name, then handle.

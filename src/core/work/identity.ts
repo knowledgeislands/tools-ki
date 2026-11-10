@@ -31,8 +31,3 @@ export const workNames = (id: string, level: string): readonly string[] => {
 }
 export const isMainStateOfPlay = (id: string): boolean =>
   !id.includes('.') || (id.split('.').length === 3 && id.endsWith('.sop.main'))
-export const projectSlug = (id: string): string =>
-  id
-    .split('.')
-    .slice(id.split('.')[1] === 'prj' ? 2 : 1)
-    .join('.')

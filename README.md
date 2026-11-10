@@ -99,26 +99,19 @@ ki repo repair --dry-run
 ki repo --estate audit
 ```
 
-## Delegate to background agents
+## Delegate and link work
 
-`ki agent` launches detached Claude Code or Codex agents under the `ki-delegation` background-run contract. Each agent gets a prompt with its authority footer, any `--allow fetch` or `--allow machine` grant sections after it, and the progress protocol, a one-line status ending `DONE`, a pid and a log under `$KI_STATE_HOME/agents/<run>/`, and a temporary folder `$TMPDIR/ki-agents/<run>/<name>/` outside every repository that close removes. The run's knowledge, its decisions log and each agent's report, lives in the owning repository's tracked work folder `+/_WORK/<id>/`, when the run's name is that work's slug, or else in `+/_THREADS/<run>/`, which `ki` writes but never commits; `ki agent home <run> --work <id>` moves a run's home into a work folder. A queue and a concurrency-capped dispatcher keep agents moving, `ki agent wait --next` wakes the coordinator on each finish, failure, block or outstanding query in the order they happened, and `ki agent close` retires a finished run's state folder once every decision has a durable home or a class that needs none, or with `--finished` or `--agent <name>` retires only finished agents while the rest run on. An agent writes its report in the state folder and `ki` copies it into the tracked folder when it sees `DONE`; `ki agent sweep --write` removes closed runs beyond the newest ten and briefs a launch has superseded. `ki agent status` with no run lists every live thread on this machine. `ki agent send <run> <line>` leaves a line in another live run's inbox, which its next `status` shows, and `ki agent decide <run> '<TAG> - b'` logs an owner's bare option letter with the option's wording from the report. Agent names are unique within a run; `--relaunch` starts one again, keeping its earlier packet.
-
-```sh
-ki agent decide gov "Ship the launcher." --home docs/roadmap/KI-TOOL-KI-CLI-124-agent-run-close.md
-ki agent queue gov build task.md --workdir ~/src/repo --rules push
-ki agent dispatch gov --max 4
-ki agent wait gov --next
-ki agent close gov
-ki link KI-TOOL-KI-CLI-127 KI-TOOL-KI-CLI-124
-```
+Delegation uses the session harness's own subagents, under the `ki-delegation` skill; `ki` does not launch agents.
 
 `ki link <identifier...>` prints the Markdown link to each roadmap record an owner report cites: the local file by absolute path, or for a pruned record its last committed revision on the canonical repository.
 
-See [run detached background agents](docs/guides/user/background-agents.md).
+```sh
+ki link KI-TOOL-KI-CLI-127 KI-TOOL-KI-CLI-124
+```
 
 ## Read the work model
 
-`ki work status` reads each `+/_WORK/<id>/` work folder in a repository and shows its work in five views: with you, stuck, blocked, moving and on hold. A work package takes its state from `state.md` and its definition from its entry file, `_index.md`, or `work.md`, its former name, where the folder has no `_index.md`; a single-file work folder takes both from its entry file. A folder holding both names is a warning. Whose move it is comes from that state, a work with lines waiting in its message queue shows how many are pending, and each detached run homed in a work folder adds its running agents as items, which count as stuck after ten silent minutes. `+/_WORK_REVIEW/` shows only as a count. Through the work model's tolerance window, `+/_CHECKPOINTS/` files still read, each with a warning naming its new home. `--format json` writes the versioned `ki/work-status/v1` report, each entry carrying its routing `description`, `method_read` revision and pending `messages` count. `--view routing` replaces the five views with the routing listing State of play reads to choose which work takes a unit of work: one line per unfinished work with its id, state, pending count and description cut to one line.
+`ki work status` reads each `+/_WORK/<id>/` work folder in a repository and shows its work in five views: with you, stuck, blocked, moving and on hold. A work package takes its state from `state.md` and its definition from its entry file, `_index.md`, or `work.md`, its former name, where the folder has no `_index.md`; a single-file work folder takes both from its entry file. A folder holding both names is a warning. Whose move it is comes from that state, a work with lines waiting in its message queue shows how many are pending. `+/_WORK_REVIEW/` shows only as a count. Through the work model's tolerance window, `+/_CHECKPOINTS/` files still read, each with a warning naming its new home. `--format json` writes the versioned `ki/work-status/v1` report, each entry carrying its routing `description`, `method_read` revision and pending `messages` count. `--view routing` replaces the five views with the routing listing State of play reads to choose which work takes a unit of work: one line per unfinished work with its id, state, pending count and description cut to one line.
 
 ```sh
 ki work status --repo ~/workspaces/knowledge-islands/ki-principal

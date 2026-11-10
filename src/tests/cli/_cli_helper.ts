@@ -33,16 +33,10 @@ import { run as runCli } from '../../cli.ts'
 export type CliEntrypoint = typeof runCli
 
 import { createContext } from '../../context.ts'
-import type { AgentLaunchEvidence } from '../../core/agent/launch-evidence.ts'
-import type { AgentProcesses } from '../../core/agent/processes.ts'
-
-export type { AgentLaunchEvidence } from '../../core/agent/launch-evidence.ts'
-
 import type { Fetcher } from '../../core/harness/acquire.ts'
 import type { KiInstallationMode } from '../../core/paths.ts'
 import { type Runner, runCommand } from '../../core/runtime/runner.ts'
 
-export type { AgentLaunch, AgentProcesses } from '../../core/agent/processes.ts'
 export type { Runner } from '../../core/runtime/runner.ts'
 // The production process runner, for a test that wraps real commands to inject one failure.
 export { runCommand } from '../../core/runtime/runner.ts'
@@ -235,8 +229,6 @@ export interface Sandbox {
   readonly setEnv: (environment: Record<string, string | undefined>) => void
   readonly setFetcher: (fetcher: Fetcher) => void
   readonly setRunner: (runner: Runner) => void
-  readonly setAgentProcesses: (processes: AgentProcesses) => void
-  readonly setAgentLaunchEvidence: (evidence: AgentLaunchEvidence | undefined) => void
   readonly setLstat: (lstat: typeof import('node:fs/promises').lstat) => void
   readonly cd: (relativePath: string) => void
   readonly run: (
@@ -248,10 +240,8 @@ export interface Sandbox {
       readonly now?: () => number
       readonly fetcher?: 'default'
       readonly runner?: 'default'
-      readonly agentProcesses?: 'default'
       readonly executable?: string
       readonly installation?: KiInstallationMode
-      readonly runtimeExecutable?: string
       readonly installationProvenance?: 'local' | 'release' | 'unknown'
       readonly entrypointUrl?: string
       readonly architecture?: string
@@ -304,19 +294,7 @@ const create = async (): Promise<Sandbox> => {
       'sandbox runner not configured; call setRunner() before running a command that invokes an installer'
     )
   }
-  // No sandbox test may start a real agent: launching without setAgentProcesses() fails loudly.
-  let agentProcesses: AgentProcesses = {
-    launch: async () => {
-      throw new Error('sandbox agent processes not configured; call setAgentProcesses() before launching an agent')
-    },
-    alive: () => false,
-    sleep: async () => {}
-  }
   let stat: typeof lstat | undefined
-  let agentLaunchEvidence: AgentLaunchEvidence | undefined
-  const setAgentLaunchEvidence = (next: AgentLaunchEvidence | undefined): void => {
-    agentLaunchEvidence = next
-  }
 
   const setEnv = (environment: Record<string, string | undefined>): void => {
     environmentOverrides = { ...environmentOverrides, ...environment }
@@ -326,9 +304,6 @@ const create = async (): Promise<Sandbox> => {
   }
   const setRunner = (next: Runner): void => {
     runner = next
-  }
-  const setAgentProcesses = (next: AgentProcesses): void => {
-    agentProcesses = next
   }
   const setLstat = (next: typeof lstat): void => {
     stat = next
@@ -353,10 +328,8 @@ const create = async (): Promise<Sandbox> => {
       readonly now?: () => number
       readonly fetcher?: 'default'
       readonly runner?: 'default'
-      readonly agentProcesses?: 'default'
       readonly executable?: string
       readonly installation?: KiInstallationMode
-      readonly runtimeExecutable?: string
       readonly installationProvenance?: 'local' | 'release' | 'unknown'
       readonly entrypointUrl?: string
       readonly architecture?: string
@@ -389,7 +362,6 @@ const create = async (): Promise<Sandbox> => {
       stderr: { write: write('stderr'), isTTY: options?.interactive, columns: options?.columns },
       executable,
       installation: options?.installation,
-      runtimeExecutable: options?.runtimeExecutable,
       installationProvenance: options?.installationProvenance,
       entrypointUrl: options?.entrypointUrl,
       architecture: options?.architecture,
@@ -399,8 +371,6 @@ const create = async (): Promise<Sandbox> => {
       environment: { ...env, ...environmentOverrides, _: executable },
       ...(options?.fetcher === 'default' ? {} : { fetcher: (input, init) => fetcher(input, init) }),
       ...(options?.runner === 'default' ? {} : { runner }),
-      ...(options?.agentProcesses === 'default' ? {} : { agentProcesses }),
-      agentLaunchEvidence,
       ...(stat === undefined ? {} : { lstat: stat }),
       now: options?.now,
       ...(options?.captureInterrupt === undefined
@@ -450,8 +420,6 @@ const create = async (): Promise<Sandbox> => {
     setEnv,
     setFetcher,
     setRunner,
-    setAgentProcesses,
-    setAgentLaunchEvidence,
     setLstat,
     cd,
     run

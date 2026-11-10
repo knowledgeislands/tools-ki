@@ -77,8 +77,7 @@ const optionValueStrategy = (path: string, option: Option): CompletionValueStrat
     return { kind: 'values', values: ['prepare', 'import', 'export'] }
   if (name === '--observation') return { kind: 'values', values: ['unattended', 'receipt', 'decision', 'completion'] }
   if (closedOptionValues[name]) return { kind: 'values', values: closedOptionValues[name] }
-  if (name === '--capture' || name === '--worktree' || (name === '--repo' && /^(repo|registry)( |$)/.test(path)))
-    return { kind: 'path' }
+  if (name === '--capture' || (name === '--repo' && /^(repo|registry)( |$)/.test(path))) return { kind: 'path' }
   return noValue
 }
 

@@ -92,26 +92,15 @@ export interface WorkStatus {
   readonly warnings: readonly string[]
 }
 
-/** A live run whose tracked home is a work folder, read from its state folder by the caller. */
-export interface WorkRun {
-  readonly run: string
-  readonly folder: string
-  readonly agents: readonly { readonly name: string; readonly since: string }[]
-}
-
 export interface WorkStatusRequest {
   readonly root: string
   readonly identity: string
   readonly now: Date
-  readonly runs: readonly WorkRun[]
 }
 
 const SEGMENT = '[a-z0-9]+(?:-[a-z0-9]+)*'
 const WORK_ID = new RegExp(`^${SEGMENT}(?:\\.${SEGMENT})*$`)
 const HOLDER = new RegExp(`^(?:owner|agent|(?:run|person|repo)/[A-Za-z0-9_-]+|work/${SEGMENT}(?:\\.${SEGMENT})*)$`)
-
-/** Whether the value is a dotted work id, such as `ki.ways-of-working`. */
-export const isWorkId = (value: string): boolean => WORK_ID.test(value)
 
 /** The reserved second id segment of a secondary State of play, `<territory>.sop.<name>`. */
 export const SECONDARY_SEGMENT = 'sop'
@@ -119,9 +108,6 @@ export const SECONDARY_SEGMENT = 'sop'
 /** Whether the id names a secondary State of play, `<territory>.sop.<name>`. */
 export const isSecondaryStateOfPlay = (id: string): boolean =>
   id.split('.')[1] === SECONDARY_SEGMENT && !isMainStateOfPlay(id)
-
-/** The work's slug, its id with each `.` written as `-`; never parsed back into an id. */
-export const workSlug = (id: string): string => id.replaceAll('.', '-')
 
 /** A UTC RFC 3339 time at second precision, or undefined when the value is not a time. */
 const utc = (value: unknown): string | undefined => {
@@ -331,8 +317,7 @@ const workEntry = async (
   root: string,
   folder: string,
   file: string,
-  identity: string,
-  items: readonly WorkStatusItem[]
+  identity: string
 ): Promise<{ readonly entry?: WorkStatusEntry; readonly warnings: readonly string[] }> => {
   const relative = (name: string): string => `${WORK_DIRECTORY}/${folder}/${name}`
   const read = (name: string): Promise<string> => readFile(join(root, WORK_DIRECTORY, folder, name), 'utf8')
@@ -352,7 +337,7 @@ const workEntry = async (
   const queue = packaged ? await read('messages.md').catch(() => '') : section(text, '## Messages')
   const stale = packaged && STATE_FIELDS.some((field) => field in values)
   return {
-    entry: { identity, ...definition, ...state, messages: pending(queue), path: source, items },
+    entry: { identity, ...definition, ...state, messages: pending(queue), path: source, items: [] },
     warnings: stale ? [`${relative(file)}: carries state fields beside state.md; state.md governs`] : []
   }
 }
@@ -424,14 +409,15 @@ const checkpointEntry = (
 
 /**
  * Reads every `+/_WORK/<id>/` work folder in one repository, package or single-file, into the `ki/work-status/v1`
- * report, with the live runs homed in each work folder as its run items, and counts `+/_WORK_REVIEW/`. Through the work model's tolerance
+ * report, and counts `+/_WORK_REVIEW/`. Through the work model's tolerance
  * window each `+/_CHECKPOINTS/*.md` maps to an entry whose path is the checkpoint, with a warning naming its new home.
  * It writes nothing; an unreadable work file is a warning, never a failure.
  */
 export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkStatus> => {
   const warnings: string[] = []
   const work: WorkStatusEntry[] = []
-  const definitions = await readWorkDefinitions(request.root)
+  // Refuses ambiguous work names before reading any state.
+  await readWorkDefinitions(request.root)
   for (const folder of await directories(join(request.root, WORK_DIRECTORY))) {
     const file = await workEntryFile(join(request.root, WORK_DIRECTORY, folder), isFile)
     if (!file) {
@@ -439,31 +425,7 @@ export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkSt
       continue
     }
     if (file.both) warnings.push(bothEntryFilesWarning(`${WORK_DIRECTORY}/${folder}`))
-    const items = request.runs
-      .filter(
-        (run) =>
-          run.folder === `${WORK_DIRECTORY}/${folder}` ||
-          definitions.some(
-            (definition) =>
-              definition.id === folder &&
-              workNames(definition.id, definition.level).some((name) => run.folder === `${WORK_DIRECTORY}/${name}`)
-          )
-      )
-      .flatMap((run) =>
-        run.agents.map(
-          (agent): WorkStatusItem => ({
-            id: `${run.run}/${agent.name}`,
-            kind: 'run',
-            holder: `run/${run.run}`,
-            role: 'worker',
-            state: 'with-worker',
-            target: null,
-            blocking: false,
-            since: agent.since
-          })
-        )
-      )
-    const read = await workEntry(request.root, folder, file.name, request.identity, items)
+    const read = await workEntry(request.root, folder, file.name, request.identity)
     warnings.push(...read.warnings)
     if (read.entry) work.push(read.entry)
   }
@@ -570,20 +532,7 @@ export const deriveWorkViews = (
           ? { ...line, overdue: true }
           : line
       )
-    // Every item is a live run with a worker; its since is its status file's last change.
-    for (const item of entry.items)
-      views[age(item.since) > STUCK_AFTER ? 'stuck' : 'moving'].push({
-        id: item.id,
-        holder: item.holder,
-        since: item.since
-      })
   }
   views['with-you'].sort((left, right) => Date.parse(left.since) - Date.parse(right.since))
   return views
-}
-
-/** The modification time of a run agent's status file, its last move or heartbeat, as a UTC time. */
-export const statusSince = async (path: string): Promise<string | undefined> => {
-  const status = await stat(path).catch(() => undefined)
-  return status ? utc(status.mtime) : undefined
 }

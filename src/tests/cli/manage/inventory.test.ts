@@ -4,7 +4,6 @@ import { buildCommandInventory, renderCommandInventory } from '../../../../scrip
 import { sandbox } from '../_cli_helper.ts'
 
 const rootHelpCommands = [
-  'agent',
   'bootstrap',
   'cleanup',
   'completion',
@@ -92,26 +91,6 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   'repo trade policy': ['check', 'compare', 'show'],
   'repo trade routes': ['check', 'list'],
   'repo trade standing': ['capture', 'check', 'list'],
-  agent: [
-    'close',
-    'decide',
-    'dequeue',
-    'dispatch',
-    'home',
-    'launch',
-    'new',
-    'prompts',
-    'queue',
-    'reconcile',
-    'recover',
-    'send',
-    'status',
-    'stop',
-    'sweep',
-    'wait',
-    'watch'
-  ],
-  'agent recover': ['inspect', 'resolve'],
   dev: ['local', 'skill'],
   'dev local': ['off', 'on', 'set'],
   'dev skill': ['generate', 'rubric'],

@@ -1,8 +1,6 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import type { Output } from './commands/presentation/index.ts'
-import type { AgentLaunchEvidence } from './core/agent/launch-evidence.ts'
-import { type AgentProcesses, hostAgentProcesses } from './core/agent/processes.ts'
 import type { Fetcher } from './core/harness/acquire.ts'
 import { installationProvenance } from './core/manage/installation-provenance.ts'
 import type { Environment, KiInstallationMode, KiPaths } from './core/paths.ts'
@@ -13,8 +11,6 @@ export interface KiContext {
   readonly stdout: Output
   readonly stderr: Output
   readonly executable: string
-  /** Command and leading arguments that start this same `ki` again, as a detached agent process does. */
-  readonly launcher: readonly [string, ...string[]]
   readonly installation: KiInstallationMode
   readonly installationProvenance: 'local' | 'release' | 'unknown'
   readonly architecture: string
@@ -35,9 +31,6 @@ export interface KiContext {
   readonly onInterrupt: (handler: () => void) => () => void
   /** Starts a repeating timer so a live display can advance between events; returns its cancel. */
   readonly startInterval: (milliseconds: number, handler: () => void) => () => void
-  /** Detached agent processes behind `ki agent`, injected so tests never start a real agent. */
-  readonly agentProcesses: AgentProcesses
-  readonly agentLaunchEvidence?: AgentLaunchEvidence | undefined
 }
 
 export interface ContextOptions {
@@ -46,8 +39,6 @@ export interface ContextOptions {
   readonly executable: string
   /** Internal update mode is independent of diagnostic provenance; callers default to regular. */
   readonly installation?: KiInstallationMode
-  /** Runtime that runs a local-mode entry script; defaults to this process's own runtime. */
-  readonly runtimeExecutable?: string
   readonly installationProvenance?: KiContext['installationProvenance']
   /** Process entrypoint evidence; source URLs require identified checkout markers. */
   readonly entrypointUrl?: string
@@ -62,8 +53,6 @@ export interface ContextOptions {
   readonly now?: () => number
   readonly onInterrupt?: (handler: () => void) => () => void
   readonly startInterval?: (milliseconds: number, handler: () => void) => () => void
-  readonly agentProcesses?: AgentProcesses
-  readonly agentLaunchEvidence?: AgentLaunchEvidence | undefined
 }
 
 /* v8 ignore start -- Real timers are a process concern; tests inject this capability at the same boundary. */
@@ -107,11 +96,6 @@ export const createContext = async (options: ContextOptions): Promise<KiContext>
     stdout: options.stdout,
     stderr: options.stderr,
     executable: options.executable,
-    // A local-mode executable is the entry script, which only its runtime can start.
-    launcher:
-      installation === 'local'
-        ? [options.runtimeExecutable ?? process.execPath, options.executable]
-        : [options.executable],
     installation,
     installationProvenance: options.installationProvenance ?? installationProvenance(options.entrypointUrl),
     architecture: options.architecture ?? process.arch,
@@ -126,8 +110,6 @@ export const createContext = async (options: ContextOptions): Promise<KiContext>
     lstat: options.lstat ?? lstat,
     now: options.now ?? Date.now,
     onInterrupt: options.onInterrupt ?? processInterrupt,
-    startInterval: options.startInterval ?? processInterval,
-    agentProcesses: options.agentProcesses ?? hostAgentProcesses,
-    agentLaunchEvidence: options.agentLaunchEvidence
+    startInterval: options.startInterval ?? processInterval
   }
 }
