@@ -22,8 +22,8 @@ export interface HarnessRelease {
  */
 export const canonicalHarnessRelease: HarnessRelease = {
   id: canonicalHarnessIdentifier,
-  url: 'https://codeload.github.com/knowledgeislands/ki-agentic-harness/tar.gz/fdf9a60415a9cf79bf90673abadbe8663117c38e',
-  sha256: 'a100b9f1bd53244007ab67b07c4ea9232c72b7efa218fdd26900c8f55891cbe6'
+  url: 'https://codeload.github.com/knowledgeislands/ki-agentic-harness/tar.gz/ac55ee5eb09faede9f7456b28ac8bfb529fc546f',
+  sha256: 'eb85310c2dda4504319c8971f53bff58318110cfa303f4c7d35be2d8fa58f414'
 }
 
 type RegistryValue = Record<string, unknown> & { readonly harnesses?: unknown }
