@@ -21,7 +21,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 - Agent report homing: `status`, `watch` and `wait` copy a finished agent's report into its work folder once, when its attempt first ends, and never write one Git holds with the same contents under the folder's present or any earlier name, so a renamed work folder no longer gets retired reports redelivered or newer committed versions overwritten.
 - Acquisition removed: `ki acquire` and its `list`, `import`, `images` and `mark` actions, the ChatGPT and Granola adapters and the Harness `ki-acquire-*` adapter metadata parsing have left `ki`. Acquisition now lives in the assistant's `ki-muninn` (krisb/assistant). Running `ki acquire` prints one line saying so and exits 1, until the `ki-<name>` extension mechanism lets `ki muninn` run it. The ACQUIRE specification area is retired, and the ChatGPT capture and Granola acquisition guides are removed.
 
-This baseline describes the `v0.15.0` release. Domain imports and extracted type leaves keep the dependency graph acyclic, enforced by a resolved-graph boundary gate with a supported isolated compiler and deliberate failure fixtures.
+This baseline describes the `v0.15.1` release. Domain imports and extracted type leaves keep the dependency graph acyclic, enforced by a resolved-graph boundary gate with a supported isolated compiler and deliberate failure fixtures.
 
 ### Compatibility and migration
 
