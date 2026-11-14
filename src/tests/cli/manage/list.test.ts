@@ -17,10 +17,10 @@ describe('[ki inventory]', () => {
         'ids = []',
         '',
         '[skills.ki-a]',
-        'harness = "example/harness"',
+        'backpack = "example/harness"',
         '',
         '[skills.ki-example]',
-        'harness = "example/harness"',
+        'backpack = "example/harness"',
         ''
       ].join('\n')
     )
@@ -52,7 +52,7 @@ describe('[ki inventory]', () => {
   test('renders every installed harness in its capability section', async () => {
     const box = await sandbox()
     await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
+    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
     await box.data.write(
       'ki/harnesses/other/harness/skills/other-example/SKILL.md',
       '---\nname: other-example\nki-depends-on: []\n---\n'
@@ -96,7 +96,7 @@ describe('[ki inventory]', () => {
     expect(grammar).toEqual({
       exitCode: 2,
       output:
-        "error: too many arguments for 'inventory'. Expected 0 arguments but got 1: unexpected.\n\nUsage: ki inventory [options]\n\nlist installed harness capabilities and declared skills\n\nOptions:\n  -h, --help  display help for command\n"
+        "error: too many arguments for 'inventory'. Expected 0 arguments but got 1: unexpected.\n\nUsage: ki inventory [options]\n\nlist installed backpack capabilities and declared skills\n\nOptions:\n  -h, --help  display help for command\n"
     })
     expect(invalidDeclaration).toEqual({
       exitCode: 0,

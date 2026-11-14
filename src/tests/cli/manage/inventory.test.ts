@@ -217,7 +217,7 @@ describe('[ki command inventory]', () => {
     expect(changelog).not.toContain('`ki dev local set <local-harness-path>`')
     expect(changelog).not.toContain('keeps a quoted, fully-qualified key')
     expect(manual).toContain('.B ki dev local off <harness-id>.')
-    expect(manual).not.toContain('.B ki dev local off knowledgeislands/ki-agentic-harness')
+    expect(manual).not.toContain('.B ki dev local off knowledgeislands/ki-agent-backpack')
 
     for (const command of territoryCommands) expect(manual).toContain(`.B ki territory ${command}`)
     for (const command of territoryChangelogCommands) expect(changelog).toContain(command)

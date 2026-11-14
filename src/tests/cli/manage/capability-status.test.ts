@@ -32,10 +32,10 @@ describe('[ki harness missing and ki harness outdated]', () => {
         'ids = []',
         '',
         '[skills.ki-user]',
-        'harness = "example/harness"',
+        'backpack = "example/harness"',
         '',
         '[skills.ki-other]',
-        'harness = "example/harness"',
+        'backpack = "example/harness"',
         ''
       ].join('\n')
     )
@@ -62,7 +62,7 @@ describe('[ki harness missing and ki harness outdated]', () => {
     expect(result).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI HARNESS OUTDATED\n├─ evidence gaps (2)\n│  ├─ example/harness: no configured immutable release\n│  ╰─ knowledgeislands/ki-agentic-harness: installed release provenance is not recorded\n╰─ summary: EVIDENCE_GAPS=2\n'
+        '╭─ KI HARNESS OUTDATED\n├─ evidence gaps (2)\n│  ├─ example/harness: no configured immutable release\n│  ╰─ knowledgeislands/ki-agent-backpack: installed release provenance is not recorded\n╰─ summary: EVIDENCE_GAPS=2\n'
     })
   })
 

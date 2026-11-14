@@ -49,7 +49,7 @@ const renderBootstrapEvent = (event: BootstrapOperationEvent): string => {
 export const createBootstrapCommand = (context: KiContext): Command =>
   new Command('bootstrap')
     .description('configure detected agents and install KI core user skills')
-    .option('--refresh', 'reconcile agents, harnesses, and skills from installed state')
+    .option('--refresh', 'reconcile agents, backpacks, and skills from installed state')
     .action(async (options: { refresh?: boolean }) => {
       await bootstrapEnvironment(bootstrapPort(context), options, (event) =>
         (event.kind === 'development-binding-lost' ? context.stderr : context.stdout).write(renderBootstrapEvent(event))

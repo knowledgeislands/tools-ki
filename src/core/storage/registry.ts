@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { parse } from 'smol-toml'
 import { setTomlStringArray } from '../configuration/toml-edit.ts'
 import { KiError } from '../errors.ts'
+import { backpackIdentifier, backpackSpellings } from '../harness/identity.ts'
 import { canonicalHarnessIdentifier } from '../harness/inspection.ts'
 import { harnessIdentifier } from './harness-paths.ts'
 
@@ -18,7 +19,9 @@ export interface HarnessRelease {
 /**
  * The one harness every KI installation can acquire without user-managed
  * registry configuration. The Git commit and archive digest together are the
- * immutable acquisition evidence; additional harnesses remain opt-in.
+ * immutable acquisition evidence; additional harnesses remain opt-in. The archive is still the
+ * one published under the repository's retired `ki-agentic-harness` name, whose digest the
+ * pin records; it moves to `ki-agent-backpack` with the next pin.
  */
 export const canonicalHarnessRelease: HarnessRelease = {
   id: canonicalHarnessIdentifier,
@@ -37,12 +40,12 @@ const stringField = (source: Record<string, unknown>, field: string, description
   return value
 }
 
-const githubCodeloadPath = (identifier: string, path: string): boolean => {
-  const [owner, repository] = identifier.split('/') as [string, string]
-  const prefix = `/${owner}/${repository}/tar.gz/`
-  const revision = path.slice(prefix.length)
-  return path.startsWith(prefix) && Boolean(revision) && !revision.includes('/')
-}
+const githubCodeloadPath = (identifier: string, path: string): boolean =>
+  backpackSpellings(identifier).some((spelling) => {
+    const prefix = `/${spelling}/tar.gz/`
+    const revision = path.slice(prefix.length)
+    return path.startsWith(prefix) && Boolean(revision) && !revision.includes('/')
+  })
 
 const parseReleaseAuthentication = (
   value: unknown,
@@ -64,7 +67,7 @@ const parseReleaseAuthentication = (
 const parseRelease = (value: unknown, index: number): HarnessRelease => {
   const description = `harnesses[${index}]`
   if (!isRecord(value)) throw new KiError(`${description} must be a table`, 1)
-  const id = stringField(value, 'id', description)
+  const id = backpackIdentifier(stringField(value, 'id', description))
   if (!harnessIdentifier.test(id)) throw new KiError(`${description} id must be an owner/name identifier`, 1)
   const url = stringField(value, 'url', description)
   let parsedUrl: URL
@@ -154,7 +157,7 @@ const configuredHarnessIds = async (configurationDirectory: string): Promise<rea
   if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string' || !harnessIdentifier.test(id))) {
     throw new KiError('ki configuration harnesses.ids must be an array of harness identifiers', 1)
   }
-  return ids
+  return ids.map(backpackIdentifier)
 }
 
 export const recordInstalledHarness = async (
@@ -167,10 +170,11 @@ export const recordInstalledHarness = async (
   /* v8 ignore next */
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   const identifiers = await configuredHarnessIds(configurationDirectory)
-  if (identifiers === undefined || identifiers.includes(identifier) === installed) return
+  const backpack = backpackIdentifier(identifier)
+  if (identifiers === undefined || identifiers.includes(backpack) === installed) return
   const next = new Set(identifiers)
-  if (installed) next.add(identifier)
-  else next.delete(identifier)
+  if (installed) next.add(backpack)
+  else next.delete(backpack)
   const path = join(configurationDirectory, 'config.toml')
   // Edit only the ids statement, so the rest of a file another tool manages keeps its layout.
   await writeFile(

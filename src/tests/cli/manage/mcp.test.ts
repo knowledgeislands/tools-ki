@@ -42,7 +42,7 @@ const sourceRunner = (
       stagedTags.set(target, tag)
       await mkdir(target, { recursive: true })
       const declaration =
-        fixture.declaration ?? '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-mcp]\n'
+        fixture.declaration ?? '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-mcp]\n'
       if (fixture.symlinkDeclaration) {
         await writeFile(join(target, 'declaration-target'), declaration)
         await symlink('declaration-target', join(target, '.ki.toml'))

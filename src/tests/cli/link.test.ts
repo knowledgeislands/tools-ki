@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { runCommand, type Sandbox, sandbox } from './_cli_helper.ts'
 
-const harnesses = '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n'
+const harnesses = '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n'
 const declaration = (code: string): string =>
   `${harnesses}\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepo_code = "${code}"\n\n[skills.ki-repo-project]\n`
 

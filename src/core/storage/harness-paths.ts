@@ -1,6 +1,7 @@
 import { lstat, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { KiError } from '../errors.ts'
+import { installedSlotName } from '../harness/identity.ts'
 
 export const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 export const harnessMetadataFile = '.ki.toml'
@@ -22,7 +23,9 @@ export const ensureDirectory = async (path: string, description: string): Promis
   await physicalDirectory(path, description)
 }
 
+/** An installed backpack's slot, found under the retired `*-agentic-harness` spelling while one is still on disk. */
 export const harnessDirectory = (dataDirectory: string, identifier: string): string => {
-  const [owner, name] = identifier.split('/') as [string, string]
-  return join(dataDirectory, 'harnesses', owner, name)
+  const owner = identifier.slice(0, identifier.indexOf('/'))
+  const ownerDirectory = join(dataDirectory, 'harnesses', owner)
+  return join(ownerDirectory, installedSlotName(ownerDirectory, identifier))
 }

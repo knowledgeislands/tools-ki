@@ -27,7 +27,7 @@ const setChezmoiRunner = (
 }
 
 const repositoryDeclaration = (name: string): string => `[repo]
-harnesses = ["knowledgeislands/ki-agentic-harness"]
+harnesses = ["knowledgeislands/ki-agent-backpack"]
 
 [skills.ki-repo-project]
 

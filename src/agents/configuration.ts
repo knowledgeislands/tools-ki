@@ -12,6 +12,7 @@ import {
   setTomlStringArray
 } from '../core/configuration/index.ts'
 import { KiError } from '../core/errors.ts'
+import { backpackIdentifier } from '../core/harness/index.ts'
 import type { Runner } from '../core/runtime/runner.ts'
 import { canonicalRepositoryIdentity, registryEntry, renderLocalRegistry } from '../core/storage/index.ts'
 import {
@@ -124,6 +125,10 @@ const unowned = (configuration: Record<string, unknown>): Record<string, unknown
   repositories: without(configuration['repositories'], 'paths')
 })
 
+/** Whether a skill table holds only its backpack, under the current key rather than the retired `harness` key. */
+const declaresBackpack = (skill: unknown, backpack: string): boolean =>
+  isRecord(skill) && skill['backpack'] === backpack && Object.keys(skill).length === 1
+
 /** Whether a parsed configuration already holds every owned value, so nothing needs writing. */
 const holds = (configuration: Record<string, unknown>, desired: OwnedValues): boolean => {
   const skills = table(configuration, 'skills')
@@ -134,7 +139,7 @@ const holds = (configuration: Record<string, unknown>, desired: OwnedValues): bo
     sameSet(table(configuration, 'harnesses')['ids'], desired.harnesses) &&
     isRecord(configuration['skills']) &&
     Object.keys(skills).length === wanted.size &&
-    [...wanted].every(([name, harness]) => isRecord(skills[name]) && skills[name]['harness'] === harness) &&
+    [...wanted].every(([name, backpack]) => declaresBackpack(skills[name], backpack)) &&
     (desired.repositories.length ? sameSet(repositories, desired.repositories) : repositories === undefined)
   )
 }
@@ -160,10 +165,12 @@ const editConfiguration = (before: string, desired: OwnedValues): string | undef
   const skills = table(current, 'skills')
   const wanted = skillHarnesses(desired.skills)
   for (const name of Object.keys(skills)) if (!wanted.has(name)) text = removeTomlTable(text, ['skills', name])
-  for (const [name, harness] of wanted) {
+  for (const [name, backpack] of wanted) {
     const skill = skills[name]
-    if (!isRecord(skill) || skill['harness'] !== harness)
-      text = setTomlString(text, ['skills', name], 'harness', harness)
+    if (declaresBackpack(skill, backpack)) continue
+    // A table still spelt with the retired `harness` key is laid out afresh under `backpack`.
+    if (isRecord(skill) && skill['harness'] !== undefined) text = removeTomlTable(text, ['skills', name])
+    text = setTomlString(text, ['skills', name], 'backpack', backpack)
   }
   if (!isRecord(current['skills']) && !wanted.size) text = addTomlTable(text, ['skills'])
   const repositories = table(current, 'repositories')['paths']
@@ -305,12 +312,18 @@ export const inspectUserConfiguration = async (
       errors.push(`skills.${name} must be a TOML table`)
       continue
     }
-    const harness = (value as { harness?: unknown }).harness
-    if (typeof harness !== 'string' || !harness) {
-      errors.push(`skills.${name} must declare a harness string`)
+    const { backpack, harness } = value as { backpack?: unknown; harness?: unknown }
+    if (harness !== undefined) {
+      if (backpack !== undefined)
+        errors.push(`skills.${name} must declare backpack only; remove its retired harness key`)
+      else warnings.push(`skills.${name} uses the retired key harness; rename it to backpack`)
+    }
+    const provider = backpack ?? harness
+    if (typeof provider !== 'string' || !provider) {
+      errors.push(`skills.${name} must declare a backpack string`)
       continue
     }
-    skills.push(`${harness}:${name}`)
+    skills.push(`${backpackIdentifier(provider)}:${name}`)
   }
   const harnessSection = inspectSection(configuration.harnesses, 'harnesses', errors) as HarnessSection
   for (const key of Object.keys(harnessSection)) {
@@ -318,7 +331,7 @@ export const inspectUserConfiguration = async (
   }
   const harnesses: string[] = []
   if (harnessSection.ids !== undefined)
-    harnesses.push(...inspectStringList(harnessSection.ids, 'harnesses.ids', errors))
+    harnesses.push(...inspectStringList(harnessSection.ids, 'harnesses.ids', errors).map(backpackIdentifier))
   else if (!Array.isArray(harnessSection.releases)) errors.push('harnesses must declare an ids array')
   else {
     for (const [index, harness] of harnessSection.releases.entries()) {
@@ -335,7 +348,7 @@ export const inspectUserConfiguration = async (
       const url = release.url
       const digest = release.sha256
       if (typeof id !== 'string' || !id) errors.push(`harnesses[${index}] id must be a non-empty string`)
-      else harnesses.push(id)
+      else harnesses.push(backpackIdentifier(id))
       if (typeof url !== 'string' || !url.startsWith('https://'))
         errors.push(`harnesses[${index}] url must be an HTTPS URL`)
       if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest))

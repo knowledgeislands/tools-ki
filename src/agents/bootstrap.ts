@@ -1,13 +1,14 @@
 import { lstat, mkdir, readdir, readlink, realpath, symlink, unlink } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KiError } from '../core/errors.ts'
-import { minimumBootstrapUserSkills } from '../core/harness/bootstrap-capabilities.ts'
+import { bootstrapUserSkills } from '../core/harness/bootstrap-capabilities.ts'
 import {
   canonicalHarnessIdentifier,
   discoverInstalledHarnesses,
   type HarnessCapability,
   inspectHarnessSourceRoot,
-  readInstalledHarness
+  readInstalledHarness,
+  sameBackpack
 } from '../core/harness/index.ts'
 import { inspectUserConfiguration, readConfiguration, writeUserConfiguration } from './configuration.ts'
 import {
@@ -30,7 +31,7 @@ const bootstrapSkillSources = async (
   description: string
 ): Promise<readonly ManagedUserSkill[]> =>
   Promise.all(
-    minimumBootstrapUserSkills.map(async (name) => {
+    bootstrapUserSkills(harness.capabilities.map((capability) => capability.name)).map(async (name) => {
       const capability = harness.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === name)
       if (!capability) throw new KiError(`${description} does not provide ${name}`, 1)
       const source = await requiredPhysicalDirectory(
@@ -75,7 +76,7 @@ export const localHarness = async (
   identifier: string
 ): Promise<{ readonly harness: string; readonly prefix: string; readonly skills: readonly ManagedUserSkill[] }> => {
   const inspected = await inspectHarnessSourceRoot(resolve(harnessDirectory), identifier)
-  if (identifier === canonicalHarnessIdentifier)
+  if (sameBackpack(identifier, canonicalHarnessIdentifier))
     return {
       harness: inspected.root,
       prefix: inspected.prefix,

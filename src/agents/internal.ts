@@ -1,6 +1,7 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
 import { KiError } from '../core/errors.ts'
+import { backpackIdentifier } from '../core/harness/index.ts'
 import type { AgentDescriptor } from './shared/types.ts'
 import { chatgptCodex, claudeCode } from './vendors/index.ts'
 
@@ -65,7 +66,12 @@ export const inspectLocalsTable = (
       errors.push(`locals.${harness}.path must be a non-empty string`)
       continue
     }
-    locals.push({ harness, path: source.path })
+    const backpack = backpackIdentifier(harness)
+    if (locals.some((local) => local.harness === backpack)) {
+      errors.push(`locals names ${backpack} under both its backpack and its retired harness spelling`)
+      continue
+    }
+    locals.push({ harness: backpack, path: source.path })
   }
   return locals.toSorted((left, right) => left.harness.localeCompare(right.harness))
 }

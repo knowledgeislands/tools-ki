@@ -7,7 +7,7 @@
 // <mkdtemp>/                  (root — content outside the four areas below)
 // │   └── dev/                (a local checkout selected by `ki dev local set` — populated by setupLocalCanonicalHarness())
 // │       └── knowledgeislands/
-// │           └── ki-agentic-harness/   (skills/, subagents/, hooks/ are real, never symlinks — `ki dev local on` validates each root)
+// │           └── ki-agent-backpack/   (skills/, subagents/, hooks/ are real, never symlinks — `ki dev local on` validates each root)
 // │               ├── skills/
 // │               ├── subagents/
 // │               └── hooks/
@@ -17,7 +17,7 @@
 // ├── data/                   ($XDG_DATA_HOME — installed harnesses/skills project here)
 // │   └── ki/harnesses/
 // │       └── knowledgeislands/
-// │           └── ki-agentic-harness/   (installed mode: real, from the archive. After `ki dev local on`: this complete root is symlinked to root/dev/.../ki-agentic-harness)
+// │           └── ki-agent-backpack/   (installed mode: real, from the archive. After `ki dev local on`: this complete root is symlinked to root/dev/.../ki-agent-backpack)
 // │               ├── skills/
 // │               ├── subagents/
 // │               └── hooks/
@@ -54,7 +54,7 @@ const agentConfig: Record<AgentId, { home: string }> = {
   }
 }
 
-// A fixture shaped exactly like the real canonical knowledgeislands/ki-agentic-harness
+// A fixture shaped exactly like the real canonical knowledgeislands/ki-agent-backpack
 // (its specific skill names and keystone/process grouping), because `ki bootstrap`/`ki
 // dev` hardcode expectations about that identity rather than accepting any harness.
 const bootstrapHarnessSkills = [
@@ -149,12 +149,12 @@ const setupExampleHarness = async (
     prefix = name.split('-')[0] as string
   }: { rubric?: string; name?: string; identifier?: string; prefix?: string } = {}
 ): Promise<void> => {
-  const canonical = 'knowledgeislands/ki-agentic-harness'
+  const canonical = 'knowledgeislands/ki-agent-backpack'
   const canonicalInstalled = await lstat(join(data.path, 'ki/harnesses', canonical)).catch(() => undefined)
   const selectedIdentifier =
     identifier === 'example/harness' && prefix === 'ki' && canonicalInstalled?.isDirectory() ? canonical : identifier
   const root = `ki/harnesses/${selectedIdentifier}`
-  await data.write(`${root}/.ki.toml`, `[skills.ki-repo-harness]\nprefix = ${JSON.stringify(prefix)}\n`)
+  await data.write(`${root}/.ki.toml`, `[skills.ki-repo-backpack]\nprefix = ${JSON.stringify(prefix)}\n`)
   const base = `${root}/skills/${name}`
   await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: []\n---\n`)
   if (name === 'ki-repo') {
@@ -183,7 +183,7 @@ const setupRepositoryLocalSkill = async (
 }
 
 const writeBootstrapHarness = async (area: SandboxArea, base: string, metadataFile = '.ki.toml'): Promise<void> => {
-  await area.write(`${base}/${metadataFile}`, '[skills.ki-repo-harness]\nprefix = "ki"\n')
+  await area.write(`${base}/${metadataFile}`, '[skills.ki-repo-backpack]\nprefix = "ki"\n')
   await Promise.all(['subagents', 'hooks'].map((payload) => area.mkdir(`${base}/${payload}`)))
   for (const skill of bootstrapHarnessSkills) {
     const group = skill === 'ki-bootstrap' ? 'keystone' : 'change-management'
@@ -192,7 +192,7 @@ const writeBootstrapHarness = async (area: SandboxArea, base: string, metadataFi
 }
 
 const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
-  writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
+  writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agent-backpack')
 
 // The same fixture, but written under an arbitrary local directory rather than the
 // installed-harness data root — for exercising `ki dev local set <harness-id> <path>` against a local

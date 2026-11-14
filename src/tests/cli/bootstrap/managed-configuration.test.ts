@@ -11,7 +11,7 @@ import { type Sandbox, sandbox } from '../_cli_helper.ts'
  * array with a trailing comment, a commented skills header and a multi-line territories array.
  */
 
-const canonical = 'knowledgeislands/ki-agentic-harness'
+const canonical = 'knowledgeislands/ki-agent-backpack'
 
 const territories = `
 [territories]
@@ -53,7 +53,7 @@ describe('[ki bootstrap] managed configuration', () => {
 
   test('moves remembered checkouts out of a managed configuration without rewriting it', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('chatgpt-codex')
     await box.run('ki bootstrap --refresh')
     const fixture = await managed(
@@ -79,16 +79,16 @@ describe('[ki bootstrap] managed configuration', () => {
     // harness with a configured release carries the round trip through the same refresh writer.
     const box = await sandbox()
     const skill = '---\nname: hnr-example\nki-depends-on: []\n---\n'
-    const harness = 'humansnotrobots/hnr-agentic-harness'
+    const harness = 'humansnotrobots/hnr-agent-backpack'
     const installed = `ki/harnesses/${harness}`
     await box.setupAgentHome('chatgpt-codex')
-    await box.data.write(`${installed}/.ki.toml`, '[skills.ki-repo-harness]\nprefix = "hnr"\n')
+    await box.data.write(`${installed}/.ki.toml`, '[skills.ki-repo-backpack]\nprefix = "hnr"\n')
     await box.data.write(`${installed}/skills/hnr-example/SKILL.md`, skill)
     await Promise.all(['subagents', 'hooks'].map((payload) => box.data.mkdir(`${installed}/${payload}`)))
     await box.run('ki bootstrap --refresh')
     await box.run('ki skill add hnr-example')
     const checkout = `dev/${harness}`
-    await box.root.write(`${checkout}/.ki.toml`, '[skills.ki-repo-harness]\nprefix = "hnr"\n')
+    await box.root.write(`${checkout}/.ki.toml`, '[skills.ki-repo-backpack]\nprefix = "hnr"\n')
     await box.root.write(`${checkout}/skills/hnr-example/SKILL.md`, skill)
     await Promise.all(['subagents', 'hooks'].map((payload) => box.root.mkdir(`${checkout}/${payload}`)))
     const local = await realpath(`${box.root.path}/${checkout}`)
@@ -123,13 +123,13 @@ describe('[ki bootstrap] managed configuration', () => {
     const withSkill = await box.config.read('ki/config.toml')
     const removed = await box.run('ki skill remove example-skill')
 
-    const harness = (parse(withSkill) as { skills: Record<string, { harness: string }> }).skills['example-skill']
-      ?.harness
+    const backpack = (parse(withSkill) as { skills: Record<string, { backpack: string }> }).skills['example-skill']
+      ?.backpack
     expect(added.exitCode).toBe(0)
     expect(withSkill).toBe(
       fixture.replace(
         '\n\n[territories]',
-        `\n\n[skills.example-skill]\nharness = ${JSON.stringify(harness)}\n\n[territories]`
+        `\n\n[skills.example-skill]\nbackpack = ${JSON.stringify(backpack)}\n\n[territories]`
       )
     )
     expect(removed.exitCode).toBe(0)
@@ -167,7 +167,7 @@ describe('[ki bootstrap] managed configuration', () => {
     await box.config.write('ki/config.toml', `${fixture}${repositories}`)
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
+      '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
     )
 
     const refreshed = await box.run('ki bootstrap --refresh')
@@ -188,7 +188,7 @@ describe('[ki bootstrap] managed configuration', () => {
 
     expect(added.exitCode).toBe(0)
     expect(await box.config.read('ki/config.toml')).toBe(
-      fixture.replace('\n\n[territories]', '\n\n[skills.example-skill]\nharness = "example/harness"\n\n[territories]')
+      fixture.replace('\n\n[territories]', '\n\n[skills.example-skill]\nbackpack = "example/harness"\n\n[territories]')
     )
   })
 
@@ -205,7 +205,7 @@ describe('[ki bootstrap] managed configuration', () => {
 
     expect(removed.exitCode).toBe(0)
     expect(await box.config.read('ki/config.toml')).toBe(
-      compact.replace('[skills.example-skill]\nharness = "example/harness"\n', '')
+      compact.replace('[skills.example-skill]\nbackpack = "example/harness"\n', '')
     )
   })
 
@@ -245,7 +245,7 @@ ${territories}`
     expect(parse(await box.config.read('ki/config.toml'))).toEqual({
       agents: { ids: ['claude-code'] },
       harnesses: { ids: [canonical], releases: [release] },
-      skills: { 'example-skill': { harness: 'example/harness' }, 'ki-next': { harness: canonical } },
+      skills: { 'example-skill': { backpack: 'example/harness' }, 'ki-next': { backpack: canonical } },
       territories: { ranking: ['alpha', 'beta'] },
       repositories: { paths: [repository] }
     })

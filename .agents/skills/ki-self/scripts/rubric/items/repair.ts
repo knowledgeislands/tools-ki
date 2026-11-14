@@ -16,11 +16,13 @@ export const REPAIR: RubricFamily<SelfRubricContext, SelfRubricContext> = {
       sources: ['src/agents/bootstrap.ts', 'src/core/storage/harness-installation.ts'],
       mechanical: {
         level: 'FAIL',
-        remediation: diagnosticRemediation('Route every bootstrap and restoration consumer through minimumBootstrapUserSkills.'),
+        remediation: diagnosticRemediation(
+          'Route every bootstrap and restoration consumer through bootstrapUserSkills and minimumBootstrapUserSkills.'
+        ),
         audit: {
           phase: 'PRIMARY',
           run: (context) => [
-            ...sourceContains(context, 'src/agents/bootstrap.ts', ['minimumBootstrapUserSkills']),
+            ...sourceContains(context, 'src/agents/bootstrap.ts', ['bootstrapUserSkills(']),
             ...sourceContains(context, 'src/core/storage/harness-installation.ts', [
               'requiredCapabilities: minimumBootstrapUserSkills'
             ])

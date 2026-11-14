@@ -4,7 +4,7 @@ import { sandbox } from '../_cli_helper.ts'
 
 const repositoryConfiguration = `
 [repo]
-harnesses = ["knowledgeislands/ki-agentic-harness"]
+harnesses = ["knowledgeislands/ki-agent-backpack"]
 
 [skills.ki-repo-project]
 
@@ -95,7 +95,7 @@ describe('[ki repo repair]', () => {
     await box.project.write(
       '.ki.toml',
       repositoryConfiguration
-        .replace('knowledgeislands/ki-agentic-harness', 'missing/harness')
+        .replace('knowledgeislands/ki-agent-backpack', 'missing/harness')
         .replace('[skills.ki-example]', '[skills.ki-missing]')
     )
     const unresolved = await box.run('ki repo repair')

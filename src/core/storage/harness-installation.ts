@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, readdir, rename, rm } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { KiError } from '../errors.ts'
 import { acquireVerifiedArchive, extractArchive, type Fetcher } from '../harness/acquire.ts'
-import { minimumBootstrapUserSkills } from '../harness/bootstrap-capabilities.ts'
+import { bootstrapUserSkills, minimumBootstrapUserSkills } from '../harness/bootstrap-capabilities.ts'
+import { sameBackpack } from '../harness/identity.ts'
 import {
   canonicalHarnessIdentifier,
   discoverInstalledHarnesses,
@@ -46,7 +47,12 @@ export interface HarnessInstallation {
 }
 
 const requireCapabilities = (harness: InstalledHarness, options: HarnessInstallationOptions): void => {
-  const required = new Set(options.requiredCapabilities ?? [])
+  // A canonical backpack may still offer the retired bootstrap skills for this one release.
+  const required = new Set(
+    options.requiredCapabilitiesContext === 'canonical-bootstrap'
+      ? bootstrapUserSkills(harness.capabilities.map((capability) => capability.name))
+      : (options.requiredCapabilities ?? [])
+  )
   for (const capability of required) {
     if (!harness.capabilities.some((candidate) => candidate.name === capability)) {
       if (options.requiredCapabilitiesContext === 'canonical-bootstrap') {
@@ -69,14 +75,14 @@ export const installHarness = async (
 ): Promise<HarnessInstallation> => {
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   const releases = await readHarnessRegistry(configurationDirectory)
-  const release = releases.find((candidate) => candidate.id === identifier)
+  const release = releases.find((candidate) => sameBackpack(candidate.id, identifier))
   if (!release) throw new KiError(`harness ${identifier} is not configured in the immutable release registry`, 1)
-  const [owner, name] = identifier.split('/') as [string, string]
+  const owner = identifier.slice(0, identifier.indexOf('/'))
   const harnesses = join(dataDirectory, 'harnesses')
   await ensureDirectory(harnesses, 'installed harnesses directory')
   const ownerDirectory = join(harnesses, owner)
   await ensureDirectory(ownerDirectory, `installed harness owner ${owner}`)
-  const destination = join(ownerDirectory, name)
+  const destination = harnessDirectory(dataDirectory, identifier)
   const existing = await lstat(destination).catch(() => undefined)
   if (existing) {
     const developmentLink = existing.isSymbolicLink()
@@ -107,7 +113,7 @@ export const installHarness = async (
       await artifact.retire()
       return { installed: true, replaced: false, archiveSha256: release.sha256 }
     }
-    const previous = join(ownerDirectory, parkedPayloadEntry(randomUUID(), name))
+    const previous = join(ownerDirectory, parkedPayloadEntry(randomUUID(), basename(destination)))
     await rename(destination, previous)
     await artifact.transition('retired')
     /* v8 ignore start -- Recovery needs a filesystem failure after the old verified payload is parked; no CLI input can cause it. */
@@ -143,7 +149,7 @@ export const restoreHarness = async (
       (await lstat(harnessDirectory(dataDirectory, identifier)).catch(() => undefined))?.isSymbolicLink()
     ),
     allowDevelopmentReplace: true,
-    ...(identifier === canonicalHarnessIdentifier
+    ...(sameBackpack(identifier, canonicalHarnessIdentifier)
       ? {
           requiredCapabilities: minimumBootstrapUserSkills,
           requiredCapabilitiesContext: 'canonical-bootstrap' as const
@@ -174,15 +180,15 @@ export const uninstallHarness = async (dataDirectory: string, identifier: string
   /* v8 ignore next -- no public CLI path can bypass the command validation. */
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   /* v8 ignore next -- no public CLI path can bypass the command validation. */
-  if (identifier === canonicalHarnessIdentifier)
+  if (sameBackpack(identifier, canonicalHarnessIdentifier))
     throw new KiError(`the canonical harness ${identifier} cannot be uninstalled`, 1)
 
   await readInstalledHarness(dataDirectory, identifier)
-  const [owner, name] = identifier.split('/') as [string, string]
+  const owner = identifier.slice(0, identifier.indexOf('/'))
   const harnesses = join(dataDirectory, 'harnesses')
   const ownerDirectory = join(harnesses, owner)
   await physicalDirectory(ownerDirectory, `installed harness owner ${owner}`)
-  const destination = join(ownerDirectory, name)
+  const destination = harnessDirectory(dataDirectory, identifier)
   await physicalDirectory(destination, `installed harness ${identifier}`)
   const entries = await readdir(destination, { withFileTypes: true })
   if (

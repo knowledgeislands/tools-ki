@@ -22,8 +22,8 @@ const matches = (query: string, entry: CapabilityMatch): boolean => {
 
 export const createSearchCommand = (context: KiContext): Command =>
   new Command('search')
-    .description('search verified installed harness capabilities')
-    .argument('<query>', 'non-empty harness or capability search text')
+    .description('search verified installed backpack capabilities')
+    .argument('<query>', 'non-empty backpack or capability search text')
     .action(async (query: string) => {
       if (!query.trim()) throw grammarError('search query must not be empty')
       const capabilities = (await discoverInstalledHarnesses(context.paths.data)).flatMap((harness) =>

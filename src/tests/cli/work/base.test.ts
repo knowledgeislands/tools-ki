@@ -57,7 +57,7 @@ const harness = async (box: Sandbox): Promise<Harness> => {
 const register = async (box: Sandbox): Promise<string> => {
   const root = await realpath(box.root.path)
   const entries = [
-    ['ki-agentic-harness', 'example/ki-agentic-harness', 'harness'],
+    ['ki-agent-backpack', 'example/ki-agent-backpack', 'harness'],
     ['principal', 'example/principal', 'principal'],
     ['unfetched', 'example/unfetched', 'unfetched']
   ]
@@ -104,30 +104,30 @@ describe('ki work base', () => {
     await register(box)
     await document(box, 'moved.change.md', [
       'Status: draft',
-      `Base: ki-agentic-harness@${base}`,
+      `Base: ki-agent-backpack@${base}`,
       'Touches: `skills/a/standard.md`, `skills/d/steady.md`, `skills/f/`',
       '**Status:** a later line does not govern'
     ])
     await document(box, 'renamed.change.md', [
-      `Base: ki-agentic-harness@${base} (8 November 2026)`,
+      `Base: ki-agent-backpack@${base} (8 November 2026)`,
       'Touches: `skills/b/old.md` and `./skills/e`'
     ])
     await document(box, 'deleted.change.md', [
-      `Base: ki-agentic-harness@${base}`,
+      `Base: ki-agent-backpack@${base}`,
       'Touches: skills/c/gone.md and skills/d/steady.md.'
     ])
     await document(box, 'current.change.md', [
-      `**Base:** ki-agentic-harness@${base}`,
-      'Touches: `example/ki-agentic-harness` `skills/d/steady.md`'
+      `**Base:** ki-agent-backpack@${base}`,
+      'Touches: `example/ki-agent-backpack` `skills/d/steady.md`'
     ])
     await document(box, 'graduated.change.md', [
       'Status: graduated',
-      `Base: ki-agentic-harness@${base}`,
+      `Base: ki-agent-backpack@${base}`,
       'Touches: `skills/a/standard.md`'
     ])
-    await document(box, 'note.design.md', [`Base: ki-agentic-harness@${base}`, 'Touches: `skills/d/steady.md`'])
+    await document(box, 'note.design.md', [`Base: ki-agent-backpack@${base}`, 'Touches: `skills/d/steady.md`'])
     await document(box, 'unmigrated.design.md', ['Status: draft', 'Touches: `skills/a/standard.md`'])
-    await box.root.write(`principal/${WORK}/notes.md`, 'Base: ki-agentic-harness@0000000\n')
+    await box.root.write(`principal/${WORK}/notes.md`, 'Base: ki-agent-backpack@0000000\n')
 
     const { result, json } = await report(box)
 
@@ -143,7 +143,7 @@ describe('ki work base', () => {
     ])
     expect(json.documents[2]).toMatchObject({
       repository: 'principal',
-      base: { repository: 'ki-agentic-harness', commit: base },
+      base: { repository: 'ki-agent-backpack', commit: base },
       touches: ['skills/a/standard.md', 'skills/d/steady.md', 'skills/f'],
       status: 'draft'
     })
@@ -179,24 +179,21 @@ describe('ki work base', () => {
     const { base, unpushed } = await harness(box)
     await register(box)
     await box.root.git(['init', '-q', '-b', 'main'], 'unfetched')
-    await document(box, 'missing.change.md', ['Base: ki-agentic-harness@deadbeef0', 'Touches: `skills/a/standard.md`'])
+    await document(box, 'missing.change.md', ['Base: ki-agent-backpack@deadbeef0', 'Touches: `skills/a/standard.md`'])
     await document(box, 'unpushed.change.md', [
-      `Base: ki-agentic-harness@${unpushed.slice(0, 9)}`,
+      `Base: ki-agent-backpack@${unpushed.slice(0, 9)}`,
       'Touches: `skills/a/standard.md`'
     ])
     await document(box, 'no-base.change.md', ['Touches: `skills/a/standard.md`'])
-    await document(box, 'no-touches.change.md', [`Base: ki-agentic-harness@${base}`])
-    await document(box, 'malformed.change.md', ['Base: ki-agentic-harness', 'Touches: `skills/a/standard.md`'])
+    await document(box, 'no-touches.change.md', [`Base: ki-agent-backpack@${base}`])
+    await document(box, 'malformed.change.md', ['Base: ki-agent-backpack', 'Touches: `skills/a/standard.md`'])
     await document(box, 'unregistered.change.md', ['Base: other-harness@abcd123', 'Touches: `skills/a/standard.md`'])
     await document(box, 'unfetched.change.md', ['Base: unfetched@abcd123', 'Touches: `skills/a/standard.md`'])
     await document(box, 'elsewhere.change.md', [
-      `Base: ki-agentic-harness@${base}`,
-      'Touches: `example/app` `docs/x.md`; `example/app` `docs/y.md`; `example/ki-agentic-harness` `skills/a/standard.md`'
+      `Base: ki-agent-backpack@${base}`,
+      'Touches: `example/app` `docs/x.md`; `example/app` `docs/y.md`; `example/ki-agent-backpack` `skills/a/standard.md`'
     ])
-    await document(box, 'empty.change.md', [
-      `Base: ki-agentic-harness@${base}`,
-      'Touches: `example/ki-agentic-harness`'
-    ])
+    await document(box, 'empty.change.md', [`Base: ki-agent-backpack@${base}`, 'Touches: `example/ki-agent-backpack`'])
 
     const { result, json } = await report(box)
 
@@ -206,18 +203,18 @@ describe('ki work base', () => {
       'elsewhere.change.md': {
         verdict: 'unknown',
         files: [],
-        reason: 'touches files outside ki-agentic-harness: example/app'
+        reason: 'touches files outside ki-agent-backpack: example/app'
       },
       'empty.change.md': { verdict: 'unknown', files: [], reason: 'Touches: names no files' },
       'malformed.change.md': {
         verdict: 'unknown',
         files: [],
-        reason: 'Base: ki-agentic-harness is not <repository>@<commit>'
+        reason: 'Base: ki-agent-backpack is not <repository>@<commit>'
       },
       'missing.change.md': {
         verdict: 'unknown',
         files: [],
-        reason: `base deadbeef0 is not in ki-agentic-harness at ${checkout}/harness; fetch it, or correct the Base: line`
+        reason: `base deadbeef0 is not in ki-agent-backpack at ${checkout}/harness; fetch it, or correct the Base: line`
       },
       'no-base.change.md': { verdict: 'unknown', files: [], reason: 'no Base: line' },
       'no-touches.change.md': { verdict: 'unknown', files: [], reason: 'no Touches: line' },
@@ -229,7 +226,7 @@ describe('ki work base', () => {
       'unpushed.change.md': {
         verdict: 'unknown',
         files: [],
-        reason: `base ${unpushed.slice(0, 9)} is not on ki-agentic-harness's origin/main: unpushed, or on another branch`
+        reason: `base ${unpushed.slice(0, 9)} is not on ki-agent-backpack's origin/main: unpushed, or on another branch`
       },
       'unregistered.change.md': {
         verdict: 'unknown',
@@ -244,7 +241,7 @@ describe('ki work base', () => {
     const box = await sandbox()
     const { base } = await harness(box)
     await register(box)
-    await document(box, 'current.change.md', [`Base: ki-agentic-harness@${base}`, 'Touches: `skills/d/steady.md`'])
+    await document(box, 'current.change.md', [`Base: ki-agent-backpack@${base}`, 'Touches: `skills/d/steady.md`'])
     await document(box, 'graduated.change.md', ['Status: Graduated 8 November 2026', 'Touches: `skills/a/standard.md`'])
 
     const result = await box.run('ki work base', { runner: 'default' })
@@ -256,7 +253,7 @@ describe('ki work base', () => {
         '├─ moved (0)',
         '├─ unknown (0)',
         '├─ current (1)',
-        `│  ╰─ principal · ${WORK}/current.change.md · ki-agentic-harness@${base}`,
+        `│  ╰─ principal · ${WORK}/current.change.md · ki-agent-backpack@${base}`,
         '├─ graduated, not checked (1)',
         '╰─ summary: DOCUMENTS=1 MOVED=0 UNKNOWN=0 CURRENT=1 GRADUATED=1',
         ''
@@ -269,7 +266,7 @@ describe('ki work base', () => {
     const { base } = await harness(box)
     await register(box)
     await document(box, 'renamed.change.md', [
-      `Base: ki-agentic-harness@${base}`,
+      `Base: ki-agent-backpack@${base}`,
       'Touches: `skills/b/old.md`, `skills/c/gone.md`'
     ])
     await document(box, 'no-base.change.md', ['Touches: `skills/a/standard.md`'])
@@ -281,7 +278,7 @@ describe('ki work base', () => {
       [
         '╭─ KI WORK BASE',
         '├─ moved (1)',
-        `│  ╰─ principal · ${WORK}/renamed.change.md · ki-agentic-harness@${base}`,
+        `│  ╰─ principal · ${WORK}/renamed.change.md · ki-agent-backpack@${base}`,
         '│     ├─ skills/b/old.md renamed to skills/b/new.md',
         '│     ╰─ skills/c/gone.md deleted',
         '├─ unknown (1)',
@@ -299,11 +296,11 @@ describe('ki work base', () => {
     const box = await sandbox()
     const { base } = await harness(box)
     await register(box)
-    await document(box, 'current.change.md', [`Base: ki-agentic-harness@${base}`, 'Touches: `skills/d/steady.md`'])
+    await document(box, 'current.change.md', [`Base: ki-agent-backpack@${base}`, 'Touches: `skills/d/steady.md`'])
     await box.root.write('loose/.ki.toml', declaration('https://github.com/example/loose'))
     await box.root.write(
       `loose/${WORK}/loose.change.md`,
-      `Base: ki-agentic-harness@${base}\nTouches: \`skills/d/steady.md\`\n`
+      `Base: ki-agent-backpack@${base}\nTouches: \`skills/d/steady.md\`\n`
     )
     box.cd('..')
 

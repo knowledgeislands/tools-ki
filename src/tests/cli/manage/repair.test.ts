@@ -131,7 +131,7 @@ describe('[ki repair]', () => {
     const unavailable = await sandbox()
     await unavailable.config.write(
       'ki/config.toml',
-      'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills.ki-missing]\nharness = "missing/harness"\n'
+      'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills.ki-missing]\nbackpack = "missing/harness"\n'
     )
     const unavailableRepair = await unavailable.run('ki repair --apply')
     const incompatible = await sandbox()
@@ -143,7 +143,7 @@ describe('[ki repair]', () => {
     )
     await incompatible.config.write(
       'ki/config.toml',
-      'schema = 1\n\n[agents]\nids = ["claude-code"]\n\n[harnesses]\nids = ["example/harness"]\n\n[skills.example-skill]\nharness = "example/harness"\n'
+      'schema = 1\n\n[agents]\nids = ["claude-code"]\n\n[harnesses]\nids = ["example/harness"]\n\n[skills.example-skill]\nbackpack = "example/harness"\n'
     )
     const incompatibleRepair = await incompatible.run('ki repair --apply')
 
@@ -159,10 +159,10 @@ describe('[ki repair]', () => {
 
   test('uses the active local canonical harness as the repair source', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
     await box.run('ki dev local on')
     const recap = `${box.home.path}/.claude/skills/ki-recap`
     await unlink(recap)

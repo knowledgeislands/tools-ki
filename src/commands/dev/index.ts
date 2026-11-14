@@ -5,6 +5,6 @@ import { createDevSkillCommand } from './skill/index.ts'
 
 export const createDevCommand = (context: KiContext): Command =>
   new Command('dev')
-    .description('switch installed harnesses independently between local checkouts and verified archives')
+    .description('switch installed backpacks independently between local checkouts and verified archives')
     .addCommand(createDevLocalCommand(context))
     .addCommand(createDevSkillCommand(context))

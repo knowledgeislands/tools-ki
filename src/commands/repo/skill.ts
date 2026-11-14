@@ -15,9 +15,9 @@ export const createRepoSkillCommand = (
     .description('manage KI-managed skills in one or more repositories')
     .addCommand(
       new Command('add')
-        .description('link a harness skill into a repository and declare it in .ki.toml')
+        .description('link a backpack skill into a repository and declare it in .ki.toml')
         .argument('<skill>', 'skill capability name to link')
-        .option('--replace', 're-point an existing KI-managed link at the resolved harness source')
+        .option('--replace', 're-point an existing KI-managed link at the resolved backpack source')
         .action(async (skill: string, options: { replace?: boolean }) => {
           const repositories = await resolveRepositoryTargets({
             ...selectedRepositories(),

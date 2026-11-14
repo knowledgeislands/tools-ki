@@ -14,7 +14,7 @@ describe('[ki local utility commands]', () => {
     expect(result).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI HARNESS SEARCH\n├─ query: SKILL\n├─ matches (9)\n│  ├─ example/harness skill example-skill\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-accept\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-batch\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-bootstrap\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-implement\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-next\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-plan\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-recap\n│  ╰─ knowledgeislands/ki-agentic-harness skill ki-work-design\n╰─ summary: MATCHES=9\n'
+        '╭─ KI HARNESS SEARCH\n├─ query: SKILL\n├─ matches (9)\n│  ├─ example/harness skill example-skill\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-accept\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-batch\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-bootstrap\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-implement\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-next\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-plan\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-recap\n│  ╰─ knowledgeislands/ki-agent-backpack skill ki-work-design\n╰─ summary: MATCHES=9\n'
     })
     expect(await box.data.read('ki/harnesses/example/harness/skills/example-skill/SKILL.md')).toBe(example)
   })

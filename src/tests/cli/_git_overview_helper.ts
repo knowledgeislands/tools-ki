@@ -1,5 +1,5 @@
 // Test-only archive of the canonical ki-git session, CLEAN catalogue and type contract.
-// Source: knowledgeislands/ki-agentic-harness at b91fa71dba7ea902e7c1fa8eefa9d515e226a741.
+// Source: knowledgeislands/ki-agent-backpack at b91fa71dba7ea902e7c1fa8eefa9d515e226a741.
 // Each archived source is byte-exact; SHA-256 provenance is verified before installation.
 import { createHash } from 'node:crypto'
 import { realpath } from 'node:fs/promises'

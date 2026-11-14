@@ -52,7 +52,7 @@ export const makeHarnessArchive = (
       ? firstParts[0]
       : undefined
   const metadataPath = nestedPrefix && !firstEntryPrefix ? `${nestedPrefix}/.ki.toml` : '.ki.toml'
-  const metadataContents = `[skills.ki-repo-harness]\nprefix = ${JSON.stringify(harnessPrefix)}\n`
+  const metadataContents = `[skills.ki-repo-backpack]\nprefix = ${JSON.stringify(harnessPrefix)}\n`
   const entries =
     harnessPrefix === null || files[metadataPath] !== undefined
       ? files

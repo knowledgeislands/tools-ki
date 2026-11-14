@@ -2,11 +2,12 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { basename } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
+import { backpackIdentifier } from '../harness/identity.ts'
 import { type SupportedRuntime, supportedRuntimes } from '../harness/inspection.ts'
 import { canonicalRepositoryIdentity } from '../storage/local-registry.ts'
 
 export const REPOSITORY_DECLARATION_FILE = '.ki.toml'
-export const DEFAULT_HARNESS = 'knowledgeislands/ki-agentic-harness'
+export const DEFAULT_HARNESS = 'knowledgeislands/ki-agent-backpack'
 
 export interface DeclaredSkill {
   /** The skill's bare capability name under `[skills]`. */
@@ -132,7 +133,8 @@ const declaredHarnesses = (parsed: Record<string, unknown>, path: string): reado
   const harnesses = repository['harnesses']
   if (!harnesses.length || harnesses.some((harness) => typeof harness !== 'string' || !harnessIdentifier.test(harness)))
     throw shapeError(path, '[repo] harnesses must be a non-empty array of <owner>/<name> harness identifiers')
-  const identifiers = harnesses as string[]
+  // A backpack declared under its retired `*-agentic-harness` spelling is read as the backpack it now is.
+  const identifiers = (harnesses as string[]).map(backpackIdentifier)
   if (new Set(identifiers).size !== identifiers.length)
     throw shapeError(path, '[repo] harnesses must not repeat a harness')
   return identifiers
@@ -180,7 +182,9 @@ export const readRepositoryDeclaration = async (configurationPath: string): Prom
 
 const projectShapes = [
   'ki-repo-project',
+  'ki-repo-backpack',
   'ki-repo-dotfiles-chezmoi',
+  // The retired name of ki-repo-backpack, still accepted for this one release.
   'ki-repo-harness',
   'ki-repo-homebrew-tap',
   'ki-repo-mcp',

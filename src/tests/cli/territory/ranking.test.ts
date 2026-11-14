@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 import { capitalConfiguration, home, memberConfiguration } from '../_territory_helper.ts'
 
-const SYSTEM_HARNESS = home('knowledgeislands/ki-agentic-harness')
+const SYSTEM_HARNESS = home('knowledgeislands/ki-agent-backpack')
 
 const capital = async (
   box: Sandbox,

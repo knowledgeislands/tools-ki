@@ -227,7 +227,7 @@ describe('[ki update and ki repo upgrade]', () => {
   test('reports unconfigured harnesses without mutating them', async () => {
     const box = await sandbox()
     await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
+    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
     await box.data.write(
       'ki/harnesses/other/harness/skills/other-skill/SKILL.md',
       '---\nname: other-skill\nki-depends-on: []\n---\n'
@@ -244,7 +244,7 @@ describe('[ki update and ki repo upgrade]', () => {
     const box = await sandbox()
     const payload = archive()
     await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
+    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
     await box.data.write(
       'ki/harnesses/other/harness/skills/other-skill/SKILL.md',
       skill.replace('ki-example', 'other-skill')
@@ -304,7 +304,7 @@ describe('[ki update and ki repo upgrade]', () => {
 
     const box = await sandbox()
     await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
+    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
     await box.data.write(
       'ki/harnesses/other/harness/skills/other-skill/SKILL.md',
       skill.replace('ki-example', 'other-skill')

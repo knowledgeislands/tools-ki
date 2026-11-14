@@ -6,6 +6,7 @@ const declaration = (fields: string, skills: readonly string[] = []): string =>
 
 test.each([
   'ki-repo-project',
+  'ki-repo-backpack',
   'ki-repo-dotfiles-chezmoi',
   'ki-repo-harness',
   'ki-repo-homebrew-tap',

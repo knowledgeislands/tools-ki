@@ -32,7 +32,7 @@ describe('[ki harness]', () => {
     test('renders every installed harness in order', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
-      await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
+      await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
       await box.data.write(
         'ki/harnesses/other/harness/skills/other-example/SKILL.md',
         '---\nname: other-example\nki-depends-on: []\n---\n'
@@ -82,7 +82,7 @@ describe('[ki harness]', () => {
     test('renders an installed harness with no capabilities', async () => {
       const box = await sandbox()
       await box.data.mkdir('ki/harnesses/empty/harness/skills')
-      await box.data.write('ki/harnesses/empty/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "empty"\n')
+      await box.data.write('ki/harnesses/empty/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "empty"\n')
 
       const info = await box.run('ki harness info empty/harness')
 
@@ -174,7 +174,7 @@ describe('[ki harness]', () => {
     test('refuses to uninstall the canonical harness', async () => {
       const box = await sandbox()
       await box.setupCanonicalHarness()
-      const result = await box.run('ki harness uninstall knowledgeislands/ki-agentic-harness')
+      const result = await box.run('ki harness uninstall knowledgeislands/ki-agent-backpack')
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('cannot be uninstalled')
@@ -262,7 +262,7 @@ describe('[ki harness]', () => {
       ],
       [
         'an override of the built-in canonical harness',
-        `[harnesses]\nreleases = [{ id = "knowledgeislands/ki-agentic-harness", url = "https://releases.example.test/archive.tar.gz", sha256 = "${'a'.repeat(64)}" }]\n`,
+        `[harnesses]\nreleases = [{ id = "knowledgeislands/ki-agent-backpack", url = "https://releases.example.test/archive.tar.gz", sha256 = "${'a'.repeat(64)}" }]\n`,
         'must not override the built-in canonical harness'
       ],
       ['a release entry that is not a table', '[harnesses]\nreleases = [5]\n', 'harnesses[0] must be a table'],
@@ -363,7 +363,7 @@ describe('[ki harness]', () => {
       const box = await sandbox()
       await box.setupCanonicalHarness()
 
-      const result = await box.run('ki harness install knowledgeislands/ki-agentic-harness')
+      const result = await box.run('ki harness install knowledgeislands/ki-agent-backpack')
 
       expect(result.exitCode).toBe(0)
       await expect(lstat(`${box.config.path}/ki/config.toml`)).rejects.toThrow()
@@ -385,11 +385,11 @@ describe('[ki harness]', () => {
       await box.setupCanonicalHarness()
       await box.config.write('ki/config.toml', 'schema = 1\n')
 
-      const result = await box.run('ki harness install knowledgeislands/ki-agentic-harness')
+      const result = await box.run('ki harness install knowledgeislands/ki-agent-backpack')
 
       expect(result.exitCode).toBe(0)
       expect(await box.config.read('ki/config.toml')).toContain(
-        '[harnesses]\nids = [\n  "knowledgeislands/ki-agentic-harness",\n]'
+        '[harnesses]\nids = [\n  "knowledgeislands/ki-agent-backpack",\n]'
       )
     })
 
@@ -497,18 +497,18 @@ releases = [
       ['invalid TOML', 'not = [toml', '.ki.toml must be valid TOML'],
       [
         'an invalid prefix',
-        '[skills.ki-repo-harness]\nprefix = "not-valid"\n',
-        'must declare a lowercase alphanumeric [skills.ki-repo-harness] prefix'
+        '[skills.ki-repo-backpack]\nprefix = "not-valid"\n',
+        'must declare a lowercase alphanumeric [skills.ki-repo-backpack] prefix'
       ],
       [
         'a scalar skills declaration',
         'skills = "invalid"\n',
-        'must declare a lowercase alphanumeric [skills.ki-repo-harness] prefix'
+        'must declare a lowercase alphanumeric [skills.ki-repo-backpack] prefix'
       ],
       [
-        'a scalar ki-repo-harness declaration',
-        '[skills]\nki-repo-harness = "invalid"\n',
-        'must declare a lowercase alphanumeric [skills.ki-repo-harness] prefix'
+        'a scalar ki-repo-backpack declaration',
+        '[skills]\nki-repo-backpack = "invalid"\n',
+        'must declare a lowercase alphanumeric [skills.ki-repo-backpack] prefix'
       ]
     ])('refuses %s in Harness prefix metadata', async (_case, metadata, message) => {
       const box = await sandbox()
@@ -724,11 +724,11 @@ releases = [
       })
       box.setFetcher(async () => new Response(payload))
 
-      const result = await box.run('ki harness install knowledgeislands/ki-agentic-harness')
+      const result = await box.run('ki harness install knowledgeislands/ki-agent-backpack')
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('does not match its SHA-256')
-      await expect(lstat(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`)).rejects.toThrow()
+      await expect(lstat(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agent-backpack`)).rejects.toThrow()
     })
 
     test('refuses symbolic links in a harness archive', async () => {

@@ -4,9 +4,9 @@ import type { KiContext } from '../../context.ts'
 
 const createUserCommands = (context: KiContext): readonly Command[] => [
   new Command('add')
-    .description('link a harness skill into the configured user agent skill spaces')
+    .description('link a backpack skill into the configured user agent skill spaces')
     .argument('<skill>', 'skill capability name to link')
-    .option('--replace', 're-point an existing KI-managed link at the resolved harness source')
+    .option('--replace', 're-point an existing KI-managed link at the resolved backpack source')
     .action(async (skill: string, options: { replace?: boolean }) => {
       const result = await addUserSkill({
         configurationDirectory: context.paths.config,

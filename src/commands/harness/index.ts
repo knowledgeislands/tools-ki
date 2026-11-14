@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import {
+  backpackIdentifier,
   inspectInstalledHarness,
   installConfiguredHarness,
   listInstalledHarnesses,
@@ -17,12 +18,13 @@ import {
 
 export const createHarnessCommand = (context: KiContext): Command =>
   new Command('harness')
-    .description('install and inspect compatible harnesses')
+    .description('install and inspect compatible backpacks')
     .addCommand(
       new Command('install')
-        .description('install one configured compatible harness')
-        .argument('<harness-id>', 'configured harness identifier')
-        .action(async (identifier: string) => {
+        .description('install one configured compatible backpack')
+        .argument('<harness-id>', 'configured backpack identifier')
+        .action(async (argument: string) => {
+          const identifier = backpackIdentifier(argument)
           const result = await installConfiguredHarness(harnessInstallationPort(context), identifier)
           context.stdout.write(
             result.installed
@@ -33,15 +35,16 @@ export const createHarnessCommand = (context: KiContext): Command =>
     )
     .addCommand(
       new Command('reinstall')
-        .description('replace one inactive installed harness with a verified archive')
-        .argument('<harness-id>', 'installed harness identifier')
-        .action(async (identifier: string) => {
+        .description('replace one inactive installed backpack with a verified archive')
+        .argument('<harness-id>', 'installed backpack identifier')
+        .action(async (argument: string) => {
+          const identifier = backpackIdentifier(argument)
           const installation = await reinstallInstalledHarness(harnessReinstallationPort(context), identifier)
           context.stdout.write(`reinstalled ${identifier}\tarchive ${installation.archiveSha256}\n`)
         })
     )
     .addCommand(
-      new Command('list').description('list installed harnesses').action(async () => {
+      new Command('list').description('list installed backpacks').action(async () => {
         const { harnesses, capabilityCount } = await listInstalledHarnesses(harnessQueryPort(context))
         const installed = harnesses.length
           ? harnesses.map(({ id, capabilities: entries }) => ({ label: `${id} (${entries.length})` }))
@@ -59,9 +62,10 @@ export const createHarnessCommand = (context: KiContext): Command =>
     )
     .addCommand(
       new Command('info')
-        .description('inspect one installed harness')
-        .argument('<harness-id>', 'installed harness identifier')
-        .action(async (identifier: string) => {
+        .description('inspect one installed backpack')
+        .argument('<harness-id>', 'installed backpack identifier')
+        .action(async (argument: string) => {
+          const identifier = backpackIdentifier(argument)
           const harness = await inspectInstalledHarness(harnessQueryPort(context), identifier)
           const capabilities = harness.capabilities.map(({ kind, name, source, dependsOn, rubricModule }) => ({
             kind,
@@ -87,9 +91,10 @@ export const createHarnessCommand = (context: KiContext): Command =>
     )
     .addCommand(
       new Command('uninstall')
-        .description('remove one installed non-canonical harness')
-        .argument('<harness-id>', 'installed non-canonical harness identifier')
-        .action(async (identifier: string) => {
+        .description('remove one installed non-canonical backpack')
+        .argument('<harness-id>', 'installed non-canonical backpack identifier')
+        .action(async (argument: string) => {
+          const identifier = backpackIdentifier(argument)
           await uninstallInstalledHarness(harnessUninstallationPort(context), identifier)
           context.stdout.write(`uninstalled ${identifier}\n`)
         })

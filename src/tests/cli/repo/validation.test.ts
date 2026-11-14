@@ -911,7 +911,7 @@ describe('[ki repo validation]', () => {
         readonly packageScripts?: readonly string[]
       }[]
     ): Promise<void> => {
-      await data.write('ki/harnesses/example/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
+      await data.write('ki/harnesses/example/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "ki"\n')
       for (const { name, deps, optionalDeps = [], packageScripts = [] } of specs) {
         const base = `ki/harnesses/example/harness/skills/${name}`
         const list = `[${deps.join(', ')}]`
@@ -1152,7 +1152,7 @@ script_exclusions = ["vendor:generate"]
       const box = await sandbox()
       await installSkillsHarness(box.data, [{ name: 'ki-shared', deps: [] }])
       const root = 'ki/harnesses/other/harness'
-      await box.data.write(`${root}/.ki.toml`, '[skills.ki-repo-harness]\nprefix = "hnr"\n')
+      await box.data.write(`${root}/.ki.toml`, '[skills.ki-repo-backpack]\nprefix = "hnr"\n')
       await box.data.write(`${root}/skills/hnr-shared/SKILL.md`, '---\nname: hnr-shared\nki-depends-on: []\n---\n')
       await box.data.write(
         `${root}/skills/hnr-shared/scripts/rubric/items/index.ts`,

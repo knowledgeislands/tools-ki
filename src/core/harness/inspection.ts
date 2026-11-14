@@ -3,12 +3,19 @@ import { dirname, join, relative } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
 import { RUBRIC_MODULE_PATH } from '../rubric/index.ts'
+import { backpackIdentifier, installedSlotName, retiredBackpackIdentifier } from './identity.ts'
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const harnessComponent = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const payloadRoots = ['skills', 'subagents', 'hooks'] as const
 
-export const canonicalHarnessIdentifier = 'knowledgeislands/ki-agentic-harness'
+export const canonicalHarnessIdentifier = 'knowledgeislands/ki-agent-backpack'
+/** The canonical backpack's retired spelling, still recognised for this one release. */
+export const retiredCanonicalHarnessIdentifier = retiredBackpackIdentifier(canonicalHarnessIdentifier) as string
+/** The skill a backpack's root `.ki.toml` declares its capability prefix under. */
+export const BACKPACK_SHAPE_SKILL = 'ki-repo-backpack'
+/** The retired name of that skill, still read for this one release. */
+export const RETIRED_BACKPACK_SHAPE_SKILL = 'ki-repo-harness'
 export const HARNESS_DECLARATION_FILE = '.ki.toml'
 
 export const supportedRuntimes = ['claude-code', 'claude-desktop', 'chatgpt-codex'] as const
@@ -56,11 +63,13 @@ const harnessPrefix = async (
     throw new KiError(`${description} ${identifier} ${metadataFile} must be valid TOML`, 1)
   }
   const skills = (configuration as Record<string, unknown>)['skills']
-  const declaration = isRecord(skills) ? skills['ki-repo-harness'] : undefined
+  const declaration = isRecord(skills)
+    ? (skills[BACKPACK_SHAPE_SKILL] ?? skills[RETIRED_BACKPACK_SHAPE_SKILL])
+    : undefined
   const prefix = isRecord(declaration) ? declaration['prefix'] : undefined
   if (typeof prefix !== 'string' || !prefixPattern.test(prefix))
     throw new KiError(
-      `${description} ${identifier} must declare a lowercase alphanumeric [skills.ki-repo-harness] prefix`,
+      `${description} ${identifier} must declare a lowercase alphanumeric [skills.${BACKPACK_SHAPE_SKILL}] prefix`,
       1
     )
   return prefix
@@ -241,7 +250,7 @@ const inspectHarnessRoot = async (
       `installed harness ${identifier} skill ${mismatched.name} must begin with declared prefix ${prefix}-`,
       1
     )
-  return { id: identifier, root, prefix, capabilities }
+  return { id: backpackIdentifier(identifier), root, prefix, capabilities }
 }
 
 export const inspectInstalledHarnessRoot = async (rootPath: string, identifier: string): Promise<InstalledHarness> =>
@@ -259,7 +268,7 @@ export const readInstalledHarness = async (dataDirectory: string, identifier: st
   /* v8 ignore next */
   if (!contained(harnesses, ownerDirectory))
     throw new KiError(`installed harness ${identifier} escapes the harnesses directory`, 1)
-  const destination = join(ownerDirectory, name)
+  const destination = join(ownerDirectory, installedSlotName(ownerDirectory, `${owner}/${name}`))
   const state = await lstat(destination).catch(() => undefined)
   if (!state?.isDirectory() && !state?.isSymbolicLink())
     throw new KiError(`installed harness ${identifier} must be a directory`, 1)
@@ -335,7 +344,13 @@ export const discoverInstalledHarnesses = async (
           1
         )
       }
-      if (`${owner.name}/${name.name}` !== options.except) identifiers.push(`${owner.name}/${name.name}`)
+      const identifier = backpackIdentifier(`${owner.name}/${name.name}`)
+      if (identifiers.includes(identifier))
+        throw new KiError(
+          `installed backpack ${identifier} is installed under both ${identifier} and ${retiredBackpackIdentifier(identifier)}; remove one`,
+          1
+        )
+      if (!options.except || identifier !== backpackIdentifier(options.except)) identifiers.push(identifier)
     }
   }
   const installed = await Promise.all(

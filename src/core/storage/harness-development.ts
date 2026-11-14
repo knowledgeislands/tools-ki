@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { lstat, readdir, readlink, realpath, rename, rm, symlink } from 'node:fs/promises'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
+import { sameBackpack } from '../harness/identity.ts'
 import { canonicalHarnessIdentifier, parkedPayloadEntry, readInstalledHarness } from '../harness/inspection.ts'
 import {
   ensureDirectory,
@@ -40,7 +41,9 @@ const recognisedInstalledRoot = async (
   if (!state) throw new KiError(`installed harness ${identifier} must be a directory`, 1)
   if (state.isSymbolicLink()) return 'local'
   await physicalDirectory(destination, `installed harness ${identifier}`)
-  const retired: readonly string[] = identifier === canonicalHarnessIdentifier ? retiredCanonicalPayloadRoots : []
+  const retired: readonly string[] = sameBackpack(identifier, canonicalHarnessIdentifier)
+    ? retiredCanonicalPayloadRoots
+    : []
   const entries = await readdir(destination, { withFileTypes: true })
   for (const entry of entries) {
     if (entry.name === harnessMetadataFile) {
@@ -80,7 +83,7 @@ export const enableHarnessDevelopment = async (
     )
   )
   const destination = harnessDirectory(dataDirectory, identifier)
-  const [owner, name] = identifier.split('/') as [string, string]
+  const owner = identifier.slice(0, identifier.indexOf('/'))
   await ensureDirectory(join(dataDirectory, 'harnesses'), 'installed harnesses directory')
   await ensureDirectory(dirname(destination), `installed harness owner ${owner}`)
   const state = await recognisedInstalledRoot(destination, identifier, sources)
@@ -89,7 +92,7 @@ export const enableHarnessDevelopment = async (
     if (actual !== harness) throw new KiError(`installed harness ${identifier} root link is unfamiliar`, 1)
     return harness
   }
-  const previous = join(dirname(destination), parkedPayloadEntry(randomUUID(), name))
+  const previous = join(dirname(destination), parkedPayloadEntry(randomUUID(), basename(destination)))
   await rename(destination, previous)
   /* v8 ignore start -- Requires a filesystem failure after the verified installed root is parked; no CLI input can cause it. */
   try {

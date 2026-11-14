@@ -87,7 +87,7 @@ describe('[ki harness lifecycle]', () => {
     await box.setupExampleHarness()
     await box.config.write(
       'ki/config.toml',
-      `${userConfiguration({ id: 'example/harness', sha256: archive.sha256 }).replace('[skills]\n', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\nharness = "example/harness"\n')}`
+      `${userConfiguration({ id: 'example/harness', sha256: archive.sha256 }).replace('[skills]\n', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\nbackpack = "example/harness"\n')}`
     )
     box.setFetcher(async () => new Response(archive.payload))
 
@@ -125,7 +125,7 @@ describe('[ki harness lifecycle]', () => {
       'ki/config.toml',
       userConfiguration().replace(
         '[skills]\n',
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-other]\nharness = "example/harness"\n'
+        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-other]\nbackpack = "example/harness"\n'
       )
     )
 
@@ -138,21 +138,21 @@ describe('[ki harness lifecycle]', () => {
     const box = await sandbox()
     await box.setupCanonicalHarness()
     await box.config.write('ki/config.toml', userConfiguration())
-    const local = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
-    expect((await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${local}`)).exitCode).toBe(0)
+    const local = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    expect((await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${local}`)).exitCode).toBe(0)
     expect((await box.run('ki dev local on')).exitCode).toBe(0)
 
-    const reinstalled = await box.run('ki harness reinstall knowledgeislands/ki-agentic-harness')
-    const removed = await box.run('ki harness uninstall knowledgeislands/ki-agentic-harness')
+    const reinstalled = await box.run('ki harness reinstall knowledgeislands/ki-agent-backpack')
+    const removed = await box.run('ki harness uninstall knowledgeislands/ki-agent-backpack')
 
     expect(reinstalled).toEqual({
       exitCode: 1,
       output:
-        'ki: error: harness knowledgeislands/ki-agentic-harness is development-linked; run ki dev local off before reinstalling\n'
+        'ki: error: harness knowledgeislands/ki-agent-backpack is development-linked; run ki dev local off before reinstalling\n'
     })
     expect(removed).toEqual({
       exitCode: 1,
-      output: 'ki: error: the canonical harness knowledgeislands/ki-agentic-harness cannot be uninstalled\n'
+      output: 'ki: error: the canonical harness knowledgeislands/ki-agent-backpack cannot be uninstalled\n'
     })
   })
 

@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { parse } from 'smol-toml'
 import { DEFAULT_HARNESS, REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
+import { backpackSpellings } from '../harness/index.ts'
 import { targetFromDirectory } from '../repository/location.ts'
 import { type LocalRegistryEntry, requiredLocalRegistry } from '../storage/index.ts'
 import { claimedRepository, type TerritoryDeclaration, territoryDeclarationFrom } from './declaration.ts'
@@ -97,7 +98,7 @@ export const resolveTerritoryCapital = async (stateDirectory: string, handle: st
  * Ranked handles lead in ranking order. The rest follow the derived order: the Capital whose
  * territory holds the canonical KI Harness, then territory name, then handle.
  */
-const SYSTEM_HARNESS = `https://github.com/${DEFAULT_HARNESS}`
+const SYSTEM_HARNESS = backpackSpellings(DEFAULT_HARNESS).map((spelling) => `https://github.com/${spelling}`)
 const territoryOrder = (found: readonly Capital[], ranking: readonly string[]): readonly Capital[] => {
   const position = (capital: Capital): number => {
     const index = ranking.indexOf(capital.handle)
@@ -106,8 +107,8 @@ const territoryOrder = (found: readonly Capital[], ranking: readonly string[]): 
   return [...found].sort(
     (left, right) =>
       position(left) - position(right) ||
-      Number(!left.declaration.territory.members.includes(SYSTEM_HARNESS)) -
-        Number(!right.declaration.territory.members.includes(SYSTEM_HARNESS)) ||
+      Number(!left.declaration.territory.members.some((member) => SYSTEM_HARNESS.includes(member))) -
+        Number(!right.declaration.territory.members.some((member) => SYSTEM_HARNESS.includes(member))) ||
       left.declaration.territory.name.localeCompare(right.declaration.territory.name, 'en') ||
       left.handle.localeCompare(right.handle, 'en')
   )

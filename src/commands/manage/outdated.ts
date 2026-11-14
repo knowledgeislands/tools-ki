@@ -5,7 +5,7 @@ import { renderTree } from '../presentation/index.ts'
 
 export const createOutdatedCommand = (context: KiContext): Command =>
   new Command('outdated')
-    .description('report installed harnesses with comparable newer release evidence')
+    .description('report installed backpacks with comparable newer release evidence')
     .action(async () => {
       const status = await collectCapabilityStatus({
         configurationDirectory: context.paths.config,

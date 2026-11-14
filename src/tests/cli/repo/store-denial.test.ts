@@ -100,7 +100,7 @@ describe('ki repo store under access denial', () => {
     const sources = await box.root.mkdir('sources')
     await box.project.write(
       '.ki.toml',
-      `${knowledgeBase('https://github.com/example/knowledge', 'knowledgeislands/ki-agentic-harness')}supported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-example]\n`
+      `${knowledgeBase('https://github.com/example/knowledge', 'knowledgeislands/ki-agent-backpack')}supported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-example]\n`
     )
     await box.state.write(
       'ki/registry.toml',

@@ -102,7 +102,7 @@ const declaredLayout = (capital: string, territory: readonly string[] = []): str
     '',
     '[repo]',
     'harnesses = [',
-    '  "knowledgeislands/ki-agentic-harness",',
+    '  "knowledgeislands/ki-agent-backpack",',
     ']',
     '',
     '[skills.ki-repo]',

@@ -74,7 +74,7 @@ const devLinkExampleHarness = async (
   box: Awaited<ReturnType<typeof sandbox>>,
   rubricSource: string
 ): Promise<string> => {
-  await box.root.write('local/.ki.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
+  await box.root.write('local/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "ki"\n')
   await box.root.write('local/skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
   await box.root.write('local/skills/ki-example/scripts/rubric/items/index.ts', rubricSource)
   await Promise.all(['subagents', 'hooks'].map((payload) => box.root.mkdir(`local/${payload}`)))
@@ -201,7 +201,7 @@ describe('[ki dev skill rubric]', () => {
   test('refuses an installed Harness prefix collision before resolving a skill', async () => {
     const box = await sandbox()
     await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
-    await box.data.write('ki/harnesses/second/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
+    await box.data.write('ki/harnesses/second/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "ki"\n')
     await box.data.write(
       'ki/harnesses/second/harness/skills/ki-example/SKILL.md',
       '---\nname: ki-example\nki-depends-on: []\n---\n'

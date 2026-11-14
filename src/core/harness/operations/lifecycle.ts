@@ -1,4 +1,5 @@
 import { KiError } from '../../errors.ts'
+import { sameBackpack } from '../identity.ts'
 import { canonicalHarnessIdentifier, type InstalledHarness } from '../inspection.ts'
 import type {
   HarnessInstallationPort,
@@ -20,7 +21,7 @@ const installedHarness = async (
   missingMessage = `harness ${identifier} is not installed`
 ): Promise<InstalledHarness> => {
   const harnesses = await port.discoverInstalled()
-  const harness = harnesses.find((candidate) => candidate.id === identifier)
+  const harness = harnesses.find((candidate) => sameBackpack(candidate.id, identifier))
   if (!harness) throw new KiError(missingMessage, 1)
   return harness
 }
@@ -83,7 +84,7 @@ export const reinstallInstalledHarness = async (
 export const uninstallInstalledHarness = async (port: HarnessUninstallationPort, identifier: string): Promise<void> => {
   requireHarnessIdentifier(identifier)
   const harness = await installedHarness(port, identifier)
-  if (identifier === canonicalHarnessIdentifier) {
+  if (sameBackpack(identifier, canonicalHarnessIdentifier)) {
     throw new KiError(`the canonical harness ${identifier} cannot be uninstalled`, 1)
   }
   if (await port.developmentLinked(identifier)) {

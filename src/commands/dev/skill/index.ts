@@ -37,7 +37,7 @@ export const createDevSkillCommand = (context: KiContext): Command =>
       new Command('generate')
         .description("render the surfaces a skill's scripts/generate module produces, or verify them on disk")
         .argument('<skill>', 'skill capability name whose generated surfaces to render')
-        .option('--write', 'publish the rendered surfaces below the Harness root (dev-linked harness installs only)')
+        .option('--write', 'publish the rendered surfaces below the backpack root (dev-linked backpack installs only)')
         .action(async (skill: string, options: { write?: boolean }) => {
           await inspectDevelopmentGeneration(
             developmentSkillGenerationPort(context),
@@ -51,7 +51,7 @@ export const createDevSkillCommand = (context: KiContext): Command =>
       new Command('rubric')
         .description("render a skill's generated rubric catalogue, or verify it against references/rubric.md")
         .argument('<skill>', 'skill capability name whose rubric to render')
-        .option('--write', 'publish the rendered catalogue to references/rubric.md (dev-linked harness installs only)')
+        .option('--write', 'publish the rendered catalogue to references/rubric.md (dev-linked backpack installs only)')
         .action(async (skill: string, options: { write?: boolean }) => {
           await inspectDevelopmentRubric(
             developmentSkillRubricPort(context),

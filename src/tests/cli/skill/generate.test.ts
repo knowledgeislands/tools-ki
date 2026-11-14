@@ -29,7 +29,7 @@ const installedHarness = async (box: Sandbox, source = generator()): Promise<voi
 // A dev-linked Harness whose installed root is a symlink to a real Git checkout, as `ki dev local on` leaves it.
 const devLinkedHarness = async (box: Sandbox, source = generator()): Promise<string> => {
   await box.setupExampleHarness()
-  await box.root.write('local/.ki.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
+  await box.root.write('local/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "ki"\n')
   await box.root.write('local/skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
   await box.root.write('local/source.txt', 'rendered\n')
   await box.root.write(`local/${generatorPath}`, source)

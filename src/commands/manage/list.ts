@@ -10,7 +10,7 @@ const treeEntries = (items: readonly string[]) =>
   items.length ? items.map((label) => ({ label })) : [{ label: 'none' }]
 
 export const createListCommand = (context: KiContext): Command =>
-  new Command('list').description('list installed harness capabilities and declared skills').action(async () => {
+  new Command('list').description('list installed backpack capabilities and declared skills').action(async () => {
     const [harnesses, userConfiguration, registry] = await Promise.all([
       discoverInstalledHarnesses(context.paths.data),
       inspectUserConfiguration(context.paths.config),

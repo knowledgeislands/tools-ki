@@ -350,7 +350,7 @@ describe('[ki repo roadmap]', () => {
   })
 
   test('pins the KB Streams known fields to the Harness Streams checker', async () => {
-    // Mirrors RECORD_FIELDS plus KB_NOTE_FIELDS in ki-agentic-harness
+    // Mirrors RECORD_FIELDS plus KB_NOTE_FIELDS in ki-agent-backpack
     // skills/repo-structure/ki-repo-kb-streams/scripts/rubric/contexts/streams.ts (origin/main 05ee5b1f).
     // A change to either list needs the matching change on the other side.
     const known = [

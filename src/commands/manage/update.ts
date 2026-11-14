@@ -12,7 +12,7 @@ const cliResult = (result: Awaited<ReturnType<typeof runManageUpdate>>['cli']): 
 
 export const createUpdateCommand = (context: KiContext): Command =>
   new Command('update')
-    .description('update an installer-managed CLI and refresh installed configured harnesses')
+    .description('update an installer-managed CLI and refresh installed configured backpacks')
     .option('--cli', 'update only the installer-managed CLI executable')
     .action(async (options: { cli?: boolean }) => {
       const result = await runManageUpdate(

@@ -3,6 +3,7 @@ import { inspectUserConfiguration, requireLocalSources } from '../../../agents/i
 import type { KiContext } from '../../../context.ts'
 import { KiError } from '../../../core/errors.ts'
 import {
+  backpackIdentifier,
   type DevelopmentProjectionView,
   disableDevelopment,
   enableDevelopment,
@@ -51,30 +52,31 @@ const reportDisabled = async (context: KiContext, identifier: string): Promise<v
 }
 
 export const createDevLocalCommand = (context: KiContext): Command => {
-  const command = new Command('local').description('manage local development for installed harnesses')
+  const command = new Command('local').description('manage local development for installed backpacks')
   command
     .command('set <harness-id> <local-harness-path>')
-    .description('validate and remember a checkout for one installed harness without enabling it')
+    .description('validate and remember a checkout for one installed backpack without enabling it')
     .summary('remember a local harness checkout')
-    .action(async (identifier: string, path: string) => {
+    .action(async (argument: string, path: string) => {
+      const identifier = backpackIdentifier(argument)
       const result = await setDevelopmentSource(setDevelopmentSourcePort(context), identifier, path)
       context.stdout.write(`development harness set ${result.identifier}\t${result.harness}\n`)
       context.stdout.write(`configured ${result.agents} agents\n`)
     })
   command
     .command('on [harness-id]')
-    .description('switch one configured harness, or every configured harness, to its complete local checkout root')
+    .description('switch one configured backpack, or every configured backpack, to its complete local checkout root')
     .summary('activate local harness checkouts')
     .action(async (identifier?: string) => {
-      const identifiers = identifier ? [identifier] : await configuredLocalHarnesses(context)
+      const identifiers = identifier ? [backpackIdentifier(identifier)] : await configuredLocalHarnesses(context)
       for (const harness of identifiers) await reportEnabled(context, harness)
     })
   command
     .command('off [harness-id]')
-    .description('restore one configured harness, or every configured harness, from its verified archive')
+    .description('restore one configured backpack, or every configured backpack, from its verified archive')
     .summary('restore verified harness archives')
     .action(async (identifier?: string) => {
-      const identifiers = identifier ? [identifier] : await configuredLocalHarnesses(context)
+      const identifiers = identifier ? [backpackIdentifier(identifier)] : await configuredLocalHarnesses(context)
       for (const harness of identifiers) await reportDisabled(context, harness)
     })
   return command
