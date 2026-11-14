@@ -2,6 +2,8 @@ import { Command, CommanderError } from 'commander'
 import { addRootCommands } from './commands/root/index.ts'
 import type { KiContext } from './context.ts'
 import { KiError, KiExit } from './core/errors.ts'
+import { notice, withNotices } from './core/notices.ts'
+import { migrateBackpackData } from './core/storage/backpack-migration.ts'
 import { adoptMcpInventory } from './core/storage/mcp-inventory.ts'
 import { KI_VERSION } from './version.ts'
 
@@ -109,18 +111,33 @@ export const createProgram = (context: KiContext): Command => {
   return program
 }
 
-const needsMcpInventory = (arguments_: readonly string[]): boolean => {
-  if (arguments_.some((argument) => ['--help', '-h', '--version', '-V'].includes(argument))) return false
-  return !['help', 'doctor', 'diag', 'repair', 'git'].includes(arguments_[0] as string)
-}
+const helpOrVersion = (arguments_: readonly string[]): boolean =>
+  arguments_.some((argument) => ['--help', '-h', '--version', '-V'].includes(argument))
+
+const needsMcpInventory = (arguments_: readonly string[]): boolean =>
+  !helpOrVersion(arguments_) && !['help', 'doctor', 'diag', 'repair', 'git'].includes(arguments_[0] as string)
+
+// Every command that may read installed backpacks first moves the retired harness layout; help,
+// version and the commit-msg check never read it.
+const needsBackpackMigration = (arguments_: readonly string[]): boolean =>
+  !helpOrVersion(arguments_) && !['help', 'git'].includes(arguments_[0] as string)
 
 /** Commands that have left `ki`, each answered with one line naming its new home. */
 const movedCommands: ReadonlyMap<string, string> = new Map([
   ['acquire', "acquisition has moved to the Inbox's ki-muninn (krisb/inbox); `ki acquire` no longer runs it"]
 ])
 
-export const run = async (arguments_: readonly string[], context: KiContext): Promise<number> => {
+/** Command groups renamed in this release, still answered under the retired name with a deprecation line. */
+const renamedCommands: ReadonlyMap<string, string> = new Map([['harness', 'backpack']])
+
+export const run = async (requested: readonly string[], context: KiContext): Promise<number> => {
   const program = createProgram(context)
+  const renamed = renamedCommands.get(requested[0] as string)
+  if (renamed)
+    context.stderr.write(
+      `ki: warning: ki ${requested[0]} is deprecated and will be removed in the next release; use ki ${renamed}\n`
+    )
+  const arguments_ = renamed ? [renamed, ...requested.slice(1)] : requested
   /* v8 ignore next -- V8 reports a non-existent third outcome for this complete boolean condition. */
   if (!arguments_.length) {
     program.outputHelp()
@@ -131,23 +148,30 @@ export const run = async (arguments_: readonly string[], context: KiContext): Pr
     context.stderr.write(`ki: ${moved}\n`)
     return 1
   }
-  try {
-    // Help, version, recovery diagnostics, and the commit-msg check must remain reachable with malformed MCP binding
-    // configuration. Other commands still adopt before dispatch and share one environment.
-    if (needsMcpInventory(arguments_)) await adoptMcpInventory(context.environment, context.paths.config)
-    await program.parseAsync([...arguments_], { from: 'user' })
-    return 0
-  } catch (error) {
-    if (error instanceof KiExit) return error.exitCode
+  return withNotices(
+    async () => {
+      try {
+        if (needsBackpackMigration(arguments_))
+          for (const moved of await migrateBackpackData(context.paths.data)) notice(moved)
+        // Help, version, recovery diagnostics, and the commit-msg check must remain reachable with malformed MCP binding
+        // configuration. Other commands still adopt before dispatch and share one environment.
+        if (needsMcpInventory(arguments_)) await adoptMcpInventory(context.environment, context.paths.config)
+        await program.parseAsync([...arguments_], { from: 'user' })
+        return 0
+      } catch (error) {
+        if (error instanceof KiExit) return error.exitCode
 
-    if (error instanceof KiError) {
-      context.stderr.write(`ki: error: ${error.message}\n${error.next ? `next: ${error.next}\n` : ''}`)
-      return error.exitCode
-    }
-    if (error instanceof CommanderError) {
-      if (error.code === 'commander.helpDisplayed' || error.code === 'commander.version') return 0
-      return 2
-    }
-    throw error
-  }
+        if (error instanceof KiError) {
+          context.stderr.write(`ki: error: ${error.message}\n${error.next ? `next: ${error.next}\n` : ''}`)
+          return error.exitCode
+        }
+        if (error instanceof CommanderError) {
+          if (error.code === 'commander.helpDisplayed' || error.code === 'commander.version') return 0
+          return 2
+        }
+        throw error
+      }
+    },
+    (message) => context.stderr.write(`ki: warning: ${message}\n`)
+  )
 }

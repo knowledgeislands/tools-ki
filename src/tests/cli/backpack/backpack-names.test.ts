@@ -6,8 +6,8 @@ import { makeBackpackArchive } from '../_archive_helper.ts'
 import { sandbox } from '../_cli_helper.ts'
 
 // Backpack repositories were `*-agentic-harness` until 14 November 2026. For one release `ki`
-// reads either spelling, reports the backpack spelling, and finds a slot still on disk under the
-// retired one.
+// reads either spelling, reports the backpack spelling, and moves a slot still on disk under the
+// retired one to its backpack name.
 const retired = 'example/demo-agentic-harness'
 const backpack = 'example/demo-agent-backpack'
 const canonical = 'knowledgeislands/ki-agent-backpack'
@@ -18,7 +18,7 @@ const repositoryDeclaration = (identifier: string): string =>
 
 describe('[backpack names]', () => {
   describe('installed slots', () => {
-    test('finds a backpack installed under its retired spelling by either name', async () => {
+    test('moves a backpack installed under its retired spelling and finds it by either name', async () => {
       const box = await sandbox()
       await box.setupExampleBackpack({ identifier: retired })
 
@@ -27,8 +27,9 @@ describe('[backpack names]', () => {
       const byBackpack = await box.run(`ki backpack info ${backpack}`)
 
       expect(listed.exitCode).toBe(0)
-      expect(listed.output).toContain(`${backpack} (1)`)
-      expect(listed.output).not.toContain(retired)
+      expect(listed.stdout).toContain(`${backpack} (1)`)
+      expect(listed.stdout).not.toContain(retired)
+      expect(await box.data.isSymlink(`ki/backpacks/${backpack}`)).toBe(false)
       expect(byRetired.exitCode).toBe(0)
       expect(byRetired.output).toContain(backpack)
       expect(byBackpack).toEqual(byRetired)
@@ -245,7 +246,8 @@ describe('[backpack names]', () => {
       expect(bootstrapped.output).toContain('ki-bootstrap for claude-code installed')
       expect(bootstrapped.output).toContain('ki-next for claude-code installed')
       expect(configured).toContain(`[skills.ki-next]\nbackpack = "${canonical}"`)
-      expect(await box.data.isSymlink(`ki/backpacks/${canonical}`).catch(() => 'absent')).toBe('absent')
+      expect(await box.data.isSymlink(`ki/backpacks/${canonical}`)).toBe(false)
+      expect(await box.data.isSymlink(`ki/backpacks/${retiredCanonical}`)).toBe(true)
     })
   })
 })

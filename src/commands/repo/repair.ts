@@ -6,9 +6,12 @@ import type { KiContext } from '../../context.ts'
 import {
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
-  readRepositoryDeclaration
+  readRepositoryDeclaration,
+  renameRetiredRepositoryKey,
+  retiredRepositoryKeyNotice
 } from '../../core/configuration/index.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
+import { withdrawNotice } from '../../core/notices.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import {
   externalStoreRoles,
@@ -59,6 +62,17 @@ export const createRepairCommand = (
       for (const repository of repositories) {
         const entries: string[] = []
         try {
+          // For one release a declaration may still name its backpacks under the retired key.
+          const renamed = await renameRetiredRepositoryKey(repository.declaration, dryRun)
+          if (renamed === 'renamed') {
+            entries.push(
+              `${dryRun ? 'would rename' : 'rename'} [repo] harnesses to backpacks in ${repository.declaration}`
+            )
+            if (!dryRun) withdrawNotice(retiredRepositoryKeyNotice(repository.declaration))
+          } else if (renamed === 'manual')
+            entries.push(
+              `${warnMark} Declaration: rename [repo] harnesses to backpacks in ${repository.declaration} by hand`
+            )
           const declaration = await readRepositoryDeclaration(repository.declaration)
           const identity = declaredRepositoryIdentity(declaration)
           const roles = externalStoreRoles(declaredKnowledgeBaseStoreRoles(declaration))

@@ -116,7 +116,8 @@ const readManifest = async (path: string): Promise<ManagedArtifact> => {
   const { schema, id, operation, state, paths, lock } = parsed
   if (schema !== 1) throw new Error('schema 1 is required')
   if (typeof id !== 'string' || !artifactIdentifier.test(id)) throw new Error('id must be a UUID')
-  if (operation !== 'backpack-install') throw new Error('operation is not supported')
+  // ki 0.16 recorded installs as `harness-install`; read them for one release.
+  if (operation !== 'backpack-install' && operation !== 'harness-install') throw new Error('operation is not supported')
   if (!validState(state)) throw new Error('state is invalid')
   if (
     !Array.isArray(paths) ||
@@ -125,14 +126,17 @@ const readManifest = async (path: string): Promise<ManagedArtifact> => {
   )
     throw new Error('paths must contain one absolute path')
   if (typeof lock !== 'string' || !isAbsolute(lock)) throw new Error('lock must be an absolute path')
-  return { id, operation, state, paths: paths as [string], lock }
+  return { id, operation: 'backpack-install', state, paths: paths as [string], lock }
 }
 
 const installPath = async (dataDirectory: string, path: string): Promise<boolean> => {
   const backpacks = await realpath(resolve(dataDirectory, 'backpacks')).catch(() => undefined)
   if (!backpacks) return false
-  if (!contained(backpacks, path)) return false
-  const relativePath = relative(backpacks, path).split('/')
+  // ki 0.16 recorded its staging under `harnesses/`, which the data migration moved to `backpacks/`.
+  const retired = join(dirname(backpacks), 'harnesses')
+  const resolved = contained(retired, path) ? join(backpacks, relative(retired, path)) : path
+  if (!contained(backpacks, resolved)) return false
+  const relativePath = relative(backpacks, resolved).split('/')
   if (relativePath.length !== 2) return false
   const [owner, name] = relativePath as [string, string]
   return backpackOwner.test(owner) && name.startsWith('.install-')

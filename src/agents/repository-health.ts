@@ -1,4 +1,4 @@
-import { lstat, readdir, realpath } from 'node:fs/promises'
+import { lstat, readdir, readlink, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
 import { discoverInstalledBackpacks } from '../core/backpack/index.ts'
 import {
@@ -10,6 +10,7 @@ import { configuredAgents } from './configuration.ts'
 import type { InstalledAgent } from './internal.ts'
 import { compatibleWithSkill, repositorySupportedRuntimes, runtimeForAgent } from './runtimes.ts'
 import { agentSkillDirectory } from './shared/index.ts'
+import { currentLinkText } from './skills.ts'
 
 type Health = 'healthy' | 'repairable' | 'unrepairable'
 
@@ -61,7 +62,9 @@ const inspectProjection = async (
   if (!state.isSymbolicLink()) return { agent, skill, expected, state: 'foreign', path }
   const actual = await realpath(path).catch(() => undefined)
   if (!actual) return { agent, skill, expected, state: 'dangling', path }
-  return { agent, skill, expected, state: actual === expected ? 'linked' : 'stale', path }
+  // A link still spelt through the retired harness layout resolves, but is stale until re-pointed.
+  const current = actual === expected && currentLinkText(await readlink(path), expected)
+  return { agent, skill, expected, state: current ? 'linked' : 'stale', path }
 }
 
 // A retired or renamed skill leaves its old link behind, outside every declared

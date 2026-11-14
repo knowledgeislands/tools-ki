@@ -3,7 +3,8 @@ import { dirname, join, relative } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
 import { RUBRIC_MODULE_PATH } from '../rubric/index.ts'
-import { backpackIdentifier, installedSlotName, retiredBackpackIdentifier } from './identity.ts'
+import { isRetiredSlotAlias } from '../storage/backpack-migration.ts'
+import { backpackIdentifier, retiredBackpackIdentifier } from './identity.ts'
 
 const backpackIdentifierPattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const backpackComponent = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
@@ -270,7 +271,7 @@ export const readInstalledBackpack = async (dataDirectory: string, identifier: s
   /* v8 ignore next */
   if (!contained(backpacks, ownerDirectory))
     throw new KiError(`installed backpack ${identifier} escapes the backpacks directory`, 1)
-  const destination = join(ownerDirectory, installedSlotName(ownerDirectory, `${owner}/${name}`))
+  const destination = join(ownerDirectory, backpackIdentifier(`${owner}/${name}`).slice(owner.length + 1))
   const state = await lstat(destination).catch(() => undefined)
   if (!state?.isDirectory() && !state?.isSymbolicLink())
     throw new KiError(`installed backpack ${identifier} must be a directory`, 1)
@@ -340,6 +341,8 @@ export const discoverInstalledBackpacks = async (
       // An orphan is reported by `ki cleanup` and recovered by `ki repair`; it must
       // not fail the read paths that merely wanted to list what is installed.
       if (installOrphan(owner.name, name.name, join(physicalBackpacks, owner.name, name.name))) continue
+      // The data migration leaves a retired slot name linking to the slot it moved, for one release.
+      if (name.isSymbolicLink() && (await isRetiredSlotAlias(join(physicalBackpacks, owner.name), name.name))) continue
       if ((!name.isDirectory() && !name.isSymbolicLink()) || !backpackComponent.test(name.name)) {
         throw new KiError(
           `installed backpack ${owner.name} contains an unsafe name entry ${join(physicalBackpacks, owner.name, name.name)}`,

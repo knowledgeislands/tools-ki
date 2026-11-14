@@ -9,6 +9,7 @@ import {
   REPOSITORY_DECLARATION_FILE,
   readRepositoryDeclaration,
   removeTomlTable,
+  renameTomlTable,
   setTomlString,
   setTomlStringArray
 } from '../core/configuration/index.ts'
@@ -29,7 +30,7 @@ import {
 } from './internal.ts'
 
 /** Top-level keys the bootstrap writer renders; every other table belongs to another reader. */
-const OWNED_KEYS = ['schema', 'agents', 'backpacks', 'skills', 'repositories']
+const OWNED_KEYS = ['schema', 'agents', 'backpacks', 'harnesses', 'skills', 'repositories']
 /** Top-level tables other `ki` readers own, such as the territory ranking and the MCP inventory. */
 const DELEGATED_KEYS = ['territories', 'mcp']
 /** Host-local tables kept verbatim and read only as one-time migration input to the state directory. */
@@ -53,7 +54,7 @@ const preservedTables = (current: Record<string, unknown>): Record<string, unkno
  * and authentication setting the backpack registry reads, neither dropping nor repairing them.
  */
 const preservedReleases = (current: Record<string, unknown>): readonly unknown[] => {
-  const backpacks = current['backpacks']
+  const backpacks = current['backpacks'] ?? current['harnesses']
   return isRecord(backpacks) && Array.isArray(backpacks['releases']) ? backpacks['releases'] : []
 }
 
@@ -125,6 +126,17 @@ const unowned = (configuration: Record<string, unknown>): Record<string, unknown
   repositories: without(configuration['repositories'], 'paths')
 })
 
+/** Whether a configuration still spells `[backpacks]` as the retired `[harnesses]` table, and only that way. */
+const retiredBackpacksTable = (configuration: Record<string, unknown>): boolean =>
+  configuration['harnesses'] !== undefined && configuration['backpacks'] === undefined
+
+/** A configuration read with its retired `[harnesses]` table as `[backpacks]`. */
+const withBackpacksTable = (configuration: Record<string, unknown>): Record<string, unknown> => {
+  if (!retiredBackpacksTable(configuration)) return configuration
+  const { harnesses, ...rest } = configuration
+  return { ...rest, backpacks: harnesses }
+}
+
 /** Whether a skill table holds only its backpack, under the current key rather than the retired `harness` key. */
 const declaresBackpack = (skill: unknown, backpack: string): boolean =>
   isRecord(skill) && skill['backpack'] === backpack && Object.keys(skill).length === 1
@@ -156,8 +168,14 @@ const editConfiguration = (before: string, desired: OwnedValues): string | undef
   } catch {
     return undefined
   }
-  if (holds(current, desired)) return before
+  // A retired `[harnesses]` table that already holds every value is left for its owner to rename;
+  // any other write renames it first, so ki writes only `[backpacks]`.
+  if (holds(withBackpacksTable(current), desired)) return before
   let text = before
+  if (retiredBackpacksTable(current)) {
+    text = renameTomlTable(text, 'harnesses', 'backpacks')
+    current = parsedConfiguration(text)
+  }
   if (!sameSet(table(current, 'agents')['ids'], desired.agents))
     text = setTomlStringArray(text, ['agents'], 'ids', desired.agents)
   if (!sameSet(table(current, 'backpacks')['ids'], desired.backpacks))
@@ -287,6 +305,7 @@ export const inspectUserConfiguration = async (
     schema?: unknown
     agents?: unknown
     backpacks?: unknown
+    harnesses?: unknown
     skills?: unknown
     locals?: unknown
     repositories?: unknown
@@ -325,7 +344,16 @@ export const inspectUserConfiguration = async (
     }
     skills.push(`${backpackIdentifier(provider)}:${name}`)
   }
-  const backpackSection = inspectSection(configuration.backpacks, 'backpacks', errors) as BackpackSection
+  if (configuration.harnesses !== undefined) {
+    if (configuration.backpacks !== undefined)
+      errors.push('configuration must declare [backpacks] only; remove its retired [harnesses] table')
+    else warnings.push('configuration uses the retired [harnesses] table; rename it to [backpacks]')
+  }
+  const backpackSection = inspectSection(
+    configuration.backpacks ?? configuration.harnesses,
+    'backpacks',
+    errors
+  ) as BackpackSection
   for (const key of Object.keys(backpackSection)) {
     if (key !== 'ids' && key !== 'releases') warnings.push(`backpacks has unrecognised key ${key}`)
   }

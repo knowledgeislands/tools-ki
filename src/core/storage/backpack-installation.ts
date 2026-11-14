@@ -16,6 +16,7 @@ import {
 import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
+import { removeRetiredSlotAlias } from './backpack-migration.ts'
 import {
   backpackDirectory,
   backpackIdentifierPattern,
@@ -210,6 +211,7 @@ export const uninstallBackpack = async (dataDirectory: string, identifier: strin
   try {
     await inspectInstalledBackpackRoot(removal, identifier)
     await rm(removal, { recursive: true, force: true })
+    await removeRetiredSlotAlias(ownerDirectory, basename(destination))
     return
     /* v8 ignore start -- Recovery needs a filesystem failure or replacement after the successful rename; no single CLI input can cause it. */
   } catch (error) {

@@ -4,6 +4,7 @@ import { parse } from 'smol-toml'
 import { backpackIdentifier } from '../backpack/identity.ts'
 import { type SupportedRuntime, supportedRuntimes } from '../backpack/inspection.ts'
 import { KiError } from '../errors.ts'
+import { notice } from '../notices.ts'
 import { canonicalRepositoryIdentity } from '../storage/local-registry.ts'
 
 export const REPOSITORY_DECLARATION_FILE = '.ki.toml'
@@ -126,11 +127,25 @@ const skillName = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[a-z0-9](?:[a-z0-9-]*[a-z0-9
 
 const shapeError = (path: string, detail: string): KiError => new KiError(`${basename(path)} ${detail}`, 1)
 
+/** The `[repo]` key naming a repository's backpacks; it was `harnesses` until the rename of 14 November 2026. */
+const REPOSITORY_BACKPACKS_KEY = 'backpacks'
+const RETIRED_REPOSITORY_BACKPACKS_KEY = 'harnesses'
+
+/** The warning for a declaration that still names its backpacks under the retired `[repo] harnesses` key. */
+export const retiredRepositoryKeyNotice = (path: string): string =>
+  `${path} uses the retired [repo] key harnesses; rename it to backpacks, or run ki repo repair`
+
 const declaredBackpacks = (parsed: Record<string, unknown>, path: string): readonly string[] => {
   const repository = parsed['repo']
-  if (!isRecord(repository) || !Array.isArray(repository['backpacks']))
-    throw shapeError(path, 'must declare [repo] with a backpacks array')
-  const backpacks = repository['backpacks']
+  if (!isRecord(repository)) throw shapeError(path, 'must declare [repo] with a backpacks array')
+  const current = repository[REPOSITORY_BACKPACKS_KEY]
+  const retired = repository[RETIRED_REPOSITORY_BACKPACKS_KEY]
+  if (current !== undefined && retired !== undefined)
+    throw shapeError(path, '[repo] must declare backpacks only; remove its retired harnesses key')
+  // For one release a declaration may still name its backpacks under the retired key.
+  if (retired !== undefined) notice(retiredRepositoryKeyNotice(path))
+  const backpacks = current ?? retired
+  if (!Array.isArray(backpacks)) throw shapeError(path, 'must declare [repo] with a backpacks array')
   if (
     !backpacks.length ||
     backpacks.some((backpack) => typeof backpack !== 'string' || !backpackIdentifierPattern.test(backpack))

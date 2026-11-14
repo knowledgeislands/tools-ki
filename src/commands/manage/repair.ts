@@ -1,4 +1,4 @@
-import { lstat, realpath } from 'node:fs/promises'
+import { lstat, readlink, realpath } from 'node:fs/promises'
 import { Command } from 'commander'
 import {
   agentSkillDirectory,
@@ -6,7 +6,7 @@ import {
   configuredAgents,
   repairLegacyUserConfiguration
 } from '../../agents/index.ts'
-import { linkManagedSkill } from '../../agents/skills.ts'
+import { currentLinkText, linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
 import { canonicalBackpackIdentifier, discoverInstalledBackpacks } from '../../core/backpack/index.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
@@ -19,7 +19,9 @@ const linkedTo = async (path: string, expected: string): Promise<boolean> => {
   const entry = await lstat(path).catch(() => undefined)
   if (!entry) return false
   if (!entry.isSymbolicLink()) throw new Error('skill is not a symbolic link')
-  return (await realpath(path).catch(() => undefined)) === expected
+  if ((await realpath(path).catch(() => undefined)) !== expected) return false
+  // A link still spelt through the retired harness layout resolves, but is re-pointed.
+  return currentLinkText(await readlink(path), expected)
 }
 
 const repairPort = (context: KiContext): ManageRepairPort => ({

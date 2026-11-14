@@ -169,3 +169,28 @@ export const removeTomlTable = (text: string, table: readonly string[]): string 
     text = splice(document.lines, start, end - start + 1)
   }
 }
+
+// A bare or quoted key at the start of a statement or table header, before its `.`, `=` or `]`.
+const leadingKey = (prefix: string, key: string): RegExp => new RegExp(`^(${prefix})(["']?)${key}\\2(?=\\s*[.=\\]])`)
+
+/** Renames `from` to `to` in each `[table]` statement keyed by it, keeping the rest of the statement. */
+export const renameTomlKey = (text: string, table: readonly string[], from: string, to: string): string => {
+  const document = layout(text)
+  const lines = [...document.lines]
+  for (const statement of document.statements.filter(
+    (candidate) => samePath(candidate.table, table) && candidate.key === from
+  ))
+    lines[statement.start] = (lines[statement.start] as string).replace(leadingKey('\\s*', from), `$1$2${to}$2`)
+  return lines.join('\n')
+}
+
+/** Renames top-level table `from` to `to`: every header under it, and a root statement keyed by it. */
+export const renameTomlTable = (text: string, from: string, to: string): string => {
+  const document = layout(text)
+  const lines = [...document.lines]
+  for (const header of document.headers.filter((candidate) => candidate.path[0] === from))
+    lines[header.line] = (lines[header.line] as string).replace(leadingKey('\\s*\\[\\[?\\s*', from), `$1$2${to}$2`)
+  for (const statement of document.statements.filter((candidate) => !candidate.table.length && candidate.key === from))
+    lines[statement.start] = (lines[statement.start] as string).replace(leadingKey('\\s*', from), `$1$2${to}$2`)
+  return lines.join('\n')
+}

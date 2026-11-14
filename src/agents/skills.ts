@@ -13,6 +13,17 @@ import { type InstalledAgent, requiredPhysicalDirectory } from './internal.ts'
 import { compatibleWithSkill, repositorySupportedRuntimes, runtimeForAgent } from './runtimes.ts'
 import { agentSkillDirectory } from './shared/index.ts'
 
+/**
+ * Whether a link's text still passes through the retired harness layout: the `harnesses` data
+ * folder or a `*-agentic-harness` slot, which the data migration left linking to their backpack
+ * names for one release. Such a link resolves, but repair re-points it before the aliases go.
+ */
+export const retiredLinkText = (text: string): boolean =>
+  text.split('/').some((segment) => segment === 'harnesses' || segment.endsWith('-agentic-harness'))
+
+/** Whether a resolving link to `expected` is current: spelt as `expected`, or through no retired path. */
+export const currentLinkText = (text: string, expected: string): boolean => text === expected || !retiredLinkText(text)
+
 // One scope at which a KI-managed skill is linked for an agent: the user's home, or a
 // repository root. Carries exactly the data `agentSkillDirectory` needs to resolve the
 // target directory, so user and repository linking share one code path.

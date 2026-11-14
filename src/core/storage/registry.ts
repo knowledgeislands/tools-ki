@@ -3,7 +3,8 @@ import { join } from 'node:path'
 import { parse } from 'smol-toml'
 import { backpackIdentifier, backpackSpellings } from '../backpack/identity.ts'
 import { canonicalBackpackIdentifier } from '../backpack/inspection.ts'
-import { setTomlStringArray } from '../configuration/toml-edit.ts'
+import { configuredBackpacksTable } from '../configuration/retired-keys.ts'
+import { renameTomlTable, setTomlStringArray } from '../configuration/toml-edit.ts'
 import { KiError } from '../errors.ts'
 import { backpackIdentifierPattern } from './backpack-paths.ts'
 
@@ -28,7 +29,7 @@ export const canonicalBackpackRelease: BackpackRelease = {
   sha256: 'abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404'
 }
 
-type RegistryValue = Record<string, unknown> & { readonly backpacks?: unknown }
+type RegistryValue = Record<string, unknown>
 
 const isRecord = (value: unknown): value is RegistryValue =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -96,10 +97,10 @@ export const readBackpackRegistry = async (configurationDirectory: string): Prom
   // A successfully parsed TOML document is always a table; this only guards a future parser change.
   /* v8 ignore next */
   if (!isRecord(parsed)) throw new KiError('ki configuration must be a TOML table', 1)
-  const configuration = parsed as Record<string, unknown> & { backpacks?: unknown }
-  if (configuration.backpacks === undefined) return [canonicalBackpackRelease]
-  if (!isRecord(configuration.backpacks)) throw new KiError('ki configuration backpacks must be a TOML table', 1)
-  const backpacks = configuration.backpacks as Record<string, unknown> & { ids?: unknown; releases?: unknown }
+  const table = configuredBackpacksTable(parsed)
+  if (table === undefined) return [canonicalBackpackRelease]
+  if (!isRecord(table)) throw new KiError('ki configuration backpacks must be a TOML table', 1)
+  const backpacks = table as Record<string, unknown> & { ids?: unknown; releases?: unknown }
   if (backpacks.releases === undefined) {
     if (
       !Array.isArray(backpacks.ids) ||
@@ -149,9 +150,10 @@ const configuredBackpackIds = async (configurationDirectory: string): Promise<re
   // A successfully parsed TOML document is always a table; this only guards a future parser change.
   /* v8 ignore next */
   if (!isRecord(parsed)) throw new KiError('ki configuration must be a TOML table', 1)
-  if (parsed.backpacks === undefined) return []
-  if (!isRecord(parsed.backpacks)) throw new KiError('ki configuration backpacks must be a TOML table', 1)
-  const ids = (parsed.backpacks as { readonly ids?: unknown }).ids
+  const table = configuredBackpacksTable(parsed)
+  if (table === undefined) return []
+  if (!isRecord(table)) throw new KiError('ki configuration backpacks must be a TOML table', 1)
+  const ids = (table as { readonly ids?: unknown }).ids
   if (ids === undefined) return []
   if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string' || !backpackIdentifierPattern.test(id))) {
     throw new KiError('ki configuration backpacks.ids must be an array of backpack identifiers', 1)
@@ -176,10 +178,8 @@ export const recordInstalledBackpack = async (
   if (installed) next.add(backpack)
   else next.delete(backpack)
   const path = join(configurationDirectory, 'config.toml')
-  // Edit only the ids statement, so the rest of a file another tool manages keeps its layout.
-  await writeFile(
-    path,
-    setTomlStringArray(await readFile(path, 'utf8'), ['backpacks'], 'ids', [...next].sort()),
-    'utf8'
-  )
+  // Edit only the ids statement, so the rest of a file another tool manages keeps its layout; a
+  // retired `[harnesses]` table is renamed `[backpacks]` first, so ki writes only the current name.
+  const text = renameTomlTable(await readFile(path, 'utf8'), 'harnesses', 'backpacks')
+  await writeFile(path, setTomlStringArray(text, ['backpacks'], 'ids', [...next].sort()), 'utf8')
 }

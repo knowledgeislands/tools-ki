@@ -1,6 +1,6 @@
 import { lstat, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { installedSlotName } from '../backpack/identity.ts'
+import { backpackIdentifier } from '../backpack/identity.ts'
 import { KiError } from '../errors.ts'
 
 export const backpackIdentifierPattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
@@ -23,9 +23,6 @@ export const ensureDirectory = async (path: string, description: string): Promis
   await physicalDirectory(path, description)
 }
 
-/** An installed backpack's slot, found under the retired `*-agentic-harness` spelling while one is still on disk. */
-export const backpackDirectory = (dataDirectory: string, identifier: string): string => {
-  const owner = identifier.slice(0, identifier.indexOf('/'))
-  const ownerDirectory = join(dataDirectory, 'backpacks', owner)
-  return join(ownerDirectory, installedSlotName(ownerDirectory, identifier))
-}
+/** An installed backpack's slot, always under its backpack spelling: the data migration moves a retired slot there. */
+export const backpackDirectory = (dataDirectory: string, identifier: string): string =>
+  join(dataDirectory, 'backpacks', backpackIdentifier(identifier))
