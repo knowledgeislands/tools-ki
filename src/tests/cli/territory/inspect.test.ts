@@ -6,7 +6,7 @@ import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 
 const repository = (identity: string, territory = 'capital = "https://github.com/example/home"\n'): string =>
-  `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${territory}`
+  `[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${territory}`
 
 const home = (_id: string, members: readonly string[]): string =>
   `capital = "https://github.com/example/home"\nterritory_name = "Shared"\nterritory_prefix = "team"\nterritory_members = ${JSON.stringify(['https://github.com/example/home', ...members].sort())}\n`

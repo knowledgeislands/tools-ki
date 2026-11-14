@@ -42,11 +42,11 @@ export default {
 }
 `
 
-const projectLinkedHarness = async (box: Awaited<ReturnType<typeof sandbox>>): Promise<void> => {
-  await box.setupExampleHarness()
+const projectLinkedBackpack = async (box: Awaited<ReturnType<typeof sandbox>>): Promise<void> => {
+  await box.setupExampleBackpack()
   await box.project.write(
     '.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n\n[skills.ki-repo-harness]\nprefix = "ki"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n\n[skills.ki-repo-harness]\nprefix = "ki"\n'
   )
   await box.project.write('skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
   await box.project.write('skills/ki-example/scripts/rubric/items/index.ts', publicationRubric)
@@ -56,20 +56,20 @@ const projectLinkedHarness = async (box: Awaited<ReturnType<typeof sandbox>>): P
     `export default {
       contract: 1,
       name: 'ki-repo-harness',
-      concern: 'Harness fixture',
-      createSession: async () => ({ subjects: [{ families: ['HARNESS'], context: () => ({}) }], proposal: () => ({ writes: [] }) }),
+      concern: 'Backpack fixture',
+      createSession: async () => ({ subjects: [{ families: ['BACKPACK'], context: () => ({}) }], proposal: () => ({ writes: [] }) }),
       families: [{
-        code: 'HARNESS', title: 'Harness', description: 'Harness fixture.', standard: 'standard.md', selectContext: (context) => context,
+        code: 'BACKPACK', title: 'Backpack', description: 'Backpack fixture.', standard: 'standard.md', selectContext: (context) => context,
         items: [{
-          code: 'HARNESS-1', title: 'Harness fixture', description: 'The Harness fixture is present.', sources: ['standard.md'],
-          mechanical: { level: 'WARN', remediation: { class: 'diagnostic', guidance: 'Restore the fixture.' }, audit: { phase: 'PRIMARY', run: () => [{ status: 'PASS', message: 'Harness fixture present.', subject: '.ki.toml' }] } }
+          code: 'BACKPACK-1', title: 'Backpack fixture', description: 'The backpack fixture is present.', sources: ['standard.md'],
+          mechanical: { level: 'WARN', remediation: { class: 'diagnostic', guidance: 'Restore the fixture.' }, audit: { phase: 'PRIMARY', run: () => [{ status: 'PASS', message: 'Backpack fixture present.', subject: '.ki.toml' }] } }
         }]
       }]
     }
     `
   )
   await Promise.all(['subagents', 'hooks'].map((payload) => box.project.mkdir(payload)))
-  const installed = join(box.data.path, 'ki/harnesses/example/harness')
+  const installed = join(box.data.path, 'ki/backpacks/example/backpack')
   await rm(installed, { recursive: true, force: true })
   await symlink(box.project.path, installed)
 }
@@ -104,7 +104,7 @@ describe('[ki generated rubric publication]', () => {
     ['stale', 'stale publication\n']
   ])('reports %s publication evidence through the rubric context', async (_, existing) => {
     const box = await sandbox()
-    await projectLinkedHarness(box)
+    await projectLinkedBackpack(box)
     if (existing !== undefined) await box.project.write('skills/ki-example/references/rubric.md', existing)
 
     const result = await box.run('ki repo audit --reporter-levels all')
@@ -116,7 +116,7 @@ describe('[ki generated rubric publication]', () => {
 
   test('keeps dry-run publication proposals in memory, publishes incrementally, and is idempotent', async () => {
     const box = await sandbox()
-    await projectLinkedHarness(box)
+    await projectLinkedBackpack(box)
     const target = 'skills/ki-example/references/rubric.md'
 
     const dryRun = await box.run('ki repo conform --dry-run')
@@ -141,7 +141,7 @@ describe('[ki generated rubric publication]', () => {
 
   test('refuses an unsafe publication target before a repository conform can publish', async () => {
     const box = await sandbox()
-    await projectLinkedHarness(box)
+    await projectLinkedBackpack(box)
     await box.root.write('outside-rubric.md', 'outside\n')
     await box.project.mkdir('skills/ki-example/references')
     await symlink(
@@ -153,15 +153,15 @@ describe('[ki generated rubric publication]', () => {
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain(
-      'installed harness payload skills/ki-example/references/rubric.md must not be a symlink'
+      'installed backpack payload skills/ki-example/references/rubric.md must not be a symlink'
     )
     expect(await box.root.read('outside-rubric.md')).toBe('outside\n')
   })
 
   test('refuses a publication request outside the repository publication scope', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness({ rubric: publicationRubric })
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+    await box.setupExampleBackpack({ rubric: publicationRubric })
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
 
     const result = await box.run('ki repo conform')
 
@@ -171,8 +171,8 @@ describe('[ki generated rubric publication]', () => {
 
   test('refuses a publication request during audit', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness({ rubric: auditProposalRubric })
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+    await box.setupExampleBackpack({ rubric: auditProposalRubric })
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
 
     const audit = await box.run('ki repo audit')
     const conform = await box.run('ki repo conform')
@@ -185,7 +185,7 @@ describe('[ki generated rubric publication]', () => {
 
   test('refuses a directory where a generated publication file belongs', async () => {
     const box = await sandbox()
-    await projectLinkedHarness(box)
+    await projectLinkedBackpack(box)
     await box.project.mkdir('skills/ki-example/references/rubric.md')
 
     const result = await box.run('ki repo audit')
@@ -196,7 +196,7 @@ describe('[ki generated rubric publication]', () => {
 
   test('propagates an unexpected publication metadata read failure', async () => {
     const box = await sandbox()
-    await projectLinkedHarness(box)
+    await projectLinkedBackpack(box)
     await box.project.write('skills/ki-example/references/rubric.md', 'stale publication\n')
     const suffix = '/skills/ki-example/references/rubric.md'
     const failingLstat = (async (path, options) => {
@@ -210,7 +210,7 @@ describe('[ki generated rubric publication]', () => {
 
   test('uses byte-identical publication bytes for standalone rendering and repository conform', async () => {
     const box = await sandbox()
-    await projectLinkedHarness(box)
+    await projectLinkedBackpack(box)
     const target = 'skills/ki-example/references/rubric.md'
 
     // `--write` publishes only inside the caller's own working tree, so the project that backs the

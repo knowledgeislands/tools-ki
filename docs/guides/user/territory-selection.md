@@ -14,7 +14,7 @@ Supported repository commands use the same selectors, for example `ki repo -t kn
 
 ## Open the Principals
 
-`--principals` selects every registered territory Capital and no other repository. The system Capital comes first: the one whose territory includes the canonical KI Harness, `knowledgeislands/ki-agent-backpack`, which in this estate is Knowledge Islands Principal. The other Capitals follow alphabetically by territory name, then by handle, unless you [rank your territories](#rank-your-territories). A Capital whose checkout is unavailable cannot be recognised as one and is left out.
+`--principals` selects every registered territory Capital and no other repository. The system Capital comes first: the one whose territory includes the canonical KI Backpack, `knowledgeislands/ki-agent-backpack`, which in this estate is Knowledge Islands Principal. The other Capitals follow alphabetically by territory name, then by handle, unless you [rank your territories](#rank-your-territories). A Capital whose checkout is unavailable cannot be recognised as one and is left out.
 
 Use `ki territory open --principals --target zed` to open them in that order. Zed adds each opened folder to the top of its project list, so `ki` opens them in reverse and the list reads in principals order; VS Code and Delta receive the order directly. Filters narrow the Capitals as usual, for example `ki territory open --principals -f ki- -f hnr- --target vscode`.
 

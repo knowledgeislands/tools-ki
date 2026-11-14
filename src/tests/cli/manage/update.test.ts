@@ -1,6 +1,6 @@
 import { lstat, realpath, symlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
-import { makeHarnessArchive } from '../_archive_helper.ts'
+import { makeBackpackArchive } from '../_archive_helper.ts'
 import { sandbox } from '../_cli_helper.ts'
 
 const skill = '---\nname: ki-example\nki-depends-on: []\n---\n'
@@ -11,14 +11,14 @@ const configuration = (sha256: string): string =>
 [agents]
 ids = []
 
-[harnesses]
+[backpacks]
 ids = []
-releases = [{ id = "example/harness", url = "https://releases.example.test/harness.tgz", sha256 = "${sha256}" }]
+releases = [{ id = "example/backpack", url = "https://releases.example.test/backpack.tgz", sha256 = "${sha256}" }]
 
 [skills]
 `
 
-const archive = () => makeHarnessArchive({ 'source/skills/example/SKILL.md': skill })
+const archive = () => makeBackpackArchive({ 'source/skills/example/SKILL.md': skill })
 
 const receipt = (box: Awaited<ReturnType<typeof sandbox>>, installer: string, manual: string): string =>
   `schema = 1
@@ -30,7 +30,7 @@ installer = "${installer}"
 `
 
 describe('[ki update and ki repo upgrade]', () => {
-  test('reports unavailable external executable ownership while leaving an empty harness inventory unchanged', async () => {
+  test('reports unavailable external executable ownership while leaving an empty backpack inventory unchanged', async () => {
     const box = await sandbox()
 
     const result = await box.run('ki update')
@@ -38,7 +38,7 @@ describe('[ki update and ki repo upgrade]', () => {
     expect(result).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI UPDATE\n├─ CLI\n│  ╰─ CLI executable: unavailable (CLI executable is not installer-managed; update it with its distribution manager)\n├─ harnesses (0)\n│  ╰─ none\n╰─ summary: HARNESS_RESULTS=0\n'
+        '╭─ KI UPDATE\n├─ CLI\n│  ╰─ CLI executable: unavailable (CLI executable is not installer-managed; update it with its distribution manager)\n├─ backpacks (0)\n│  ╰─ none\n╰─ summary: BACKPACK_RESULTS=0\n'
     })
   })
 
@@ -60,7 +60,7 @@ describe('[ki update and ki repo upgrade]', () => {
     })
   })
 
-  test('updates an installer-managed executable before refreshing an empty harness inventory', async () => {
+  test('updates an installer-managed executable before refreshing an empty backpack inventory', async () => {
     const box = await sandbox()
     await box.root.write('installer.sh', '')
     await box.root.write('ki.1', '')
@@ -75,7 +75,7 @@ describe('[ki update and ki repo upgrade]', () => {
     expect(updated).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI UPDATE\n├─ CLI\n│  ╰─ CLI executable: updated with the verified installer\n├─ harnesses (0)\n│  ╰─ none\n╰─ summary: HARNESS_RESULTS=0\n'
+        '╭─ KI UPDATE\n├─ CLI\n│  ╰─ CLI executable: updated with the verified installer\n├─ backpacks (0)\n│  ╰─ none\n╰─ summary: BACKPACK_RESULTS=0\n'
     })
   })
 
@@ -152,7 +152,7 @@ describe('[ki update and ki repo upgrade]', () => {
     expect(directoryResult).toEqual({ exitCode: 1, output: 'ki: error: installer receipt must be a regular file\n' })
   })
 
-  test('reports failed installer execution without mutating harness state', async () => {
+  test('reports failed installer execution without mutating backpack state', async () => {
     const box = await sandbox()
     await box.root.write('installer.sh', '')
     await box.root.write('ki.1', '')
@@ -211,61 +211,61 @@ describe('[ki update and ki repo upgrade]', () => {
     })
   })
 
-  test('refreshes configured installed harnesses while preserving their capability inventory', async () => {
+  test('refreshes configured installed backpacks while preserving their capability inventory', async () => {
     const box = await sandbox()
     const payload = archive()
-    await box.setupExampleHarness()
+    await box.setupExampleBackpack()
     await box.config.write('ki/config.toml', configuration(payload.sha256))
     box.setFetcher(async () => new Response(payload.payload))
 
     const updated = await box.run('ki update')
 
-    expect(updated.output).toContain(`example/harness: refreshed archive ${payload.sha256}`)
-    expect(await box.data.read('ki/harnesses/example/harness/skills/example/SKILL.md')).toBe(skill)
+    expect(updated.output).toContain(`example/backpack: refreshed archive ${payload.sha256}`)
+    expect(await box.data.read('ki/backpacks/example/backpack/skills/example/SKILL.md')).toBe(skill)
   })
 
-  test('reports unconfigured harnesses without mutating them', async () => {
+  test('reports unconfigured backpacks without mutating them', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
+    await box.setupExampleBackpack()
+    await box.data.write('ki/backpacks/other/backpack/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
     await box.data.write(
-      'ki/harnesses/other/harness/skills/other-skill/SKILL.md',
+      'ki/backpacks/other/backpack/skills/other-skill/SKILL.md',
       '---\nname: other-skill\nki-depends-on: []\n---\n'
     )
 
     const result = await box.run('ki update')
 
-    expect(result.output).toContain('example/harness: unavailable (no configured immutable release)')
-    expect(result.output).toContain('other/harness: unavailable (no configured immutable release)')
-    expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(skill)
+    expect(result.output).toContain('example/backpack: unavailable (no configured immutable release)')
+    expect(result.output).toContain('other/backpack: unavailable (no configured immutable release)')
+    expect(await box.data.read('ki/backpacks/example/backpack/skills/ki-example/SKILL.md')).toBe(skill)
   })
 
   test('upgrades the uniquely resolved providers declared by the current repository', async () => {
     const box = await sandbox()
     const payload = archive()
-    await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
+    await box.setupExampleBackpack()
+    await box.data.write('ki/backpacks/other/backpack/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
     await box.data.write(
-      'ki/harnesses/other/harness/skills/other-skill/SKILL.md',
+      'ki/backpacks/other/backpack/skills/other-skill/SKILL.md',
       skill.replace('ki-example', 'other-skill')
     )
     await box.config.write('ki/config.toml', configuration(payload.sha256))
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["example/harness", "other/harness"]\n\n[skills.ki-example]\n[skills.other-skill]\n'
+      '[repo]\nbackpacks = ["example/backpack", "other/backpack"]\n\n[skills.ki-example]\n[skills.other-skill]\n'
     )
     box.setFetcher(async () => new Response(payload.payload))
 
     const upgraded = await box.run('ki repo upgrade')
 
-    expect(upgraded.output).toContain(`example/harness: refreshed archive ${payload.sha256}`)
-    expect(upgraded.output).toContain('other/harness: unavailable (no configured immutable release)')
-    expect(await box.data.read('ki/harnesses/example/harness/skills/example/SKILL.md')).toBe(skill)
+    expect(upgraded.output).toContain(`example/backpack: refreshed archive ${payload.sha256}`)
+    expect(upgraded.output).toContain('other/backpack: unavailable (no configured immutable release)')
+    expect(await box.data.read('ki/backpacks/example/backpack/skills/example/SKILL.md')).toBe(skill)
   })
 
   test('reports a repository with no declared capabilities as an update no-op', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n')
 
     const result = await box.run('ki repo upgrade')
     const project = await realpath(box.project.path)
@@ -278,8 +278,8 @@ describe('[ki update and ki repo upgrade]', () => {
 
   test('reports every explicitly selected repository during an upgrade', async () => {
     const box = await sandbox()
-    await box.root.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
-    await box.root.write('second/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.root.write('first/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n')
+    await box.root.write('second/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n')
 
     const result = await box.run([
       'ki',
@@ -303,13 +303,13 @@ describe('[ki update and ki repo upgrade]', () => {
     const missingRepository = await outside.run('ki repo upgrade')
 
     const box = await sandbox()
-    await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
+    await box.setupExampleBackpack()
+    await box.data.write('ki/backpacks/other/backpack/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
     await box.data.write(
-      'ki/harnesses/other/harness/skills/other-skill/SKILL.md',
+      'ki/backpacks/other/backpack/skills/other-skill/SKILL.md',
       skill.replace('ki-example', 'other-skill')
     )
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
     const declared = await box.run('ki repo upgrade')
 
     expect(missingRepository).toEqual({
@@ -317,26 +317,26 @@ describe('[ki update and ki repo upgrade]', () => {
       output:
         'ki: error: no KI repository found from the current working directory\nnext: run from inside a KI repository, or pass --repo <checkout>\n'
     })
-    expect(declared.output).toContain('example/harness: unavailable (no configured immutable release)')
+    expect(declared.output).toContain('example/backpack: unavailable (no configured immutable release)')
   })
 
   test('keeps a provider intact when its upgrade archive drops an installed capability', async () => {
     const box = await sandbox()
-    const payload = makeHarnessArchive({
+    const payload = makeBackpackArchive({
       'source/skills/other/SKILL.md': '---\nname: ki-other\nki-depends-on: []\n---\n'
     })
-    await box.setupExampleHarness()
+    await box.setupExampleBackpack()
     await box.config.write('ki/config.toml', configuration(payload.sha256))
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
     box.setFetcher(async () => new Response(payload.payload))
 
     const result = await box.run('ki repo upgrade')
 
     expect(result).toEqual({
       exitCode: 1,
-      output: 'ki: error: harness example/harness does not provide skill ki-example\n'
+      output: 'ki: error: backpack example/backpack does not provide skill ki-example\n'
     })
-    expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(skill)
-    await expect(lstat(`${box.data.path}/ki/harnesses/example/harness/skills/other`)).rejects.toThrow()
+    expect(await box.data.read('ki/backpacks/example/backpack/skills/ki-example/SKILL.md')).toBe(skill)
+    await expect(lstat(`${box.data.path}/ki/backpacks/example/backpack/skills/other`)).rejects.toThrow()
   })
 })

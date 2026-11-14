@@ -2,6 +2,7 @@ import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { parse, stringify } from 'smol-toml'
+import { backpackIdentifier } from '../core/backpack/index.ts'
 import {
   addTomlTable,
   declaredRepositoryIdentity,
@@ -12,14 +13,13 @@ import {
   setTomlStringArray
 } from '../core/configuration/index.ts'
 import { KiError } from '../core/errors.ts'
-import { backpackIdentifier } from '../core/harness/index.ts'
 import type { Runner } from '../core/runtime/runner.ts'
 import { canonicalRepositoryIdentity, registryEntry, renderLocalRegistry } from '../core/storage/index.ts'
 import {
   agentDescriptors,
+  type BackpackSection,
   bootstrapConfigurationPath,
   descriptor,
-  type HarnessSection,
   type InstalledAgent,
   inspectLocalsTable,
   isRecord,
@@ -29,7 +29,7 @@ import {
 } from './internal.ts'
 
 /** Top-level keys the bootstrap writer renders; every other table belongs to another reader. */
-const OWNED_KEYS = ['schema', 'agents', 'harnesses', 'skills', 'repositories']
+const OWNED_KEYS = ['schema', 'agents', 'backpacks', 'skills', 'repositories']
 /** Top-level tables other `ki` readers own, such as the territory ranking and the MCP inventory. */
 const DELEGATED_KEYS = ['territories', 'mcp']
 /** Host-local tables kept verbatim and read only as one-time migration input to the state directory. */
@@ -49,20 +49,20 @@ const preservedTables = (current: Record<string, unknown>): Record<string, unkno
   Object.fromEntries(Object.entries(current).filter(([key]) => !OWNED_KEYS.includes(key)))
 
 /**
- * The `harnesses.releases` entries as written, so a rewrite keeps every release location, digest
- * and authentication setting the harness registry reads, neither dropping nor repairing them.
+ * The `backpacks.releases` entries as written, so a rewrite keeps every release location, digest
+ * and authentication setting the backpack registry reads, neither dropping nor repairing them.
  */
 const preservedReleases = (current: Record<string, unknown>): readonly unknown[] => {
-  const harnesses = current['harnesses']
-  return isRecord(harnesses) && Array.isArray(harnesses['releases']) ? harnesses['releases'] : []
+  const backpacks = current['backpacks']
+  return isRecord(backpacks) && Array.isArray(backpacks['releases']) ? backpacks['releases'] : []
 }
 
-/** Release entries as `[[harnesses.releases]]` tables, or inline when a malformed entry is no table. */
+/** Release entries as `[[backpacks.releases]]` tables, or inline when a malformed entry is no table. */
 const releaseLines = (releases: readonly unknown[]): string[] =>
   !releases.length
     ? []
     : releases.every(isRecord)
-      ? ['', stringify({ harnesses: { releases } }).trimEnd()]
+      ? ['', stringify({ backpacks: { releases } }).trimEnd()]
       : [stringify({ releases }).trimEnd()]
 
 /**
@@ -75,7 +75,7 @@ const renderSkeleton = (preserved: Record<string, unknown>, releases: readonly u
     'ids = [',
     ']',
     '',
-    '[harnesses]',
+    '[backpacks]',
     'ids = [',
     ']',
     ...releaseLines(releases),
@@ -88,7 +88,7 @@ const renderSkeleton = (preserved: Record<string, unknown>, releases: readonly u
 /** The values the bootstrap writer owns, each list compared as the set it represents. */
 interface OwnedValues {
   readonly agents: readonly string[]
-  readonly harnesses: readonly string[]
+  readonly backpacks: readonly string[]
   readonly skills: readonly string[]
   readonly repositories: readonly string[]
 }
@@ -101,7 +101,7 @@ const table = (configuration: Record<string, unknown>, key: string): Record<stri
   return isRecord(value) ? value : {}
 }
 
-const skillHarnesses = (skills: readonly string[]): ReadonlyMap<string, string> =>
+const skillBackpacks = (skills: readonly string[]): ReadonlyMap<string, string> =>
   new Map(
     skills.map((skill) => {
       const separator = skill.lastIndexOf(':')
@@ -120,7 +120,7 @@ const without = (value: unknown, key: string): unknown => {
 const unowned = (configuration: Record<string, unknown>): Record<string, unknown> => ({
   ...configuration,
   agents: without(configuration['agents'], 'ids'),
-  harnesses: without(configuration['harnesses'], 'ids'),
+  backpacks: without(configuration['backpacks'], 'ids'),
   skills: undefined,
   repositories: without(configuration['repositories'], 'paths')
 })
@@ -132,11 +132,11 @@ const declaresBackpack = (skill: unknown, backpack: string): boolean =>
 /** Whether a parsed configuration already holds every owned value, so nothing needs writing. */
 const holds = (configuration: Record<string, unknown>, desired: OwnedValues): boolean => {
   const skills = table(configuration, 'skills')
-  const wanted = skillHarnesses(desired.skills)
+  const wanted = skillBackpacks(desired.skills)
   const repositories = table(configuration, 'repositories')['paths']
   return (
     sameSet(table(configuration, 'agents')['ids'], desired.agents) &&
-    sameSet(table(configuration, 'harnesses')['ids'], desired.harnesses) &&
+    sameSet(table(configuration, 'backpacks')['ids'], desired.backpacks) &&
     isRecord(configuration['skills']) &&
     Object.keys(skills).length === wanted.size &&
     [...wanted].every(([name, backpack]) => declaresBackpack(skills[name], backpack)) &&
@@ -160,10 +160,10 @@ const editConfiguration = (before: string, desired: OwnedValues): string | undef
   let text = before
   if (!sameSet(table(current, 'agents')['ids'], desired.agents))
     text = setTomlStringArray(text, ['agents'], 'ids', desired.agents)
-  if (!sameSet(table(current, 'harnesses')['ids'], desired.harnesses))
-    text = setTomlStringArray(text, ['harnesses'], 'ids', desired.harnesses)
+  if (!sameSet(table(current, 'backpacks')['ids'], desired.backpacks))
+    text = setTomlStringArray(text, ['backpacks'], 'ids', desired.backpacks)
   const skills = table(current, 'skills')
-  const wanted = skillHarnesses(desired.skills)
+  const wanted = skillBackpacks(desired.skills)
   for (const name of Object.keys(skills)) if (!wanted.has(name)) text = removeTomlTable(text, ['skills', name])
   for (const [name, backpack] of wanted) {
     const skill = skills[name]
@@ -190,13 +190,13 @@ const editConfiguration = (before: string, desired: OwnedValues): string | undef
 export const writeUserConfiguration = async (
   configurationDirectory: string,
   agents: readonly InstalledAgent[],
-  harnesses: readonly string[],
+  backpacks: readonly string[],
   skills: readonly string[],
   repositories: readonly string[]
 ): Promise<void> => {
   const path = bootstrapConfigurationPath(configurationDirectory)
   const before = await readFile(path, 'utf8').catch(() => undefined)
-  const desired = { agents: agents.map((agent) => agent.descriptor.id), harnesses, skills, repositories }
+  const desired = { agents: agents.map((agent) => agent.descriptor.id), backpacks, skills, repositories }
   const current = parsedConfiguration(before ?? '')
   const next =
     (before !== undefined && editConfiguration(before, desired)) ||
@@ -230,7 +230,7 @@ export const inspectUserConfiguration = async (
       path,
       state: 'missing',
       agents: [],
-      harnesses: [],
+      backpacks: [],
       skills: [],
       legacyLocals: [],
       repositories: [],
@@ -242,7 +242,7 @@ export const inspectUserConfiguration = async (
       path,
       state: 'invalid',
       agents: [],
-      harnesses: [],
+      backpacks: [],
       skills: [],
       legacyLocals: [],
       repositories: [],
@@ -258,7 +258,7 @@ export const inspectUserConfiguration = async (
       path,
       state: 'invalid',
       agents: [],
-      harnesses: [],
+      backpacks: [],
       skills: [],
       legacyLocals: [],
       repositories: [],
@@ -274,7 +274,7 @@ export const inspectUserConfiguration = async (
       path,
       state: 'invalid',
       agents: [],
-      harnesses: [],
+      backpacks: [],
       skills: [],
       legacyLocals: [],
       repositories: [],
@@ -286,7 +286,7 @@ export const inspectUserConfiguration = async (
   const configuration = parsed as Record<string, unknown> & {
     schema?: unknown
     agents?: unknown
-    harnesses?: unknown
+    backpacks?: unknown
     skills?: unknown
     locals?: unknown
     repositories?: unknown
@@ -325,34 +325,34 @@ export const inspectUserConfiguration = async (
     }
     skills.push(`${backpackIdentifier(provider)}:${name}`)
   }
-  const harnessSection = inspectSection(configuration.harnesses, 'harnesses', errors) as HarnessSection
-  for (const key of Object.keys(harnessSection)) {
-    if (key !== 'ids' && key !== 'releases') warnings.push(`harnesses has unrecognised key ${key}`)
+  const backpackSection = inspectSection(configuration.backpacks, 'backpacks', errors) as BackpackSection
+  for (const key of Object.keys(backpackSection)) {
+    if (key !== 'ids' && key !== 'releases') warnings.push(`backpacks has unrecognised key ${key}`)
   }
-  const harnesses: string[] = []
-  if (harnessSection.ids !== undefined)
-    harnesses.push(...inspectStringList(harnessSection.ids, 'harnesses.ids', errors).map(backpackIdentifier))
-  else if (!Array.isArray(harnessSection.releases)) errors.push('harnesses must declare an ids array')
+  const backpacks: string[] = []
+  if (backpackSection.ids !== undefined)
+    backpacks.push(...inspectStringList(backpackSection.ids, 'backpacks.ids', errors).map(backpackIdentifier))
+  else if (!Array.isArray(backpackSection.releases)) errors.push('backpacks must declare an ids array')
   else {
-    for (const [index, harness] of harnessSection.releases.entries()) {
-      if (!isRecord(harness)) {
-        errors.push(`harnesses[${index}] must be a table`)
+    for (const [index, backpack] of backpackSection.releases.entries()) {
+      if (!isRecord(backpack)) {
+        errors.push(`backpacks[${index}] must be a table`)
         continue
       }
-      for (const key of Object.keys(harness)) {
+      for (const key of Object.keys(backpack)) {
         if (!['id', 'url', 'sha256', 'auth'].includes(key))
-          warnings.push(`harnesses[${index}] has unrecognised key ${key}`)
+          warnings.push(`backpacks[${index}] has unrecognised key ${key}`)
       }
-      const release = harness as Record<string, unknown> & { id?: unknown; url?: unknown; sha256?: unknown }
+      const release = backpack as Record<string, unknown> & { id?: unknown; url?: unknown; sha256?: unknown }
       const id = release.id
       const url = release.url
       const digest = release.sha256
-      if (typeof id !== 'string' || !id) errors.push(`harnesses[${index}] id must be a non-empty string`)
-      else harnesses.push(backpackIdentifier(id))
+      if (typeof id !== 'string' || !id) errors.push(`backpacks[${index}] id must be a non-empty string`)
+      else backpacks.push(backpackIdentifier(id))
       if (typeof url !== 'string' || !url.startsWith('https://'))
-        errors.push(`harnesses[${index}] url must be an HTTPS URL`)
+        errors.push(`backpacks[${index}] url must be an HTTPS URL`)
       if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest))
-        errors.push(`harnesses[${index}] sha256 must be lowercase SHA-256`)
+        errors.push(`backpacks[${index}] sha256 must be lowercase SHA-256`)
     }
   }
   const legacyLocals = inspectLocalsTable(configuration.locals, errors, warnings)
@@ -373,7 +373,7 @@ export const inspectUserConfiguration = async (
     path,
     state: errors.length ? 'invalid' : 'valid',
     agents,
-    harnesses,
+    backpacks,
     skills,
     legacyLocals,
     repositories,
@@ -417,7 +417,7 @@ export const readConfiguration = async (
     !validLocals
   ) {
     throw new KiError(
-      'ki configuration must declare an agents.ids string array and optional locals.<harness-id>.path strings',
+      'ki configuration must declare an agents.ids string array and optional locals.<backpack-id>.path strings',
       1
     )
   }
@@ -462,7 +462,7 @@ export const setConfiguredUserSkills = async (
 ): Promise<void> => {
   const agents = await configuredAgents({ homeDirectory, configurationDirectory })
   const inspection = await inspectUserConfiguration(configurationDirectory)
-  await writeUserConfiguration(configurationDirectory, agents, inspection.harnesses, skills, inspection.repositories)
+  await writeUserConfiguration(configurationDirectory, agents, inspection.backpacks, skills, inspection.repositories)
 }
 
 /**

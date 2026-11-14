@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest'
 import { runCommand, type Sandbox, sandbox } from './_cli_helper.ts'
 
-const harnesses = '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n'
+const backpacks = '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n'
 const declaration = (code: string): string =>
-  `${harnesses}\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepo_code = "${code}"\n\n[skills.ki-repo-project]\n`
+  `${backpacks}\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepo_code = "${code}"\n\n[skills.ki-repo-project]\n`
 
 /** A registry of six repositories: a scoped Git repository with a live and a pruned record, others for the fallbacks. */
 const setupRegistry = async (box: Sandbox): Promise<void> => {
@@ -18,7 +18,7 @@ const setupRegistry = async (box: Sandbox): Promise<void> => {
   await box.root.git(['rm', '-q', 'docs/roadmap/KI-TOOL-CLI-2-gone.md'], 'tools')
   await box.root.git(['commit', '-q', '-m', 'prune'], 'tools')
   await box.root.write('island/Streams/Roadmap/KI-ISLAND-GOV-7-thing.md', '# 7\n')
-  await box.root.write('plain/.ki.toml', harnesses)
+  await box.root.write('plain/.ki.toml', backpacks)
   await box.root.write('loose/.ki.toml', declaration('KI-LOOSE'))
   await box.root.write('loose/Streams/Roadmap/_ISSUES.md', '---\nareas: { GOV: 4 }\n---\n')
   await box.root.write('bare/.ki.toml', declaration('KI-BARE'))

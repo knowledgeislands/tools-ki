@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 import { capitalConfiguration, home, memberConfiguration } from '../_territory_helper.ts'
 
-const SYSTEM_HARNESS = home('knowledgeislands/ki-agent-backpack')
+const SYSTEM_BACKPACK = home('knowledgeislands/ki-agent-backpack')
 
 const capital = async (
   box: Sandbox,
@@ -38,7 +38,7 @@ const register = async (box: Sandbox, entries: readonly { key: string; repositor
 /** Four Capitals whose path, key and title orders all disagree with the principals order. */
 const fixture = async () => {
   const box = await sandbox()
-  const system = await capital(box, 'a-zeta-principal', { name: 'Zeta System', members: [SYSTEM_HARNESS] })
+  const system = await capital(box, 'a-zeta-principal', { name: 'Zeta System', members: [SYSTEM_BACKPACK] })
   const alpha = await capital(box, 'd-alpha-principal', { name: 'Alpha' })
   const betaTwo = await capital(box, 'b-beta-principal', { name: 'Beta', prefix: 'beta-two' })
   const betaOne = await capital(box, 'c-beta-principal', { name: 'Beta', prefix: 'beta-one' })
@@ -71,7 +71,7 @@ describe('principals selection', () => {
     )
   })
 
-  test('orders names alone when no Capital holds the canonical Harness and skips unavailable checkouts', async () => {
+  test('orders names alone when no Capital holds the canonical backpack and skips unavailable checkouts', async () => {
     const { box, entries, ordered } = await fixture()
     await rm(ordered[0] as string, { recursive: true })
     expect((await box.run('ki territory roots --principals')).stdout).toBe(`${ordered.slice(1).join('\n')}\n`)

@@ -15,7 +15,7 @@ const rubric = `export default {
 const fixture = async (name: string) => {
   const box = await sandbox()
   for (const skill of names)
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       name: skill,
       rubric:
         skill === 'ki-repo'
@@ -25,9 +25,9 @@ const fixture = async (name: string) => {
   await box.home.mkdir('.agents')
   await box.config.write(
     'ki/config.toml',
-    'schema = 1\n[agents]\nids = ["chatgpt-codex"]\n[harnesses]\nids = ["example/harness"]\n[skills]\n'
+    'schema = 1\n[agents]\nids = ["chatgpt-codex"]\n[backpacks]\nids = ["example/backpack"]\n[skills]\n'
   )
-  const declaration = `[repo]\nharnesses = ["example/harness"]\n[skills.ki-repo-project]\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/knowledgeislands/${name}"\nsupported_runtimes = ["chatgpt-codex"]\n${names
+  const declaration = `[repo]\nbackpacks = ["example/backpack"]\n[skills.ki-repo-project]\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/knowledgeislands/${name}"\nsupported_runtimes = ["chatgpt-codex"]\n${names
     .filter((skill) => skill !== 'ki-repo')
     .map((skill) => `[skills.${skill}]`)
     .join('\n')}\n`
@@ -39,7 +39,7 @@ const fixture = async (name: string) => {
   await box.project.mkdir('.agents/skills')
   for (const skill of names)
     await symlink(
-      join(box.data.path, 'ki/harnesses/example/harness/skills', skill),
+      join(box.data.path, 'ki/backpacks/example/backpack/skills', skill),
       join(box.project.path, '.agents/skills', skill)
     )
   const registered = await box.run('ki registry add --repo .')
@@ -64,7 +64,7 @@ test.each(['tools-ki', 'tools-rig'])(
       expect(missing.exitCode, skill).toBe(1)
       expect(missing.output).toContain('RUNTIMES-2')
       expect(missing.output).toContain(`${skill} is not active`)
-      await symlink(join(box.data.path, 'ki/harnesses/example/harness/skills', skill), path)
+      await symlink(join(box.data.path, 'ki/backpacks/example/backpack/skills', skill), path)
     }
   }
 )
@@ -90,7 +90,7 @@ test('keeps an unsafe worktree activation blocking even when the primary activat
   const { box } = await fixture('tools-rig')
   await box.root.mkdir('linked/.agents/skills')
   await symlink(
-    join(box.data.path, 'ki/harnesses/example/harness/skills/ki-specs'),
+    join(box.data.path, 'ki/backpacks/example/backpack/skills/ki-specs'),
     join(box.root.path, 'linked/.agents/skills/ki-guides')
   )
   box.cd('../linked')

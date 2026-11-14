@@ -1,5 +1,5 @@
 // Loads and structurally validates one installed skill's canonical
-// `scripts/rubric/items/index.ts` catalogue. Harness discovery has already
+// `scripts/rubric/items/index.ts` catalogue. Backpack discovery has already
 // established containment and rejected symlinks before this loader runs.
 
 import { pathToFileURL } from 'node:url'

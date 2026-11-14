@@ -70,7 +70,7 @@ export interface WorkStatusEntry {
   readonly beat: string | null
   /** The work file's routing description, or null when it declares none. */
   readonly description: string | null
-  /** The harness revision whose guidance the worker last read, from the state file, or null. */
+  /** The backpack revision whose guidance the worker last read, from the state file, or null. */
   readonly method_read: string | null
   /** Lines waiting in the work's message queue. */
   readonly messages: number

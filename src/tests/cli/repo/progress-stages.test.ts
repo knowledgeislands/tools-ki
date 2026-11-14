@@ -41,8 +41,8 @@ export default {
 
 const withRubric = async (body: string): Promise<Awaited<ReturnType<typeof sandbox>>> => {
   const box = await sandbox()
-  await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-  await box.setupExampleHarness({ rubric: emittingRubric(body) })
+  await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+  await box.setupExampleBackpack({ rubric: emittingRubric(body) })
   return box
 }
 
@@ -142,11 +142,11 @@ describe('[ki repo audit evidence progress]', () => {
     const box = await sandbox()
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-first]\n[skills.ki-second]\n[skills.ki-third]\n'
+      '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-first]\n[skills.ki-second]\n[skills.ki-third]\n'
     )
-    await box.setupExampleHarness({ rubric: emittingRubric('', 'ki-first'), name: 'ki-first' })
-    await box.setupExampleHarness({ rubric: emittingRubric('', 'ki-second'), name: 'ki-second' })
-    await box.setupExampleHarness({ rubric: emittingRubric('', 'ki-third'), name: 'ki-third' })
+    await box.setupExampleBackpack({ rubric: emittingRubric('', 'ki-first'), name: 'ki-first' })
+    await box.setupExampleBackpack({ rubric: emittingRubric('', 'ki-second'), name: 'ki-second' })
+    await box.setupExampleBackpack({ rubric: emittingRubric('', 'ki-third'), name: 'ki-third' })
 
     const result = await box.run('ki repo conform --progress-style multi', {
       interactive: true,
@@ -261,6 +261,6 @@ describe('[ki repo audit evidence progress]', () => {
     const result = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain(`example/harness:ki-example rubric progress event ${message}`)
+    expect(result.output).toContain(`example/backpack:ki-example rubric progress event ${message}`)
   })
 })

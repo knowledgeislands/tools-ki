@@ -61,7 +61,7 @@ Keeps tools-ki architecture, executable-contract tests, and portable boundaries 
 
 Preserves the host distinctions between bootstrap inventory, managed projections, and capability sources.
 
-- **SELF-CLASS-001 [M] — Bootstrap inventory authority** — The minimum bootstrap user-skill inventory has one named typed authority. (src/core/harness/bootstrap-capabilities.ts)
+- **SELF-CLASS-001 [M] — Bootstrap inventory authority** — The minimum bootstrap user-skill inventory has one named typed authority. (src/core/backpack/bootstrap-capabilities.ts)
   - _Remediation:_ diagnostic — Restore minimumBootstrapUserSkills as the single typed inventory.
 - **SELF-CLASS-002 [M] — Managed user scope** — Bootstrap and repair retain explicit user-scoped managed-skill projection. (src/agents/bootstrap.ts, src/commands/manage/repair.ts)
   - _Remediation:_ diagnostic — Restore explicit user scope at the managed-skill activation boundary.
@@ -74,12 +74,12 @@ Preserves the host distinctions between bootstrap inventory, managed projections
 
 Keeps bootstrap validation and repair coverage complete and automation-visible.
 
-- **SELF-BOOTSTRAP-001 [M] — Shared bootstrap inventory** — Bootstrap and canonical Harness restoration consume the authoritative minimum inventory. (src/agents/bootstrap.ts, src/core/storage/harness-installation.ts)
+- **SELF-BOOTSTRAP-001 [M] — Shared bootstrap inventory** — Bootstrap and canonical backpack restoration consume the authoritative minimum inventory. (src/agents/bootstrap.ts, src/core/storage/backpack-installation.ts)
   - _Remediation:_ diagnostic — Route every bootstrap and restoration consumer through bootstrapUserSkills and minimumBootstrapUserSkills.
 - **SELF-REPAIR-001 [M] — Configured skill coverage** — Repair and diagnostics inspect every configured managed identity. (src/core/manage/repair.ts, src/core/manage/doctor.ts)
   - _Remediation:_ diagnostic — Iterate the complete configured skill inventory in repair and doctor.
-- **SELF-REPAIR-002 [M] — Local capability resolution** — Local Harness development resolves sources through inspected capability metadata. (src/agents/bootstrap.ts)
-  - _Remediation:_ diagnostic — Keep localBootstrapHarness on inspectHarnessSourceRoot and capability.source.
+- **SELF-REPAIR-002 [M] — Local capability resolution** — Local backpack development resolves sources through inspected capability metadata. (src/agents/bootstrap.ts)
+  - _Remediation:_ diagnostic — Keep localBootstrapBackpack on inspectBackpackSourceRoot and capability.source.
 - **SELF-REPAIR-003 [M] — Automation failure signal** — A failed manage repair result exits non-zero after rendering its summary. (src/commands/manage/repair.ts)
   - _Remediation:_ diagnostic — Preserve FAIL summary rendering and KiExit(1) for repair failure.
 

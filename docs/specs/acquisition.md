@@ -1,6 +1,6 @@
 # Retired knowledge package acquisition — ACQUIRE
 
-Acquisition has moved to the Inbox's `ki-muninn` (krisb/inbox), which now owns ChatGPT packaging and Granola acquisition. The `ki acquire` command, its adapters and their Harness metadata parsing are removed from `ki`. Running `ki acquire` prints one line naming the new home and exits 1, until the `ki-<name>` extension mechanism lets `ki muninn` run it; `src/tests/cli/root/help.test.ts` — `answers a moved command with one line naming its new home` verifies that pointer. See the [Specifications index](index.md) for corpus conventions and registered prefixes.
+Acquisition has moved to the Inbox's `ki-muninn` (krisb/inbox), which now owns ChatGPT packaging and Granola acquisition. The `ki acquire` command, its adapters and their backpack metadata parsing are removed from `ki`. Running `ki acquire` prints one line naming the new home and exits 1, until the `ki-<name>` extension mechanism lets `ki muninn` run it; `src/tests/cli/root/help.test.ts` — `answers a moved command with one line naming its new home` verifies that pointer. See the [Specifications index](index.md) for corpus conventions and registered prefixes.
 
 ## Retired requirements
 

@@ -1,11 +1,11 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Command } from 'commander'
-import { agentSkillDirectory, compatibleWithSkill, configuredAgents, localHarness } from '../../agents/index.ts'
+import { agentSkillDirectory, compatibleWithSkill, configuredAgents, localBackpack } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
+import { canonicalBackpackIdentifier, discoverInstalledBackpacks } from '../../core/backpack/index.ts'
 import { declaredKnowledgeBaseStoreRoles, readRepositoryDeclaration } from '../../core/configuration/index.ts'
 import { KiExit } from '../../core/errors.ts'
-import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import {
   inspectManageDoctor,
   type ManageCheckStatus,
@@ -15,8 +15,8 @@ import {
   type ManageStoreState
 } from '../../core/manage/index.ts'
 import {
+  backpackDevelopmentEnabled,
   externalStoreRoles,
-  harnessDevelopmentEnabled,
   knowledgeBaseStoreAvailability,
   requiredLocalRegistry
 } from '../../core/storage/index.ts'
@@ -73,9 +73,9 @@ const doctorPort = (context: KiContext, configuration: ManageConfiguration): Man
       userSkills: agentSkillDirectory(agent, 'user'),
       supports: (runtimes) => compatibleWithSkill(agent, runtimes)
     })),
-  discoverHarnesses: () => discoverInstalledHarnesses(context.paths.data),
-  localDevelopmentEnabled: (identifier, source) => harnessDevelopmentEnabled(context.paths.data, identifier, source),
-  inspectLocalHarness: (source, identifier) => localHarness(source, identifier),
+  discoverBackpacks: () => discoverInstalledBackpacks(context.paths.data),
+  localDevelopmentEnabled: (identifier, source) => backpackDevelopmentEnabled(context.paths.data, identifier, source),
+  inspectLocalBackpack: (source, identifier) => localBackpack(source, identifier),
   readRepositorySkills: async (path) => (await readRepositoryDeclaration(path)).skills,
   lstat: (path) => lstat(path).catch(() => undefined),
   realpath: (path) => realpath(path).catch(() => undefined),
@@ -96,7 +96,7 @@ const report = (context: KiContext, configuration: string, checks: readonly Mana
         ...diagnosticContext(context, configuration),
         {
           label:
-            'Scope: read-only local configuration, agents, harnesses, skills, and direct-CWD state; freshness not checked'
+            'Scope: read-only local configuration, agents, backpacks, skills, and direct-CWD state; freshness not checked'
         },
         {
           label: `checks (${checks.length})`,
@@ -117,7 +117,7 @@ export const createDoctorCommand = (context: KiContext): Command =>
       const configuration = await manageConfiguration(context)
       const checks = await inspectManageDoctor(doctorPort(context, configuration), {
         workingDirectory: context.workingDirectory,
-        canonicalHarnessIdentifier
+        canonicalBackpackIdentifier
       })
       report(context, configuration.state, checks)
     })

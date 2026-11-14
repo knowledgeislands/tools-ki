@@ -39,7 +39,7 @@ const stateForTarget = async (target: ActivationTarget): Promise<'active' | 'mis
   const [actual, expected] = await Promise.all([
     realpath(target.path).catch(() => undefined),
     realpath(join(target.skill.provider.root, target.skill.capability.source)).catch(
-      /* v8 ignore next -- the discovered harness source can disappear here only through a concurrent filesystem replacement. */
+      /* v8 ignore next -- the discovered backpack source can disappear here only through a concurrent filesystem replacement. */
       () => undefined
     )
   ])
@@ -66,7 +66,7 @@ export const createRepositorySkillActivation = async (options: {
   ])
   const skills = new Map(
     options.skills
-      .filter((skill) => skill.provider.kind === 'installed-harness')
+      .filter((skill) => skill.provider.kind === 'installed-backpack')
       .map((skill) => [skill.declaration.name, skill])
   )
   const targetsFor = (name: string): ActivationTarget[] => {

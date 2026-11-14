@@ -17,9 +17,9 @@ export default {
 `
 
 const declaration =
-  '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
+  '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
 
-const localConfiguration = 'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n'
+const localConfiguration = 'schema = 1\n\n[agents]\nids = []\n\n[backpacks]\nids = []\n\n[skills]\n'
 
 const header = (hook: string): string[] => [
   '#!/bin/sh',
@@ -91,9 +91,9 @@ const toolsKi: Readonly<Record<string, string>> = {
 
 const setup = async (files: Readonly<Record<string, string>>, hooksPath?: string): Promise<Sandbox> => {
   const box = await sandbox()
-  await box.setupExampleHarness({ name: 'ki-repo', rubric })
+  await box.setupExampleBackpack({ name: 'ki-repo', rubric })
   await box.data.write(
-    'ki/harnesses/example/harness/skills/ki-repo/scripts/rubric/contexts/canonical-hooks.ts',
+    'ki/backpacks/example/backpack/skills/ki-repo/scripts/rubric/contexts/canonical-hooks.ts',
     `export const canonicalHooks = () => (${JSON.stringify({ 'pre-commit': converted['.githooks/pre-commit'], 'commit-msg': converted['.githooks/commit-msg'] })})`
   )
   await box.config.write('ki/config.toml', localConfiguration)
@@ -152,7 +152,7 @@ test('retains an already bound prepare command after Husky', async () => {
 
 test('a filtered conform does not publish hooks when ki-repo is not selected', async () => {
   const box = await setup(toolsKi)
-  await box.setupExampleHarness({ name: 'ki-other', rubric: rubric.replace("'ki-repo'", "'ki-other'") })
+  await box.setupExampleBackpack({ name: 'ki-other', rubric: rubric.replace("'ki-repo'", "'ki-other'") })
   await box.project.write('.ki.toml', `${declaration}\n[skills.ki-other]\n`)
   expect((await box.run('ki repo conform --skill ki-other', { runner: 'default' })).exitCode).toBe(0)
   expect(await exists(box, '.githooks')).toBe(false)

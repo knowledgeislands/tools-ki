@@ -12,7 +12,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /**
  * Reads the user's optional `[territories] ranking` from `config.toml`, the personal order in which
  * territories are listed, selected and opened. Like the MCP inventory reader it leaves a missing,
- * irregular or unparseable file to the harness registry reader, but validates a present table
+ * irregular or unparseable file to the backpack registry reader, but validates a present table
  * strictly so a mistyped ranking never silently falls back to the derived order.
  */
 export const readTerritoryRanking = async (configurationDirectory: string): Promise<readonly string[]> => {

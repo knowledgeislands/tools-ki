@@ -3,8 +3,8 @@ import { sandbox } from '../_cli_helper.ts'
 
 test('repo audit strips complete terminal control sequences from finding messages', async () => {
   const box = await sandbox()
-  await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-  await box.setupExampleHarness({
+  await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+  await box.setupExampleBackpack({
     rubric: `
 export default {
   contract: 1,

@@ -7,7 +7,7 @@ interface GitOverviewEvidence {
   readonly findings: readonly Finding[]
 }
 
-/** Acquire only producer evidence. The selected Harness catalogue owns its interpretation. */
+/** Acquire only producer evidence. The selected backpack catalogue owns its interpretation. */
 export const gatherGitOverview = async (
   context: Pick<RepositoryOperationContext, 'runner' | 'environment' | 'platform'>,
   repository: string,

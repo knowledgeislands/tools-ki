@@ -1,6 +1,6 @@
 import { lstat, realpath, stat } from 'node:fs/promises'
+import { type InstalledBackpack, inspectSkillCapability } from '../backpack/inspection.ts'
 import { KiError } from '../errors.ts'
-import { type InstalledHarness, inspectSkillCapability } from '../harness/inspection.ts'
 import type { RepositoryDeclaration } from './declaration.ts'
 import { type DataRootEvidence, type ResolvedSkill, resolveDeclaredSkills } from './resolution.ts'
 
@@ -30,18 +30,18 @@ const dataRootEvidence = async (dataDirectory: string): Promise<DataRootEvidence
 /**
  * Resolves declarations for repository operations, admitting only the canonical
  * explicitly declared repository-local ki-self provider. The data directory is
- * named in the error for a declared harness that is not installed.
+ * named in the error for a declared backpack that is not installed.
  */
 export const resolveRepositoryDeclaredSkills = async (
   repositoryRoot: string,
   declaration: RepositoryDeclaration,
-  harnesses: readonly InstalledHarness[],
+  backpacks: readonly InstalledBackpack[],
   dataDirectory: string,
   selected?: string
 ): Promise<readonly ResolvedSkill[]> => {
   const dataRoot = await dataRootEvidence(dataDirectory)
   const declared = declaration.skills.some((skill) => skill.name === repositoryLocalSkillName)
-  if (!declared) return resolveDeclaredSkills(declaration, harnesses, dataRoot, selected)
+  if (!declared) return resolveDeclaredSkills(declaration, backpacks, dataRoot, selected)
 
   const root = await physicalRepositoryRoot(repositoryRoot)
   const capability = await inspectSkillCapability(root, repositoryLocalSkillSource)
@@ -55,7 +55,7 @@ export const resolveRepositoryDeclaredSkills = async (
     throw new KiError(`repository-local skill ${repositoryLocalSkillName} does not provide rubric catalogue`, 1)
   }
 
-  return resolveDeclaredSkills(declaration, harnesses, dataRoot, selected, [
+  return resolveDeclaredSkills(declaration, backpacks, dataRoot, selected, [
     {
       provider: { kind: 'repository-local', root },
       capability

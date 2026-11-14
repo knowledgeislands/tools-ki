@@ -66,11 +66,11 @@ const expectedRendered = [
   ''
 ].join('\n')
 
-// Simulates a complete local Harness root without going through `ki dev local on`. The checkout is a
-// real Git working tree, as a development Harness always is — `--write` resolves that tree and refuses
+// Simulates a complete local backpack root without going through `ki dev local on`. The checkout is a
+// real Git working tree, as a development backpack always is — `--write` resolves that tree and refuses
 // to publish into it from anywhere else. Returns the resolved skill source directory, which is the
 // publication root every event now names.
-const devLinkExampleHarness = async (
+const devLinkExampleBackpack = async (
   box: Awaited<ReturnType<typeof sandbox>>,
   rubricSource: string
 ): Promise<string> => {
@@ -78,7 +78,7 @@ const devLinkExampleHarness = async (
   await box.root.write('local/skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
   await box.root.write('local/skills/ki-example/scripts/rubric/items/index.ts', rubricSource)
   await Promise.all(['subagents', 'hooks'].map((payload) => box.root.mkdir(`local/${payload}`)))
-  const installed = join(box.data.path, 'ki/harnesses/example/harness')
+  const installed = join(box.data.path, 'ki/backpacks/example/backpack')
   await rm(installed, { recursive: true, force: true })
   await symlink(join(box.root.path, 'local'), installed)
   await box.root.git(['init'], 'local')
@@ -96,9 +96,9 @@ describe('[ki dev skill rubric]', () => {
 
   test('renders mechanical and judgment items and reports in sync once written', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
-    const target = 'ki/harnesses/example/harness/skills/ki-example/references/rubric.md'
-    const publicationRoot = await devLinkExampleHarness(box, rubric(mixedFamilies))
+    await box.setupExampleBackpack({ rubric: rubric(mixedFamilies) })
+    const target = 'ki/backpacks/example/backpack/skills/ki-example/references/rubric.md'
+    const publicationRoot = await devLinkExampleBackpack(box, rubric(mixedFamilies))
     box.cd('../local')
 
     const written = await box.run('ki dev skill rubric ki-example --write', { runner: 'default' })
@@ -109,41 +109,41 @@ describe('[ki dev skill rubric]', () => {
     const checked = await box.run('ki dev skill rubric ki-example')
     expect(checked).toEqual({
       exitCode: 0,
-      output: `ki dev skill rubric: example/harness:ki-example references/rubric.md is in sync in ${publicationRoot}\n`
+      output: `ki dev skill rubric: example/backpack:ki-example references/rubric.md is in sync in ${publicationRoot}\n`
     })
   })
 
   test('reports missing when references/rubric.md has never been generated', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+    await box.setupExampleBackpack({ rubric: rubric(mixedFamilies) })
 
     const result = await box.run('ki dev skill rubric ki-example')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toMatch(
-      /references\/rubric\.md is missing in .*skills\/ki-example; run with --write from a dev-linked harness/
+      /references\/rubric\.md is missing in .*skills\/ki-example; run with --write from a dev-linked backpack/
     )
   })
 
   test('reports stale when the on-disk catalogue no longer matches the definition', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
-    await box.data.write('ki/harnesses/example/harness/skills/ki-example/references/rubric.md', 'stale content\n')
+    await box.setupExampleBackpack({ rubric: rubric(mixedFamilies) })
+    await box.data.write('ki/backpacks/example/backpack/skills/ki-example/references/rubric.md', 'stale content\n')
 
     const result = await box.run('ki dev skill rubric ki-example')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toMatch(
-      /references\/rubric\.md is stale in .*skills\/ki-example; run with --write from a dev-linked harness/
+      /references\/rubric\.md is stale in .*skills\/ki-example; run with --write from a dev-linked backpack/
     )
   })
 
   test('produces byte-identical output across repeated renders', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
-    await devLinkExampleHarness(box, rubric(mixedFamilies))
+    await box.setupExampleBackpack({ rubric: rubric(mixedFamilies) })
+    await devLinkExampleBackpack(box, rubric(mixedFamilies))
     box.cd('../local')
-    const target = 'ki/harnesses/example/harness/skills/ki-example/references/rubric.md'
+    const target = 'ki/backpacks/example/backpack/skills/ki-example/references/rubric.md'
 
     await box.run('ki dev skill rubric ki-example --write', { runner: 'default' })
     const first = await box.data.read(target)
@@ -155,18 +155,20 @@ describe('[ki dev skill rubric]', () => {
 
   test('refuses --write against an installed, non-dev-linked payload', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+    await box.setupExampleBackpack({ rubric: rubric(mixedFamilies) })
 
     const result = await box.run('ki dev skill rubric ki-example --write')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('run ki dev local on before writing its rubric catalogue')
-    await expect(box.data.read('ki/harnesses/example/harness/skills/ki-example/references/rubric.md')).rejects.toThrow()
+    await expect(
+      box.data.read('ki/backpacks/example/backpack/skills/ki-example/references/rubric.md')
+    ).rejects.toThrow()
   })
 
   test('refuses a skill with no rubric definition module', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness()
+    await box.setupExampleBackpack()
 
     const result = await box.run('ki dev skill rubric ki-example')
 
@@ -176,18 +178,18 @@ describe('[ki dev skill rubric]', () => {
 
   test('refuses an unknown skill', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+    await box.setupExampleBackpack({ rubric: rubric(mixedFamilies) })
 
     const result = await box.run('ki dev skill rubric does-not-exist')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('no installed harness provides skill does-not-exist')
+    expect(result.output).toContain('no installed backpack provides skill does-not-exist')
   })
 
   test('names the resolved publication root even when the caller is nowhere near it', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
-    const publicationRoot = await devLinkExampleHarness(box, rubric(mixedFamilies))
+    await box.setupExampleBackpack({ rubric: rubric(mixedFamilies) })
+    const publicationRoot = await devLinkExampleBackpack(box, rubric(mixedFamilies))
     box.cd('../home')
 
     const result = await box.run('ki dev skill rubric ki-example')
@@ -198,32 +200,32 @@ describe('[ki dev skill rubric]', () => {
     expect(result.output).toContain(publicationRoot)
   })
 
-  test('refuses an installed Harness prefix collision before resolving a skill', async () => {
+  test('refuses an installed backpack prefix collision before resolving a skill', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
-    await box.data.write('ki/harnesses/second/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "ki"\n')
+    await box.setupExampleBackpack({ rubric: rubric(mixedFamilies) })
+    await box.data.write('ki/backpacks/second/backpack/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "ki"\n')
     await box.data.write(
-      'ki/harnesses/second/harness/skills/ki-example/SKILL.md',
+      'ki/backpacks/second/backpack/skills/ki-example/SKILL.md',
       '---\nname: ki-example\nki-depends-on: []\n---\n'
     )
 
     const result = await box.run('ki dev skill rubric ki-example')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('harness prefix ki is already owned by installed harness')
+    expect(result.output).toContain('backpack prefix ki is already owned by installed backpack')
   })
 })
 
-// `--write` publishes into the tree the install resolves to, which under a dev-linked harness is a
+// `--write` publishes into the tree the install resolves to, which under a dev-linked backpack is a
 // development checkout the caller may not be in. The guard compares working-tree roots for equality
 // and refuses everything else, so a worktree cannot dirty the checkout its own install points at.
 describe('[ki dev skill rubric --write publication-tree guard]', () => {
-  const published = 'ki/harnesses/example/harness/skills/ki-example/references/rubric.md'
+  const published = 'ki/backpacks/example/backpack/skills/ki-example/references/rubric.md'
 
   const guardFixture = async (): Promise<{ readonly box: Sandbox; readonly checkoutRoot: string }> => {
     const box = await sandbox()
-    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
-    await devLinkExampleHarness(box, rubric(mixedFamilies))
+    await box.setupExampleBackpack({ rubric: rubric(mixedFamilies) })
+    await devLinkExampleBackpack(box, rubric(mixedFamilies))
     return { box, checkoutRoot: await box.root.mkdir('local') }
   }
 

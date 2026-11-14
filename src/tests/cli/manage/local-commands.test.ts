@@ -4,45 +4,45 @@ import { sandbox } from '../_cli_helper.ts'
 describe('[ki local utility commands]', () => {
   test('searches verified installed capabilities case-insensitively in deterministic order without repository discovery', async () => {
     const box = await sandbox()
-    await box.setupCanonicalHarness()
-    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
+    await box.setupCanonicalBackpack()
+    await box.setupExampleBackpack({ name: 'example-skill', prefix: 'example' })
     await box.project.write('.ki.toml', '[not valid TOML\n')
-    const example = await box.data.read('ki/harnesses/example/harness/skills/example-skill/SKILL.md')
+    const example = await box.data.read('ki/backpacks/example/backpack/skills/example-skill/SKILL.md')
 
-    const result = await box.run('ki harness search SKILL')
+    const result = await box.run('ki backpack search SKILL')
 
     expect(result).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI HARNESS SEARCH\n├─ query: SKILL\n├─ matches (9)\n│  ├─ example/harness skill example-skill\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-accept\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-batch\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-bootstrap\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-implement\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-next\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-plan\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-recap\n│  ╰─ knowledgeislands/ki-agent-backpack skill ki-work-design\n╰─ summary: MATCHES=9\n'
+        '╭─ KI BACKPACK SEARCH\n├─ query: SKILL\n├─ matches (9)\n│  ├─ example/backpack skill example-skill\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-accept\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-batch\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-bootstrap\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-implement\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-next\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-plan\n│  ├─ knowledgeislands/ki-agent-backpack skill ki-recap\n│  ╰─ knowledgeislands/ki-agent-backpack skill ki-work-design\n╰─ summary: MATCHES=9\n'
     })
-    expect(await box.data.read('ki/harnesses/example/harness/skills/example-skill/SKILL.md')).toBe(example)
+    expect(await box.data.read('ki/backpacks/example/backpack/skills/example-skill/SKILL.md')).toBe(example)
   })
 
-  test('searches harness identifiers and reports an explicit successful empty result', async () => {
+  test('searches backpack identifiers and reports an explicit successful empty result', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness()
+    await box.setupExampleBackpack()
 
-    const identifier = await box.run('ki harness search EXAMPLE/HARNESS')
-    const absent = await box.run('ki harness search absent')
+    const identifier = await box.run('ki backpack search EXAMPLE/BACKPACK')
+    const absent = await box.run('ki backpack search absent')
 
     expect(identifier).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI HARNESS SEARCH\n├─ query: EXAMPLE/HARNESS\n├─ matches (1)\n│  ╰─ example/harness skill ki-example\n╰─ summary: MATCHES=1\n'
+        '╭─ KI BACKPACK SEARCH\n├─ query: EXAMPLE/BACKPACK\n├─ matches (1)\n│  ╰─ example/backpack skill ki-example\n╰─ summary: MATCHES=1\n'
     })
     expect(absent).toEqual({
       exitCode: 0,
-      output: '╭─ KI HARNESS SEARCH\n├─ query: absent\n├─ matches (0)\n│  ╰─ none\n╰─ summary: MATCHES=0\n'
+      output: '╭─ KI BACKPACK SEARCH\n├─ query: absent\n├─ matches (0)\n│  ╰─ none\n╰─ summary: MATCHES=0\n'
     })
   })
 
   test('rejects missing, empty, additional, and option search arguments', async () => {
     const box = await sandbox()
-    const missing = await box.run('ki harness search')
-    const empty = await box.run(['ki', 'harness', 'search', ''])
-    const extra = await box.run('ki harness search one two')
-    const option = await box.run('ki harness search --all')
+    const missing = await box.run('ki backpack search')
+    const empty = await box.run(['ki', 'backpack', 'search', ''])
+    const extra = await box.run('ki backpack search one two')
+    const option = await box.run('ki backpack search --all')
 
     expect(missing.exitCode).toBe(2)
     expect(empty).toEqual({ exitCode: 2, output: 'ki: error: search query must not be empty\n' })
@@ -50,11 +50,11 @@ describe('[ki local utility commands]', () => {
     expect(option.exitCode).toBe(2)
   })
 
-  test('reports no eligible managed stale state without changing any installed harness or unknown file', async () => {
+  test('reports no eligible managed stale state without changing any installed backpack or unknown file', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness()
+    await box.setupExampleBackpack()
     await box.data.write('ki/unknown-state', 'leave untouched\n')
-    const skill = await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')
+    const skill = await box.data.read('ki/backpacks/example/backpack/skills/ki-example/SKILL.md')
     const unknown = await box.data.read('ki/unknown-state')
 
     const result = await box.run('ki cleanup')
@@ -63,7 +63,7 @@ describe('[ki local utility commands]', () => {
       exitCode: 0,
       output: '╭─ KI CLEANUP\n├─ eligible (0)\n│  ╰─ none\n╰─ summary: ELIGIBLE=0\n'
     })
-    expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(skill)
+    expect(await box.data.read('ki/backpacks/example/backpack/skills/ki-example/SKILL.md')).toBe(skill)
     expect(await box.data.read('ki/unknown-state')).toBe(unknown)
   })
 

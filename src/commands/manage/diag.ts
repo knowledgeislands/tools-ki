@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import { inspectLocalSources, inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
-import { harnessDevelopmentEnabled, inspectLocalRegistry } from '../../core/storage/index.ts'
+import { backpackDevelopmentEnabled, inspectLocalRegistry } from '../../core/storage/index.ts'
 import { presentation, renderTree, type TreeEntry } from '../presentation/index.ts'
 import { diagnosticContext } from './diagnostic-context.ts'
 
@@ -27,7 +27,7 @@ export const createDiagCommand = (context: KiContext): Command =>
           ...diagnosticContext(context, configuration.state),
           { label: field('Registry', registry.state) },
           {
-            label: `summary: AGENTS=${configuration.agents.length} HARNESSES=${configuration.harnesses.length} SKILLS=${configuration.skills.length} REPOSITORIES=${registry.repositories.length} WARNINGS=${warnings.length} ERRORS=${errors.length + registry.errors.length}`
+            label: `summary: AGENTS=${configuration.agents.length} BACKPACKS=${configuration.backpacks.length} SKILLS=${configuration.skills.length} REPOSITORIES=${registry.repositories.length} WARNINGS=${warnings.length} ERRORS=${errors.length + registry.errors.length}`
           }
         ]
         context.stdout.write(`${renderTree({ title: 'KI DIAG', entries }).join('\n')}\n`)
@@ -39,18 +39,18 @@ export const createDiagCommand = (context: KiContext): Command =>
         const locals = await Promise.all(
           sources.locals.map(async (local) => ({
             ...local,
-            mode: (await harnessDevelopmentEnabled(context.paths.data, local.harness, local.path)) ? 'on' : 'off'
+            mode: (await backpackDevelopmentEnabled(context.paths.data, local.backpack, local.path)) ? 'on' : 'off'
           }))
         )
         configurationEntries.push(
           { label: `agents (${configuration.agents.length})`, children: treeEntries(configuration.agents) },
-          { label: `harnesses (${configuration.harnesses.length})`, children: treeEntries(configuration.harnesses) },
+          { label: `backpacks (${configuration.backpacks.length})`, children: treeEntries(configuration.backpacks) },
           { label: `skills (${configuration.skills.length})`, children: treeEntries(configuration.skills) },
           {
             label: `locals (${locals.length})`,
             children: locals.length
               ? locals.map((local) => ({
-                  label: local.harness,
+                  label: local.backpack,
                   children: [{ label: field('source', local.path) }, { label: field('mode', local.mode) }]
                 }))
               : [{ label: 'none' }]

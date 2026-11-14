@@ -6,7 +6,7 @@ import { sandbox } from '../_cli_helper.ts'
 
 const repositoryConfiguration = `
 [repo]
-harnesses = ["knowledgeislands/ki-agent-backpack"]
+backpacks = ["knowledgeislands/ki-agent-backpack"]
 
 [skills.ki-repo-project]
 
@@ -175,8 +175,8 @@ unexpected = true
 [agents]
 ids = ["claude-code", "unknown-agent"]
 
-[harnesses]
-releases = [{ id = "example/harness", url = "http://example.test/archive.tar.gz", sha256 = "invalid", extra = true }]
+[backpacks]
+releases = [{ id = "example/backpack", url = "http://example.test/archive.tar.gz", sha256 = "invalid", extra = true }]
 
 [skills]
 ids = ["example:skill", "example:skill"]
@@ -238,11 +238,11 @@ ids = ["example:skill", "example:skill"]
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')
     await box.run('ki bootstrap')
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       name: 'ki-repo',
       identifier: 'knowledgeislands/ki-agent-backpack'
     })
-    await box.setupExampleHarness({ identifier: 'knowledgeislands/ki-agent-backpack' })
+    await box.setupExampleBackpack({ identifier: 'knowledgeislands/ki-agent-backpack' })
     await box.project.write('.ki.toml', repositoryConfiguration)
     const managed = await box.run('ki diag --full')
     const repository = await box.run('ki repo diag')
@@ -296,14 +296,14 @@ ids = ["example:skill", "example:skill"]
     expect(diag.output).toContain('× configuration must be valid TOML')
   })
 
-  test('reports non-array agents.ids, a skill missing its harness, a non-table harness release, and an unrecognised local key', async () => {
+  test('reports non-array agents.ids, a skill missing its backpack, a non-table backpack release, and an unrecognised local key', async () => {
     const box = await sandbox()
     const invalidConfig = `schema = 1
 
 [agents]
 ids = "not-an-array"
 
-[harnesses]
+[backpacks]
 releases = [42]
 
 [skills.foo]
@@ -318,7 +318,7 @@ extra = true
 
     expect(diag.output).toContain('× agents.ids must be an array of non-empty strings')
     expect(diag.output).toContain('× skills.foo must declare a backpack string')
-    expect(diag.output).toContain('× harnesses[0] must be a table')
+    expect(diag.output).toContain('× backpacks[0] must be a table')
     expect(diag.output).toContain('! locals.knowledgeislands/ki-agent-backpack has unrecognised key extra')
   })
 
@@ -326,7 +326,7 @@ extra = true
     const box = await sandbox()
     await box.config.write(
       'ki/config.toml',
-      'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[repositories]\npaths = ["relative"]\nextra = true\n'
+      'schema = 1\n\n[agents]\nids = []\n\n[backpacks]\nids = []\n\n[skills]\n\n[repositories]\npaths = ["relative"]\nextra = true\n'
     )
 
     const diag = await box.run('ki diag --full')
@@ -346,7 +346,7 @@ extra = true
     expect(diag.output).not.toContain('Warnings')
     expect(diag.output).not.toContain('Errors')
     expect(diag.output).toContain('├─ agents (1)\n│  │  ╰─ claude-code')
-    expect(diag.output).toContain('├─ harnesses (0)\n│  │  ╰─ none')
+    expect(diag.output).toContain('├─ backpacks (0)\n│  │  ╰─ none')
     expect(diag.output).toContain('├─ skills (8)')
     expect(diag.output).toContain('│  │  ╰─ knowledgeislands/ki-agent-backpack:ki-work-design')
     expect(diag.output).toContain('├─ registry\n│  ├─ Status: missing')
@@ -356,29 +356,29 @@ extra = true
 
   test('reports a remembered local source as off, then on when its projection is active', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
 
     const off = await box.run('ki diag --full')
     await box.run('ki dev local on')
     const on = await box.run('ki diag --full')
 
-    expect(off.output).toContain(`source: ${harnessPath}`)
+    expect(off.output).toContain(`source: ${backpackPath}`)
     expect(off.output).toContain('mode: off')
-    expect(on.output).toContain(`source: ${harnessPath}`)
+    expect(on.output).toContain(`source: ${backpackPath}`)
     expect(on.output).toContain('mode: on')
   })
 
   test('does not report local mode as active when the canonical root is no longer linked', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     await box.run('ki dev local on')
-    const root = 'ki/harnesses/knowledgeislands/ki-agent-backpack'
+    const root = 'ki/backpacks/knowledgeislands/ki-agent-backpack'
     await unlink(`${box.data.path}/${root}`)
     await box.data.mkdir(root)
 
@@ -389,15 +389,15 @@ extra = true
 
   test('does not report local mode as active when the canonical root points at another checkout', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/current/knowledgeislands/ki-agent-backpack')
-    const otherHarnessPath = await box.setupLocalCanonicalHarness('dev/other/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/current/knowledgeislands/ki-agent-backpack')
+    const otherBackpackPath = await box.setupLocalCanonicalBackpack('dev/other/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     await box.run('ki dev local on')
-    const root = `${box.data.path}/ki/harnesses/knowledgeislands/ki-agent-backpack`
+    const root = `${box.data.path}/ki/backpacks/knowledgeislands/ki-agent-backpack`
     await unlink(root)
-    await symlink(otherHarnessPath, root, 'dir')
+    await symlink(otherBackpackPath, root, 'dir')
 
     const diag = await box.run('ki diag --full')
 
@@ -406,14 +406,14 @@ extra = true
 
   test('does not report local mode as active when the canonical root link is broken', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     await box.run('ki dev local on')
-    const root = `${box.data.path}/ki/harnesses/knowledgeislands/ki-agent-backpack`
+    const root = `${box.data.path}/ki/backpacks/knowledgeislands/ki-agent-backpack`
     await unlink(root)
-    await symlink(`${box.root.path}/missing-harness`, root, 'dir')
+    await symlink(`${box.root.path}/missing-backpack`, root, 'dir')
 
     const diag = await box.run('ki diag --full')
 
@@ -422,12 +422,12 @@ extra = true
 
   test('reports local mode as active while its selected checkout remains the active root', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     await box.run('ki dev local on')
-    await rm(`${harnessPath}/hooks`, { recursive: true })
+    await rm(`${backpackPath}/hooks`, { recursive: true })
 
     const diag = await box.run('ki diag --full')
 
@@ -436,13 +436,13 @@ extra = true
 
   test('does not report local mode as active when its configured source disappears', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     await box.run('ki dev local on')
     const sources = await box.state.read('ki/locals.toml')
-    await box.state.write('ki/locals.toml', sources.replace(harnessPath, `${harnessPath}-missing`))
+    await box.state.write('ki/locals.toml', sources.replace(backpackPath, `${backpackPath}-missing`))
 
     const diag = await box.run('ki diag --full')
 
@@ -455,7 +455,7 @@ extra = true
       'ki/config.toml',
       `schema = 1
 agents = "not-a-table"
-harnesses = "not-a-table"
+backpacks = "not-a-table"
 skills = "not-a-table"
 locals = "not-a-table"
 `
@@ -465,8 +465,8 @@ locals = "not-a-table"
 
     expect(diag.output).toContain('× agents must be a TOML table')
     expect(diag.output).toContain('× skills must be a TOML table')
-    expect(diag.output).toContain('× harnesses must be a TOML table')
-    expect(diag.output).toContain('× harnesses must declare an ids array')
+    expect(diag.output).toContain('× backpacks must be a TOML table')
+    expect(diag.output).toContain('× backpacks must declare an ids array')
     expect(diag.output).toContain('× locals must be a TOML table')
   })
 
@@ -480,11 +480,11 @@ locals = "not-a-table"
 ids = ["claude-code", "claude-code", "unrecognised"]
 extra = true
 
-[harnesses]
+[backpacks]
 section_extra = true
 releases = [
   { id = 3, url = 3, sha256 = 3, extra = true },
-  { id = "example/harness", url = "https://example.test/archive.tar.gz", sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+  { id = "example/backpack", url = "https://example.test/archive.tar.gz", sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
 ]
 
 [skills]
@@ -493,7 +493,7 @@ scalar = 3
 [skills.empty]
 backpack = ""
 
-[locals."example/harness"]
+[locals."example/backpack"]
 path = ""
 `
     )
@@ -503,13 +503,13 @@ path = ""
     expect(diag.output).toContain('× agents.ids repeats a value')
     expect(diag.output).toContain('! unrecognised agent unrecognised')
     expect(diag.output).toContain('! agents has unrecognised key extra')
-    expect(diag.output).toContain('! harnesses has unrecognised key section_extra')
-    expect(diag.output).toContain('! harnesses[0] has unrecognised key extra')
-    expect(diag.output).toContain('× harnesses[0] id must be a non-empty string')
-    expect(diag.output).toContain('× harnesses[0] url must be an HTTPS URL')
-    expect(diag.output).toContain('× harnesses[0] sha256 must be lowercase SHA-256')
+    expect(diag.output).toContain('! backpacks has unrecognised key section_extra')
+    expect(diag.output).toContain('! backpacks[0] has unrecognised key extra')
+    expect(diag.output).toContain('× backpacks[0] id must be a non-empty string')
+    expect(diag.output).toContain('× backpacks[0] url must be an HTTPS URL')
+    expect(diag.output).toContain('× backpacks[0] sha256 must be lowercase SHA-256')
     expect(diag.output).toContain('× skills.scalar must be a TOML table')
     expect(diag.output).toContain('× skills.empty must declare a backpack string')
-    expect(diag.output).toContain('× locals.example/harness.path must be a non-empty string')
+    expect(diag.output).toContain('× locals.example/backpack.path must be a non-empty string')
   })
 })

@@ -586,7 +586,7 @@ describe('[ki estate converge]', () => {
     await box.home.write('.claude/plugins/notes.md', 'acme/solo\n')
     await box.home.write('.paperclip/instances/default/config.json', 'acme/solo-other acme/solo.github acme/solo.\n')
     await box.home.write('.mcporter/credentials.json', 'acme/solo\n')
-    await box.home.mkdir('.local/share/ki/harnesses/acme/installed')
+    await box.home.mkdir('.local/share/ki/backpacks/acme/installed')
     await box.home.mkdir('.claude/skills')
     await symlink(join(home, 'workspaces/old/solo/skills/a'), join(home, '.claude/skills/a'))
     const path = await manifest([{ from: 'acme/solo', to: 'acme/solo-renamed', path_to: '~/workspaces/new/solo' }])

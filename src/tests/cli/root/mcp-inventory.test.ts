@@ -4,7 +4,7 @@ import { sandbox } from '../_cli_helper.ts'
 type Box = Awaited<ReturnType<typeof sandbox>>
 
 const configuration = (mcp?: string): string =>
-  `schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n${mcp ? `\n[mcp]\n${mcp}\n` : ''}`
+  `schema = 1\n\n[agents]\nids = []\n\n[backpacks]\nids = []\n\n[skills]\n${mcp ? `\n[mcp]\n${mcp}\n` : ''}`
 
 // `ki repo init` reaches the runner with the command environment before it can succeed or fail on
 // anything else, so a refusing runner is the cheapest observation of what a spawned child inherits.

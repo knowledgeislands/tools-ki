@@ -73,13 +73,13 @@ export default {
 
 const projectRoot = (area: SandboxArea): Promise<string> => realpath(area.path)
 
-const setupPrefixCollisionHarness = async (data: SandboxArea): Promise<void> => {
-  await data.write('ki/harnesses/example/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "ki"\n')
+const setupPrefixCollisionBackpack = async (data: SandboxArea): Promise<void> => {
+  await data.write('ki/backpacks/example/backpack/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "ki"\n')
   for (const { name, code, marker } of [
     { name: 'ki-repo-website', code: 'WEB-1', marker: 'website.txt' },
     { name: 'ki-repo-website-cloudflare', code: 'WCF-1', marker: 'cloudflare.txt' }
   ]) {
-    const base = `ki/harnesses/example/harness/skills/${name}`
+    const base = `ki/backpacks/example/backpack/skills/${name}`
     await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: []\n---\n`)
     await data.write(
       `${base}/scripts/rubric/items/index.ts`,
@@ -104,8 +104,8 @@ describe('[ki repo]', () => {
   describe('repo educate', () => {
     test('renders only the static catalogue for one declared skill', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric(
           `[{\n          code: 'F', title: 'Family',\n          items: [\n            { kind: 'judgment', code: 'J-1', title: 'Judgment', prompt: 'Review the design.' },\n            { kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',\n              audit: async () => { throw new Error('educate must not execute items') } }\n          ]\n        }]`
         )
@@ -116,14 +116,14 @@ describe('[ki repo]', () => {
       expect(result).toEqual({
         exitCode: 0,
         output:
-          'example/harness:ki-example\n  Concern: test governance\n  Scope: repository\n  F: Family\n    Test family.\n    Standard: standard.md\n    J-1 [J]: Judgment\n      Judgment test criterion.\n      Sources: standard.md\n      Review: Review the design.\n    EXAMPLE-1 [M]: Example\n      Mechanical test criterion.\n      Sources: standard.md\n'
+          'example/backpack:ki-example\n  Concern: test governance\n  Scope: repository\n  F: Family\n    Test family.\n    Standard: standard.md\n    J-1 [J]: Judgment\n      Judgment test criterion.\n      Sources: standard.md\n      Review: Review the design.\n    EXAMPLE-1 [M]: Example\n      Mechanical test criterion.\n      Sources: standard.md\n'
       })
     })
 
     test('closes educate progress with a timed completion receipt', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
 
       const result = await box.run('ki repo educate', { interactive: true, now: () => 0 })
 
@@ -133,8 +133,8 @@ describe('[ki repo]', () => {
 
     test('reports when the repository declares no skills', async () => {
       const box = await sandbox()
-      await box.setupExampleHarness()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+      await box.setupExampleBackpack()
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n')
 
       const result = await box.run('ki repo educate')
 
@@ -143,8 +143,8 @@ describe('[ki repo]', () => {
 
     test('renders an explicitly declared repository scope', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric('[]').replace(
           "concern: 'test governance',",
           "concern: 'test governance', scope: { kind: 'repository' },"
@@ -159,8 +159,8 @@ describe('[ki repo]', () => {
 
     test('renders user-home scope and a heuristic hybrid item in the static catalogue', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           code: 'HYBRID-1', title: 'Heuristic hybrid',
           mechanical: { level: 'WARN', heuristic: true, remediation: { class: 'guarded', guidance: 'Apply the review decision.' }, audit: { phase: 'PRIMARY', run: async () => [] } },
@@ -194,8 +194,8 @@ describe('[ki repo]', () => {
 
     test("runs only a declared skill's mechanical rubric items", async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric(`[{
           code: 'F', title: 'Family',
           items: [
@@ -213,7 +213,7 @@ describe('[ki repo]', () => {
         output: `╭─ KI REPO AUDIT
 │  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})
 │  ╰─ ✦ 1 skill selected
-│     ╰─ example/harness:ki-example
+│     ╰─ example/backpack:ki-example
 ╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 1 skill · CRITERIA: EVALUATED=1/1 JUDGMENT=1
 `
       })
@@ -221,8 +221,8 @@ describe('[ki repo]', () => {
 
     test('renders only the final audit summary in concise mode', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
 
       const result = await box.run('ki repo audit --concise --progress always')
 
@@ -234,8 +234,8 @@ describe('[ki repo]', () => {
 
     test('filters complete outcome levels by default and renders every level on request', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [
           { kind: 'mechanical', code: 'PASS-1', title: 'Pass', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'PASS', message: 'pass evidence' }] },
           { kind: 'mechanical', code: 'NA-1', title: 'Not applicable', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'NOT_APPLICABLE', message: 'not applicable evidence' }] },
@@ -269,8 +269,8 @@ describe('[ki repo]', () => {
 
     test('exposes and validates repository-operation output controls', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
 
       const help = await box.run('ki repo audit --help')
       const never = await box.run('ki repo audit --progress never', { interactive: true, now: () => 0 })
@@ -303,7 +303,7 @@ describe('[ki repo]', () => {
       expect(always.output).toContain('├─ ✦ loading')
       expect(always.output).not.toContain('\r\x1b[2K')
       expect(always.output).toContain(
-        `╭─ KI REPO AUDIT\n│  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})\n│  ╰─ ✦ 1 skill selected\n│     ╰─ example/harness:ki-example\n├─ ✦ loading`
+        `╭─ KI REPO AUDIT\n│  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})\n│  ╰─ ✦ 1 skill selected\n│     ╰─ example/backpack:ki-example\n├─ ✦ loading`
       )
       expect(always.output.indexOf('╭─ KI REPO AUDIT')).toBeLessThan(always.output.indexOf('├─ ✦ loading'))
       expect(writes.stdout).toContain('├─ ✦ loading')
@@ -331,21 +331,21 @@ describe('[ki repo]', () => {
       const box = await sandbox()
       await box.project.write(
         '.ki.toml',
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-website]\n[skills.ki-repo-website-cloudflare]\n'
+        '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-website]\n[skills.ki-repo-website-cloudflare]\n'
       )
-      await setupPrefixCollisionHarness(box.data)
+      await setupPrefixCollisionBackpack(box.data)
 
       const result = await box.run(`ki repo --repo ${box.project.path} audit --skill ki-repo-website`)
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain(`╰─ ! example/harness:ki-repo-website WARN · FAIL=0 WARN=1`)
+      expect(result.output).toContain(`╰─ ! example/backpack:ki-repo-website WARN · FAIL=0 WARN=1`)
       expect(result.output).not.toContain('ki-repo-website-cloudflare')
     })
 
     test('reports clean when no families declare items', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
 
       const result = await box.run('ki repo audit')
 
@@ -354,7 +354,7 @@ describe('[ki repo]', () => {
         output: `╭─ KI REPO AUDIT
 │  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})
 │  ╰─ ✦ 1 skill selected
-│     ╰─ example/harness:ki-example
+│     ╰─ example/backpack:ki-example
 ╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 1 skill · CRITERIA: EVALUATED=0/0 JUDGMENT=0
 `
       })
@@ -362,8 +362,8 @@ describe('[ki repo]', () => {
 
     test('reports an empty declared skill selection without opening progress', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
-      await box.setupExampleHarness()
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n')
+      await box.setupExampleBackpack()
 
       const result = await box.run('ki repo audit --progress always', { now: () => 0 })
 
@@ -374,8 +374,8 @@ describe('[ki repo]', () => {
 
     test('reports an interactive zero-item audit as complete', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
 
       const result = await box.run('ki repo audit', { interactive: true, now: () => 0 })
 
@@ -390,8 +390,8 @@ describe('[ki repo]', () => {
 
     test('uses the fallback progress width when a TTY reports an invalid column count', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
 
       const result = await box.run('ki repo audit', { interactive: true, columns: Number.NaN, now: () => 0 })
 
@@ -404,20 +404,20 @@ describe('[ki repo]', () => {
       const box = await sandbox()
       await box.project.write(
         '.ki.toml',
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n[skills.ki-extra]\n'
+        '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n[skills.ki-extra]\n'
       )
-      await box.setupExampleHarness({
+      await box.setupExampleBackpack({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [
           { kind: 'mechanical', code: 'EXAMPLE-1', title: 'First', level: 'FAIL', phase: 'PRIMARY', audit: async () => [] },
           { kind: 'mechanical', code: 'EXAMPLE-2', title: 'Second', level: 'FAIL', phase: 'DERIVED', audit: async () => [] }
         ] }]`)
       })
       await box.data.write(
-        'ki/harnesses/example/harness/skills/ki-extra/SKILL.md',
+        'ki/backpacks/example/backpack/skills/ki-extra/SKILL.md',
         '---\nname: ki-extra\nki-depends-on: []\n---\n'
       )
       await box.data.write(
-        'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts',
+        'ki/backpacks/example/backpack/skills/ki-extra/scripts/rubric/items/index.ts',
         rubric(
           `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXTRA-1', title: 'Extra', level: 'FAIL', phase: 'PRIMARY', audit: async () => [] }] }]`,
           'ki-extra'
@@ -458,8 +458,8 @@ describe('[ki repo]', () => {
         output: `╭─ KI REPO AUDIT
 │  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})
 │  ╰─ ✦ 2 skills selected
-│     ├─ example/harness:ki-example
-│     ╰─ example/harness:ki-extra
+│     ├─ example/backpack:ki-example
+│     ╰─ example/backpack:ki-extra
 ╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 2 skills · CRITERIA: EVALUATED=0/3 JUDGMENT=0
 `
       })
@@ -467,8 +467,8 @@ describe('[ki repo]', () => {
 
     test('drops the bar from a plain-stream frame too narrow to hold one', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
 
       // 20 columns leaves under three columns for a bracket bar, so only the text survives.
       const result = await box.run('ki repo audit --progress always', { columns: 20, now: () => 0 })
@@ -481,8 +481,8 @@ describe('[ki repo]', () => {
     test('uses the same activity bar regardless of declared item cost', async () => {
       const run = async (items: string): Promise<string> => {
         const box = await sandbox()
-        await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-        await box.setupExampleHarness({ rubric: rubric(`[{ code: 'F', title: 'Family', items: [${items}] }]`) })
+        await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+        await box.setupExampleBackpack({ rubric: rubric(`[{ code: 'F', title: 'Family', items: [${items}] }]`) })
         return (await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })).output
       }
       const item = (code: string, cost?: number): string =>
@@ -502,10 +502,10 @@ describe('[ki repo]', () => {
 
     test('names the running item when an audit fails part-way through', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
       // A malformed outcome is rejected while the item is in flight, which is the only
       // failure the tracker can attribute to a named running item.
-      await box.setupExampleHarness({
+      await box.setupExampleBackpack({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
           audit: async () => [{ status: 'NOT_A_STATUS', message: 'bad' }]
@@ -522,8 +522,8 @@ describe('[ki repo]', () => {
 
     test('advances the elapsed clock between item events', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
 
       let refresh: (() => void) | undefined
       // A slow item reports nothing between its edges, so without a refresh the clock
@@ -551,8 +551,8 @@ describe('[ki repo]', () => {
 
     test('restores the terminal cursor when the run is interrupted', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
 
       let interrupt: (() => void) | undefined
       const result = await box.run('ki repo audit', {
@@ -574,10 +574,10 @@ describe('[ki repo]', () => {
 
     test('restores the terminal cursor when an interrupt arrives mid-run', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
       // Firing the captured handler from inside an item reproduces a signal arriving
       // while the display owns the terminal, which no completed invocation can reach.
-      await box.setupExampleHarness({
+      await box.setupExampleBackpack({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
           audit: async () => { globalThis.__kiInterrupt?.(); return [] }
@@ -606,8 +606,8 @@ describe('[ki repo]', () => {
       [13, 'loading de...']
     ])('renders a safe abbreviated TTY progress frame at %p columns', async (columns, expected) => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY', audit: async () => []
         }] }]`)
@@ -625,8 +625,8 @@ describe('[ki repo]', () => {
 
     test('finishes an interactive progress line when loading a malformed provider fails', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: 'this is not valid javascript syntax {{{\n' })
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: 'this is not valid javascript syntax {{{\n' })
 
       const result = await box.run('ki repo audit', { interactive: true, now: () => 0 })
       const forcedSingle = await box.run('ki repo audit --progress always', { now: () => 0 })
@@ -636,7 +636,7 @@ describe('[ki repo]', () => {
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('\r\x1b[2K')
-      expect(result.output).toContain('\nki: error: example/harness:ki-example rubric catalogue could not be imported')
+      expect(result.output).toContain('\nki: error: example/backpack:ki-example rubric catalogue could not be imported')
       expect(forcedSingle.exitCode).toBe(1)
       expect(multi.exitCode).toBe(1)
       expect(stripVTControlCharacters(multi.output)).toMatch(/✗ loading +\[\.*\] failed · total 0\.0s/)
@@ -656,8 +656,8 @@ describe('[ki repo]', () => {
 
     test('refuses a declared skill with no rubric definition module', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness()
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack()
 
       const result = await box.run('ki repo audit')
 
@@ -667,8 +667,8 @@ describe('[ki repo]', () => {
 
     test('fails when a FAIL-level item reports a violation', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric(`[{
           code: 'F', title: 'Family',
           items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
@@ -685,8 +685,8 @@ describe('[ki repo]', () => {
 
     test('discloses evaluated mechanical and unassessed judgment criteria', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric(`[{
           code: 'F', title: 'Family',
           items: [
@@ -702,7 +702,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit --progress never')
 
       expect(result.output).toContain(
-        '! example/harness:ki-example WARN · FAIL=0 WARN=1 · CRITERIA: EVALUATED=1/2 JUDGMENT=1'
+        '! example/backpack:ki-example WARN · FAIL=0 WARN=1 · CRITERIA: EVALUATED=1/2 JUDGMENT=1'
       )
       expect(result.output).toContain(
         'PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1 · CRITERIA: EVALUATED=1/2 JUDGMENT=1'
@@ -711,8 +711,8 @@ describe('[ki repo]', () => {
 
     test('appends the subject to a finding message when an outcome declares one', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric(`[{
           code: 'F', title: 'Family',
           items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
@@ -727,7 +727,7 @@ describe('[ki repo]', () => {
         output: `╭─ KI REPO AUDIT
 │  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})
 │  ╰─ ✦ 1 skill selected
-│     ╰─ example/harness:ki-example
+│     ╰─ example/backpack:ki-example
 ╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 1 skill · CRITERIA: EVALUATED=1/1 JUDGMENT=0
 `
       })
@@ -735,8 +735,8 @@ describe('[ki repo]', () => {
 
     test('inherits a rubric-session subject when an outcome leaves it unspecified', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
           audit: async () => [{ status: 'INFO', message: 'ok' }]
@@ -755,8 +755,8 @@ describe('[ki repo]', () => {
 
     test('executes a full direct catalogue with family context selection, hybrid judgment, and a declared level override', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: `
 export default {
   contract: 1,

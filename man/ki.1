@@ -25,27 +25,27 @@ Print the CLI version.
 \&
 .TP
 .B ki bootstrap [--refresh]
-Detect agents, install the canonical harness, and install core user skills.
+Detect agents, install the canonical backpack, and install core user skills.
 On refresh, migrate retired local repository paths into machine-local registry
 state.
 .SS Local management
 \&
 .TP
-.B ki harness search <query>
-Search verified installed local harness capabilities.
+.B ki backpack search <query>
+Search verified installed local backpack capabilities.
 .TP
 .B ki completion <shell>
 Print Bash or Zsh completion source for the complete registered CLI grammar.
 .TP
-.B ki harness outdated
-Report installed harnesses only when comparable newer release evidence is
+.B ki backpack outdated
+Report installed backpacks only when comparable newer release evidence is
 available; it names unavailable evidence rather than claiming freshness.
 .TP
-.B ki harness missing
+.B ki backpack missing
 Report desired user capabilities that have no installed provider.
 .TP
 .B ki update [--cli]
-Update an installer-managed CLI and refresh installed configured harnesses.
+Update an installer-managed CLI and refresh installed configured backpacks.
 .TP
 .B ki cleanup
 Report eligible KI-managed stale state.
@@ -54,7 +54,7 @@ Report eligible KI-managed stale state.
 Show share-safe installation facts; --full includes paths and local identities.
 .TP
 .B ki doctor
-Check user configuration, agents, harnesses, user-skill links, registered
+Check user configuration, agents, backpacks, user-skill links, registered
 Knowledge Base stores, and direct-CWD legacy KI state and configuration.
 .TP
 .B ki repair [--apply | --dry-run]
@@ -64,7 +64,7 @@ Preview user-skill and configuration repairs; --apply writes them.
 Print canonical KI documentation locations.
 .TP
 .B ki inventory
-List verified installed harnesses and capabilities with declared user skills and
+List verified installed backpacks and capabilities with declared user skills and
 local registered repositories.
 .TP
 .B ki git check-message <file>
@@ -100,7 +100,7 @@ Preview or publish local VS Code projection changes.
 \&
 .TP
 .B ki skill add <skill> [--replace]
-Link a harness skill into configured user agent skill spaces.
+Link a backpack skill into configured user agent skill spaces.
 .TP
 .B ki skill remove <skill>
 Remove a KI-managed user skill link.
@@ -192,7 +192,7 @@ Preview or apply the mechanical roadmap model migration.
 Explain the registered repository maintenance catalogue.
 .TP
 .B ki repo [repo-options] skill add <skill> [--replace]
-Link and declare a harness skill in selected repositories.
+Link and declare a backpack skill in selected repositories.
 .TP
 .B ki repo [repo-options] skill remove <skill>
 Remove KI-managed repository skill links and declarations.
@@ -251,23 +251,23 @@ Remove one exact machine-local registry entry by key.
 .TP
 .B ki registry --repo <path> remove [--dry-run]
 Remove one exact machine-local registry entry by stored path.
-.SS Harness management
+.SS Backpack management
 \&
 .TP
-.B ki harness info <harness-id>
-Inspect one installed harness and its capabilities.
+.B ki backpack info <backpack-id>
+Inspect one installed backpack and its capabilities.
 .TP
-.B ki harness list
-List installed compatible harnesses.
+.B ki backpack list
+List installed compatible backpacks.
 .TP
-.B ki harness install <harness-id>
-Install one configured compatible harness.
+.B ki backpack install <backpack-id>
+Install one configured compatible backpack.
 .TP
-.B ki harness reinstall <harness-id>
-Replace one inactive installed harness with a verified archive.
+.B ki backpack reinstall <backpack-id>
+Replace one inactive installed backpack with a verified archive.
 .TP
-.B ki harness uninstall <harness-id>
-Remove one installed non-canonical harness.
+.B ki backpack uninstall <backpack-id>
+Remove one installed non-canonical backpack.
 .SS Trades
 \&
 .TP
@@ -412,15 +412,15 @@ Preview or apply binding registered KI checkouts to their tracked hooks.
 .SS Development
 \&
 .TP
-.B ki dev local set <harness-id> <local-harness-path>
-Validate and remember a checkout for one installed harness without enabling it.
+.B ki dev local set <backpack-id> <local-backpack-path>
+Validate and remember a checkout for one installed backpack without enabling it.
 .TP
-.B ki dev local on [harness-id]
-Switch one remembered installed harness, or all remembered harnesses, to their
+.B ki dev local on [backpack-id]
+Switch one remembered installed backpack, or all remembered backpacks, to their
 local checkouts.
 .TP
-.B ki dev local off [harness-id]
-Restore one remembered harness, or all remembered harnesses, from their
+.B ki dev local off [backpack-id]
+Restore one remembered backpack, or all remembered backpacks, from their
 verified archives.
 .TP
 .B ki dev skill generate <skill> [--write]
@@ -490,8 +490,8 @@ skills installed instead. An existing agent
 configuration is reused without replacement. Pass
 .B --refresh
 to redetect every supported runtime and rebuild the user configuration's
-agents, installed harnesses, and KI-managed user skill links.
-When the canonical harness is in local development, bootstrap keeps that
+agents, installed backpacks, and KI-managed user skill links.
+When the canonical backpack is in local development, bootstrap keeps that
 binding and installs the core user skills from the local checkout. If the
 binding cannot be kept, it prints a warning naming the reason before restoring
 the verified archive and re-pointing the configured canonical skills to it.
@@ -507,10 +507,10 @@ retired path list.
 Use these commands to inspect the local KI installation, user configuration,
 and repository state without changing it.
 .TP
-.B ki harness search <query>
-Search only verified installed local harness capabilities. The required
-non-empty query matches case-insensitively against a harness identifier,
-capability kind, or capability name. Results are sorted by harness identifier,
+.B ki backpack search <query>
+Search only verified installed local backpack capabilities. The required
+non-empty query matches case-insensitively against a backpack identifier,
+capability kind, or capability name. Results are sorted by backpack identifier,
 capability kind, and capability name. The command neither discovers a
 repository nor consults a registry or the network. When no capability matches,
 it succeeds and reports that no matching installed capabilities exist.
@@ -523,15 +523,15 @@ selection, capture-directory, and output-directory values to the shell's native
 path completion.
 They do not invoke KI, consult the network, or invent dynamic identifiers.
 .TP
-.B ki harness outdated
-Report installed harnesses only when comparable newer release evidence is
+.B ki backpack outdated
+Report installed backpacks only when comparable newer release evidence is
 available; it names unavailable evidence rather than claiming freshness.
 .TP
-.B ki harness missing
+.B ki backpack missing
 Report desired user capabilities that have no installed provider.
 .TP
 .B ki update [--cli]
-Refresh installed configured harnesses. The executable updates only when a
+Refresh installed configured backpacks. The executable updates only when a
 verified installer receipt proves that it owns the running regular executable.
 Use
 .B --cli
@@ -542,7 +542,7 @@ executables, including Homebrew installations, are not self-updated.
 Report only stale artefacts in a persisted, versioned KI-owned format. V1 has
 no such format, so this command reports that no eligible managed stale state
 exists and changes no files. It does not infer that cache contents,
-transaction-looking directories, unconfigured harnesses, links, or unknown
+transaction-looking directories, unconfigured backpacks, links, or unknown
 files are stale.
 .TP
 .B ki diag [--full]
@@ -558,7 +558,7 @@ without that evidence reports unknown; a source URL alone is insufficient.
 .TP
 .B ki doctor
 Check the user configuration, configured agent skill directories, installed
-harnesses, and configured KI user-skill links without changing state. It also
+backpacks, and configured KI user-skill links without changing state. It also
 reports direct-CWD legacy \fB.ki-meta/\fR and \fB.ki/\fR directories, without
 searching for or operating on a repository. It validates a regular direct-CWD
 \fB.ki.toml\fR declaration without resolving its providers. For every
@@ -574,10 +574,10 @@ Health does not imply package or release freshness.
 .B ki repair [--apply | --dry-run]
 Preview repairs by default; --apply explicitly authorises changes.
 Reconcile configured user-skill links from their installed or active local
-harness sources. It creates missing links and re-points stale or dangling
+backpack sources. It creates missing links and re-points stale or dangling
 symbolic links. It also removes a recognised legacy \fBschema = 1\fR line
 from valid user configuration; newly written configuration is unversioned.
-It never installs a harness, removes legacy repository state, or repairs
+It never installs a backpack, removes legacy repository state, or repairs
 repository projections. It reports
 unavailable sources, incompatible agents, and unsafe non-symbolic-link entries
 for manual resolution. With \fB--dry-run\fR, it reports proposed links and
@@ -604,7 +604,7 @@ for
 Any other topic is invalid command grammar.
 .TP
 .B ki inventory
-List verified installed harnesses and their capabilities with declared user
+List verified installed backpacks and their capabilities with declared user
 skills and local registered repositories. The command does not fetch, discover a
 repository, or change state.
 .TP
@@ -860,7 +860,7 @@ servers even when using a local model.
 .TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>] [--staged] [--paths <path...>]
 Run the native read-only operations registered by each selected repository's
-declared capabilities. The host verifies every selected harness inventory and
+declared capabilities. The host verifies every selected backpack inventory and
 integrity-covered operation before importing it in process; it never dispatches
 repository-vendored runners.
 Progress defaults to \fBauto\fR, which follows the output stream's TTY state;
@@ -880,7 +880,7 @@ criterion runs, together with whatever stages and steps that skill reports
 inside it; a span of unknown extent shows activity and an elapsed clock rather
 than a completion estimate.
 Per-skill result rows name the assessed repository first and its supplying
-harness skill in brackets, and appear only for WARN, FAIL, or FIXED outcomes.
+backpack skill in brackets, and appear only for WARN, FAIL, or FIXED outcomes.
 Audit renders FAIL and WARN findings by default;
 \fB--reporter-levels\fR accepts a case-insensitive comma-separated selection
 from FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, and PASS, or \fBall\fR.
@@ -930,7 +930,7 @@ an inventory action, not evidence of conformance, so a failing repository
 remains available for later repair and bulk maintenance.
 With \fBki-repo\fR selected, conform creates or replaces both
 \fI.githooks/pre-commit\fR and \fI.githooks/commit-msg\fR at mode 0755,
-byte-exact from the resolved harness's canonical \fBki-repo\fR data for
+byte-exact from the resolved backpack's canonical \fBki-repo\fR data for
 \fBprimary_shape\fR and package presence. There is no extension point;
 repository-specific hook lines are replaced. The dotfiles shape receives no
 hook changes, and repositories without \fI.ki.toml\fR are not targets.
@@ -1019,7 +1019,7 @@ never crosses lanes, and an aggregate view keeps each repository's records
 together. Through the field migration window a \fBgaps\fR section names each
 open record's missing \fBsize\fR or \fBkind\fR, retired \fBinitiative\fR,
 theme beside its project, \fBpurpose: adoption\fR or retired horizon, in the
-Harness checker's wording, counted in \fBGAPS=\fR without changing the exit
+Backpack checker's wording, counted in \fBGAPS=\fR without changing the exit
 status. JSON items add \fBpriority\fR, \fBsize\fR and \fBgaps\fR.
 A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other
@@ -1251,7 +1251,7 @@ Remove a KI-managed repository skill link and declaration from each selected
 repository.
 .TP
 .B ki repo [repo-options] upgrade
-Refresh uniquely resolved harness providers declared by each selected KI
+Refresh uniquely resolved backpack providers declared by each selected KI
 repository. It changes neither user nor repository skill activation.
 .SS Batch records
 \&
@@ -1342,10 +1342,10 @@ the checkout no longer exists. Removal rejects bulk selectors and publishes the
 validated replacement atomically. Use
 .B --dry-run
 to inspect the write without changing registry state.
-.SS Harness management
+.SS Backpack management
 \&
 .PP
-Use these commands to install, inspect, and remove compatible harness payloads
+Use these commands to install, inspect, and remove compatible backpack payloads
 in the user-managed KI environment.
 .PP
 A configured private GitHub archive may declare
@@ -1358,28 +1358,28 @@ and sends it only on that no-redirect archive request; it neither stores nor
 prints the token. Authenticate the GitHub CLI first with
 .BR gh\ auth\ login .
 .TP
-.B ki harness info <harness-id>
-Inspect one user-installed compatible harness and its capability
+.B ki backpack info <backpack-id>
+Inspect one user-installed compatible backpack and its capability
 inventory without changing user state.
 .TP
-.B ki harness list
-List compatible harnesses already installed.
+.B ki backpack list
+List compatible backpacks already installed.
 .TP
-.B ki harness install \fIharness-id\fR
-Install a harness from which capabilities, such as skills and subagents, can
+.B ki backpack install \fIbackpack-id\fR
+Install a backpack from which capabilities, such as skills and subagents, can
 be added.
 .TP
-.B ki harness reinstall <harness-id>
-Replace one inactive installed Harness with a verified archive. The command
-refuses a Harness that supplies active user skills. A development-linked
-Harness must first be restored with
-.B ki dev local off <harness-id>.
+.B ki backpack reinstall <backpack-id>
+Replace one inactive installed backpack with a verified archive. The command
+refuses a backpack that supplies active user skills. A development-linked
+Backpack must first be restored with
+.B ki dev local off <backpack-id>.
 .TP
-.B ki harness uninstall <harness-id>
-Remove one non-canonical harness with only recognised payload directories. The
-canonical harness cannot be removed, and a harness that supplies active user
+.B ki backpack uninstall <backpack-id>
+Remove one non-canonical backpack with only recognised payload directories. The
+canonical backpack cannot be removed, and a backpack that supplies active user
 skills cannot be removed. A successful removal deletes its identifier from
-.BR [harnesses].ids .
+.BR [backpacks].ids .
 .SS Trades
 \&
 .PP
@@ -1805,11 +1805,11 @@ reverses.
 .SS Development
 \&
 .PP
-Use these commands to switch Harnesses already present in the installed KI
+Use these commands to switch backpacks already present in the installed KI
 estate between their verified archives and independent local development
 checkouts.
 .TP
-.B ki dev local set <harness-id> <local-harness-path>
+.B ki dev local set <backpack-id> <local-backpack-path>
 Validate the identity against the installed estate and remember it with the
 local checkout in the host-local
 .I $XDG_STATE_HOME/ki/locals.toml
@@ -1836,24 +1836,24 @@ and
 .IR hooks
 payload directories.
 .TP
-.B ki dev local on [harness-id]
+.B ki dev local on [backpack-id]
 Enable selected local checkouts for development. KI replaces each selected
-Harness's complete active root with its checkout, so its metadata and payloads
+Backpack's complete active root with its checkout, so its metadata and payloads
 always have one source, and reconciles its managed user-skill links to the
-local source on every run. An explicit Harness ID selects one source;
+local source on every run. An explicit backpack ID selects one source;
 omitting it selects all remembered sources. A remembered checkout missing on
 this host is refused rather than replaced by another source.
 .TP
-.B ki dev local off [harness-id]
-Remove each selected recognised local Harness root, reinstall its verified
+.B ki dev local off [backpack-id]
+Remove each selected recognised local backpack root, reinstall its verified
 archive, retain its remembered checkout, and reconcile its managed user-skill
-links to the restored archive. An explicit Harness ID selects one source;
+links to the restored archive. An explicit backpack ID selects one source;
 omitting it selects all remembered sources.
 .TP
 .B ki dev skill generate <skill> [--write]
 Check or regenerate the surfaces a skill's
 .I scripts/generate/index.ts
-module renders below its Harness root, such as files the skill's standard is
+module renders below its backpack root, such as files the skill's standard is
 the one source of. The module renders and never writes. Without
 \fB--write\fR, every missing or stale surface is named and the command fails;
 with \fB--write\fR, only those surfaces are published, an existing file keeping
@@ -1862,7 +1862,7 @@ its permission bits, under the same development-link and working-tree guard as
 .TP
 .B ki dev skill rubric <skill> [--write]
 Check or regenerate a skill's rubric catalogue. The skill is resolved from the
-installed Harnesses and never from the current directory, so every result names
+installed backpacks and never from the current directory, so every result names
 the resolved publication root that it answers about. With
 \fB--write\fR, publish only when that publication root and the current directory
 belong to the same Git working tree; any other tree, including another worktree
@@ -1908,7 +1908,7 @@ writes the file; a table with both keys is invalid.
 .TP
 .I .ki.toml
 Required repository declaration at a KI repository root.
-\fB[repo]\fR names, in its harnesses list, the backpacks that provide the
+\fB[repo]\fR names, in its backpacks list, the backpacks that provide the
 repository's skills, and each governing skill is declared by its bare name under
 \fB[skills]\fR, carrying its own configuration. A provider must appear in that
 list before its skill can be added; backpack-qualified skill keys are invalid.

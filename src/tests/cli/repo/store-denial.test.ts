@@ -17,8 +17,8 @@ vi.mock('node:fs/promises', async (importOriginal) => {
 
 afterEach(() => denied.clear())
 
-const knowledgeBase = (identity: string, harness = 'example/harness'): string =>
-  `[repo]\nharnesses = ["${harness}"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-kb"\nrepository = ${JSON.stringify(identity)}\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n`
+const knowledgeBase = (identity: string, backpack = 'example/backpack'): string =>
+  `[repo]\nbackpacks = ["${backpack}"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-kb"\nrepository = ${JSON.stringify(identity)}\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n`
 
 const macFix =
   "grant Full Disk Access to the terminal app, or to sshd-keygen-wrapper over SSH, in System Settings > Privacy & Security, or run ki at the Mac's screen"
@@ -94,8 +94,8 @@ describe('ki repo store under access denial', () => {
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')
     await box.run('ki bootstrap')
-    await box.setupExampleHarness({ name: 'ki-repo' })
-    await box.setupExampleHarness()
+    await box.setupExampleBackpack({ name: 'ki-repo' })
+    await box.setupExampleBackpack()
     const root = await realpath(box.project.path)
     const sources = await box.root.mkdir('sources')
     await box.project.write(

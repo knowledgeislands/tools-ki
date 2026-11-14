@@ -1,5 +1,5 @@
+import type { Fetcher } from '../backpack/acquire.ts'
 import { KiError } from '../errors.ts'
-import type { Fetcher } from '../harness/acquire.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
 import type { McpSourceAuth } from './types.ts'

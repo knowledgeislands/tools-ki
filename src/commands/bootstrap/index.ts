@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { type BootstrapOperationEvent, bootstrapEnvironment } from '../../core/harness/index.ts'
+import { type BootstrapOperationEvent, bootstrapEnvironment } from '../../core/backpack/index.ts'
 import { bootstrapPort } from './ports.ts'
 
 const developmentLoss = (event: Extract<BootstrapOperationEvent, { readonly kind: 'development-binding-lost' }>) => {
@@ -18,8 +18,8 @@ const developmentRecovery = (
   event: Extract<BootstrapOperationEvent, { readonly kind: 'development-binding-lost' }>
 ): string =>
   event.reason === 'source-unconfigured'
-    ? `To resume, run ki dev local set ${event.harness} <checkout> and then ki dev local on ${event.harness}`
-    : `To resume, run ki dev local on ${event.harness} once its checkout is available`
+    ? `To resume, run ki dev local set ${event.backpack} <checkout> and then ki dev local on ${event.backpack}`
+    : `To resume, run ki dev local on ${event.backpack} once its checkout is available`
 
 const renderBootstrapEvent = (event: BootstrapOperationEvent): string => {
   switch (event.kind) {
@@ -27,20 +27,20 @@ const renderBootstrapEvent = (event: BootstrapOperationEvent): string => {
       return `created KI agent configuration for ${event.agentIds.join(', ') || 'no detected agents'}\n`
     case 'agents-refreshed':
       return `refreshed KI agents: ${event.agentIds.join(', ') || 'none'}\n`
-    case 'canonical-harness':
+    case 'canonical-backpack':
       // A sandbox cannot verify the pinned canonical archive needed by the fresh-install arm.
       /* v8 ignore next */
-      return `canonical harness ${event.installed ? 'installed' : 'already installed'}\tarchive ${event.archiveSha256}\n`
-    case 'canonical-harness-local':
-      return `canonical harness kept in local development\t${event.path}\n`
+      return `canonical backpack ${event.installed ? 'installed' : 'already installed'}\tarchive ${event.archiveSha256}\n`
+    case 'canonical-backpack-local':
+      return `canonical backpack kept in local development\t${event.path}\n`
     case 'development-binding-lost':
-      return `ki: warning: leaving local development for ${event.harness}: ${developmentLoss(event)}; restoring the verified archive and re-pointing its configured skills. ${developmentRecovery(event)}\n`
+      return `ki: warning: leaving local development for ${event.backpack}: ${developmentLoss(event)}; restoring the verified archive and re-pointing its configured skills. ${developmentRecovery(event)}\n`
     case 'configuration-refreshed':
-      return `refreshed ki configuration: ${event.agents} agents, ${event.harnesses} harnesses, ${event.skills} skills\n`
+      return `refreshed ki configuration: ${event.agents} agents, ${event.backpacks} backpacks, ${event.skills} skills\n`
     case 'repositories-migrated':
       return `migrated local KI repository registry: ${event.repositories} repositories\n`
     case 'locals-migrated':
-      return `moved remembered local harness checkouts to ${event.path}: ${event.locals} harnesses\n`
+      return `moved remembered local backpack checkouts to ${event.path}: ${event.locals} backpacks\n`
     case 'skill-projection':
       return `${event.skill} for ${event.agentId} ${event.installed ? 'installed' : 'already installed'}\n`
   }

@@ -1,10 +1,10 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
+import { discoverInstalledBackpacks } from '../../core/backpack/index.ts'
 import { readRepositoryDeclaration, resolveRepositoryDeclaredSkills } from '../../core/configuration/index.ts'
-import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { renderTree } from '../presentation/index.ts'
-import { refreshHarnesses } from '../shared/harness-refresh.ts'
+import { refreshBackpacks } from '../shared/backpack-refresh.ts'
 
 export const createUpgradeCommand = (
   context: KiContext,
@@ -24,27 +24,27 @@ export const createUpgradeCommand = (
         workingDirectory: context.workingDirectory,
         homeDirectory: context.homeDirectory
       })
-      const harnesses = await discoverInstalledHarnesses(context.paths.data)
+      const backpacks = await discoverInstalledBackpacks(context.paths.data)
       const reports: { readonly root: string; readonly providers: readonly string[] }[] = []
       for (const repository of repositories) {
         const skills = await resolveRepositoryDeclaredSkills(
           repository.root,
           await readRepositoryDeclaration(repository.declaration),
-          harnesses,
+          backpacks,
           context.paths.data
         )
         const selected = [
           ...new Map(
             skills.flatMap((skill) =>
-              skill.provider.kind === 'installed-harness'
-                ? [[skill.provider.harness.id, skill.provider.harness] as const]
+              skill.provider.kind === 'installed-backpack'
+                ? [[skill.provider.backpack.id, skill.provider.backpack] as const]
                 : []
             )
           ).values()
         ]
         reports.push({
           root: repository.root,
-          providers: selected.length ? await refreshHarnesses(context, selected) : []
+          providers: selected.length ? await refreshBackpacks(context, selected) : []
         })
       }
       const providers = reports.reduce((total, report) => total + report.providers.length, 0)

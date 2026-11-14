@@ -26,11 +26,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### BOOT-003 — Complete core capability inventory
 
-`ki bootstrap` MUST refuse an installed canonical Harness that lacks a required bootstrap skill.
+`ki bootstrap` MUST refuse an installed canonical backpack that lacks a required bootstrap skill.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/bootstrap/bootstrap.test.ts` — `refuses an installed canonical harness missing a required bootstrap skill`.
+_Verify:_ `src/tests/cli/bootstrap/bootstrap.test.ts` — `refuses an installed canonical backpack missing a required bootstrap skill`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
@@ -38,7 +38,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### BOOT-004 — Kept local development binding
 
-When the canonical Harness root is linked to its configured local checkout, `ki bootstrap` and `ki bootstrap --refresh` MUST keep that binding and project the core user skills from the checkout, and MUST NOT restore the verified archive. When a canonical root link cannot be kept, because its checkout is missing, it targets another checkout than the configured one, or no local checkout is configured, bootstrap MUST warn on standard error, naming the reason and the recovery, before restoring the verified archive, and MUST then re-point every configured canonical skill the archive provides. An active checkout that fails inspection MUST fail bootstrap without changing the binding.
+When the canonical backpack root is linked to its configured local checkout, `ki bootstrap` and `ki bootstrap --refresh` MUST keep that binding and project the core user skills from the checkout, and MUST NOT restore the verified archive. When a canonical root link cannot be kept, because its checkout is missing, it targets another checkout than the configured one, or no local checkout is configured, bootstrap MUST warn on standard error, naming the reason and the recovery, before restoring the verified archive, and MUST then re-point every configured canonical skill the archive provides. An active checkout that fails inspection MUST fail bootstrap without changing the binding.
 
 _Conformance:_ conforming
 

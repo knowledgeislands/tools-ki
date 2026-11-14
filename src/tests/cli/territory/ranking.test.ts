@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 import { capitalConfiguration, home, memberConfiguration } from '../_territory_helper.ts'
 
-const SYSTEM_HARNESS = home('knowledgeislands/ki-agent-backpack')
+const SYSTEM_BACKPACK = home('knowledgeislands/ki-agent-backpack')
 
 const capital = async (
   box: Sandbox,
@@ -39,7 +39,7 @@ const rank = (box: Sandbox, body: string) => box.config.write('ki/config.toml', 
  */
 const fixture = async () => {
   const box = await sandbox()
-  const system = await capital(box, 'a-sys-principal', { name: 'Sys', prefix: 'sys', members: [SYSTEM_HARNESS] })
+  const system = await capital(box, 'a-sys-principal', { name: 'Sys', prefix: 'sys', members: [SYSTEM_BACKPACK] })
   const alpha = await capital(box, 'b-alpha-principal', {
     name: 'Alpha',
     prefix: 'alpha',
@@ -72,7 +72,7 @@ describe('territory ranking', () => {
     expect((await box.run('ki territory roots --principals')).stdout).toBe(lines(system, alpha, beta))
     expect(await listed(box)).toEqual(['sys', 'alpha', 'beta'])
     expect((await box.run('ki territory roots --estate')).stdout).toBe(lines(system, alpha, beta, loose, member))
-    await rank(box, '[harnesses]\nids = []\n')
+    await rank(box, '[backpacks]\nids = []\n')
     expect((await box.run('ki territory roots --principals')).stdout).toBe(lines(system, alpha, beta))
     await rank(box, '[territories]\n')
     expect((await box.run('ki territory roots --principals')).stdout).toBe(lines(system, alpha, beta))

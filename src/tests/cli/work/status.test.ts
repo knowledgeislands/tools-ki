@@ -9,7 +9,7 @@ const REPOSITORY = 'https://github.com/example/principal'
 const declaration = (territory: readonly string[] = []): string =>
   [
     '[repo]',
-    'harnesses = ["example/harness"]',
+    'backpacks = ["example/backpack"]',
     '',
     '[skills.ki-repo-project]',
     '',

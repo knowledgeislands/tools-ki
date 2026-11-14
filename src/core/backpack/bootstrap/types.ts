@@ -1,6 +1,6 @@
 export interface BootstrapConfigurationInspection {
   readonly state: 'missing' | 'valid' | 'invalid'
-  readonly locals: readonly { readonly harness: string; readonly path: string }[]
+  readonly locals: readonly { readonly backpack: string; readonly path: string }[]
   readonly skills: readonly string[]
 }
 
@@ -10,7 +10,7 @@ export interface BootstrapAgentConfiguration<Agent> {
 }
 
 export interface BootstrapRefreshResult {
-  readonly harnesses: number
+  readonly backpacks: number
   readonly skills: number
 }
 
@@ -32,16 +32,16 @@ export interface BootstrapProjectionView {
 }
 
 export interface BootstrapOperationPort<Agent, Skill, Projection> {
-  readonly canonicalHarnessIdentifier: string
+  readonly canonicalBackpackIdentifier: string
   readonly inspectConfiguration: () => Promise<BootstrapConfigurationInspection>
   readonly developmentBinding: (local?: {
-    readonly harness: string
+    readonly backpack: string
     readonly path: string
   }) => Promise<BootstrapDevelopmentBinding>
-  readonly inspectLocalHarness: (local: {
-    readonly harness: string
+  readonly inspectLocalBackpack: (local: {
+    readonly backpack: string
     readonly path: string
-  }) => Promise<{ readonly harness: string; readonly skills: readonly Skill[] }>
+  }) => Promise<{ readonly backpack: string; readonly skills: readonly Skill[] }>
   readonly migrateLegacyRepositories: () => Promise<number>
   readonly migrateLocalSources: () => Promise<number>
   readonly localSourcesPath: string
@@ -50,7 +50,7 @@ export interface BootstrapOperationPort<Agent, Skill, Projection> {
     readonly dropLegacyRepositories: boolean
   }) => Promise<BootstrapAgentConfiguration<Agent>>
   readonly installedSkills: () => Promise<readonly Skill[]>
-  readonly installedHarnessSkills: () => Promise<readonly Skill[]>
+  readonly installedBackpackSkills: () => Promise<readonly Skill[]>
   readonly refreshConfiguration: (
     agents: readonly Agent[],
     options: { readonly dropLegacyRepositories: boolean }
@@ -61,7 +61,7 @@ export interface BootstrapOperationPort<Agent, Skill, Projection> {
     agents: readonly Agent[],
     options: { readonly replace?: boolean; readonly finalize: () => Promise<void> }
   ) => Promise<readonly Projection[]>
-  readonly restoreCanonicalHarness: () => Promise<BootstrapInstallationResult>
+  readonly restoreCanonicalBackpack: () => Promise<BootstrapInstallationResult>
   readonly agentId: (agent: Agent) => string
   readonly skillName: (skill: Skill) => string
   readonly projectionView: (projection: Projection) => BootstrapProjectionView
@@ -70,11 +70,11 @@ export interface BootstrapOperationPort<Agent, Skill, Projection> {
 export type BootstrapOperationEvent =
   | { readonly kind: 'configuration-created'; readonly agentIds: readonly string[] }
   | { readonly kind: 'agents-refreshed'; readonly agentIds: readonly string[] }
-  | ({ readonly kind: 'canonical-harness' } & BootstrapInstallationResult)
-  | { readonly kind: 'canonical-harness-local'; readonly path: string }
+  | ({ readonly kind: 'canonical-backpack' } & BootstrapInstallationResult)
+  | { readonly kind: 'canonical-backpack-local'; readonly path: string }
   | {
       readonly kind: 'development-binding-lost'
-      readonly harness: string
+      readonly backpack: string
       readonly reason: BootstrapDevelopmentLoss
       readonly target: string
       readonly configured?: string

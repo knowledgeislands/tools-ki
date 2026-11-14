@@ -214,7 +214,7 @@ jobs:
           ki diag --full | grep -F "Executable: $KI_CLI_INSTALL_DIR/ki"
           ki bootstrap
           ki diag | grep -F 'Configuration: valid'
-          ki harness list | grep -F 'knowledgeislands/ki-agent-backpack'
+          ki backpack list | grep -F 'knowledgeislands/ki-agent-backpack'
 
   notify-homebrew-tap:
     name: Notify Homebrew tap

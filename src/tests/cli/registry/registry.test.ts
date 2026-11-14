@@ -28,7 +28,7 @@ const localConfiguration = `schema = 1
 [agents]
 ids = []
 
-[harnesses]
+[backpacks]
 ids = []
 
 [skills]
@@ -101,7 +101,7 @@ const declaredLayout = (capital: string, territory: readonly string[] = []): str
     `# ${'-'.repeat(77)}`,
     '',
     '[repo]',
-    'harnesses = [',
+    'backpacks = [',
     '  "knowledgeislands/ki-agent-backpack",',
     ']',
     '',
@@ -376,10 +376,10 @@ test('refuses repository initialization when the bootstrapped local configuratio
 
 test('audits, conforms, and lists the local ki-repo registry without discovering other paths', async () => {
   const box = await sandbox()
-  await box.setupExampleHarness({ name: 'ki-repo', rubric })
+  await box.setupExampleBackpack({ name: 'ki-repo', rubric })
   await box.project.write(
     '.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
   )
   await box.config.write('ki/config.toml', localConfiguration)
 
@@ -405,7 +405,7 @@ test('registers a selected KI repository carrying a canonical identity', async (
   const box = await sandbox()
   await box.project.write(
     '.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
   )
   await box.config.write('ki/config.toml', localConfiguration)
 
@@ -423,7 +423,7 @@ test('registers a selected KI repository carrying a canonical identity', async (
 
   await box.project.write(
     'another/.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/another"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/another"\n'
   )
   const previousRegistry = await box.state.read('ki/registry.toml')
   const another = await realpath(`${box.project.path}/another`)
@@ -435,7 +435,7 @@ test('refuses a repository registration without a declared canonical identity', 
   const box = await sandbox()
   await box.project.write(
     '.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
   )
 
   expect(await box.run('ki registry add')).toEqual({
@@ -449,7 +449,7 @@ test('refuses a repository whose local directory name cannot become a registry k
   const repository = await box.root.mkdir('UPPER')
   await box.root.write(
     'UPPER/.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
   )
 
   expect(await box.run(['ki', 'registry', '--repo', repository, 'add'])).toEqual({
@@ -462,7 +462,7 @@ test('preserves and extends an existing local repository registry in determinist
   const box = await sandbox()
   await box.project.write(
     '.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
   )
   const later = await box.root.mkdir('z-later')
   const earlier = await box.root.mkdir('a-earlier')
@@ -626,10 +626,10 @@ test('requires exactly one key or path and rejects bulk or unknown registry remo
 
 test('reports missing, invalid, and unsafe local registry configuration without repairing it', async () => {
   const box = await sandbox()
-  await box.setupExampleHarness({ name: 'ki-repo', rubric })
+  await box.setupExampleBackpack({ name: 'ki-repo', rubric })
   await box.project.write(
     '.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
   )
 
   const missingList = await box.run('ki registry list')
@@ -695,7 +695,7 @@ test('projects registered declaration metadata without exposing local paths', as
   const unavailable = `${box.root.path}/missing`
   await box.root.write(
     'available/.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n' +
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n' +
       'repository = "https://github.com/example/available"\n' +
       'title = "Available repository"\n' +
       'description = "Machine-readable registry evidence."\n' +
@@ -704,7 +704,7 @@ test('projects registered declaration metadata without exposing local paths', as
   )
   await box.root.write(
     'knowledge-base/.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nrepo_type = "kb"\nprimary_shape = "ki-repo-kb"\n' +
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nrepo_type = "kb"\nprimary_shape = "ki-repo-kb"\n' +
       'repository = "https://github.com/example/knowledge-base"\n' +
       'title = "Knowledge Base"\n' +
       'description = "Knowledge Base registry evidence."\n' +
@@ -799,7 +799,7 @@ test('marks mismatched and malformed repository declarations unavailable in JSON
     const path = await box.root.mkdir(key)
     await box.root.write(
       `${key}/.ki.toml`,
-      `[repo]\nharnesses = ["example/harness"]\n${declaration ? `\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "${key === 'bad-type' ? 'other' : 'project'}"\nprimary_shape = "ki-repo-project"\n${declaration}\n` : ''}`
+      `[repo]\nbackpacks = ["example/backpack"]\n${declaration ? `\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "${key === 'bad-type' ? 'other' : 'project'}"\nprimary_shape = "ki-repo-project"\n${declaration}\n` : ''}`
     )
     entries.push({ key, repository: `https://github.com/example/${key}`, path })
   }
@@ -827,11 +827,11 @@ test('lists registered repositories as a newline-delimited absolute-path stream'
   const second = await box.root.mkdir('second')
   await box.root.write(
     'first/.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/first"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/first"\n'
   )
   await box.root.write(
     'second/.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/second"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/second"\n'
   )
   await box.state.write(
     'ki/registry.toml',
@@ -869,7 +869,7 @@ test('rejects malformed state records and conflicting local bindings', async () 
   const root = await realpath(box.project.path)
   await box.project.write(
     '.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
   )
   const list = (): Promise<{ readonly exitCode: number; readonly output: string }> => box.run('ki registry list')
   const invalid = async (contents: string, expected: string): Promise<void> => {
@@ -955,7 +955,7 @@ test('registers a Knowledge Base independently and preserves typed bindings', as
   const identity = 'https://github.com/example/knowledge'
   await box.project.write(
     '.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-kb"\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-kb"\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
   )
   const registered = `schema = 1
 
@@ -977,7 +977,7 @@ test('retires registry-owned source binding options', async () => {
   const box = await sandbox()
   await box.project.write(
     '.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-kb"\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-kb"\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
   )
 
   expect((await box.run('ki registry add --sources anywhere')).exitCode).toBe(2)
@@ -986,7 +986,7 @@ test('retires registry-owned source binding options', async () => {
 test('rejects every malformed Knowledge Base store-role declaration through the store boundary', async () => {
   const box = await sandbox()
   const base =
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\n'
   const cases = [
     ['repo_type = "project"\nstore_roles = ["notes"]', 'store_roles requires repo_type = "kb"'],
     ['repo_type = "kb"', 'store_roles must be a non-empty array of named KB stores'],
@@ -1012,9 +1012,9 @@ test('conformance registers a Knowledge Base independently and preserves existin
   await box.config.write('ki/config.toml', localConfiguration)
   await box.project.write(
     '.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-kb"\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-kb"\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
   )
-  await box.setupExampleHarness({ name: 'ki-repo', rubric })
+  await box.setupExampleBackpack({ name: 'ki-repo', rubric })
 
   expect((await box.run('ki repo conform')).exitCode).toBe(0)
   expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(root)}`)

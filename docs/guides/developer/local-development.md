@@ -34,25 +34,25 @@ Before sourcing either script, parse its generated form:
 ./bin/ki completion zsh >/tmp/ki.zsh && zsh -n /tmp/ki.zsh
 ```
 
-## Develop a compatible harness locally
+## Develop a compatible backpack locally
 
-Keep a local harness source separate from its active projection:
+Keep a local backpack source separate from its active projection:
 
 ```sh
 ki dev local set knowledgeislands/ki-agent-backpack /path/to/ki-agent-backpack
 ki dev local set humansnotrobots/hnr-agent-backpack /path/to/hnr-agent-backpack
 ki dev local on
-# make and test harness changes
+# make and test backpack changes
 ki dev local off
 ```
 
-`set` accepts any Harness identity already present in the installed KI estate. It validates and remembers that identity and physical checkout without changing the installed Harness or managed user-skill links. Each installed Harness can have its own remembered source. Remembered checkouts belong to the host: they live in `$XDG_STATE_HOME/ki/locals.toml`, never in the portable `config.toml`, so two machines sharing one configuration can each remember their own checkout. Entries an older `ki` wrote below `[locals]` in `config.toml` are moved to the host-local file once, by the first `ki dev local set` or `ki bootstrap`; `ki` leaves them in `config.toml` and then ignores them with a warning until they are removed from its source. Until the move, `ki diag` and `ki dev local on|off` read them with a warning. An invalid host-local file is refused, never bypassed.
+`set` accepts any backpack identity already present in the installed KI estate. It validates and remembers that identity and physical checkout without changing the installed backpack or managed user-skill links. Each installed backpack can have its own remembered source. Remembered checkouts belong to the host: they live in `$XDG_STATE_HOME/ki/locals.toml`, never in the portable `config.toml`, so two machines sharing one configuration can each remember their own checkout. Entries an older `ki` wrote below `[locals]` in `config.toml` are moved to the host-local file once, by the first `ki dev local set` or `ki bootstrap`; `ki` leaves them in `config.toml` and then ignores them with a warning until they are removed from its source. Until the move, `ki diag` and `ki dev local on|off` read them with a warning. An invalid host-local file is refused, never bypassed.
 
-The checkout and installed Harness root both use `.ki.toml` and must retain the same `[skills.ki-repo-backpack].prefix`; local mode is a mutable source for the same provider identity, not a way to change or claim a capability namespace. Release archives also carry `.ki.toml` directly. The one translation is the backpack rename: for one release, a `*-agentic-harness` identifier names the same backpack as its `*-agent-backpack` spelling, and `[skills.ki-repo-harness]` is still read for the prefix.
+The checkout and installed backpack root both use `.ki.toml` and must retain the same `[skills.ki-repo-backpack].prefix`; local mode is a mutable source for the same provider identity, not a way to change or claim a capability namespace. Release archives also carry `.ki.toml` directly. The one translation is the backpack rename: for one release, a `*-agentic-harness` identifier names the same backpack as its `*-agent-backpack` spelling, and `[skills.ki-repo-harness]` is still read for the prefix.
 
-`on` makes each selected checkout the complete active Harness root and reconciles that Harness's KI-managed user-skill links to their current local sources on every invocation. Metadata and payloads therefore always come from the same checkout; local mode never assembles a hybrid from an installed archive and selected linked directories. `on <harness-id>` selects one remembered Harness; `on` without an ID selects all of them. A remembered checkout that is missing on this host is refused; remember another with `set`.
+`on` makes each selected checkout the complete active backpack root and reconciles that backpack's KI-managed user-skill links to their current local sources on every invocation. Metadata and payloads therefore always come from the same checkout; local mode never assembles a hybrid from an installed archive and selected linked directories. `on <backpack-id>` selects one remembered backpack; `on` without an ID selects all of them. A remembered checkout that is missing on this host is refused; remember another with `set`.
 
-`off` restores selected Harnesses from their configured verified archives and reprojects their links, while retaining each remembered identity and checkout for the next `on`. `off <harness-id>` selects one remembered Harness; `off` without an ID selects all of them.
+`off` restores selected backpacks from their configured verified archives and reprojects their links, while retaining each remembered identity and checkout for the next `on`. `off <backpack-id>` selects one remembered backpack; `off` without an ID selects all of them.
 
 `ki bootstrap` and `ki bootstrap --refresh` keep an active canonical local mode: they project the core user skills from the checkout and never replace it with the archive. When the canonical root link cannot be kept, because its checkout is missing, it targets a different checkout, or no source is remembered, bootstrap prints a `ki: warning:` line with the reason, restores the verified archive and re-points every configured canonical skill to it. Run `ki dev local on` once the checkout is back, or `ki dev local set` first when no source is remembered. A checkout that fails inspection stops bootstrap with an error and leaves local mode in place.
 

@@ -5,7 +5,7 @@ export const rootCommandNames = [
   'dev',
   'estate',
   'git',
-  'harness',
+  'backpack',
   'kb',
   'link',
   'markdown',

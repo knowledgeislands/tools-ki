@@ -1,7 +1,7 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import type { Output } from './commands/presentation/index.ts'
-import type { Fetcher } from './core/harness/acquire.ts'
+import type { Fetcher } from './core/backpack/acquire.ts'
 import { installationProvenance } from './core/manage/installation-provenance.ts'
 import type { Environment, KiInstallationMode, KiPaths } from './core/paths.ts'
 import { resolveKiPaths, userHome } from './core/paths.ts'

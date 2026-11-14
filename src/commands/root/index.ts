@@ -1,13 +1,13 @@
 import type { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
+import { createBackpackCommand } from '../backpack/index.ts'
 import { createBootstrapCommand } from '../bootstrap/index.ts'
 import { createDevCommand } from '../dev/index.ts'
 import { createEstateCommand } from '../estate/index.ts'
 import { createGitCommand } from '../git/index.ts'
-import { createHarnessCommand } from '../harness/index.ts'
 import { createKbCommand } from '../kb/index.ts'
 import { createLinkCommand } from '../link/index.ts'
-import { createHarnessStatusCommands, createSupportCommands } from '../manage/index.ts'
+import { createBackpackStatusCommands, createSupportCommands } from '../manage/index.ts'
 import { createMarkdownCommand } from '../markdown/index.ts'
 import { createRegistryCommand } from '../registry/index.ts'
 import { createRepoCommand } from '../repo/index.ts'
@@ -24,7 +24,7 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   dev: (context) => createDevCommand(context),
   estate: (context) => createEstateCommand(context),
   git: (context) => createGitCommand(context),
-  harness: (context) => createHarnessCommand(context),
+  backpack: (context) => createBackpackCommand(context),
   repo: (context) => createRepoCommand(context),
   kb: (context) => createKbCommand(context),
   link: (context) => createLinkCommand(context),
@@ -37,7 +37,7 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
 export const addRootCommands = (program: Command, context: KiContext): void => {
   for (const name of rootCommandNames) {
     const command = rootCommandFactories[name](context)
-    if (name === 'harness') for (const child of createHarnessStatusCommands(context)) command.addCommand(child)
+    if (name === 'backpack') for (const child of createBackpackStatusCommands(context)) command.addCommand(child)
     program.addCommand(command)
   }
   for (const command of createSupportCommands(context)) program.addCommand(command)

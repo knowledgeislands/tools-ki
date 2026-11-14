@@ -5,7 +5,7 @@ import {
   type DevelopmentRubricEvent,
   inspectDevelopmentGeneration,
   inspectDevelopmentRubric
-} from '../../../core/harness/index.ts'
+} from '../../../core/backpack/index.ts'
 import { developmentSkillGenerationPort, developmentSkillRubricPort } from '../ports.ts'
 
 const renderRubricEvent = (event: DevelopmentRubricEvent): string => {
@@ -15,7 +15,7 @@ const renderRubricEvent = (event: DevelopmentRubricEvent): string => {
     case 'in-sync':
       return `ki dev skill rubric: ${event.identity} references/rubric.md is in sync in ${event.root}\n`
     case 'out-of-sync':
-      return `ki dev skill rubric: ${event.identity} references/rubric.md ${event.reason} in ${event.root}; run with --write from a dev-linked harness\n`
+      return `ki dev skill rubric: ${event.identity} references/rubric.md ${event.reason} in ${event.root}; run with --write from a dev-linked backpack\n`
   }
 }
 
@@ -26,7 +26,7 @@ const renderGenerationEvent = (event: DevelopmentGenerationEvent): string => {
     case 'in-sync':
       return `ki dev skill generate: ${event.identity} ${event.count} generated surface(s) are in sync in ${event.root}\n`
     case 'out-of-sync':
-      return `ki dev skill generate: ${event.identity} ${event.path} ${event.reason} in ${event.root}; run with --write from a dev-linked harness\n`
+      return `ki dev skill generate: ${event.identity} ${event.path} ${event.reason} in ${event.root}; run with --write from a dev-linked backpack\n`
   }
 }
 

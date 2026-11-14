@@ -3,10 +3,10 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 
-const installed = 'ki/harnesses/example/harness'
+const installed = 'ki/backpacks/example/backpack'
 const generatorPath = 'skills/ki-example/scripts/generate/index.ts'
 
-// A generator that renders two surfaces below the Harness root from one source file there.
+// A generator that renders two surfaces below the backpack root from one source file there.
 const generator = (body = 'surfaces(root)', name = 'ki-example', contract = 1): string => `
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -20,15 +20,15 @@ const surfaces = (root) => {
 export default { contract: ${contract}, name: '${name}', generate: (root) => ${body} }
 `
 
-const installedHarness = async (box: Sandbox, source = generator()): Promise<void> => {
-  await box.setupExampleHarness()
+const installedBackpack = async (box: Sandbox, source = generator()): Promise<void> => {
+  await box.setupExampleBackpack()
   await box.data.write(`${installed}/source.txt`, 'rendered\n')
   await box.data.write(`${installed}/${generatorPath}`, source)
 }
 
-// A dev-linked Harness whose installed root is a symlink to a real Git checkout, as `ki dev local on` leaves it.
-const devLinkedHarness = async (box: Sandbox, source = generator()): Promise<string> => {
-  await box.setupExampleHarness()
+// A dev-linked backpack whose installed root is a symlink to a real Git checkout, as `ki dev local on` leaves it.
+const devLinkedBackpack = async (box: Sandbox, source = generator()): Promise<string> => {
+  await box.setupExampleBackpack()
   await box.root.write('local/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "ki"\n')
   await box.root.write('local/skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
   await box.root.write('local/source.txt', 'rendered\n')
@@ -45,7 +45,7 @@ const devLinkedHarness = async (box: Sandbox, source = generator()): Promise<str
 describe('[ki dev skill generate]', () => {
   test('still generates from a subdirectory of the primary development checkout', async () => {
     const box = await sandbox()
-    await devLinkedHarness(box)
+    await devLinkedBackpack(box)
     box.cd('../local/skills')
     const result = await box.run('ki dev skill generate ki-example --write', { runner: 'default' })
     expect(result.exitCode).toBe(0)
@@ -54,7 +54,7 @@ describe('[ki dev skill generate]', () => {
 
   test('generates from and publishes only into the caller linked worktree', async () => {
     const box = await sandbox()
-    const primary = await devLinkedHarness(box)
+    const primary = await devLinkedBackpack(box)
     await box.root.git(['add', '.'], 'local')
     await box.root.git(['commit', '-q', '-m', 'base'], 'local')
     await box.root.git(['worktree', 'add', '-q', '-b', 'delivery', '../linked'], 'local')
@@ -70,14 +70,14 @@ describe('[ki dev skill generate]', () => {
 
   test('reports each missing and stale surface and fails until they are written', async () => {
     const box = await sandbox()
-    await installedHarness(box)
+    await installedBackpack(box)
     await box.data.write(`${installed}/styles/rendered.md`, 'hand edited\n')
 
     const result = await box.run('ki dev skill generate ki-example')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toMatch(
-      /hooks\/rendered\.sh is missing in .*harness; run with --write from a dev-linked harness/
+      /hooks\/rendered\.sh is missing in .*backpack; run with --write from a dev-linked backpack/
     )
     expect(result.output).toMatch(/styles\/rendered\.md is stale in /)
     expect(result.output).toContain('has 2 generated surface(s) out of step')
@@ -85,7 +85,7 @@ describe('[ki dev skill generate]', () => {
 
   test('writes only the surfaces out of step, keeps an existing mode and then reports in sync', async () => {
     const box = await sandbox()
-    const root = await devLinkedHarness(box)
+    const root = await devLinkedBackpack(box)
     await box.root.write('local/hooks/rendered.sh', "line='old'\n")
     await chmod(join(root, 'hooks/rendered.sh'), 0o755)
 
@@ -101,7 +101,7 @@ describe('[ki dev skill generate]', () => {
 
     const again = await box.run('ki dev skill generate ki-example --write', { runner: 'default' })
     expect(again.output).toBe(
-      `ki dev skill generate: example/harness:ki-example 2 generated surface(s) are in sync in ${root}\n`
+      `ki dev skill generate: example/backpack:ki-example 2 generated surface(s) are in sync in ${root}\n`
     )
     const checked = await box.run('ki dev skill generate ki-example')
     expect(checked).toEqual({ exitCode: 0, output: again.output })
@@ -109,7 +109,7 @@ describe('[ki dev skill generate]', () => {
 
   test('refuses --write against an installed, non-dev-linked payload', async () => {
     const box = await sandbox()
-    await installedHarness(box)
+    await installedBackpack(box)
 
     const result = await box.run('ki dev skill generate ki-example --write')
 
@@ -118,9 +118,9 @@ describe('[ki dev skill generate]', () => {
     await expect(box.data.read(`${installed}/hooks/rendered.sh`)).rejects.toThrow()
   })
 
-  test('refuses --write from a working tree other than the Harness checkout', async () => {
+  test('refuses --write from a working tree other than the backpack checkout', async () => {
     const box = await sandbox()
-    const root = await devLinkedHarness(box)
+    const root = await devLinkedBackpack(box)
     await box.root.git(['init'], 'other')
     box.cd('../other')
 
@@ -133,7 +133,7 @@ describe('[ki dev skill generate]', () => {
 
   test('refuses a skill with no generator module', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness()
+    await box.setupExampleBackpack()
 
     const result = await box.run('ki dev skill generate ki-example')
 
@@ -163,7 +163,7 @@ describe('[ki dev skill generate]', () => {
     ['a directory in place of a file', generator("[{ path: 'skills', content: '' }]"), 'must be a regular file']
   ])('refuses %s', async (_, source, message) => {
     const box = await sandbox()
-    await installedHarness(box, source)
+    await installedBackpack(box, source)
 
     const result = await box.run('ki dev skill generate ki-example')
 

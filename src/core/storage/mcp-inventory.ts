@@ -15,7 +15,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 /**
  * Reads `config.toml` tolerantly, because every command now passes through here: a missing,
- * irregular or unparseable file stays the harness registry reader's fault to report on the paths
+ * irregular or unparseable file stays the backpack registry reader's fault to report on the paths
  * that depend on it, rather than stopping unrelated commands on a half-configured host. A present
  * `[mcp]` table is then validated strictly, so a typed key never resolves by accident.
  */
@@ -23,7 +23,7 @@ const readConfiguredMcpInventory = async (configurationDirectory: string): Promi
   const path = join(configurationDirectory, 'config.toml')
   const state = await lstat(path).catch(() => undefined)
   // lstat reports a symbolic link as a link, so this one test also refuses the indirection the
-  // harness registry reader refuses.
+  // backpack registry reader refuses.
   if (!state?.isFile()) return undefined
   let parsed: unknown
   try {

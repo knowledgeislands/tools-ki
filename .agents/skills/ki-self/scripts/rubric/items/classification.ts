@@ -13,14 +13,14 @@ export const CLASSIFICATION: RubricFamily<SelfRubricContext, SelfRubricContext> 
       code: 'SELF-CLASS-001',
       title: 'Bootstrap inventory authority',
       description: 'The minimum bootstrap user-skill inventory has one named typed authority.',
-      sources: ['src/core/harness/bootstrap-capabilities.ts'],
+      sources: ['src/core/backpack/bootstrap-capabilities.ts'],
       mechanical: {
         level: 'FAIL',
         remediation: diagnosticRemediation('Restore minimumBootstrapUserSkills as the single typed inventory.'),
         audit: {
           phase: 'PRIMARY',
           run: (context) =>
-            sourceContains(context, 'src/core/harness/bootstrap-capabilities.ts', [
+            sourceContains(context, 'src/core/backpack/bootstrap-capabilities.ts', [
               'export const minimumBootstrapUserSkills',
               'as const'
             ])

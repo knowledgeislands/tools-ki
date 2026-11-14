@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
-const declaration = `[repo]\nharnesses = ["example/harness"]\n[skills.ki-repo-kb]\n[skills.ki-repo]\nrepo_type = "kb"\nprimary_shape = "ki-repo-kb"\nstore_roles = ["notes"]\nrepository = "https://github.com/example/alpha"\ntitle = "Alpha"\ndescription = "Synthetic authorized notes"\nrepo_code = "ALPHA"\nvisibility = "private"\n`
+const declaration = `[repo]\nbackpacks = ["example/backpack"]\n[skills.ki-repo-kb]\n[skills.ki-repo]\nrepo_type = "kb"\nprimary_shape = "ki-repo-kb"\nstore_roles = ["notes"]\nrepository = "https://github.com/example/alpha"\ntitle = "Alpha"\ndescription = "Synthetic authorized notes"\nrepo_code = "ALPHA"\nvisibility = "private"\n`
 const fixture = async () => {
   const box = await sandbox()
   await box.project.write('.ki.toml', declaration)

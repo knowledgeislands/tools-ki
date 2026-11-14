@@ -27,7 +27,7 @@ export const createSupportCommands = (context: KiContext): Command[] => [
   createVscodeCommand(context)
 ]
 
-export const createHarnessStatusCommands = (context: KiContext): Command[] => [
+export const createBackpackStatusCommands = (context: KiContext): Command[] => [
   createMissingCommand(context),
   createOutdatedCommand(context),
   createSearchCommand(context)

@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
 const declaration = (fields: string, skills: readonly string[] = []): string =>
-  `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n${fields}\n${skills.map((skill) => `\n[skills.${skill}]\n`).join('')}`
+  `[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n${fields}\n${skills.map((skill) => `\n[skills.${skill}]\n`).join('')}`
 
 test.each([
   'ki-repo-project',

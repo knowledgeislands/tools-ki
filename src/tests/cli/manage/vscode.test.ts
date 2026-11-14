@@ -27,7 +27,7 @@ const setChezmoiRunner = (
 }
 
 const repositoryDeclaration = (name: string): string => `[repo]
-harnesses = ["knowledgeislands/ki-agent-backpack"]
+backpacks = ["knowledgeislands/ki-agent-backpack"]
 
 [skills.ki-repo-project]
 
@@ -422,7 +422,7 @@ kind = "repository"
       'utf8'
     )
     expect((await box.run('ki vscode check')).output).toContain('invalid supported_runtimes declaration')
-    await writeFile(join(repositories[0] as string, '.ki.toml'), '[repo]\nharnesses = []\n', 'utf8')
+    await writeFile(join(repositories[0] as string, '.ki.toml'), '[repo]\nbackpacks = []\n', 'utf8')
     expect((await box.run('ki vscode check')).output).toContain('invalid supported_runtimes declaration')
     await writeFile(join(repositories[0] as string, '.ki.toml'), '[skills]\nother = true\n', 'utf8')
     expect((await box.run('ki vscode check')).output).toContain('invalid supported_runtimes declaration')

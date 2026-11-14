@@ -1,9 +1,9 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { discoverInstalledHarnesses, refreshInstalledHarnesses } from '../../core/harness/index.ts'
+import { discoverInstalledBackpacks, refreshInstalledBackpacks } from '../../core/backpack/index.ts'
 import { runManageUpdate } from '../../core/manage/index.ts'
 import { renderTree } from '../presentation/index.ts'
-import { harnessRefreshPort } from '../shared/harness-ports.ts'
+import { backpackRefreshPort } from '../shared/backpack-ports.ts'
 
 const cliResult = (result: Awaited<ReturnType<typeof runManageUpdate>>['cli']): string =>
   result.kind === 'updated'
@@ -18,9 +18,9 @@ export const createUpdateCommand = (context: KiContext): Command =>
       const result = await runManageUpdate(
         {
           runner: context.runner,
-          refreshHarnesses: async () => {
-            const harnesses = await discoverInstalledHarnesses(context.paths.data)
-            return refreshInstalledHarnesses(harnessRefreshPort(context), harnesses)
+          refreshBackpacks: async () => {
+            const backpacks = await discoverInstalledBackpacks(context.paths.data)
+            return refreshInstalledBackpacks(backpackRefreshPort(context), backpacks)
           }
         },
         {
@@ -40,8 +40,8 @@ export const createUpdateCommand = (context: KiContext): Command =>
         )
         return
       }
-      /* v8 ignore next -- the only result without harnesses is the CLI-only branch returned above. */
-      const refreshed = (result.harnesses ?? []).map((refresh) =>
+      /* v8 ignore next -- the only result without backpacks is the CLI-only branch returned above. */
+      const refreshed = (result.backpacks ?? []).map((refresh) =>
         refresh.kind === 'refreshed'
           ? `${refresh.id}: refreshed archive ${refresh.archiveSha256}`
           : `${refresh.id}: unavailable (no configured immutable release)`
@@ -52,10 +52,10 @@ export const createUpdateCommand = (context: KiContext): Command =>
           entries: [
             { label: 'CLI', children: [{ label: cliResult(result.cli) }] },
             {
-              label: `harnesses (${refreshed.length})`,
+              label: `backpacks (${refreshed.length})`,
               children: refreshed.length ? refreshed.map((label) => ({ label })) : [{ label: 'none' }]
             },
-            { label: `summary: HARNESS_RESULTS=${refreshed.length}` }
+            { label: `summary: BACKPACK_RESULTS=${refreshed.length}` }
           ]
         }).join('\n')}\n`
       )

@@ -10,7 +10,7 @@ const NOW = Date.parse('2026-10-07T12:00:00Z')
 const declaration = (repository?: string, capital?: string, components?: readonly string[]): string =>
   [
     '[repo]',
-    'harnesses = ["example/harness"]',
+    'backpacks = ["example/backpack"]',
     '',
     '[skills.ki-repo-project]',
     '',
@@ -173,7 +173,7 @@ test.each(['duplicate', 'merged', 'superseded'])(
     expect(await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-003-item.md')).toBe(local)
     const external = record(
       { horizon: undefined, status: 'cancelled', resolution },
-      '## Cancelled\n\nThe KI Agentic Harness repository owns the replacing roadmap contract work.\n'
+      '## Cancelled\n\nThe KI Agentic backpack repository owns the replacing roadmap contract work.\n'
     )
     await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-003', external)
     const result = await box.run('ki repo --repo repo roadmap list --format json')
@@ -199,7 +199,7 @@ describe('[ki repo roadmap] model fields', () => {
         theme: 'init-one',
         component: 'cli',
         horizon: 'hold',
-        hold: '\n  reason: waiting-for\n  condition: "The harness release"\n  review: "2026-11-01"\n  trades: [TRD-0000000a]'
+        hold: '\n  reason: waiting-for\n  condition: "The backpack release"\n  review: "2026-11-01"\n  trades: [TRD-0000000a]'
       })
     )
     await roadmapFile(
@@ -240,7 +240,12 @@ describe('[ki repo roadmap] model fields', () => {
       project: 'alpha',
       theme: 'init-one',
       component: 'cli',
-      hold: { reason: 'waiting-for', condition: 'The harness release', review: '2026-11-01', trades: ['TRD-0000000a'] },
+      hold: {
+        reason: 'waiting-for',
+        condition: 'The backpack release',
+        review: '2026-11-01',
+        trades: ['TRD-0000000a']
+      },
       legacy: []
     })
     expect(byId['KI-TOOL-KI-CLI-004']).toMatchObject({
@@ -933,7 +938,7 @@ describe('[ki repo roadmap migrate]', () => {
     await migrationFixture(box)
     const before = await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-004-item.md')
     await box.project.write('absent/.ki.toml', declaration())
-    await box.project.write('undeclared/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('undeclared/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n')
 
     const preview = await box.run('ki repo --repo repo --repo absent roadmap migrate', { now: () => NOW })
 

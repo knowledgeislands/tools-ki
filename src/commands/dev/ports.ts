@@ -2,38 +2,38 @@ import {
   configuredAgents,
   inspectUserConfiguration,
   installBootstrapSkills,
-  installedHarnessSkillSources,
-  localHarness,
+  installedBackpackSkillSources,
+  localBackpack,
   refreshUserConfiguration,
   rememberedCheckout,
   requireLocalSources,
-  setLocalBootstrapHarness
+  setLocalBootstrapBackpack
 } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
-import { resolveInstalledSkill } from '../../core/configuration/index.ts'
-import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import {
   type DevelopmentGenerationPort,
   type DevelopmentRubricPort,
   type DisableDevelopmentPort,
-  discoverInstalledHarnesses,
+  discoverInstalledBackpacks,
   type EnableDevelopmentPort,
   prepareSkillGeneration,
   type SetDevelopmentSourcePort
-} from '../../core/harness/index.ts'
+} from '../../core/backpack/index.ts'
+import { resolveInstalledSkill } from '../../core/configuration/index.ts'
+import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import { loadRubricDefinition } from '../../core/rubric/loader.ts'
 import { prepareRubricPublication } from '../../core/rubric/publication.ts'
 import { gitPrimaryWorkingTreeRoot, gitWorkingTreeRoot } from '../../core/runtime/git.ts'
 import {
-  enableHarnessDevelopment,
-  harnessDevelopmentEnabled,
-  installedHarnessSlot,
-  isHarnessDevelopmentLinked,
-  restoreHarness
+  backpackDevelopmentEnabled,
+  enableBackpackDevelopment,
+  installedBackpackSlot,
+  isBackpackDevelopmentLinked,
+  restoreBackpack
 } from '../../core/storage/index.ts'
 
 type DevelopmentAgent = Awaited<ReturnType<typeof configuredAgents>>[number]
-type DevelopmentSkill = Awaited<ReturnType<typeof installedHarnessSkillSources>>[number]
+type DevelopmentSkill = Awaited<ReturnType<typeof installedBackpackSkillSources>>[number]
 type DevelopmentProjection = Awaited<ReturnType<typeof installBootstrapSkills>>[number]
 
 const agents = (context: KiContext): Promise<readonly DevelopmentAgent[]> =>
@@ -54,22 +54,22 @@ const projectionView = ({ agent, skill, installed }: DevelopmentProjection) => (
 export const setDevelopmentSourcePort = (
   context: KiContext
 ): SetDevelopmentSourcePort<DevelopmentAgent, DevelopmentSkill> => ({
-  developmentEnabled: (identifier) => harnessDevelopmentEnabled(context.paths.data, identifier),
-  requireInstalledHarness: (identifier) => installedHarnessSlot(context.paths.data, identifier),
-  inspectLocalHarness: localHarness,
+  developmentEnabled: (identifier) => backpackDevelopmentEnabled(context.paths.data, identifier),
+  requireInstalledBackpack: (identifier) => installedBackpackSlot(context.paths.data, identifier),
+  inspectLocalBackpack: localBackpack,
   configuredAgents: () => agents(context),
-  setLocalHarness: (harness) =>
-    setLocalBootstrapHarness(context.paths.config, context.paths.state, context.homeDirectory, harness)
+  setLocalBackpack: (backpack) =>
+    setLocalBootstrapBackpack(context.paths.config, context.paths.state, context.homeDirectory, backpack)
 })
 
 export const enableDevelopmentPort = (
   context: KiContext
 ): EnableDevelopmentPort<DevelopmentAgent, DevelopmentSkill, DevelopmentProjection> => ({
   inspectConfiguration: () => developmentConfiguration(context),
-  inspectLocalHarness: async (path, identifier) =>
-    localHarness(await rememberedCheckout({ harness: identifier, path }), identifier),
+  inspectLocalBackpack: async (path, identifier) =>
+    localBackpack(await rememberedCheckout({ backpack: identifier, path }), identifier),
   configuredAgents: () => agents(context),
-  enableDevelopment: (identifier, harness) => enableHarnessDevelopment(context.paths.data, identifier, harness),
+  enableDevelopment: (identifier, backpack) => enableBackpackDevelopment(context.paths.data, identifier, backpack),
   installSkills: (skills, configured) => installBootstrapSkills(skills, configured, { replace: true }),
   refreshConfiguration: (configured) => refreshUserConfiguration(context.paths.config, context.paths.data, configured),
   projectionView
@@ -80,8 +80,8 @@ export const disableDevelopmentPort = (
 ): DisableDevelopmentPort<DevelopmentAgent, DevelopmentSkill, DevelopmentProjection> => ({
   configuredAgents: () => agents(context),
   inspectConfiguration: () => developmentConfiguration(context),
-  restoreHarness: (identifier) =>
-    restoreHarness(
+  restoreBackpack: (identifier) =>
+    restoreBackpack(
       context.paths.config,
       context.paths.data,
       context.paths.state,
@@ -90,27 +90,27 @@ export const disableDevelopmentPort = (
       context.runner,
       context.environment
     ),
-  installedSkills: (identifier) => installedHarnessSkillSources(context.paths.data, identifier),
+  installedSkills: (identifier) => installedBackpackSkillSources(context.paths.data, identifier),
   installSkills: (skills, configured) => installBootstrapSkills(skills, configured, { replace: true }),
   refreshConfiguration: (configured) => refreshUserConfiguration(context.paths.config, context.paths.data, configured),
   projectionView
 })
 
 export const developmentSkillRubricPort = (context: KiContext): DevelopmentRubricPort => ({
-  resolveSkill: async (skill) => resolveInstalledSkill(await discoverInstalledHarnesses(context.paths.data), skill),
+  resolveSkill: async (skill) => resolveInstalledSkill(await discoverInstalledBackpacks(context.paths.data), skill),
   preparePublication: async (skill) =>
     prepareRubricPublication(skill, await loadRubricDefinition(skill), undefined, context.lstat),
-  developmentLinked: (identifier) => isHarnessDevelopmentLinked(context.paths.data, identifier),
+  developmentLinked: (identifier) => isBackpackDevelopmentLinked(context.paths.data, identifier),
   repositoryRoot: (path) => gitWorkingTreeRoot(path, context.runner, context.environment),
   publish: async (root, write) => publishWrites(await prepareWrites(root, [write]), false)
 })
 
 export const developmentSkillGenerationPort = (context: KiContext): DevelopmentGenerationPort => ({
   resolveSkill: async (skill) => {
-    const resolved = resolveInstalledSkill(await discoverInstalledHarnesses(context.paths.data), skill)
+    const resolved = resolveInstalledSkill(await discoverInstalledBackpacks(context.paths.data), skill)
     if (
       context.workingDirectory === resolved.provider.root ||
-      !(await isHarnessDevelopmentLinked(context.paths.data, resolved.identity.split(':')[0] as string))
+      !(await isBackpackDevelopmentLinked(context.paths.data, resolved.identity.split(':')[0] as string))
     )
       return resolved
     const caller = await gitWorkingTreeRoot(context.workingDirectory, context.runner, context.environment)
@@ -125,7 +125,7 @@ export const developmentSkillGenerationPort = (context: KiContext): DevelopmentG
       : resolved
   },
   prepareGeneration: prepareSkillGeneration,
-  developmentLinked: (identifier) => isHarnessDevelopmentLinked(context.paths.data, identifier),
+  developmentLinked: (identifier) => isBackpackDevelopmentLinked(context.paths.data, identifier),
   repositoryRoot: (path) => gitWorkingTreeRoot(path, context.runner, context.environment),
   publish: async (root, writes) => publishWrites(await prepareWrites(root, writes), false)
 })

@@ -4,7 +4,7 @@ import { sandbox } from '../_cli_helper.ts'
 
 const repositoryConfiguration = `
 [repo]
-harnesses = ["knowledgeislands/ki-agent-backpack"]
+backpacks = ["knowledgeislands/ki-agent-backpack"]
 
 [skills.ki-repo-project]
 
@@ -25,8 +25,8 @@ const preparedRepository = async () => {
   const box = await sandbox()
   await box.setupAgentHome('chatgpt-codex')
   await box.run('ki bootstrap')
-  await box.setupExampleHarness({ name: 'ki-repo' })
-  await box.setupExampleHarness()
+  await box.setupExampleBackpack({ name: 'ki-repo' })
+  await box.setupExampleBackpack()
   await box.project.write('.ki.toml', repositoryConfiguration)
   return box
 }
@@ -95,7 +95,7 @@ describe('[ki repo repair]', () => {
     await box.project.write(
       '.ki.toml',
       repositoryConfiguration
-        .replace('knowledgeislands/ki-agent-backpack', 'missing/harness')
+        .replace('knowledgeislands/ki-agent-backpack', 'missing/backpack')
         .replace('[skills.ki-example]', '[skills.ki-missing]')
     )
     const unresolved = await box.run('ki repo repair')
@@ -103,7 +103,7 @@ describe('[ki repo repair]', () => {
     expect(repaired.exitCode).toBe(0)
     expect(await readlink(projection)).not.toBe(`${box.root.path}/old-skill`)
     expect(unresolved.exitCode).toBe(1)
-    expect(unresolved.output).toContain('missing/harness is not installed')
+    expect(unresolved.output).toContain('missing/backpack is not installed')
   })
 
   test('recreates a dangling projection and refuses an unsafe declaration', async () => {
@@ -303,8 +303,8 @@ describe('[ki repo repair]', () => {
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')
     expect((await box.run('ki bootstrap')).exitCode).toBe(0)
-    await box.setupExampleHarness({ name: 'ki-repo' })
-    await box.setupExampleHarness()
+    await box.setupExampleBackpack({ name: 'ki-repo' })
+    await box.setupExampleBackpack()
     await box.project.write('.ki.toml', knowledgeBaseConfiguration)
 
     const registered = await box.run('ki registry add --repo .')
@@ -314,7 +314,7 @@ describe('[ki repo repair]', () => {
     expect(registered.exitCode).toBe(0)
     expect(repair.exitCode).toBe(0)
     expect(repair.output).toContain('! Store: sources store is unavailable on this host (not bound)')
-    // The fixture Harness publishes no rubric, so the audit's own verdict is that error, not a store one.
+    // The fixture backpack publishes no rubric, so the audit's own verdict is that error, not a store one.
     expect(audit.output).toContain('3 skills selected')
     expect(audit.output).toContain('ki-example does not provide a rubric catalogue')
     expect(audit.output).not.toMatch(/store|Registry/)

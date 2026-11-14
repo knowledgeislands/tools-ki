@@ -1,11 +1,11 @@
-// Shared end-to-end test harness for the `ki` CLI. Every test creates its own sandbox()
+// Shared end-to-end test backpack for the `ki` CLI. Every test creates its own sandbox()
 // — a throwaway HOME/XDG_CONFIG_HOME/XDG_DATA_HOME/project quartet with methods to
 // populate and run against it — so no test assembles that layout or a raw path by hand.
 // Cleanup is registered per sandbox via `onTestFinished`, tied to the test that created
 // it, rather than a shared registry that a concurrent test could sweep prematurely.
 //
 // <mkdtemp>/                  (root — content outside the four areas below)
-// │   └── dev/                (a local checkout selected by `ki dev local set` — populated by setupLocalCanonicalHarness())
+// │   └── dev/                (a local checkout selected by `ki dev local set` — populated by setupLocalCanonicalBackpack())
 // │       └── knowledgeislands/
 // │           └── ki-agent-backpack/   (skills/, subagents/, hooks/ are real, never symlinks — `ki dev local on` validates each root)
 // │               ├── skills/
@@ -14,8 +14,8 @@
 // ├── home/                   ($HOME — dotfiles a real `ki` install would read)
 // ├── config/                 ($XDG_CONFIG_HOME)
 // │   └── ki/config.toml
-// ├── data/                   ($XDG_DATA_HOME — installed harnesses/skills project here)
-// │   └── ki/harnesses/
+// ├── data/                   ($XDG_DATA_HOME — installed backpacks/skills project here)
+// │   └── ki/backpacks/
 // │       └── knowledgeislands/
 // │           └── ki-agent-backpack/   (installed mode: real, from the archive. After `ki dev local on`: this complete root is symlinked to root/dev/.../ki-agent-backpack)
 // │               ├── skills/
@@ -33,7 +33,7 @@ import { run as runCli } from '../../cli.ts'
 export type CliEntrypoint = typeof runCli
 
 import { createContext } from '../../context.ts'
-import type { Fetcher } from '../../core/harness/acquire.ts'
+import type { Fetcher } from '../../core/backpack/acquire.ts'
 import type { KiInstallationMode } from '../../core/paths.ts'
 import { type Runner, runCommand } from '../../core/runtime/runner.ts'
 
@@ -42,7 +42,7 @@ export type { Runner } from '../../core/runtime/runner.ts'
 export { runCommand } from '../../core/runtime/runner.ts'
 
 // `ki bootstrap` detects the active agent from which of these home directories exists —
-// kept here as a literal, not imported from src/agents, so this black-box CLI harness
+// kept here as a literal, not imported from src/agents, so this black-box CLI backpack
 // exercises detection through observable behavior rather than sharing implementation.
 type AgentId = 'chatgpt-codex' | 'claude-code'
 const agentConfig: Record<AgentId, { home: string }> = {
@@ -56,8 +56,8 @@ const agentConfig: Record<AgentId, { home: string }> = {
 
 // A fixture shaped exactly like the real canonical knowledgeislands/ki-agent-backpack
 // (its specific skill names and keystone/process grouping), because `ki bootstrap`/`ki
-// dev` hardcode expectations about that identity rather than accepting any harness.
-const bootstrapHarnessSkills = [
+// dev` hardcode expectations about that identity rather than accepting any backpack.
+const bootstrapBackpackSkills = [
   'ki-bootstrap',
   'ki-next',
   'ki-plan',
@@ -135,25 +135,25 @@ const area = (path: string, home: string): SandboxArea => {
   }
 }
 
-// A single generic `example/harness` with one `ki-example` skill, whose
+// A single generic `example/backpack` with one `ki-example` skill, whose
 // `scripts/rubric/items/index.ts` default export body the caller supplies verbatim.
-// Used to exercise the repo/harness/skill
+// Used to exercise the repo/backpack/skill
 // commands against arbitrary rubric-definition behavior. Omitting `rubric` writes the skill
 // without a rubric module at all, for exercising skills that provide no native governance.
-const setupExampleHarness = async (
+const setupExampleBackpack = async (
   data: SandboxArea,
   {
     rubric,
     name = 'ki-example',
-    identifier = 'example/harness',
+    identifier = 'example/backpack',
     prefix = name.split('-')[0] as string
   }: { rubric?: string; name?: string; identifier?: string; prefix?: string } = {}
 ): Promise<void> => {
   const canonical = 'knowledgeislands/ki-agent-backpack'
-  const canonicalInstalled = await lstat(join(data.path, 'ki/harnesses', canonical)).catch(() => undefined)
+  const canonicalInstalled = await lstat(join(data.path, 'ki/backpacks', canonical)).catch(() => undefined)
   const selectedIdentifier =
-    identifier === 'example/harness' && prefix === 'ki' && canonicalInstalled?.isDirectory() ? canonical : identifier
-  const root = `ki/harnesses/${selectedIdentifier}`
+    identifier === 'example/backpack' && prefix === 'ki' && canonicalInstalled?.isDirectory() ? canonical : identifier
+  const root = `ki/backpacks/${selectedIdentifier}`
   await data.write(`${root}/.ki.toml`, `[skills.ki-repo-backpack]\nprefix = ${JSON.stringify(prefix)}\n`)
   const base = `${root}/skills/${name}`
   await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: []\n---\n`)
@@ -182,24 +182,24 @@ const setupRepositoryLocalSkill = async (
   if (rubric !== undefined) await project.write(`${source}/scripts/rubric/items/index.ts`, rubric)
 }
 
-const writeBootstrapHarness = async (area: SandboxArea, base: string, metadataFile = '.ki.toml'): Promise<void> => {
+const writeBootstrapBackpack = async (area: SandboxArea, base: string, metadataFile = '.ki.toml'): Promise<void> => {
   await area.write(`${base}/${metadataFile}`, '[skills.ki-repo-backpack]\nprefix = "ki"\n')
   await Promise.all(['subagents', 'hooks'].map((payload) => area.mkdir(`${base}/${payload}`)))
-  for (const skill of bootstrapHarnessSkills) {
+  for (const skill of bootstrapBackpackSkills) {
     const group = skill === 'ki-bootstrap' ? 'keystone' : 'change-management'
     await area.write(`${base}/skills/${group}/${skill}/SKILL.md`, `---\nname: ${skill}\nki-depends-on: []\n---\n`)
   }
 }
 
-const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
-  writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agent-backpack')
+const setupCanonicalBackpack = (data: SandboxArea): Promise<void> =>
+  writeBootstrapBackpack(data, 'ki/backpacks/knowledgeislands/ki-agent-backpack')
 
 // The same fixture, but written under an arbitrary local directory rather than the
-// installed-harness data root — for exercising `ki dev local set <harness-id> <path>` against a local
-// development checkout instead of an installed harness. Returns the checkout's real
+// installed-backpack data root — for exercising `ki dev local set <backpack-id> <path>` against a local
+// development checkout instead of an installed backpack. Returns the checkout's real
 // path, since callers select it through the named set command before enabling it.
-const setupLocalCanonicalHarness = async (root: SandboxArea, relativePath: string): Promise<string> => {
-  await writeBootstrapHarness(root, relativePath, '.ki.toml')
+const setupLocalCanonicalBackpack = async (root: SandboxArea, relativePath: string): Promise<string> => {
+  await writeBootstrapBackpack(root, relativePath, '.ki.toml')
   return realpath(join(root.path, relativePath))
 }
 
@@ -212,7 +212,7 @@ export interface Sandbox {
   readonly project: SandboxArea
   readonly env: Record<string, string>
   readonly executable: string
-  readonly setupExampleHarness: (skill?: {
+  readonly setupExampleBackpack: (skill?: {
     readonly rubric?: string
     readonly name?: string
     readonly identifier?: string
@@ -223,8 +223,8 @@ export interface Sandbox {
     readonly name?: string
     readonly source?: string
   }) => Promise<void>
-  readonly setupCanonicalHarness: () => Promise<void>
-  readonly setupLocalCanonicalHarness: (relativePath: string) => Promise<string>
+  readonly setupCanonicalBackpack: () => Promise<void>
+  readonly setupLocalCanonicalBackpack: (relativePath: string) => Promise<string>
   readonly setupAgentHome: (agentId: AgentId) => Promise<void>
   readonly setEnv: (environment: Record<string, string | undefined>) => void
   readonly setFetcher: (fetcher: Fetcher) => void
@@ -286,7 +286,7 @@ const create = async (): Promise<Sandbox> => {
   // making a live request.
   let fetcher: Fetcher = async () => {
     throw new Error(
-      'sandbox fetcher not configured; call setFetcher() before running a command that acquires a harness'
+      'sandbox fetcher not configured; call setFetcher() before running a command that acquires a backpack'
     )
   }
   let runner: Runner = async () => {
@@ -393,7 +393,7 @@ const create = async (): Promise<Sandbox> => {
     const tokens = typeof command === 'string' ? command.split(' ').filter(Boolean) : [...command]
     if (tokens[0] !== 'ki') throw new Error(`sandbox run() commands must start with "ki": ${command}`)
     // Existing tests compare `{ exitCode, output }` exactly. The named stream transcripts are
-    // intentionally non-enumerable so that strengthening the harness preserves that contract.
+    // intentionally non-enumerable so that strengthening the backpack preserves that contract.
     return Object.defineProperties(
       { exitCode: await (options?.cli ?? runCli)(tokens.slice(1), context), output },
       { stdout: { value: stdout }, stderr: { value: stderr } }
@@ -409,13 +409,13 @@ const create = async (): Promise<Sandbox> => {
     project,
     env,
     executable: executablePath,
-    setupExampleHarness: (skill) => setupExampleHarness(data, skill),
+    setupExampleBackpack: (skill) => setupExampleBackpack(data, skill),
     setupRepositoryLocalSkill: (skill) => setupRepositoryLocalSkill(project, skill),
-    setupCanonicalHarness: () => setupCanonicalHarness(data),
-    setupLocalCanonicalHarness: (relativePath) => setupLocalCanonicalHarness(root, relativePath),
+    setupCanonicalBackpack: () => setupCanonicalBackpack(data),
+    setupLocalCanonicalBackpack: (relativePath) => setupLocalCanonicalBackpack(root, relativePath),
     setupAgentHome: async (agentId) => {
       await home.mkdir(agentConfig[agentId].home)
-      await setupCanonicalHarness(data)
+      await setupCanonicalBackpack(data)
     },
     setEnv,
     setFetcher,

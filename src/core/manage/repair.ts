@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import type { ManagedArtifactRecoveryControl, OrphanRecovery } from '../storage/index.ts'
-import type { ManageAgent, ManageConfiguration, ManageHarness } from './doctor.ts'
+import type { ManageAgent, ManageBackpack, ManageConfiguration } from './doctor.ts'
 
 export type ManageRepairItem =
   | { readonly kind: 'status'; readonly status: 'pass' | 'fail'; readonly label: string; readonly detail: string }
@@ -30,14 +30,14 @@ export interface ManageRepairPort {
   readonly planOrphanRecovery: () => Promise<readonly OrphanRecovery[]>
   readonly recoverOrphans: (planned: readonly OrphanRecovery[]) => Promise<readonly OrphanRecovery[]>
   readonly configuredAgents: () => Promise<readonly ManageRepairAgent[]>
-  readonly discoverHarnesses: () => Promise<readonly ManageHarness[]>
+  readonly discoverBackpacks: () => Promise<readonly ManageBackpack[]>
   readonly realpath: (path: string) => Promise<string>
   readonly linkedTo: (path: string, expected: string) => Promise<boolean>
 }
 
 export interface ManageRepairOptions {
   readonly dryRun: boolean
-  readonly canonicalHarnessIdentifier: string
+  readonly canonicalBackpackIdentifier: string
 }
 
 const managedSkillName = (identity: string): string => identity.slice(identity.indexOf(':') + 1)
@@ -118,12 +118,12 @@ export const runManageRepair = async (
       }
     }
     items.push({ kind: 'status', status: 'pass', label: 'Configuration', detail: configuration.path })
-    const [agents, installed] = await Promise.all([port.configuredAgents(), port.discoverHarnesses()])
+    const [agents, installed] = await Promise.all([port.configuredAgents(), port.discoverBackpacks()])
     for (const identity of configuration.skills) {
       const name = managedSkillName(identity)
       const resolved = installed
-        .flatMap((harness) => harness.capabilities.map((capability) => ({ harness, capability })))
-        .find(({ harness, capability }) => identity === `${harness.id}:${capability.name}`)
+        .flatMap((backpack) => backpack.capabilities.map((capability) => ({ backpack, capability })))
+        .find(({ backpack, capability }) => identity === `${backpack.id}:${capability.name}`)
       if (!resolved) {
         items.push({
           kind: 'status',
@@ -134,7 +134,7 @@ export const runManageRepair = async (
         failed = true
         continue
       }
-      const expected = await port.realpath(join(resolved.harness.root, resolved.capability.source))
+      const expected = await port.realpath(join(resolved.backpack.root, resolved.capability.source))
       const compatible = agents.filter((agent) => agent.supports(resolved.capability.supportedRuntimes))
       if (!compatible.length) {
         items.push({

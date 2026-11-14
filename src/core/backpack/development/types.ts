@@ -6,7 +6,7 @@ import type { BootstrapInstallationResult, BootstrapRefreshResult } from '../boo
 import type { DevelopmentWriteTreePort } from './write-tree.ts'
 
 export interface DevelopmentConfigurationInspection {
-  readonly locals: readonly { readonly harness: string; readonly path: string }[]
+  readonly locals: readonly { readonly backpack: string; readonly path: string }[]
   readonly skills: readonly string[]
 }
 
@@ -17,24 +17,24 @@ export interface DevelopmentProjectionView {
 }
 
 export interface DevelopmentSource<Skill> {
-  readonly harness: string
+  readonly backpack: string
   readonly prefix: string
   readonly skills: readonly Skill[]
 }
 
 export interface SetDevelopmentSourcePort<Agent, Skill> {
   readonly developmentEnabled: (identifier: string) => Promise<boolean>
-  readonly requireInstalledHarness: (identifier: string) => Promise<{ readonly prefix?: string }>
-  readonly inspectLocalHarness: (path: string, identifier: string) => Promise<DevelopmentSource<Skill>>
+  readonly requireInstalledBackpack: (identifier: string) => Promise<{ readonly prefix?: string }>
+  readonly inspectLocalBackpack: (path: string, identifier: string) => Promise<DevelopmentSource<Skill>>
   readonly configuredAgents: () => Promise<readonly Agent[]>
-  readonly setLocalHarness: (local: { readonly harness: string; readonly path: string }) => Promise<void>
+  readonly setLocalBackpack: (local: { readonly backpack: string; readonly path: string }) => Promise<void>
 }
 
 export interface EnableDevelopmentPort<Agent, Skill, Projection> {
   readonly inspectConfiguration: () => Promise<DevelopmentConfigurationInspection>
-  readonly inspectLocalHarness: (path: string, identifier: string) => Promise<DevelopmentSource<Skill>>
+  readonly inspectLocalBackpack: (path: string, identifier: string) => Promise<DevelopmentSource<Skill>>
   readonly configuredAgents: () => Promise<readonly Agent[]>
-  readonly enableDevelopment: (identifier: string, harness: string) => Promise<string>
+  readonly enableDevelopment: (identifier: string, backpack: string) => Promise<string>
   readonly installSkills: (skills: readonly Skill[], agents: readonly Agent[]) => Promise<readonly Projection[]>
   readonly refreshConfiguration: (agents: readonly Agent[]) => Promise<BootstrapRefreshResult>
   readonly projectionView: (projection: Projection) => DevelopmentProjectionView
@@ -43,7 +43,7 @@ export interface EnableDevelopmentPort<Agent, Skill, Projection> {
 export interface DisableDevelopmentPort<Agent, Skill, Projection> {
   readonly configuredAgents: () => Promise<readonly Agent[]>
   readonly inspectConfiguration: () => Promise<DevelopmentConfigurationInspection>
-  readonly restoreHarness: (identifier: string) => Promise<BootstrapInstallationResult>
+  readonly restoreBackpack: (identifier: string) => Promise<BootstrapInstallationResult>
   readonly installedSkills: (identifier: string) => Promise<readonly Skill[]>
   readonly installSkills: (skills: readonly Skill[], agents: readonly Agent[]) => Promise<readonly Projection[]>
   readonly refreshConfiguration: (agents: readonly Agent[]) => Promise<BootstrapRefreshResult>
@@ -52,13 +52,13 @@ export interface DisableDevelopmentPort<Agent, Skill, Projection> {
 
 export interface DevelopmentSourceResult {
   readonly identifier: string
-  readonly harness: string
+  readonly backpack: string
   readonly agents: number
 }
 
 export interface EnabledDevelopmentResult extends BootstrapRefreshResult {
   readonly identifier: string
-  readonly harness: string
+  readonly backpack: string
   readonly agents: number
   readonly projections: readonly DevelopmentProjectionView[]
 }
@@ -86,7 +86,7 @@ export type DevelopmentRubricEvent =
       readonly root: string
     }
 
-/** One surface a skill's generator renders, with how the bytes below the Harness root compare. */
+/** One surface a skill's generator renders, with how the bytes below the backpack root compare. */
 export interface GeneratedSurfaceState {
   readonly path: string
   readonly content: string
@@ -106,7 +106,7 @@ export interface DevelopmentGenerationPort extends DevelopmentWriteTreePort {
   readonly publish: (root: string, writes: readonly NativeWrite[]) => Promise<void>
 }
 
-/** Every event names the resolved Harness root, because the command never resolves the caller's tree. */
+/** Every event names the resolved backpack root, because the command never resolves the caller's tree. */
 export type DevelopmentGenerationEvent =
   | { readonly kind: 'written'; readonly target: string }
   | { readonly kind: 'in-sync'; readonly identity: string; readonly count: number; readonly root: string }

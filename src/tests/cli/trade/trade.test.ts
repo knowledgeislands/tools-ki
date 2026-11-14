@@ -685,8 +685,8 @@ describe('[ki repo trade]', () => {
       ['[not valid TOML\n', 'must be valid TOML'],
       [bare.replace(`repository = "${sourceHome}"\n`, ''), repositoryForm],
       // No [skills] namespace at all, or a ki-repo entry that is not a table.
-      ['[repo]\nharnesses = ["example/harness"]\n', repositoryForm],
-      ['[repo]\nharnesses = ["example/harness"]\n\n[skills]\nki-repo = "none"\n', repositoryForm],
+      ['[repo]\nbackpacks = ["example/backpack"]\n', repositoryForm],
+      ['[repo]\nbackpacks = ["example/backpack"]\n\n[skills]\nki-repo = "none"\n', repositoryForm],
       [bare.replace(`capital = "${capitalHome}"\n`, ''), capitalForm],
       [bare.replace(`capital = "${capitalHome}"`, 'capital = "example/capital"'), capitalForm],
       [
@@ -755,13 +755,13 @@ describe('[ki repo trade]', () => {
     expect(checked).toContain(`export work ${receiverHome}: active`)
 
     const header =
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
+      '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     const pendingReceivers = [
       // No canonical identity is claimed, so the checkout is no trade endpoint at all.
       header,
       `${header}repository = 1\n`,
       `${header}repository = "not-a-repository"\n`,
-      '[repo]\nharnesses = ["example/harness"]\nskills = "none"\n',
+      '[repo]\nbackpacks = ["example/backpack"]\nskills = "none"\n',
       '[not valid TOML\n',
       // The identity is claimed but the declaration is invalid, so it cannot activate the route.
       `${header}repository = "${receiverHome}"\n`,
@@ -1286,7 +1286,7 @@ describe('[ki repo trade]', () => {
     // A receiver whose declaration names no Capital is invalid, so it is no trade endpoint.
     await box.project.write(
       'receiver/.ki.toml',
-      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "${receiverHome}"\n`
+      `[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "${receiverHome}"\n`
     )
     const invalidSelection = await box.run('ki repo --estate trade routes list')
     expect(invalidSelection.exitCode).toBe(2)
@@ -1391,7 +1391,7 @@ describe('[ki repo trade]', () => {
     box.cd('..')
     await box.project.write(
       '.ki.toml',
-      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "${sourceHome}"\n`
+      `[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "${sourceHome}"\n`
     )
     box.cd('receiver')
     const unavailable = await box.run(['ki', 'repo', 'trade', 'receive', 'TRD-00000000'])

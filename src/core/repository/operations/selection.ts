@@ -1,13 +1,13 @@
+import { discoverInstalledBackpacks, type InstalledBackpack } from '../../backpack/inspection.ts'
 import { readRepositoryDeclaration } from '../../configuration/declaration.ts'
 import { resolveRepositoryDeclaredSkills } from '../../configuration/local-provider.ts'
-import { discoverInstalledHarnesses, type InstalledHarness } from '../../harness/inspection.ts'
 import type { RepositoryLocation } from '../location.ts'
 import { resolveRepositoryTargets } from '../selection.ts'
 import type { RepositoryOperationContext, RepositorySelection, SelectedRepositorySkills } from './types.ts'
 
 export const resolveSkillsForRepositories = async (
   repositories: readonly RepositoryLocation[],
-  harnesses: readonly InstalledHarness[],
+  backpacks: readonly InstalledBackpack[],
   dataDirectory: string,
   skill?: string
 ): Promise<readonly SelectedRepositorySkills[]> =>
@@ -17,14 +17,14 @@ export const resolveSkillsForRepositories = async (
       const resolvedSkills = await resolveRepositoryDeclaredSkills(
         repository.root,
         declaration,
-        harnesses,
+        backpacks,
         dataDirectory
       )
       return {
         repository,
         resolvedSkills,
         skills: skill
-          ? await resolveRepositoryDeclaredSkills(repository.root, declaration, harnesses, dataDirectory, skill)
+          ? await resolveRepositoryDeclaredSkills(repository.root, declaration, backpacks, dataDirectory, skill)
           : resolvedSkills
       }
     })
@@ -46,6 +46,6 @@ export const selectRepositorySkills = async (
     homeDirectory: context.homeDirectory,
     onSkippedMgitMembers: options.onSkippedMgitMembers
   })
-  const harnesses = await discoverInstalledHarnesses(context.dataDirectory)
-  return resolveSkillsForRepositories(repositories, harnesses, context.dataDirectory, options.skill)
+  const backpacks = await discoverInstalledBackpacks(context.dataDirectory)
+  return resolveSkillsForRepositories(repositories, backpacks, context.dataDirectory, options.skill)
 }

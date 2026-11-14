@@ -26,7 +26,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-003 — Deterministic capability search
 
-`ki harness search` MUST search verified installed capabilities case-insensitively in deterministic order without repository discovery.
+`ki backpack search` MUST search verified installed capabilities case-insensitively in deterministic order without repository discovery.
 
 _Conformance:_ conforming
 
@@ -78,11 +78,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-008 — Non-mutating cleanup report
 
-`ki cleanup` MUST report when no eligible KI-managed stale state exists without changing installed harnesses or unknown files.
+`ki cleanup` MUST report when no eligible KI-managed stale state exists without changing installed backpacks or unknown files.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/manage/local-commands.test.ts` — `reports no eligible managed stale state without changing any installed harness or unknown file`.
+_Verify:_ `src/tests/cli/manage/local-commands.test.ts` — `reports no eligible managed stale state without changing any installed backpack or unknown file`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

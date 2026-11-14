@@ -6,7 +6,7 @@ import { configuredAgents, inspectUserConfiguration } from './configuration.ts'
 import { inspectLocalsTable, isRecord, type LocalDevelopmentConfiguration } from './internal.ts'
 
 /**
- * The host-local file that owns remembered harness checkouts. Checkout paths differ between hosts,
+ * The host-local file that owns remembered backpack checkouts. Checkout paths differ between hosts,
  * so they live in the state directory rather than in the portable, often chezmoi-managed `config.toml`.
  */
 export const localSourcesPath = (stateDirectory: string): string => join(stateDirectory, 'locals.toml')
@@ -22,8 +22,8 @@ export interface LocalSourcesInspection {
 
 const renderLocalSources = (locals: readonly LocalDevelopmentConfiguration[]): string =>
   `${locals
-    .toSorted((left, right) => left.harness.localeCompare(right.harness))
-    .map((local) => `[locals.${JSON.stringify(local.harness)}]\npath = ${JSON.stringify(local.path)}\n`)
+    .toSorted((left, right) => left.backpack.localeCompare(right.backpack))
+    .map((local) => `[locals.${JSON.stringify(local.backpack)}]\npath = ${JSON.stringify(local.path)}\n`)
     .join('\n')}`
 
 const writeLocalSources = async (
@@ -87,7 +87,7 @@ export const requireLocalSources = async (
 ): Promise<readonly LocalDevelopmentConfiguration[]> => {
   const sources = await inspectLocalSources(configurationDirectory, stateDirectory)
   if (sources.state === 'invalid')
-    throw new KiError(`local harness sources are invalid: ${sources.errors.join('; ')}`, 1)
+    throw new KiError(`local backpack sources are invalid: ${sources.errors.join('; ')}`, 1)
   return sources.locals
 }
 
@@ -103,8 +103,8 @@ export const migrateLocalSources = async (configurationDirectory: string, stateD
   return configuration.legacyLocals.length
 }
 
-/** Remembers one harness checkout in the host-local file, moving any `config.toml` entries first. */
-export const setLocalBootstrapHarness = async (
+/** Remembers one backpack checkout in the host-local file, moving any `config.toml` entries first. */
+export const setLocalBootstrapBackpack = async (
   configurationDirectory: string,
   stateDirectory: string,
   homeDirectory: string,
@@ -113,14 +113,17 @@ export const setLocalBootstrapHarness = async (
   await configuredAgents({ homeDirectory, configurationDirectory })
   await migrateLocalSources(configurationDirectory, stateDirectory)
   const locals = await requireLocalSources(configurationDirectory, stateDirectory)
-  await writeLocalSources(stateDirectory, [...locals.filter((candidate) => candidate.harness !== local.harness), local])
+  await writeLocalSources(stateDirectory, [
+    ...locals.filter((candidate) => candidate.backpack !== local.backpack),
+    local
+  ])
 }
 
 /** Refuses a remembered checkout that is missing on this host instead of guessing another source. */
 export const rememberedCheckout = async (local: LocalDevelopmentConfiguration): Promise<string> => {
   if (!(await lstat(local.path).catch(() => undefined)))
     throw new KiError(
-      `remembered checkout for ${local.harness} is missing at ${local.path}; remember another with ki dev local set ${local.harness} <path>`,
+      `remembered checkout for ${local.backpack} is missing at ${local.path}; remember another with ki dev local set ${local.backpack} <path>`,
       1
     )
   return local.path

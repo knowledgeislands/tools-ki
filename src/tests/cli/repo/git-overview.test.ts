@@ -262,7 +262,7 @@ describe('ki-git host evidence', () => {
   test('withholds evidence from another selected skill and skips acquisition for educate', async () => {
     const { box, root } = await gitFixture()
     await box.project.write('.ki.toml', `${gitDeclaration}\n[skills.ki-other]\n`)
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       name: 'ki-other',
       rubric: `
 export default { contract: 1, name: 'ki-other', concern: 'Session observer', families: [{ code: 'OTHER', title: 'Other', description: 'Evidence isolation', standard: 'fixture.md', selectContext: x => x, items: [{ code: 'OTHER-1', title: 'No git evidence', description: 'No evidence leak', sources: ['fixture.md'], mechanical: { level: 'FAIL', remediation: { class: 'diagnostic', guidance: 'Withhold evidence' }, audit: { phase: 'INSPECT', run: options => [{ status: Object.hasOwn(options, 'gitOverview') ? 'VIOLATION' : 'PASS', message: 'no Git document' }] } } }] }], createSession: async options => ({ subjects: [{ families: ['OTHER'], context: () => options }], proposal: () => ({ writes: [] }) }) }
@@ -444,11 +444,11 @@ export default { contract: 1, name: 'ki-other', concern: 'Session observer', fam
   test('retains estate, territory, principals and filter selection before evidence acquisition', async () => {
     const box = await sandbox()
     await installGitCatalogue(box)
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       name: 'ki-trades',
       rubric: `export default { contract: 1, name: 'ki-trades', concern: 'Fixture', families: [], createSession: async () => ({ subjects: [], proposal: () => ({ writes: [] }) }) }`
     })
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       name: 'ki-repo',
       rubric: `export default { contract: 1, name: 'ki-repo', concern: 'Selection fixture', families: [], createSession: async () => ({ subjects: [], proposal: () => ({ writes: [] }) }) }`
     })

@@ -1,6 +1,6 @@
+import { type SupportedRuntime, supportedRuntimes } from '../core/backpack/index.ts'
 import { readRepositoryDeclaration } from '../core/configuration/index.ts'
 import { KiError } from '../core/errors.ts'
-import { type SupportedRuntime, supportedRuntimes } from '../core/harness/index.ts'
 import type { InstalledAgent } from './internal.ts'
 
 const agentRuntimes = {

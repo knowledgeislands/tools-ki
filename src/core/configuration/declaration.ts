@@ -1,13 +1,13 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { basename } from 'node:path'
 import { parse } from 'smol-toml'
+import { backpackIdentifier } from '../backpack/identity.ts'
+import { type SupportedRuntime, supportedRuntimes } from '../backpack/inspection.ts'
 import { KiError } from '../errors.ts'
-import { backpackIdentifier } from '../harness/identity.ts'
-import { type SupportedRuntime, supportedRuntimes } from '../harness/inspection.ts'
 import { canonicalRepositoryIdentity } from '../storage/local-registry.ts'
 
 export const REPOSITORY_DECLARATION_FILE = '.ki.toml'
-export const DEFAULT_HARNESS = 'knowledgeislands/ki-agent-backpack'
+export const DEFAULT_BACKPACK = 'knowledgeislands/ki-agent-backpack'
 
 export interface DeclaredSkill {
   /** The skill's bare capability name under `[skills]`. */
@@ -17,7 +17,7 @@ export interface DeclaredSkill {
 }
 
 export interface RepositoryDeclaration {
-  readonly harnesses: readonly string[]
+  readonly backpacks: readonly string[]
   readonly skills: readonly DeclaredSkill[]
 }
 
@@ -100,7 +100,7 @@ export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisa
     ...banner('Foundation'),
     '',
     '[repo]',
-    ...multilineArray('harnesses', [DEFAULT_HARNESS]),
+    ...multilineArray('backpacks', [DEFAULT_BACKPACK]),
     '',
     '[skills.ki-repo]',
     'repo_type = "project"',
@@ -121,22 +121,25 @@ export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisa
   ].join('\n')
 }
 
-const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
+const backpackIdentifierPattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const skillName = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 
 const shapeError = (path: string, detail: string): KiError => new KiError(`${basename(path)} ${detail}`, 1)
 
-const declaredHarnesses = (parsed: Record<string, unknown>, path: string): readonly string[] => {
+const declaredBackpacks = (parsed: Record<string, unknown>, path: string): readonly string[] => {
   const repository = parsed['repo']
-  if (!isRecord(repository) || !Array.isArray(repository['harnesses']))
-    throw shapeError(path, 'must declare [repo] with a harnesses array')
-  const harnesses = repository['harnesses']
-  if (!harnesses.length || harnesses.some((harness) => typeof harness !== 'string' || !harnessIdentifier.test(harness)))
-    throw shapeError(path, '[repo] harnesses must be a non-empty array of <owner>/<name> harness identifiers')
+  if (!isRecord(repository) || !Array.isArray(repository['backpacks']))
+    throw shapeError(path, 'must declare [repo] with a backpacks array')
+  const backpacks = repository['backpacks']
+  if (
+    !backpacks.length ||
+    backpacks.some((backpack) => typeof backpack !== 'string' || !backpackIdentifierPattern.test(backpack))
+  )
+    throw shapeError(path, '[repo] backpacks must be a non-empty array of <owner>/<name> backpack identifiers')
   // A backpack declared under its retired `*-agentic-harness` spelling is read as the backpack it now is.
-  const identifiers = (harnesses as string[]).map(backpackIdentifier)
+  const identifiers = (backpacks as string[]).map(backpackIdentifier)
   if (new Set(identifiers).size !== identifiers.length)
-    throw shapeError(path, '[repo] harnesses must not repeat a harness')
+    throw shapeError(path, '[repo] backpacks must not repeat a backpack')
   return identifiers
 }
 
@@ -163,7 +166,7 @@ export const parseRepositoryDeclaration = (raw: string, configurationPath: strin
   /* v8 ignore next */
   if (!isRecord(parsed)) throw shapeError(configurationPath, 'must be a table')
   const declaration = {
-    harnesses: declaredHarnesses(parsed, configurationPath),
+    backpacks: declaredBackpacks(parsed, configurationPath),
     skills: declaredSkills(parsed, configurationPath)
   }
   if (declaration.skills.some((skill) => skill.name === 'ki-repo')) declaredRepositoryKind(declaration)
@@ -270,13 +273,13 @@ export const declaredKnowledgeBaseStoreRoles = (
 // Text-appended (not re-serialised) to preserve the file's comments and formatting.
 export const declareRepositorySkill = async (
   configurationPath: string,
-  harness: string,
+  backpack: string,
   name: string
 ): Promise<boolean> => {
   const declaration = await readRepositoryDeclaration(configurationPath)
   if (declaration.skills.some((skill) => skill.name === name)) return false
-  if (!declaration.harnesses.includes(harness))
-    throw new KiError(`repository must declare harness ${harness} before adding skill ${name}`, 1)
+  if (!declaration.backpacks.includes(backpack))
+    throw new KiError(`repository must declare backpack ${backpack} before adding skill ${name}`, 1)
   const contents = await readFile(configurationPath, 'utf8')
   const base = contents.endsWith('\n') ? contents : `${contents}\n`
   await writeFile(configurationPath, `${base}\n[skills.${name}]\n`, 'utf8')

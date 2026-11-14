@@ -1,6 +1,6 @@
+import { discoverInstalledBackpacks } from '../../backpack/inspection.ts'
 import { KiError } from '../../errors.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../../filesystem/publication.ts'
-import { discoverInstalledHarnesses } from '../../harness/inspection.ts'
 import type { PackageScriptClaim } from '../../rubric/index.ts'
 import { runSkillAudit } from '../../runtime/audit.ts'
 import { detectFixed, runSkillConform } from '../../runtime/conform.ts'
@@ -72,7 +72,7 @@ export const conformRepositories = async (
   observer: RepositoryConformObserver
 ): Promise<void> => {
   const repositories = await repositoryTargets(context, options)
-  const harnesses = await discoverInstalledHarnesses(context.dataDirectory)
+  const backpacks = await discoverInstalledBackpacks(context.dataDirectory)
   for (const repository of repositories) {
     // The local registry is an inventory of selected KI repository roots, not a
     // conformance verdict. Publish it before parsing declarations or evaluating
@@ -82,7 +82,7 @@ export const conformRepositories = async (
       observer.event({ kind: 'registry-write', path: write.path, dryRun: options.dryRun })
     await publishWrites(registryWrites, options.dryRun)
 
-    const resolved = await resolveSkillsForRepositories([repository], harnesses, context.dataDirectory, options.skill)
+    const resolved = await resolveSkillsForRepositories([repository], backpacks, context.dataDirectory, options.skill)
     const selected = resolved[0]
     // The one-element input above guarantees this result; retain a guard for a future resolver change.
     /* v8 ignore next */

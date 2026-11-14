@@ -132,7 +132,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REPO-OPS-013 — Repository-local self governance
 
-For a selected physical repository that explicitly declares `[skills.ki-self]`, native repository operations MUST resolve only the physical contained `.agents/skills/ki-self/` source as `repository-local:ki-self`, validate its canonical identity and catalogue before import, and exclude it from installed-Harness upgrade and managed runtime projection; every other declared skill MUST continue to require a declared installed Harness provider.
+For a selected physical repository that explicitly declares `[skills.ki-self]`, native repository operations MUST resolve only the physical contained `.agents/skills/ki-self/` source as `repository-local:ki-self`, validate its canonical identity and catalogue before import, and exclude it from installed-Backpack upgrade and managed runtime projection; every other declared skill MUST continue to require a declared installed backpack provider.
 
 _Conformance:_ conforming
 
@@ -294,7 +294,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### REPO-OPS-029 — Priority and size fields
 
-`ki repo roadmap list` MUST accept the optional `priority` (`high`, `medium` or `low`) and `size` (`s`, `m`, `l` or `xl`) record fields in both local adapters, MUST reject any other value and a `ready` record of size `xl` as unreadable, and MUST NOT warn of either as an unknown KB Streams field. Within each lane, text output MUST order open records unblocked first, then by priority with unset as `medium`, then by size smallest first with unsized last; priority MUST NOT cross lanes. Through the field migration window it MUST list each open record's field gaps in the Harness roadmap checker's wording, MUST exempt done and cancelled records from the `size` and `kind` gaps, MUST count them in `GAPS=`, and MUST NOT change the exit status for a gap. The JSON projection MUST add `priority`, `size` and `gaps` to every item.
+`ki repo roadmap list` MUST accept the optional `priority` (`high`, `medium` or `low`) and `size` (`s`, `m`, `l` or `xl`) record fields in both local adapters, MUST reject any other value and a `ready` record of size `xl` as unreadable, and MUST NOT warn of either as an unknown KB Streams field. Within each lane, text output MUST order open records unblocked first, then by priority with unset as `medium`, then by size smallest first with unsized last; priority MUST NOT cross lanes. Through the field migration window it MUST list each open record's field gaps in the backpack roadmap checker's wording, MUST exempt done and cancelled records from the `size` and `kind` gaps, MUST count them in `GAPS=`, and MUST NOT change the exit status for a gap. The JSON projection MUST add `priority`, `size` and `gaps` to every item.
 
 _Conformance:_ conforming
 
@@ -314,7 +314,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### REPO-OPS-031 — Assignee field
 
-`ki repo roadmap list` MUST accept the optional `assignee` record field in both local adapters, holding one work-model holder value: `owner`, `work/<id>`, `run/<name>`, `person/<handle>` or `repo/<name>`. It MUST reject any other value as unreadable and MUST NOT warn of the field as an unknown KB Streams field. Text output MUST show each record's assignee after its size. `--assignee <holder>` MUST keep only records with that assignee, `--assignee none` only records without one, and any other value MUST be a usage error. Through the Harness roadmap standard's assignee window it MUST list an open record without an assignee as a gap in the Harness roadmap checker's wording, MUST exempt done and cancelled records, and MUST NOT change the exit status for it. The JSON projection MUST add `assignee`, `null` when unset, to every item. The lock on an in-progress record's assignee is the Harness roadmap checker's audit, not a listing concern.
+`ki repo roadmap list` MUST accept the optional `assignee` record field in both local adapters, holding one work-model holder value: `owner`, `work/<id>`, `run/<name>`, `person/<handle>` or `repo/<name>`. It MUST reject any other value as unreadable and MUST NOT warn of the field as an unknown KB Streams field. Text output MUST show each record's assignee after its size. `--assignee <holder>` MUST keep only records with that assignee, `--assignee none` only records without one, and any other value MUST be a usage error. Through the backpack roadmap standard's assignee window it MUST list an open record without an assignee as a gap in the backpack roadmap checker's wording, MUST exempt done and cancelled records, and MUST NOT change the exit status for it. The JSON projection MUST add `assignee`, `null` when unset, to every item. The lock on an in-progress record's assignee is the backpack roadmap checker's audit, not a listing concern.
 
 _Conformance:_ conforming
 

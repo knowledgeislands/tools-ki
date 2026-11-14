@@ -1,6 +1,6 @@
 import { lstat, rename, rm } from 'node:fs/promises'
 import { join } from 'node:path'
-import { discoverInstallOrphans, type InstallOrphan } from '../harness/inspection.ts'
+import { discoverInstallOrphans, type InstallOrphan } from '../backpack/inspection.ts'
 
 export interface OrphanRecovery {
   readonly orphan: InstallOrphan
@@ -10,13 +10,13 @@ export interface OrphanRecovery {
 
 // Decides what an orphan deserves without doing it, so a dry run and a real run agree by
 // construction. A parked payload is only ever removed once its destination is present again:
-// while the destination is absent it is the sole verified copy of that harness.
+// while the destination is absent it is the sole verified copy of that backpack.
 const plannedRecovery = async (dataDirectory: string, orphan: InstallOrphan): Promise<OrphanRecovery> => {
   if (orphan.kind === 'staging')
     return { orphan, action: 'remove', detail: 'unpromoted extraction from an interrupted install' }
   if (!orphan.destination)
-    return { orphan, action: 'refuse', detail: 'parked payload does not name the harness it replaced' }
-  const destination = join(dataDirectory, 'harnesses', orphan.owner, orphan.destination)
+    return { orphan, action: 'refuse', detail: 'parked payload does not name the backpack it replaced' }
+  const destination = join(dataDirectory, 'backpacks', orphan.owner, orphan.destination)
   const present = await lstat(destination).catch(() => undefined)
   return present
     ? { orphan, action: 'remove', detail: `${orphan.owner}/${orphan.destination} is installed` }
@@ -36,7 +36,7 @@ export const recoverInstallOrphans = async (
     if (recovery.action === 'restore')
       await rename(
         recovery.orphan.path,
-        join(dataDirectory, 'harnesses', recovery.orphan.owner, recovery.orphan.destination as string)
+        join(dataDirectory, 'backpacks', recovery.orphan.owner, recovery.orphan.destination as string)
       )
     if (recovery.action === 'remove') await rm(recovery.orphan.path, { recursive: true, force: true })
   }

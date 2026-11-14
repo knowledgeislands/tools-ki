@@ -8,20 +8,20 @@ The governing property is that these commands report before they act, and severa
 
 ```sh
 ki inventory
-ki harness outdated
-ki harness missing
+ki backpack outdated
+ki backpack missing
 ```
 
-`list` inventories installed harness capabilities and declared skills. `outdated` reports an installed harness **only** when comparable newer release evidence is available — when it cannot compare, it names the unavailable evidence rather than claiming the harness is current, so a quiet `outdated` is not the same as a proven-fresh one. `missing` reports the opposite gap: a desired capability with no installed provider, which tells you which harness to install.
+`list` inventories installed backpack capabilities and declared skills. `outdated` reports an installed backpack **only** when comparable newer release evidence is available — when it cannot compare, it names the unavailable evidence rather than claiming the backpack is current, so a quiet `outdated` is not the same as a proven-fresh one. `missing` reports the opposite gap: a desired capability with no installed provider, which tells you which backpack to install.
 
-## Update the executable and harnesses
+## Update the executable and backpacks
 
 ```sh
 ki update
 ki update --cli
 ```
 
-`update` refreshes installed configured harnesses, and updates the executable **only** when a verified installer receipt proves that it owns the running regular installation. `--cli` requires the executable target specifically.
+`update` refreshes installed configured backpacks, and updates the executable **only** when a verified installer receipt proves that it owns the running regular installation. `--cli` requires the executable target specifically.
 
 That ownership test is deliberate and it is the usual reason an update appears to do nothing. A linked development installation, or an externally managed one such as Homebrew, is not self-updated — `ki` will not overwrite an executable another system is responsible for. Update those through the system that installed them, or reinstall from a pinned release as in [install ki and run it for the first time](getting-started.md).
 
@@ -88,7 +88,7 @@ ki doctor
 
 `diag` prints share-safe tool/version, installation mode, executing host platform and architecture, runtime/version, configuration and registry status, and counts. Installation is `local` for an identified development checkout, `release` for the embedded compiled runtime, or `unknown` when provenance cannot be established. A source URL or filename alone is not proof: the resolved entrypoint must belong to this tool's source/package layout and have a Git checkout or valid worktree marker. Arbitrary copied source reports `unknown`, while linked checkout entrypoints resolve to `local`. Use `ki diag --full` for resolved paths, local identities, and detailed diagnostics. It changes nothing and inspects no repository declaration. Each path resolves from the first non-empty of `$KI_*_HOME`, `$XDG_*_HOME/ki`, then the `~/.local` or `~/.config` default.
 
-`doctor` checks user configuration, configured agent skill directories, installed harnesses, and the configured KI-managed user skill links. It also reports a direct-CWD legacy `.ki-meta/` or `.ki/` directory and validates a regular direct-CWD `.ki.toml` declaration without resolving its providers. A failing check produces a non-zero exit status and still prints the complete report, so read the whole output rather than stopping at the first failure.
+`doctor` checks user configuration, configured agent skill directories, installed backpacks, and the configured KI-managed user skill links. It also reports a direct-CWD legacy `.ki-meta/` or `.ki/` directory and validates a regular direct-CWD `.ki.toml` declaration without resolving its providers. A failing check produces a non-zero exit status and still prints the complete report, so read the whole output rather than stopping at the first failure.
 
 Doctor reports begin with the same diagnostic context, state the read-only check scope, and end with a verdict and pass/warn/fail/skipped counts. Skipped checks were not evaluated; a healthy verdict describes only the named checks, not package or release freshness. `doctor` includes actionable local findings and is not a substitute for the share-safe `diag` report.
 
@@ -99,19 +99,19 @@ ki repair --dry-run
 ki repair --apply
 ```
 
-Repair previews reconciliation of configured user-skill links against installed or active local harness sources; `--apply` creates missing links and re-points stale or dangling symbolic links. If the user configuration has a recognised legacy `schema = 1` line, `diag --full` points it out and repair can remove that line without changing other content. Newly written configuration has no schema field; a missing field means the current shape. An unknown or noncanonical legacy marker is not repaired automatically. Repair never installs a harness or replaces a path that is not a symbolic link — anything unsafe or unavailable is reported for you to resolve by hand. Read the default or explicit `--dry-run` preview before applying; ordinary reads never rewrite configuration.
+Repair previews reconciliation of configured user-skill links against installed or active local backpack sources; `--apply` creates missing links and re-points stale or dangling symbolic links. If the user configuration has a recognised legacy `schema = 1` line, `diag --full` points it out and repair can remove that line without changing other content. Newly written configuration has no schema field; a missing field means the current shape. An unknown or noncanonical legacy marker is not repaired automatically. Repair never installs a backpack or replaces a path that is not a symbolic link — anything unsafe or unavailable is reported for you to resolve by hand. Read the default or explicit `--dry-run` preview before applying; ordinary reads never rewrite configuration.
 
 This is the user-scope counterpart to `ki repo repair`. If a _repository's_ declared skill has no projection, `ki repair` is the wrong command.
 
 ## Find capabilities and documentation
 
 ```sh
-ki harness search roadmap
+ki backpack search roadmap
 ki docs
 ki docs manual
 ```
 
-`search` matches a required non-empty query case-insensitively against harness identifier, capability kind, and capability name across verified installed harnesses only. It contacts no registry and discovers no repository, so it answers "do I already have this?" and not "does this exist anywhere?".
+`search` matches a required non-empty query case-insensitively against backpack identifier, capability kind, and capability name across verified installed backpacks only. It contacts no registry and discovers no repository, so it answers "do I already have this?" and not "does this exist anywhere?".
 
 `docs` prints labelled canonical documentation locations — `overview`, `site`, `manual`, and `roadmap` — or one of them when you name a topic. It prints locations; it never opens a browser or fetches content.
 
@@ -121,7 +121,7 @@ ki docs manual
 ki cleanup
 ```
 
-Cleanup reports only stale artefacts held in a persisted, versioned KI-owned format. No such format exists yet, so at present the command reports that no eligible managed stale state exists and changes no files. It deliberately does not infer that a cache directory, a transaction-looking directory, an unconfigured harness, a link, or an unknown file is stale. If you are looking for disk space, this is not the command that will find it for you.
+Cleanup reports only stale artefacts held in a persisted, versioned KI-owned format. No such format exists yet, so at present the command reports that no eligible managed stale state exists and changes no files. It deliberately does not infer that a cache directory, a transaction-looking directory, an unconfigured backpack, a link, or an unknown file is stale. If you are looking for disk space, this is not the command that will find it for you.
 
 ## Verify
 
@@ -136,9 +136,9 @@ A `doctor` run exiting zero, with `diag` reporting the installation mode and pat
 
 - `ki update` leaves the version unchanged — Likely cause: No installer receipt proves ownership of this executable. Action: Update through the installing system, or reinstall from a pinned release.
 
-- `ki harness outdated` names unavailable evidence — Likely cause: The comparison source could not be read. Action: Treat freshness as unknown; do not read silence as current.
+- `ki backpack outdated` names unavailable evidence — Likely cause: The comparison source could not be read. Action: Treat freshness as unknown; do not read silence as current.
 
-- `doctor` reports dangling user skill links — Likely cause: The harness source moved or was removed. Action: `ki repair --dry-run`, review, then `ki repair --apply`.
+- `doctor` reports dangling user skill links — Likely cause: The backpack source moved or was removed. Action: `ki repair --dry-run`, review, then `ki repair --apply`.
 
 - `doctor` reports an unsafe path it will not repair — Likely cause: A managed path is not a symbolic link. Action: Inspect and resolve it by hand; `repair` will not overwrite it.
 

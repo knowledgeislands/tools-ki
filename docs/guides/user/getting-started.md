@@ -32,13 +32,13 @@ If the command is not found, `KI_CLI_INSTALL_DIR` is not on your `PATH`. Add it 
 ki bootstrap
 ```
 
-Bootstrap detects the supported agent runtimes on this machine, writes the user configuration if there is none, installs the built-in verified canonical harness, and links the core user skills into each configured agent's user skill directory. It reuses an existing agent configuration rather than replacing it, so running it on a machine that already has one is safe.
+Bootstrap detects the supported agent runtimes on this machine, writes the user configuration if there is none, installs the built-in verified canonical backpack, and links the core user skills into each configured agent's user skill directory. It reuses an existing agent configuration rather than replacing it, so running it on a machine that already has one is safe.
 
-It refuses to complete against an installed canonical harness that is missing a required bootstrap skill, rather than leaving you with a half-activated environment. If that happens, the harness payload is the problem, not your configuration — reinstall it as described in the [capability lifecycle guide](capability-lifecycle.md).
+It refuses to complete against an installed canonical backpack that is missing a required bootstrap skill, rather than leaving you with a half-activated environment. If that happens, the backpack payload is the problem, not your configuration — reinstall it as described in the [capability lifecycle guide](capability-lifecycle.md).
 
-If you develop the canonical harness locally with `ki dev local on`, bootstrap keeps that local mode and links the core skills from your checkout; only `ki dev local off` returns to the verified archive. If the local mode cannot be kept, for example because the checkout has moved, bootstrap prints a `ki: warning:` line naming the reason before it restores the archive.
+If you develop the canonical backpack locally with `ki dev local on`, bootstrap keeps that local mode and links the core skills from your checkout; only `ki dev local off` returns to the verified archive. If the local mode cannot be kept, for example because the checkout has moved, bootstrap prints a `ki: warning:` line naming the reason before it restores the archive.
 
-Use `ki bootstrap --refresh` to redetect runtimes and rebuild the agent, harness, and skill-link inventory from installed state. Refresh preserves your registered local and repository settings. It is also the one-time migration path: it imports any retired configuration path list into the machine-local registry and removes the list from user configuration.
+Use `ki bootstrap --refresh` to redetect runtimes and rebuild the agent, backpack, and skill-link inventory from installed state. Refresh preserves your registered local and repository settings. It is also the one-time migration path: it imports any retired configuration path list into the machine-local registry and removes the list from user configuration.
 
 Verify:
 
@@ -47,7 +47,7 @@ ki diag
 ki doctor
 ```
 
-`diag` prints share-safe tool/version, proven installation mode, executing platform and architecture, runtime, configuration state, and registry counts without changing anything. Use `ki diag --full` for resolved paths and local identities. `doctor` reports the same context, evaluates configuration, agent skill directories, installed harnesses, and skill links, and prints its verdict and pass/warn/fail/skipped counts before exiting non-zero on a failing check. A healthy result does not mean package updates were checked.
+`diag` prints share-safe tool/version, proven installation mode, executing platform and architecture, runtime, configuration state, and registry counts without changing anything. Use `ki diag --full` for resolved paths and local identities. `doctor` reports the same context, evaluates configuration, agent skill directories, installed backpacks, and skill links, and prints its verdict and pass/warn/fail/skipped counts before exiting non-zero on a failing check. A healthy result does not mean package updates were checked.
 
 ## Register your first repository
 
@@ -85,7 +85,7 @@ This reports the repository's declared skills and their local projections withou
 
 ## What to read next
 
-- Add governing skills to the repository, or install another harness: [capability lifecycle](capability-lifecycle.md).
+- Add governing skills to the repository, or install another backpack: [capability lifecycle](capability-lifecycle.md).
 - Run audits and conform across one repository or many: [repository operations](repository-operations.md).
 - Keep the installation current and diagnose it when something drifts: [maintain a local installation](local-installation.md).
 
@@ -95,9 +95,9 @@ For exact grammar of any command here, use `ki <command> --help` or the installe
 
 - `ki: command not found` after install — Likely cause: `KI_CLI_INSTALL_DIR` is not on `PATH`. Action: Add the directory to `PATH` and start a new shell.
 
-- Bootstrap refuses, naming a missing bootstrap skill — Likely cause: The installed canonical harness payload is incomplete. Action: Reinstall the harness, then rerun `ki bootstrap`.
+- Bootstrap refuses, naming a missing bootstrap skill — Likely cause: The installed canonical backpack payload is incomplete. Action: Reinstall the backpack, then rerun `ki bootstrap`.
 
-- `ki doctor` reports dangling skill links — Likely cause: Links point at a harness source that has moved. Action: Run `ki repair --dry-run`, review, then run `ki repair --apply`.
+- `ki doctor` reports dangling skill links — Likely cause: Links point at a backpack source that has moved. Action: Run `ki repair --dry-run`, review, then run `ki repair --apply`.
 
 - `ki repo diag` reports a direct-CWD legacy `.ki-meta/` or `.ki/` — Likely cause: The checkout predates the current declaration format. Action: Migrate it to `.ki.toml`; `ki doctor` reports the same condition.
 

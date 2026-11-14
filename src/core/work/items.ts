@@ -49,7 +49,7 @@ const nestedFields = ['task_links', 'hold'] as const
 const allowedFields = new Set<string>([...requiredFields, ...optionalFields, ...nestedFields])
 /** The `ki-repo-kb` universal note fields a KB Streams record may also carry. */
 const kbNoteFields = ['note_type', 'updated', 'reviewed', 'created', 'tags', 'author'] as const
-/** Every field a KB Streams record may carry without a warning, kept level with the Harness Streams checker. */
+/** Every field a KB Streams record may carry without a warning, kept level with the backpack Streams checker. */
 const kbStreamsKnownFields: ReadonlySet<string> = new Set([...allowedFields, ...kbNoteFields])
 /** Horizons in selection order. */
 export const workItemHorizons = ['now', 'next', 'soon', 'future', 'hold'] as const
@@ -171,7 +171,7 @@ export interface WorkItem {
   readonly taskLinks?: TaskLinks
   /** Deprecated shapes this record still carries, in a stable order; absent when it has none. */
   readonly legacy?: readonly string[]
-  /** The field migration and assignee windows' gaps, in the harness roadmap checker's words; absent when it has none. */
+  /** The field migration and assignee windows' gaps, in the backpack roadmap checker's words; absent when it has none. */
   readonly gaps?: readonly string[]
 }
 
@@ -407,7 +407,7 @@ const legacyShapes = (fields: Readonly<WorkItemFields>, status: WorkItemStatus):
   status !== 'done'
     ? [`${status} at ${fields.horizon}`]
     : []),
-  // The harness tolerates an adopted record without `kind`; a legacy horizon is reported on its own.
+  // The backpack tolerates an adopted record without `kind`; a legacy horizon is reported on its own.
   ...(fields.kind === undefined &&
   adoptedOpenStatuses.has(status) &&
   !legacyWorkItemHorizons.includes(fields.horizon as LegacyWorkItemHorizon)
@@ -422,7 +422,7 @@ const retiredHorizonUse: Readonly<Record<LegacyWorkItemHorizon, string>> = {
 }
 
 /**
- * The shapes the field migration window set on 2026-10-19 tolerates, worded as the harness roadmap checker warns on
+ * The shapes the field migration window set on 2026-10-19 tolerates, worded as the backpack roadmap checker warns on
  * them: they warn until the window closes and then fail. A closed record needs no retrospective size or kind.
  */
 const migrationGaps = (fields: Readonly<WorkItemFields>, status: WorkItemStatus): readonly string[] => {
@@ -440,7 +440,7 @@ const migrationGaps = (fields: Readonly<WorkItemFields>, status: WorkItemStatus)
       : [])
   ]
   return [
-    // The harness checker already fails a retired horizon; ki lists it as a gap until the window closes.
+    // The backpack checker already fails a retired horizon; ki lists it as a gap until the window closes.
     ...(retired
       ? [`retired: horizon '${fields.horizon}'; use ${retiredHorizonUse[fields.horizon as LegacyWorkItemHorizon]}`]
       : []),

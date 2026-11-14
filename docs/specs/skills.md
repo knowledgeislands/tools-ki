@@ -46,7 +46,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### SKILL-005 — Attributable publication tree
 
-`ki dev skill rubric` resolves installed Harnesses and not the current directory, so it MUST name the resolved publication root in every result, and `--write` MUST publish only when that root and the current directory belong to the same Git working tree, refusing any other tree with both roots named.
+`ki dev skill rubric` resolves installed backpacks and not the current directory, so it MUST name the resolved publication root in every result, and `--write` MUST publish only when that root and the current directory belong to the same Git working tree, refusing any other tree with both roots named.
 
 _Conformance:_ conforming
 
@@ -56,7 +56,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### SKILL-006 — Generated skill surfaces
 
-`ki dev skill generate` MUST import a skill's `scripts/generate/index.ts`, render its surfaces against the resolved Harness root and name every missing or stale surface, failing until they are written; `--write` MUST publish only those surfaces, keeping an existing file's permission bits, under the development-link and working-tree guard of SKILL-005.
+`ki dev skill generate` MUST import a skill's `scripts/generate/index.ts`, render its surfaces against the resolved backpack root and name every missing or stale surface, failing until they are written; `--write` MUST publish only those surfaces, keeping an existing file's permission bits, under the development-link and working-tree guard of SKILL-005.
 
 _Conformance:_ conforming
 

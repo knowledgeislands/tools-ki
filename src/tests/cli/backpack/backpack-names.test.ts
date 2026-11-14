@@ -2,7 +2,7 @@ import { rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse } from 'smol-toml'
 import { describe, expect, test } from 'vitest'
-import { makeHarnessArchive } from '../_archive_helper.ts'
+import { makeBackpackArchive } from '../_archive_helper.ts'
 import { sandbox } from '../_cli_helper.ts'
 
 // Backpack repositories were `*-agentic-harness` until 14 November 2026. For one release `ki`
@@ -14,17 +14,17 @@ const canonical = 'knowledgeislands/ki-agent-backpack'
 const retiredCanonical = 'knowledgeislands/ki-agentic-harness'
 
 const repositoryDeclaration = (identifier: string): string =>
-  `[repo]\nharnesses = ["${identifier}"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n`
+  `[repo]\nbackpacks = ["${identifier}"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n`
 
 describe('[backpack names]', () => {
   describe('installed slots', () => {
     test('finds a backpack installed under its retired spelling by either name', async () => {
       const box = await sandbox()
-      await box.setupExampleHarness({ identifier: retired })
+      await box.setupExampleBackpack({ identifier: retired })
 
-      const listed = await box.run('ki harness list')
-      const byRetired = await box.run(`ki harness info ${retired}`)
-      const byBackpack = await box.run(`ki harness info ${backpack}`)
+      const listed = await box.run('ki backpack list')
+      const byRetired = await box.run(`ki backpack info ${retired}`)
+      const byBackpack = await box.run(`ki backpack info ${backpack}`)
 
       expect(listed.exitCode).toBe(0)
       expect(listed.output).toContain(`${backpack} (1)`)
@@ -36,10 +36,10 @@ describe('[backpack names]', () => {
 
     test('refuses a backpack installed under both spellings', async () => {
       const box = await sandbox()
-      await box.setupExampleHarness({ identifier: retired })
-      await box.setupExampleHarness({ identifier: backpack })
+      await box.setupExampleBackpack({ identifier: retired })
+      await box.setupExampleBackpack({ identifier: backpack })
 
-      const listed = await box.run('ki harness list')
+      const listed = await box.run('ki backpack list')
 
       expect(listed.exitCode).toBe(1)
       expect(listed.output).toContain(
@@ -49,10 +49,10 @@ describe('[backpack names]', () => {
 
     test('reads a prefix still declared under the retired ki-repo-harness skill', async () => {
       const box = await sandbox()
-      await box.setupExampleHarness({ identifier: backpack })
-      await box.data.write(`ki/harnesses/${backpack}/.ki.toml`, '[skills.ki-repo-harness]\nprefix = "ki"\n')
+      await box.setupExampleBackpack({ identifier: backpack })
+      await box.data.write(`ki/backpacks/${backpack}/.ki.toml`, '[skills.ki-repo-harness]\nprefix = "ki"\n')
 
-      const inspected = await box.run(`ki harness info ${backpack}`)
+      const inspected = await box.run(`ki backpack info ${backpack}`)
 
       expect(inspected.exitCode).toBe(0)
       expect(inspected.output).toContain('ki-example')
@@ -60,13 +60,13 @@ describe('[backpack names]', () => {
 
     test('accepts the guild keys in skill front matter', async () => {
       const box = await sandbox()
-      await box.setupExampleHarness({ identifier: backpack })
+      await box.setupExampleBackpack({ identifier: backpack })
       await box.data.write(
-        `ki/harnesses/${backpack}/skills/ki-example/SKILL.md`,
+        `ki/backpacks/${backpack}/skills/ki-example/SKILL.md`,
         '---\nname: ki-example\nki-guild: keystone\nki-leads: example\nki-depends-on: []\n---\n'
       )
 
-      const inspected = await box.run(`ki harness info ${backpack}`)
+      const inspected = await box.run(`ki backpack info ${backpack}`)
 
       expect(inspected.exitCode).toBe(0)
       expect(inspected.output).toContain('ki-example')
@@ -81,11 +81,11 @@ describe('[backpack names]', () => {
     ])('resolves a declaration of %s against a slot spelt %s', async (declared, slot) => {
       const box = await sandbox()
       await box.setupAgentHome('claude-code')
-      await box.setupExampleHarness({ name: 'ki-repo' })
-      await box.setupExampleHarness()
+      await box.setupExampleBackpack({ name: 'ki-repo' })
+      await box.setupExampleBackpack()
       await box.run('ki bootstrap')
       if (slot !== canonical)
-        await rename(join(box.data.path, `ki/harnesses/${canonical}`), join(box.data.path, `ki/harnesses/${slot}`))
+        await rename(join(box.data.path, `ki/backpacks/${canonical}`), join(box.data.path, `ki/backpacks/${slot}`))
       await box.project.write('.ki.toml', repositoryDeclaration(declared))
 
       const added = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
@@ -97,7 +97,7 @@ describe('[backpack names]', () => {
     test('refuses a declaration that names one backpack under both spellings', async () => {
       const box = await sandbox()
       await box.setupAgentHome('claude-code')
-      await box.setupExampleHarness()
+      await box.setupExampleBackpack()
       await box.run('ki bootstrap')
       await box.project.write(
         '.ki.toml',
@@ -107,7 +107,7 @@ describe('[backpack names]', () => {
       const added = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
 
       expect(added.exitCode).toBe(1)
-      expect(added.output).toContain('[repo] harnesses must not repeat a harness')
+      expect(added.output).toContain('[repo] backpacks must not repeat a backpack')
     })
   })
 
@@ -117,7 +117,7 @@ describe('[backpack names]', () => {
       await box.setupAgentHome('claude-code')
       await box.config.write(
         'ki/config.toml',
-        `[agents]\nids = ["claude-code"]\n\n[harnesses]\nids = ["${retiredCanonical}"]\n\n[skills.ki-next]\nharness = "${retiredCanonical}"\n`
+        `[agents]\nids = ["claude-code"]\n\n[backpacks]\nids = ["${retiredCanonical}"]\n\n[skills.ki-next]\nharness = "${retiredCanonical}"\n`
       )
 
       const diag = await box.run('ki diag --full')
@@ -131,7 +131,7 @@ describe('[backpack names]', () => {
       const box = await sandbox()
       await box.config.write(
         'ki/config.toml',
-        `[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills.ki-next]\nbackpack = "${canonical}"\nharness = "${canonical}"\n`
+        `[agents]\nids = []\n\n[backpacks]\nids = []\n\n[skills.ki-next]\nbackpack = "${canonical}"\nharness = "${canonical}"\n`
       )
 
       const diag = await box.run('ki diag --full')
@@ -158,7 +158,7 @@ describe('[backpack names]', () => {
 
     test('switches to a checkout remembered under the retired spelling', async () => {
       const box = await sandbox()
-      const checkout = await box.setupLocalCanonicalHarness(`dev/${canonical}`)
+      const checkout = await box.setupLocalCanonicalBackpack(`dev/${canonical}`)
       await box.setupAgentHome('chatgpt-codex')
       await box.run('ki bootstrap')
       await box.state.write('ki/locals.toml', `[locals."${retiredCanonical}"]\npath = ${JSON.stringify(checkout)}\n`)
@@ -166,31 +166,31 @@ describe('[backpack names]', () => {
       const on = await box.run(`ki dev local on ${retiredCanonical}`)
 
       expect(on.exitCode).toBe(0)
-      expect(on.output).toContain(`development harness enabled ${canonical}\t${checkout}`)
+      expect(on.output).toContain(`development backpack enabled ${canonical}\t${checkout}`)
     })
 
     test('refuses a release that overrides the canonical backpack under its retired spelling', async () => {
       const box = await sandbox()
       await box.config.write(
         'ki/config.toml',
-        `[harnesses]\nreleases = [{ id = "${retiredCanonical}", url = "https://releases.example.test/ki.tgz", sha256 = "${'a'.repeat(64)}" }]\n`
+        `[backpacks]\nreleases = [{ id = "${retiredCanonical}", url = "https://releases.example.test/ki.tgz", sha256 = "${'a'.repeat(64)}" }]\n`
       )
 
-      const result = await box.run('ki harness install example/harness')
+      const result = await box.run('ki backpack install example/backpack')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain(`must not override the built-in canonical harness ${canonical}`)
+      expect(result.output).toContain(`must not override the built-in canonical backpack ${canonical}`)
     })
 
     test('installs a private backpack whose codeload URL still names its retired repository', async () => {
       const box = await sandbox()
-      const { payload, sha256 } = makeHarnessArchive({
+      const { payload, sha256 } = makeBackpackArchive({
         'source-revision/skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n'
       })
       const url = `https://codeload.github.com/${retired}/tar.gz/0123456789abcdef`
       await box.config.write(
         'ki/config.toml',
-        `[harnesses]\nids = []\nreleases = [{ id = "${retired}", url = "${url}", sha256 = "${sha256}", auth = "github-cli" }]\n`
+        `[backpacks]\nids = []\nreleases = [{ id = "${retired}", url = "${url}", sha256 = "${sha256}", auth = "github-cli" }]\n`
       )
       box.setRunner(async () => ({ exitCode: 0, output: 'test-token\n' }))
       box.setFetcher(async (input) => {
@@ -198,13 +198,13 @@ describe('[backpack names]', () => {
         return new Response(payload)
       })
 
-      const result = await box.run(`ki harness install ${retired}`)
-      const recorded = parse(await box.config.read('ki/config.toml')) as { harnesses: { ids: string[] } }
+      const result = await box.run(`ki backpack install ${retired}`)
+      const recorded = parse(await box.config.read('ki/config.toml')) as { backpacks: { ids: string[] } }
 
       expect(result).toEqual({ exitCode: 0, output: `installed ${backpack}\tarchive ${sha256}\n` })
-      expect(await box.data.isSymlink(`ki/harnesses/${backpack}`)).toBe(false)
-      expect((await box.run(`ki harness info ${backpack}`)).exitCode).toBe(0)
-      expect(recorded.harnesses.ids).toEqual([backpack])
+      expect(await box.data.isSymlink(`ki/backpacks/${backpack}`)).toBe(false)
+      expect((await box.run(`ki backpack info ${backpack}`)).exitCode).toBe(0)
+      expect(recorded.backpacks.ids).toEqual([backpack])
     })
   })
 
@@ -217,7 +217,7 @@ describe('[backpack names]', () => {
         ['work', 'ki-work']
       ] as const)
         await box.data.write(
-          `ki/harnesses/${canonical}/skills/${group}/${skill}/SKILL.md`,
+          `ki/backpacks/${canonical}/skills/${group}/${skill}/SKILL.md`,
           `---\nname: ${skill}\nki-guild: keystone\nki-leads: ${skill.slice(3)}\nki-depends-on: []\n---\n`
         )
 
@@ -234,8 +234,8 @@ describe('[backpack names]', () => {
       const box = await sandbox()
       await box.setupAgentHome('claude-code')
       await rename(
-        join(box.data.path, `ki/harnesses/${canonical}`),
-        join(box.data.path, `ki/harnesses/${retiredCanonical}`)
+        join(box.data.path, `ki/backpacks/${canonical}`),
+        join(box.data.path, `ki/backpacks/${retiredCanonical}`)
       )
 
       const bootstrapped = await box.run('ki bootstrap')
@@ -245,7 +245,7 @@ describe('[backpack names]', () => {
       expect(bootstrapped.output).toContain('ki-bootstrap for claude-code installed')
       expect(bootstrapped.output).toContain('ki-next for claude-code installed')
       expect(configured).toContain(`[skills.ki-next]\nbackpack = "${canonical}"`)
-      expect(await box.data.isSymlink(`ki/harnesses/${canonical}`).catch(() => 'absent')).toBe('absent')
+      expect(await box.data.isSymlink(`ki/backpacks/${canonical}`).catch(() => 'absent')).toBe('absent')
     })
   })
 })

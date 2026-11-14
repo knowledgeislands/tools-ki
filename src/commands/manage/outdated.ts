@@ -17,12 +17,12 @@ export const createOutdatedCommand = (context: KiContext): Command =>
               entry.reason === 'no-configured-release'
                 ? 'no configured immutable release'
                 : 'installed release provenance is not recorded'
-            return { label: `${entry.harness}: ${reason}` }
+            return { label: `${entry.backpack}: ${reason}` }
           })
         : [{ label: 'none' }]
       context.stdout.write(
         `${renderTree({
-          title: 'KI HARNESS OUTDATED',
+          title: 'KI BACKPACK OUTDATED',
           entries: [
             { label: `evidence gaps (${status.outdatedEvidenceGaps.length})`, children: evidenceGaps },
             { label: `summary: EVIDENCE_GAPS=${status.outdatedEvidenceGaps.length}` }

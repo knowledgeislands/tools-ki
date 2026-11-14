@@ -1,11 +1,11 @@
+import type { BackpackCapability, InstalledBackpack } from '../backpack/inspection.ts'
 import { KiError } from '../errors.ts'
-import type { HarnessCapability, InstalledHarness } from '../harness/inspection.ts'
 import type { DeclaredSkill, RepositoryDeclaration } from './declaration.ts'
 
-export interface InstalledHarnessSkillProvider {
-  readonly kind: 'installed-harness'
+export interface InstalledBackpackSkillProvider {
+  readonly kind: 'installed-backpack'
   readonly root: string
-  readonly harness: InstalledHarness
+  readonly backpack: InstalledBackpack
 }
 
 export interface RepositoryLocalSkillProvider {
@@ -13,21 +13,21 @@ export interface RepositoryLocalSkillProvider {
   readonly root: string
 }
 
-export type ResolvedSkillProvider = InstalledHarnessSkillProvider | RepositoryLocalSkillProvider
+export type ResolvedSkillProvider = InstalledBackpackSkillProvider | RepositoryLocalSkillProvider
 
 export interface RepositoryLocalSkillCandidate {
   readonly provider: RepositoryLocalSkillProvider
-  readonly capability: HarnessCapability
+  readonly capability: BackpackCapability
 }
 
 export interface ResolvedSkill {
   readonly identity: string
   readonly declaration: DeclaredSkill
   readonly provider: ResolvedSkillProvider
-  readonly capability: HarnessCapability
+  readonly capability: BackpackCapability
 }
 
-/** Where installed harnesses were sought, so a missing provider names the environment it searched. */
+/** Where installed backpacks were sought, so a missing provider names the environment it searched. */
 export interface DataRootEvidence {
   readonly path: string
   readonly exists: boolean
@@ -38,20 +38,20 @@ const dataRootHint = (dataRoot: DataRootEvidence): string =>
     ? ` in data root ${dataRoot.path}`
     : `: data root ${dataRoot.path} does not exist; check KI_DATA_HOME, XDG_DATA_HOME and HOME`
 
-const installedProvider = (harness: InstalledHarness): InstalledHarnessSkillProvider => ({
-  kind: 'installed-harness',
-  root: harness.root,
-  harness
+const installedProvider = (backpack: InstalledBackpack): InstalledBackpackSkillProvider => ({
+  kind: 'installed-backpack',
+  root: backpack.root,
+  backpack
 })
 
-const skillCandidates = (harnesses: readonly InstalledHarness[], name: string): readonly ResolvedSkill[] =>
-  harnesses.flatMap((harness) =>
-    harness.capabilities
+const skillCandidates = (backpacks: readonly InstalledBackpack[], name: string): readonly ResolvedSkill[] =>
+  backpacks.flatMap((backpack) =>
+    backpack.capabilities
       .filter((capability) => capability.kind === 'skill' && capability.name === name)
       .map((capability) => ({
-        identity: `${harness.id}:${capability.name}`,
+        identity: `${backpack.id}:${capability.name}`,
         declaration: { key: name, name, configuration: {} },
-        provider: installedProvider(harness),
+        provider: installedProvider(backpack),
         capability
       }))
   )
@@ -104,29 +104,29 @@ const orderedSkills = (skills: readonly ResolvedSkill[]): readonly ResolvedSkill
 }
 
 /** Resolves one installed skill by capability name, independent of any repository declaration. */
-export const resolveInstalledSkill = (harnesses: readonly InstalledHarness[], name: string): ResolvedSkill => {
-  const [candidate] = skillCandidates(harnesses, name)
-  if (!candidate) throw new KiError(`no installed harness provides skill ${name}`, 1)
+export const resolveInstalledSkill = (backpacks: readonly InstalledBackpack[], name: string): ResolvedSkill => {
+  const [candidate] = skillCandidates(backpacks, name)
+  if (!candidate) throw new KiError(`no installed backpack provides skill ${name}`, 1)
   return candidate
 }
 
-const providedSkill = (harness: InstalledHarness, name: string): HarnessCapability | undefined =>
-  harness.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === name)
+const providedSkill = (backpack: InstalledBackpack, name: string): BackpackCapability | undefined =>
+  backpack.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === name)
 
 /**
  * Binds each declaration to its explicit provider. Portable names resolve only
- * against declared installed Harnesses; the caller may additionally supply the
+ * against declared installed backpacks; the caller may additionally supply the
  * one physically inspected repository-local provider.
  */
 export const resolveDeclaredSkills = (
   declaration: RepositoryDeclaration,
-  harnesses: readonly InstalledHarness[],
+  backpacks: readonly InstalledBackpack[],
   dataRoot: DataRootEvidence,
   selected?: string,
   localCandidates: readonly RepositoryLocalSkillCandidate[] = []
 ): readonly ResolvedSkill[] => {
-  const declared = declaration.harnesses.flatMap((id) => harnesses.filter((candidate) => candidate.id === id))
-  const absent = declaration.harnesses.filter((id) => !harnesses.some((candidate) => candidate.id === id))
+  const declared = declaration.backpacks.flatMap((id) => backpacks.filter((candidate) => candidate.id === id))
+  const absent = declaration.backpacks.filter((id) => !backpacks.some((candidate) => candidate.id === id))
   const resolved = declaration.skills.map((skill) => {
     const local = localCandidates.find((candidate) => candidate.capability.name === skill.name)
     if (local) {
@@ -138,23 +138,23 @@ export const resolveDeclaredSkills = (
       }
     }
 
-    const providers = declared.flatMap((harness) => {
-      const capability = providedSkill(harness, skill.name)
-      return capability ? [{ harness, capability }] : []
+    const providers = declared.flatMap((backpack) => {
+      const capability = providedSkill(backpack, skill.name)
+      return capability ? [{ backpack, capability }] : []
     })
     const [provider] = providers
     if (!provider) {
       throw new KiError(
-        `declared skill ${skill.name} is provided by no declared harness (${declaration.harnesses.join(', ')})${
+        `declared skill ${skill.name} is provided by no declared backpack (${declaration.backpacks.join(', ')})${
           absent.length ? `; ${absent.join(', ')} is not installed${dataRootHint(dataRoot)}` : ''
         }`,
         1
       )
     }
     return {
-      identity: `${provider.harness.id}:${skill.name}`,
+      identity: `${provider.backpack.id}:${skill.name}`,
       declaration: skill,
-      provider: installedProvider(provider.harness),
+      provider: installedProvider(provider.backpack),
       capability: provider.capability
     }
   })

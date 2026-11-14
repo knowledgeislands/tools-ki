@@ -19,7 +19,7 @@ const identity = (directory: string): string => `https://github.com/example/${di
 const capital = ({ directory, kind = 'kb', territory = [] }: CapitalFixture): string =>
   [
     '[repo]',
-    'harnesses = ["example/harness"]',
+    'backpacks = ["example/backpack"]',
     '',
     `[skills.${kind === 'kb' ? 'ki-repo-kb' : 'ki-repo-project'}]`,
     '',

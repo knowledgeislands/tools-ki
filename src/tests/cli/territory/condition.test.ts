@@ -7,7 +7,7 @@ import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 import { capitalConfiguration, home, memberConfiguration } from '../_territory_helper.ts'
 
-const CONFIGURATION = 'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n'
+const CONFIGURATION = 'schema = 1\n\n[agents]\nids = []\n\n[backpacks]\nids = []\n\n[skills]\n'
 const OBSERVED = Date.parse('2026-10-20T07:00:00.000Z')
 
 // A ki-repo catalogue whose one item reports the findings listed in the repository's
@@ -92,7 +92,7 @@ const fixture = async () => {
     ].join('\n')
   )
   await box.config.write('ki/config.toml', CONFIGURATION)
-  await box.setupExampleHarness({ name: 'ki-repo', rubric: RUBRIC })
+  await box.setupExampleBackpack({ name: 'ki-repo', rubric: RUBRIC })
   return { box, capital, member }
 }
 
@@ -167,7 +167,7 @@ describe('[ki territory show island condition]', () => {
     await box.project.write(
       'member/.ki.toml',
       memberConfiguration('example/member', { trades: false })
-        .replace('harnesses = ["example/harness"]', 'harnesses = []')
+        .replace('backpacks = ["example/backpack"]', 'backpacks = []')
         .replace('repo_code = "TEST"', 'repo_code = "TEST"\nmaturity = "settled"')
     )
     expect((await islands(box))['member']?.maturity).toEqual({ level: null, declaration: 'unreadable' })

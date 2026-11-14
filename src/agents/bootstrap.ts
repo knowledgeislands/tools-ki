@@ -1,15 +1,15 @@
 import { lstat, mkdir, readdir, readlink, realpath, symlink, unlink } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { KiError } from '../core/errors.ts'
-import { bootstrapUserSkills } from '../core/harness/bootstrap-capabilities.ts'
+import { bootstrapUserSkills } from '../core/backpack/bootstrap-capabilities.ts'
 import {
-  canonicalHarnessIdentifier,
-  discoverInstalledHarnesses,
-  type HarnessCapability,
-  inspectHarnessSourceRoot,
-  readInstalledHarness,
+  type BackpackCapability,
+  canonicalBackpackIdentifier,
+  discoverInstalledBackpacks,
+  inspectBackpackSourceRoot,
+  readInstalledBackpack,
   sameBackpack
-} from '../core/harness/index.ts'
+} from '../core/backpack/index.ts'
+import { KiError } from '../core/errors.ts'
 import { inspectUserConfiguration, readConfiguration, writeUserConfiguration } from './configuration.ts'
 import {
   type BootstrapConfiguration,
@@ -27,15 +27,17 @@ interface BootstrapSkillLinkSnapshot {
 }
 
 const bootstrapSkillSources = async (
-  harness: { readonly root: string; readonly capabilities: readonly HarnessCapability[] },
+  backpack: { readonly root: string; readonly capabilities: readonly BackpackCapability[] },
   description: string
 ): Promise<readonly ManagedUserSkill[]> =>
   Promise.all(
-    bootstrapUserSkills(harness.capabilities.map((capability) => capability.name)).map(async (name) => {
-      const capability = harness.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === name)
+    bootstrapUserSkills(backpack.capabilities.map((capability) => capability.name)).map(async (name) => {
+      const capability = backpack.capabilities.find(
+        (candidate) => candidate.kind === 'skill' && candidate.name === name
+      )
       if (!capability) throw new KiError(`${description} does not provide ${name}`, 1)
       const source = await requiredPhysicalDirectory(
-        join(harness.root, capability.source),
+        join(backpack.root, capability.source),
         `${description} ${name} skill`
       )
       return { name, source }
@@ -44,57 +46,57 @@ const bootstrapSkillSources = async (
 
 export const installedBootstrapSkillSources = async (
   dataDirectory: string,
-  identifier = canonicalHarnessIdentifier
+  identifier = canonicalBackpackIdentifier
 ): Promise<readonly ManagedUserSkill[]> => {
-  const harness = await readInstalledHarness(dataDirectory, identifier)
-  return bootstrapSkillSources(harness, `installed harness ${identifier}`)
+  const backpack = await readInstalledBackpack(dataDirectory, identifier)
+  return bootstrapSkillSources(backpack, `installed backpack ${identifier}`)
 }
 
-export const localBootstrapHarness = async (
-  harnessDirectory: string
-): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
-  const inspected = await inspectHarnessSourceRoot(resolve(harnessDirectory), canonicalHarnessIdentifier)
-  return { harness: inspected.root, skills: await bootstrapSkillSources(inspected, 'local harness') }
+export const localBootstrapBackpack = async (
+  backpackDirectory: string
+): Promise<{ readonly backpack: string; readonly skills: readonly ManagedUserSkill[] }> => {
+  const inspected = await inspectBackpackSourceRoot(resolve(backpackDirectory), canonicalBackpackIdentifier)
+  return { backpack: inspected.root, skills: await bootstrapSkillSources(inspected, 'local backpack') }
 }
 
-const harnessSkillSources = async (
-  harness: { readonly root: string; readonly capabilities: readonly HarnessCapability[] },
+const backpackSkillSources = async (
+  backpack: { readonly root: string; readonly capabilities: readonly BackpackCapability[] },
   description: string
 ): Promise<readonly ManagedUserSkill[]> =>
   Promise.all(
-    harness.capabilities.map(async (capability) => ({
+    backpack.capabilities.map(async (capability) => ({
       name: capability.name,
       source: await requiredPhysicalDirectory(
-        join(harness.root, capability.source),
+        join(backpack.root, capability.source),
         `${description} ${capability.name} skill`
       )
     }))
   )
 
-export const localHarness = async (
-  harnessDirectory: string,
+export const localBackpack = async (
+  backpackDirectory: string,
   identifier: string
-): Promise<{ readonly harness: string; readonly prefix: string; readonly skills: readonly ManagedUserSkill[] }> => {
-  const inspected = await inspectHarnessSourceRoot(resolve(harnessDirectory), identifier)
-  if (sameBackpack(identifier, canonicalHarnessIdentifier))
+): Promise<{ readonly backpack: string; readonly prefix: string; readonly skills: readonly ManagedUserSkill[] }> => {
+  const inspected = await inspectBackpackSourceRoot(resolve(backpackDirectory), identifier)
+  if (sameBackpack(identifier, canonicalBackpackIdentifier))
     return {
-      harness: inspected.root,
+      backpack: inspected.root,
       prefix: inspected.prefix,
-      skills: await bootstrapSkillSources(inspected, `local harness ${identifier}`)
+      skills: await bootstrapSkillSources(inspected, `local backpack ${identifier}`)
     }
   return {
-    harness: inspected.root,
+    backpack: inspected.root,
     prefix: inspected.prefix,
-    skills: await harnessSkillSources(inspected, `local harness ${identifier}`)
+    skills: await backpackSkillSources(inspected, `local backpack ${identifier}`)
   }
 }
 
-export const installedHarnessSkillSources = async (
+export const installedBackpackSkillSources = async (
   dataDirectory: string,
   identifier: string
 ): Promise<readonly ManagedUserSkill[]> => {
-  const harness = await readInstalledHarness(dataDirectory, identifier)
-  return harnessSkillSources(harness, `installed harness ${identifier}`)
+  const backpack = await readInstalledBackpack(dataDirectory, identifier)
+  return backpackSkillSources(backpack, `installed backpack ${identifier}`)
 }
 
 export const configureBootstrapAgents = async (options: {
@@ -111,14 +113,14 @@ export const configureBootstrapAgents = async (options: {
     : await readConfiguration(options.configurationDirectory, options.homeDirectory)
   const existing = options.refresh
     ? await inspectUserConfiguration(options.configurationDirectory)
-    : { harnesses: [], skills: [], repositories: [] }
+    : { backpacks: [], skills: [], repositories: [] }
   const agents = options.refresh || !configured ? await detectAgents(options.homeDirectory) : configured
   if (!configured) {
     await mkdir(options.configurationDirectory, { recursive: true })
     await writeUserConfiguration(
       options.configurationDirectory,
       agents,
-      existing.harnesses,
+      existing.backpacks,
       existing.skills,
       options.dropLegacyRepositories ? [] : existing.repositories
     )
@@ -128,13 +130,13 @@ export const configureBootstrapAgents = async (options: {
 
 const discoverManagedUserSkills = async (
   agents: readonly InstalledAgent[],
-  harnesses: Awaited<ReturnType<typeof discoverInstalledHarnesses>>
+  backpacks: Awaited<ReturnType<typeof discoverInstalledBackpacks>>
 ): Promise<readonly string[]> => {
   const identities = new Map<string, string>()
-  for (const harness of harnesses) {
-    for (const capability of harness.capabilities) {
-      const source = await realpath(join(harness.root, capability.source))
-      identities.set(source, `${harness.id}:${capability.name}`)
+  for (const backpack of backpacks) {
+    for (const capability of backpack.capabilities) {
+      const source = await realpath(join(backpack.root, capability.source))
+      identities.set(source, `${backpack.id}:${capability.name}`)
     }
   }
   const skills = new Set<string>()
@@ -157,19 +159,19 @@ export const refreshUserConfiguration = async (
   dataDirectory: string,
   agents: readonly InstalledAgent[],
   options: { readonly dropLegacyRepositories?: boolean } = {}
-): Promise<{ readonly harnesses: number; readonly skills: number }> => {
-  const installed = await discoverInstalledHarnesses(dataDirectory)
+): Promise<{ readonly backpacks: number; readonly skills: number }> => {
+  const installed = await discoverInstalledBackpacks(dataDirectory)
   const existing = await inspectUserConfiguration(configurationDirectory)
-  const harnesses = installed.map((harness) => harness.id).sort((left, right) => left.localeCompare(right))
+  const backpacks = installed.map((backpack) => backpack.id).sort((left, right) => left.localeCompare(right))
   const skills = await discoverManagedUserSkills(agents, installed)
   await writeUserConfiguration(
     configurationDirectory,
     agents,
-    harnesses,
+    backpacks,
     skills,
     options.dropLegacyRepositories ? [] : existing.repositories
   )
-  return { harnesses: harnesses.length, skills: skills.length }
+  return { backpacks: backpacks.length, skills: skills.length }
 }
 
 export const installBootstrapSkills = async (

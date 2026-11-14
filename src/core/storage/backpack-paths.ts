@@ -1,10 +1,10 @@
 import { lstat, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
+import { installedSlotName } from '../backpack/identity.ts'
 import { KiError } from '../errors.ts'
-import { installedSlotName } from '../harness/identity.ts'
 
-export const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
-export const harnessMetadataFile = '.ki.toml'
+export const backpackIdentifierPattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
+export const backpackMetadataFile = '.ki.toml'
 export const payloadRoots = ['skills', 'subagents', 'hooks'] as const
 
 // The first canonical archive used `agents/`; `ki dev local on` may replace that
@@ -24,8 +24,8 @@ export const ensureDirectory = async (path: string, description: string): Promis
 }
 
 /** An installed backpack's slot, found under the retired `*-agentic-harness` spelling while one is still on disk. */
-export const harnessDirectory = (dataDirectory: string, identifier: string): string => {
+export const backpackDirectory = (dataDirectory: string, identifier: string): string => {
   const owner = identifier.slice(0, identifier.indexOf('/'))
-  const ownerDirectory = join(dataDirectory, 'harnesses', owner)
+  const ownerDirectory = join(dataDirectory, 'backpacks', owner)
   return join(ownerDirectory, installedSlotName(ownerDirectory, identifier))
 }

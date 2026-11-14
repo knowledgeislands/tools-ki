@@ -26,7 +26,7 @@ const sources: readonly SweepSource[] = [
   { path: '.warp', depth: 3 },
   { path: 'Library/Application Support/dev.warp.Warp-Stable', depth: 1, name: /\.(?:json|toml|ya?ml)$/ },
   { path: '.config/ki', depth: 2 },
-  { path: '.local/share/ki/harnesses', depth: 2 }
+  { path: '.local/share/ki/backpacks', depth: 2 }
 ]
 
 const literal = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

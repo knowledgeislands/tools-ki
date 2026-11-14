@@ -4,7 +4,7 @@ The `ki kb` commands use a rebuildable derived search cache for one explicitly r
 
 ## Register and assign
 
-Install the pinned qmd v2.8.3 engine separately using the Harness's recorded pilot and adoption guidance. `ki` does not install the engine or global launch services. Bounded native execution uses POSIX process groups on the supported macOS/Linux delivery platforms; Windows native execution fails closed. If the executable is outside PATH, set `KI_QMD_BINARY` to its operator-controlled executable path.
+Install the pinned qmd v2.8.3 engine separately using the backpack's recorded pilot and adoption guidance. `ki` does not install the engine or global launch services. Bounded native execution uses POSIX process groups on the supported macOS/Linux delivery platforms; Windows native execution fails closed. If the executable is outside PATH, set `KI_QMD_BINARY` to its operator-controlled executable path.
 
 Register exactly one declared KB and explicitly assign a unique boundary:
 
@@ -28,7 +28,7 @@ The command copies eligible Markdown from the KB's configured zones into an isol
 
 The mapping is machine-local state under the KI state directory. It uses schema `ki/kb-search/v1`, binds registry identity, physical root, explicit boundary and independent index, and records content digests. New derived generations are created without overwriting unmanaged paths; retained generations are caches rather than originals. Refresh after editing notes or repository scope. A stale, invalid or missing mapping fails clearly.
 
-Provision qmd 2.8.3 at the documented source revision and its three recorded GGUF files explicitly before indexing. The runtime checks the reported version and any reported short revision, plus regular nonempty local model files; it does not cryptographically attest the engine or recalculate multi-gigabyte model checksums on every search. Verify provisioned assets against the Harness pilot receipt. The generated config points to already-present local files under `KI_CACHE_HOME/qmd/models`; reads never download models. Lexical search requires no model, vector requires embedding, native CLI hybrid requires all three, and HTTP hybrid requires embedding and reranking. Missing assets fail clearly.
+Provision qmd 2.8.3 at the documented source revision and its three recorded GGUF files explicitly before indexing. The runtime checks the reported version and any reported short revision, plus regular nonempty local model files; it does not cryptographically attest the engine or recalculate multi-gigabyte model checksums on every search. Verify provisioned assets against the backpack pilot receipt. The generated config points to already-present local files under `KI_CACHE_HOME/qmd/models`; reads never download models. Lexical search requires no model, vector requires embedding, native CLI hybrid requires all three, and HTTP hybrid requires embedding and reranking. Missing assets fail clearly.
 
 ## Provision one loopback daemon
 
@@ -61,7 +61,7 @@ ki kb search 'meeting follow-up' --kb kb-key --mode vsearch --path-prefix Resour
 
 Returned text comes from authorized current local Markdown. Engine-supplied titles, snippets and labels are ignored; candidate paths and document identities must match the selected collection, current source boundary and indexed digest before any result is exposed. An invalid or mismatched candidate fails the complete request. Mirror labels distinguish ordinary notes (`null`), substantive declared extracts, valid provenance pointers and unknown/malformed provenance. Labels are a text-coverage heuristic, not evidence that a binary source exists or that an extract is faithful or current.
 
-Missing qmd, wrong version, missing mapping, stale content and engine failures return non-zero. No CLI search silently falls back to grep. The Harness's query procedure owns an explicit fallback when a search surface is unavailable.
+Missing qmd, wrong version, missing mapping, stale content and engine failures return non-zero. No CLI search silently falls back to grep. The backpack's query procedure owns an explicit fallback when a search surface is unavailable.
 
 ## Bind MCP search
 

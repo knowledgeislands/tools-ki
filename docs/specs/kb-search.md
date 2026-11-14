@@ -1,6 +1,6 @@
 # Knowledge Base search — KB-SEARCH
 
-This area specifies the registry-owned derived search boundary. The Harness owns qmd adoption and mirror-content policy; this repository owns its concrete CLI and generated mapping. The pinned pilot and portable interface are published; CLI verification passes and independent review and acceptance are pending.
+This area specifies the registry-owned derived search boundary. The backpack owns qmd adoption and mirror-content policy; this repository owns its concrete CLI and generated mapping. The pinned pilot and portable interface are published; CLI verification passes and independent review and acceptance are pending.
 
 Generated model settings use absolute already-provisioned GGUF paths under `model_cache/qmd/models`; lexical mode needs no models, vector needs embedding, CLI hybrid needs all three and REST hybrid needs embedding and reranking. Missing models fail clearly before a read invokes retrieval. No read downloads models or provisions runtime state. qmd retrieval may update its private derived LLM cache; read purity means no canonical KB or registry mutation, installation, index refresh or daemon provisioning. Engine line numbers are hints; returned snippets and citations use independently selected current local line arrays. Input is limited to 10,000 documents, 1 MiB per document and 100 MiB of current source bytes; response transport is limited to 2 MiB and 200 candidates. CLI options precede an argv terminator and the literal query.
 

@@ -1,6 +1,6 @@
 // Builds a minimal gzip-compressed tar archive in memory, shaped exactly like a real
-// harness release archive, so CLI tests can stub the fetcher with a fixture instead of
-// hitting the network. Only the tar fields `installHarness`'s extractor reads are
+// backpack release archive, so CLI tests can stub the fetcher with a fixture instead of
+// hitting the network. Only the tar fields `installBackpack`'s extractor reads are
 // populated (name, size, type, prefix) — this is not a general-purpose tar writer.
 import { createHash } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
@@ -16,21 +16,21 @@ export type ArchiveEntry =
 
 export interface ArchiveOptions {
   readonly terminatingBlocks?: boolean
-  readonly harnessPrefix?: string | null
+  readonly backpackPrefix?: string | null
   readonly duplicateMetadata?: boolean
 }
 
 const octal = (value: number, length: number): string => `${value.toString(8).padStart(length - 1, '0')}\0`
 
-export interface HarnessArchive {
+export interface BackpackArchive {
   readonly payload: Uint8Array
   readonly sha256: string
 }
 
-export const makeHarnessArchive = (
+export const makeBackpackArchive = (
   files: Readonly<Record<string, ArchiveEntry>>,
-  { terminatingBlocks = true, harnessPrefix = 'ki', duplicateMetadata = false }: ArchiveOptions = {}
-): HarnessArchive => {
+  { terminatingBlocks = true, backpackPrefix = 'ki', duplicateMetadata = false }: ArchiveOptions = {}
+): BackpackArchive => {
   const chunks: Uint8Array[] = []
   const firstPayload = Object.entries(files).find(([path, entry]) => {
     const rawPath = typeof entry !== 'string' && entry.prefix ? `${entry.prefix}/${path}` : path
@@ -52,9 +52,9 @@ export const makeHarnessArchive = (
       ? firstParts[0]
       : undefined
   const metadataPath = nestedPrefix && !firstEntryPrefix ? `${nestedPrefix}/.ki.toml` : '.ki.toml'
-  const metadataContents = `[skills.ki-repo-backpack]\nprefix = ${JSON.stringify(harnessPrefix)}\n`
+  const metadataContents = `[skills.ki-repo-backpack]\nprefix = ${JSON.stringify(backpackPrefix)}\n`
   const entries =
-    harnessPrefix === null || files[metadataPath] !== undefined
+    backpackPrefix === null || files[metadataPath] !== undefined
       ? files
       : {
           [metadataPath]:

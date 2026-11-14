@@ -45,7 +45,7 @@ const sorted = (values: Iterable<string>): readonly string[] =>
 
 const declarationHeader = (repository: string, capital: string): readonly string[] => [
   '[repo]',
-  'harnesses = ["example/harness"]',
+  'backpacks = ["example/backpack"]',
   '',
   '[skills.ki-repo-project]',
   '',

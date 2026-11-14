@@ -15,7 +15,7 @@ const manifest = (
   [
     'schema = 1',
     `id = ${JSON.stringify(id)}`,
-    'operation = "harness-install"',
+    'operation = "backpack-install"',
     `state = ${JSON.stringify(state)}`,
     `paths = [${JSON.stringify(path)}]`,
     `lock = ${JSON.stringify(lock)}`,
@@ -25,7 +25,7 @@ const manifest = (
 describe('[ki cleanup]', () => {
   test('retains legacy recovery reports for unrecorded install residue', async () => {
     const box = await sandbox()
-    const orphan = await box.data.mkdir(`ki/harnesses/example/.install-${first}`)
+    const orphan = await box.data.mkdir(`ki/backpacks/example/.install-${first}`)
 
     const cleanup = await box.run('ki cleanup')
 
@@ -37,9 +37,9 @@ describe('[ki cleanup]', () => {
 
   test('reports manifest records in lexical identifier order without mutating recoverable staging', async () => {
     const box = await sandbox()
-    const firstPath = await box.data.mkdir(`ki/harnesses/example/.install-${first}`)
+    const firstPath = await box.data.mkdir(`ki/backpacks/example/.install-${first}`)
     const firstLock = `${box.state.path}/ki/managed-artifacts/locks/${first}`
-    const secondPath = await box.data.mkdir(`ki/harnesses/example/.install-${second}`)
+    const secondPath = await box.data.mkdir(`ki/backpacks/example/.install-${second}`)
     const secondLock = `${box.state.path}/ki/managed-artifacts/locks/${second}`
     await box.state.mkdir('ki/managed-artifacts/locks')
     await box.state.write(`ki/managed-artifacts/${second}.toml`, manifest(second, 'retired', secondPath, secondLock))
@@ -50,7 +50,7 @@ describe('[ki cleanup]', () => {
     expect(cleanup.exitCode).toBe(0)
     expect(cleanup.output).toContain(`artifact ${first} [refused: interrupted-recoverable] use ki repair`)
     expect(cleanup.output).toContain(
-      `artifact ${second} [candidate] retired harness-install · would remove ${secondPath}`
+      `artifact ${second} [candidate] retired backpack-install · would remove ${secondPath}`
     )
     expect(cleanup.output.indexOf(first)).toBeLessThan(cleanup.output.indexOf(second))
     expect(cleanup.output).toContain(
@@ -62,9 +62,9 @@ describe('[ki cleanup]', () => {
 
   test('refuses live, foreign, manually altered, and unreadable records without breaking a lock', async () => {
     const box = await sandbox()
-    const livePath = await box.data.mkdir(`ki/harnesses/example/.install-${first}`)
+    const livePath = await box.data.mkdir(`ki/backpacks/example/.install-${first}`)
     const liveLock = `${box.state.path}/ki/managed-artifacts/locks/${first}`
-    const owner = await box.data.mkdir('ki/harnesses/example')
+    const owner = await box.data.mkdir('ki/backpacks/example')
     const alteredPath = `${owner}/.install-${second}`
     const alteredLock = `${box.state.path}/ki/managed-artifacts/locks/${second}`
     const foreign = `${box.root.path}/foreign-install`
@@ -84,7 +84,9 @@ describe('[ki cleanup]', () => {
     expect(cleanup.output).toContain(
       `artifact ${second} [refused: manually-altered] declared staging path is not a physical directory`
     )
-    expect(cleanup.output).toContain('[refused: foreign] declared path or lock is outside the harness-install boundary')
+    expect(cleanup.output).toContain(
+      '[refused: foreign] declared path or lock is outside the backpack-install boundary'
+    )
     expect(cleanup.output).toContain('[refused: unreadable-manifest] schema 1 is required')
     expect(cleanup.output).toContain(
       'summary: ELIGIBLE=0 CANDIDATES=0 LIVE=1 INTERRUPTED_RECOVERABLE=0 MANUALLY_ALTERED=1 FOREIGN=1 UNREADABLE_MANIFESTS=1'
@@ -93,13 +95,13 @@ describe('[ki cleanup]', () => {
 
   test('refuses malformed schema-one records and a mismatched manifest name', async () => {
     const box = await sandbox()
-    const path = `${box.data.path}/ki/harnesses/example/.install-${first}`
+    const path = `${box.data.path}/ki/backpacks/example/.install-${first}`
     const lock = `${box.state.path}/ki/managed-artifacts/locks/${first}`
     const cases = [
       'this is not TOML',
       'schema = 2',
       manifest('not-a-uuid', 'retired', path, lock),
-      manifest(first, 'retired', path, lock).replace('operation = "harness-install"', 'operation = "other"'),
+      manifest(first, 'retired', path, lock).replace('operation = "backpack-install"', 'operation = "other"'),
       manifest(first, 'retired', path, lock).replace('state = "retired"', 'state = "other"'),
       manifest(first, 'retired', path, lock).replace(`paths = [${JSON.stringify(path)}]`, 'paths = "invalid"'),
       manifest(first, 'retired', path, lock).replace(`paths = [${JSON.stringify(path)}]`, 'paths = []'),
@@ -126,7 +128,7 @@ describe('[ki cleanup]', () => {
 
   test('refuses active lock-free records, unsafe manifest directories, and manifest files that are not regular', async () => {
     const active = await sandbox()
-    const path = await active.data.mkdir(`ki/harnesses/example/.install-${first}`)
+    const path = await active.data.mkdir(`ki/backpacks/example/.install-${first}`)
     const lock = `${active.state.path}/ki/managed-artifacts/locks/${first}`
     await active.state.mkdir('ki/managed-artifacts/locks')
     await active.state.write(`ki/managed-artifacts/${first}.toml`, manifest(first, 'active', path, lock))
@@ -159,7 +161,7 @@ describe('[ki cleanup]', () => {
 
   test('does not follow an unsafe locks directory while reporting a valid manifest as live', async () => {
     const box = await sandbox()
-    const path = await box.data.mkdir(`ki/harnesses/example/.install-${first}`)
+    const path = await box.data.mkdir(`ki/backpacks/example/.install-${first}`)
     const lock = `${box.state.path}/ki/managed-artifacts/locks/${first}`
     await box.state.write(`ki/managed-artifacts/${first}.toml`, manifest(first, 'creating', path, lock))
     await box.state.write('ki/managed-artifacts-lock-target', 'not a directory\n')
@@ -171,23 +173,23 @@ describe('[ki cleanup]', () => {
     expect((await lstat(`${box.state.path}/ki/managed-artifacts/locks`)).isSymbolicLink()).toBe(true)
   })
 
-  test('refuses paths that are inside harness storage but do not name install staging directories', async () => {
+  test('refuses paths that are inside backpack storage but do not name install staging directories', async () => {
     const box = await sandbox()
-    const harnesses = await box.data.mkdir('ki/harnesses')
+    const backpacks = await box.data.mkdir('ki/backpacks')
     const firstLock = `${box.state.path}/ki/managed-artifacts/locks/${first}`
     const secondLock = `${box.state.path}/ki/managed-artifacts/locks/${second}`
     const thirdLock = `${box.state.path}/ki/managed-artifacts/locks/${third}`
     await box.state.write(
       `ki/managed-artifacts/${first}.toml`,
-      manifest(first, 'retired', `${harnesses}/example/not-install-staging`, firstLock)
+      manifest(first, 'retired', `${backpacks}/example/not-install-staging`, firstLock)
     )
     await box.state.write(
       `ki/managed-artifacts/${second}.toml`,
-      manifest(second, 'retired', `${harnesses}/INVALID/.install-${second}`, secondLock)
+      manifest(second, 'retired', `${backpacks}/INVALID/.install-${second}`, secondLock)
     )
     await box.state.write(
       `ki/managed-artifacts/${third}.toml`,
-      manifest(third, 'retired', `${harnesses}/example/nested/.install-${third}`, thirdLock)
+      manifest(third, 'retired', `${backpacks}/example/nested/.install-${third}`, thirdLock)
     )
 
     const cleanup = await box.run('ki cleanup')
@@ -197,9 +199,9 @@ describe('[ki cleanup]', () => {
     )
   })
 
-  test('refuses a manifest when its harness root no longer exists', async () => {
+  test('refuses a manifest when its backpack root no longer exists', async () => {
     const box = await sandbox()
-    const path = `${box.data.path}/ki/harnesses/example/.install-${first}`
+    const path = `${box.data.path}/ki/backpacks/example/.install-${first}`
     const lock = `${box.state.path}/ki/managed-artifacts/locks/${first}`
     await box.state.write(`ki/managed-artifacts/${first}.toml`, manifest(first, 'retired', path, lock))
 
@@ -207,13 +209,13 @@ describe('[ki cleanup]', () => {
 
     expect(cleanup).toEqual({
       exitCode: 0,
-      output: `╭─ KI CLEANUP\n├─ eligible (0)\n│  ╰─ none\n├─ artifacts (1)\n│  ╰─ artifact ${first} [refused: foreign] declared path or lock is outside the harness-install boundary\n╰─ summary: ELIGIBLE=0 CANDIDATES=0 LIVE=0 INTERRUPTED_RECOVERABLE=0 MANUALLY_ALTERED=0 FOREIGN=1 UNREADABLE_MANIFESTS=0\n`
+      output: `╭─ KI CLEANUP\n├─ eligible (0)\n│  ╰─ none\n├─ artifacts (1)\n│  ╰─ artifact ${first} [refused: foreign] declared path or lock is outside the backpack-install boundary\n╰─ summary: ELIGIBLE=0 CANDIDATES=0 LIVE=0 INTERRUPTED_RECOVERABLE=0 MANUALLY_ALTERED=0 FOREIGN=1 UNREADABLE_MANIFESTS=0\n`
     })
   })
 
   test('reports a recorded install staging directory that has disappeared', async () => {
     const box = await sandbox()
-    const owner = await realpath(await box.data.mkdir('ki/harnesses/example'))
+    const owner = await realpath(await box.data.mkdir('ki/backpacks/example'))
     const path = `${owner}/.install-${first}`
     const lock = `${box.state.path}/ki/managed-artifacts/locks/${first}`
     await box.state.mkdir('ki/managed-artifacts/locks')

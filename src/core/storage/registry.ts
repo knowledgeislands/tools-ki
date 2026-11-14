@@ -1,15 +1,15 @@
 import { lstat, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse } from 'smol-toml'
+import { backpackIdentifier, backpackSpellings } from '../backpack/identity.ts'
+import { canonicalBackpackIdentifier } from '../backpack/inspection.ts'
 import { setTomlStringArray } from '../configuration/toml-edit.ts'
 import { KiError } from '../errors.ts'
-import { backpackIdentifier, backpackSpellings } from '../harness/identity.ts'
-import { canonicalHarnessIdentifier } from '../harness/inspection.ts'
-import { harnessIdentifier } from './harness-paths.ts'
+import { backpackIdentifierPattern } from './backpack-paths.ts'
 
 const sha256 = /^[a-f0-9]{64}$/
 
-export interface HarnessRelease {
+export interface BackpackRelease {
   readonly id: string
   readonly url: string
   readonly sha256: string
@@ -17,18 +17,18 @@ export interface HarnessRelease {
 }
 
 /**
- * The one harness every KI installation can acquire without user-managed
+ * The one backpack every KI installation can acquire without user-managed
  * registry configuration. The Git commit and archive digest together are the
- * immutable acquisition evidence; additional harnesses remain opt-in. The archive is the one
+ * immutable acquisition evidence; additional backpacks remain opt-in. The archive is the one
  * published under the repository's `ki-agent-backpack` name, whose digest the pin records.
  */
-export const canonicalHarnessRelease: HarnessRelease = {
-  id: canonicalHarnessIdentifier,
+export const canonicalBackpackRelease: BackpackRelease = {
+  id: canonicalBackpackIdentifier,
   url: 'https://codeload.github.com/knowledgeislands/ki-agent-backpack/tar.gz/3875d72be8eff2e0f0a8910488d19e304ba131cb',
   sha256: 'abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404'
 }
 
-type RegistryValue = Record<string, unknown> & { readonly harnesses?: unknown }
+type RegistryValue = Record<string, unknown> & { readonly backpacks?: unknown }
 
 const isRecord = (value: unknown): value is RegistryValue =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -63,11 +63,11 @@ const parseReleaseAuthentication = (
   return value
 }
 
-const parseRelease = (value: unknown, index: number): HarnessRelease => {
-  const description = `harnesses[${index}]`
+const parseRelease = (value: unknown, index: number): BackpackRelease => {
+  const description = `backpacks[${index}]`
   if (!isRecord(value)) throw new KiError(`${description} must be a table`, 1)
   const id = backpackIdentifier(stringField(value, 'id', description))
-  if (!harnessIdentifier.test(id)) throw new KiError(`${description} id must be an owner/name identifier`, 1)
+  if (!backpackIdentifierPattern.test(id)) throw new KiError(`${description} id must be an owner/name identifier`, 1)
   const url = stringField(value, 'url', description)
   let parsedUrl: URL
   try {
@@ -82,10 +82,10 @@ const parseRelease = (value: unknown, index: number): HarnessRelease => {
   return { id, url, sha256: digest, auth: parseReleaseAuthentication(value['auth'], id, parsedUrl, description) }
 }
 
-export const readHarnessRegistry = async (configurationDirectory: string): Promise<readonly HarnessRelease[]> => {
+export const readBackpackRegistry = async (configurationDirectory: string): Promise<readonly BackpackRelease[]> => {
   const path = join(configurationDirectory, 'config.toml')
   const state = await lstat(path).catch(() => undefined)
-  if (!state) return [canonicalHarnessRelease]
+  if (!state) return [canonicalBackpackRelease]
   if (!state.isFile() || state.isSymbolicLink()) throw new KiError('ki configuration must be a regular file', 1)
   let parsed: unknown
   try {
@@ -96,46 +96,46 @@ export const readHarnessRegistry = async (configurationDirectory: string): Promi
   // A successfully parsed TOML document is always a table; this only guards a future parser change.
   /* v8 ignore next */
   if (!isRecord(parsed)) throw new KiError('ki configuration must be a TOML table', 1)
-  const configuration = parsed as Record<string, unknown> & { harnesses?: unknown }
-  if (configuration.harnesses === undefined) return [canonicalHarnessRelease]
-  if (!isRecord(configuration.harnesses)) throw new KiError('ki configuration harnesses must be a TOML table', 1)
-  const harnesses = configuration.harnesses as Record<string, unknown> & { ids?: unknown; releases?: unknown }
-  if (harnesses.releases === undefined) {
+  const configuration = parsed as Record<string, unknown> & { backpacks?: unknown }
+  if (configuration.backpacks === undefined) return [canonicalBackpackRelease]
+  if (!isRecord(configuration.backpacks)) throw new KiError('ki configuration backpacks must be a TOML table', 1)
+  const backpacks = configuration.backpacks as Record<string, unknown> & { ids?: unknown; releases?: unknown }
+  if (backpacks.releases === undefined) {
     if (
-      !Array.isArray(harnesses.ids) ||
-      harnesses.ids.some((id) => typeof id !== 'string' || !harnessIdentifier.test(id))
+      !Array.isArray(backpacks.ids) ||
+      backpacks.ids.some((id) => typeof id !== 'string' || !backpackIdentifierPattern.test(id))
     ) {
-      throw new KiError('ki configuration harnesses.ids must be an array of harness identifiers', 1)
+      throw new KiError('ki configuration backpacks.ids must be an array of backpack identifiers', 1)
     }
-    return [canonicalHarnessRelease]
+    return [canonicalBackpackRelease]
   }
-  if (!Array.isArray(harnesses.releases))
-    throw new KiError('ki configuration harnesses.releases must be an array of release entries', 1)
-  const releases = harnesses.releases.map(parseRelease)
-  const identities = new Set<string>([canonicalHarnessIdentifier])
+  if (!Array.isArray(backpacks.releases))
+    throw new KiError('ki configuration backpacks.releases must be an array of release entries', 1)
+  const releases = backpacks.releases.map(parseRelease)
+  const identities = new Set<string>([canonicalBackpackIdentifier])
   for (const release of releases) {
-    if (release.id === canonicalHarnessIdentifier) {
+    if (release.id === canonicalBackpackIdentifier) {
       throw new KiError(
-        `harness registry must not override the built-in canonical harness ${canonicalHarnessIdentifier}`,
+        `backpack registry must not override the built-in canonical backpack ${canonicalBackpackIdentifier}`,
         1
       )
     }
-    if (identities.has(release.id)) throw new KiError(`harness registry repeats ${release.id}`, 1)
+    if (identities.has(release.id)) throw new KiError(`backpack registry repeats ${release.id}`, 1)
     identities.add(release.id)
   }
-  return [canonicalHarnessRelease, ...releases]
+  return [canonicalBackpackRelease, ...releases]
 }
 
 /**
- * Reads the configuration a harness record will have to rewrite, so a caller can refuse before it
- * removes anything. Uninstall reaches `recordInstalledHarness` without going through
- * `installHarness`, so this is the first strict read of `config.toml` on that path.
+ * Reads the configuration a backpack record will have to rewrite, so a caller can refuse before it
+ * removes anything. Uninstall reaches `recordInstalledBackpack` without going through
+ * `installBackpack`, so this is the first strict read of `config.toml` on that path.
  */
-export const requireWritableHarnessRegistry = async (configurationDirectory: string): Promise<void> => {
-  await configuredHarnessIds(configurationDirectory)
+export const requireWritableBackpackRegistry = async (configurationDirectory: string): Promise<void> => {
+  await configuredBackpackIds(configurationDirectory)
 }
 
-const configuredHarnessIds = async (configurationDirectory: string): Promise<readonly string[] | undefined> => {
+const configuredBackpackIds = async (configurationDirectory: string): Promise<readonly string[] | undefined> => {
   const path = join(configurationDirectory, 'config.toml')
   const state = await lstat(path).catch(() => undefined)
   if (!state) return undefined
@@ -149,26 +149,27 @@ const configuredHarnessIds = async (configurationDirectory: string): Promise<rea
   // A successfully parsed TOML document is always a table; this only guards a future parser change.
   /* v8 ignore next */
   if (!isRecord(parsed)) throw new KiError('ki configuration must be a TOML table', 1)
-  if (parsed.harnesses === undefined) return []
-  if (!isRecord(parsed.harnesses)) throw new KiError('ki configuration harnesses must be a TOML table', 1)
-  const ids = (parsed.harnesses as { readonly ids?: unknown }).ids
+  if (parsed.backpacks === undefined) return []
+  if (!isRecord(parsed.backpacks)) throw new KiError('ki configuration backpacks must be a TOML table', 1)
+  const ids = (parsed.backpacks as { readonly ids?: unknown }).ids
   if (ids === undefined) return []
-  if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string' || !harnessIdentifier.test(id))) {
-    throw new KiError('ki configuration harnesses.ids must be an array of harness identifiers', 1)
+  if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string' || !backpackIdentifierPattern.test(id))) {
+    throw new KiError('ki configuration backpacks.ids must be an array of backpack identifiers', 1)
   }
   return ids.map(backpackIdentifier)
 }
 
-export const recordInstalledHarness = async (
+export const recordInstalledBackpack = async (
   configurationDirectory: string,
   identifier: string,
   installed: boolean
 ): Promise<void> => {
-  // Unreachable because installHarness rejects an identifier it cannot match against the registry,
-  // and the uninstall and reinstall actions both call requireHarnessIdentifier before reaching here.
+  // Unreachable because installBackpack rejects an identifier it cannot match against the registry,
+  // and the uninstall and reinstall actions both call requireBackpackIdentifier before reaching here.
   /* v8 ignore next */
-  if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
-  const identifiers = await configuredHarnessIds(configurationDirectory)
+  if (!backpackIdentifierPattern.test(identifier))
+    throw new KiError('backpack identifier must be an owner/name identifier', 2)
+  const identifiers = await configuredBackpackIds(configurationDirectory)
   const backpack = backpackIdentifier(identifier)
   if (identifiers === undefined || identifiers.includes(backpack) === installed) return
   const next = new Set(identifiers)
@@ -178,7 +179,7 @@ export const recordInstalledHarness = async (
   // Edit only the ids statement, so the rest of a file another tool manages keeps its layout.
   await writeFile(
     path,
-    setTomlStringArray(await readFile(path, 'utf8'), ['harnesses'], 'ids', [...next].sort()),
+    setTomlStringArray(await readFile(path, 'utf8'), ['backpacks'], 'ids', [...next].sort()),
     'utf8'
   )
 }

@@ -12,7 +12,7 @@ const treeDescription = (root: string | undefined, path: string): string =>
   root ?? `${path}, which is not inside a Git working tree`
 
 /**
- * Permit a development write only into a dev-linked Harness whose publication root is in the caller's working tree.
+ * Permit a development write only into a dev-linked backpack whose publication root is in the caller's working tree.
  * A dev-linked install resolves through to its development checkout, so the publication root can be a working tree
  * the caller is not in, another worktree of the same repository included. Only equal working-tree roots permit the
  * write; differing roots, and either side not being a working tree at all, refuse. This is a safety interlock on
@@ -25,12 +25,12 @@ export const assertDevelopmentWriteTree = async (
   workingDirectory: string,
   subject: string
 ): Promise<void> => {
-  // This command resolves only installed skills; repository-local providers are not development Harnesses.
+  // This command resolves only installed skills; repository-local providers are not development backpacks.
   /* v8 ignore next -- resolveInstalledSkill supplies the port result. */
-  if (resolved.provider.kind !== 'installed-harness') {
-    throw new KiError(`${resolved.identity} is not an installed Harness capability`, 1)
+  if (resolved.provider.kind !== 'installed-backpack') {
+    throw new KiError(`${resolved.identity} is not an installed backpack capability`, 1)
   }
-  if (!(await port.developmentLinked(resolved.provider.harness.id))) {
+  if (!(await port.developmentLinked(resolved.provider.backpack.id))) {
     throw new KiError(
       `${resolved.identity} is an installed payload; run ki dev local on before writing its ${subject}`,
       1

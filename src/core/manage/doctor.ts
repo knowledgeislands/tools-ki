@@ -12,9 +12,9 @@ export interface ManageDoctorCheck {
 export interface ManageConfiguration {
   readonly path: string
   readonly state: 'missing' | 'valid' | 'invalid'
-  readonly harnesses: readonly string[]
+  readonly backpacks: readonly string[]
   readonly skills: readonly string[]
-  readonly locals: readonly { readonly harness: string; readonly path: string }[]
+  readonly locals: readonly { readonly backpack: string; readonly path: string }[]
   readonly errors: readonly string[]
   readonly legacySchema?: boolean
 }
@@ -32,14 +32,14 @@ export interface ManageCapability {
   readonly supportedRuntimes?: readonly ManageSupportedRuntime[]
 }
 
-export interface ManageHarness {
+export interface ManageBackpack {
   readonly id: string
   readonly root: string
   readonly capabilities: readonly ManageCapability[]
 }
 
-export interface ManageLocalHarness {
-  readonly harness: string
+export interface ManageLocalBackpack {
+  readonly backpack: string
   readonly skills: readonly { readonly name: string; readonly source: string }[]
 }
 
@@ -63,9 +63,9 @@ export interface ManagePathState {
 export interface ManageDoctorPort {
   readonly inspectConfiguration: () => Promise<ManageConfiguration>
   readonly configuredAgents: () => Promise<readonly ManageAgent[]>
-  readonly discoverHarnesses: () => Promise<readonly ManageHarness[]>
+  readonly discoverBackpacks: () => Promise<readonly ManageBackpack[]>
   readonly localDevelopmentEnabled: (identifier: string, source?: string) => Promise<boolean>
-  readonly inspectLocalHarness: (source: string, identifier: string) => Promise<ManageLocalHarness>
+  readonly inspectLocalBackpack: (source: string, identifier: string) => Promise<ManageLocalBackpack>
   readonly readRepositorySkills: (path: string) => Promise<readonly unknown[]>
   readonly lstat: (path: string) => Promise<ManagePathState | undefined>
   readonly realpath: (path: string) => Promise<string | undefined>
@@ -74,7 +74,7 @@ export interface ManageDoctorPort {
 
 export interface ManageDoctorOptions {
   readonly workingDirectory: string
-  readonly canonicalHarnessIdentifier: string
+  readonly canonicalBackpackIdentifier: string
 }
 
 const physicalDirectory = async (port: ManageDoctorPort, path: string): Promise<boolean> => {
@@ -171,18 +171,18 @@ export const inspectManageDoctor = async (
     checks.push({ status: 'fail', label: 'Configuration', detail: configuration.errors.join('; ') })
   }
 
-  let installed: readonly ManageHarness[] = []
+  let installed: readonly ManageBackpack[] = []
   try {
-    installed = await port.discoverHarnesses()
-    const identifiers = new Set(installed.map((harness) => harness.id))
-    const missing = configuration.harnesses.filter((identifier) => !identifiers.has(identifier))
+    installed = await port.discoverBackpacks()
+    const identifiers = new Set(installed.map((backpack) => backpack.id))
+    const missing = configuration.backpacks.filter((identifier) => !identifiers.has(identifier))
     checks.push({
       status: missing.length ? 'fail' : 'pass',
-      label: 'Harness inventory',
+      label: 'Backpack inventory',
       detail: missing.length ? `missing ${missing.join(', ')}` : `${installed.length} installed`
     })
   } catch (error) {
-    checks.push({ status: 'fail', label: 'Harness inventory', detail: (error as Error).message })
+    checks.push({ status: 'fail', label: 'Backpack inventory', detail: (error as Error).message })
   }
 
   checks.push(...(await storeChecks(port)))
@@ -203,19 +203,23 @@ export const inspectManageDoctor = async (
   }
   const activeLocals = new Set<string>()
   for (const source of configuration.locals) {
-    const active = await port.localDevelopmentEnabled(source.harness, source.path)
+    const active = await port.localDevelopmentEnabled(source.backpack, source.path)
     if (active) {
       try {
-        const local = await port.inspectLocalHarness(source.path, source.harness)
-        activeLocals.add(source.harness)
-        checks.push({ status: 'pass', label: `Local development ${source.harness}`, detail: `active ${local.harness}` })
+        const local = await port.inspectLocalBackpack(source.path, source.backpack)
+        activeLocals.add(source.backpack)
+        checks.push({
+          status: 'pass',
+          label: `Local development ${source.backpack}`,
+          detail: `active ${local.backpack}`
+        })
       } catch (error) {
-        checks.push({ status: 'fail', label: `Local development ${source.harness}`, detail: (error as Error).message })
+        checks.push({ status: 'fail', label: `Local development ${source.backpack}`, detail: (error as Error).message })
       }
-    } else if (await port.localDevelopmentEnabled(source.harness)) {
+    } else if (await port.localDevelopmentEnabled(source.backpack)) {
       checks.push({
         status: 'fail',
-        label: `Local development ${source.harness}`,
+        label: `Local development ${source.backpack}`,
         detail: 'active root does not match the configured local source'
       })
     }
@@ -230,15 +234,15 @@ export const inspectManageDoctor = async (
   }
   for (const identity of configuration.skills) {
     const name = managedSkillName(identity)
-    // Configuration inspection guarantees non-empty harness:name identities when valid.
+    // Configuration inspection guarantees non-empty backpack:name identities when valid.
     /* v8 ignore next 4 */
     if (!name) {
       checks.push({ status: 'fail', label: `User skill ${identity}`, detail: 'invalid identity' })
       continue
     }
     const resolved = installed
-      .flatMap((harness) => harness.capabilities.map((capability) => ({ harness, capability })))
-      .find(({ harness, capability }) => identity === `${harness.id}:${capability.name}`)
+      .flatMap((backpack) => backpack.capabilities.map((capability) => ({ backpack, capability })))
+      .find(({ backpack, capability }) => identity === `${backpack.id}:${capability.name}`)
     if (!resolved) {
       checks.push({
         status: 'fail',
@@ -247,7 +251,7 @@ export const inspectManageDoctor = async (
       })
       continue
     }
-    const expected = await port.realpath(join(resolved.harness.root, resolved.capability.source))
+    const expected = await port.realpath(join(resolved.backpack.root, resolved.capability.source))
     const compatibleAgents = agents.filter((agent) => agent.supports(resolved.capability.supportedRuntimes))
     if (compatibleAgents.length === 0) {
       checks.push({ status: 'fail', label: `User skill ${name}`, detail: 'no compatible configured agent' })
@@ -262,7 +266,7 @@ export const inspectManageDoctor = async (
       detail: absent
         ? 'not linked for every compatible configured agent'
         : wrongTarget
-          ? `link target does not match ${activeLocals.has(identity.slice(0, identity.indexOf(':'))) ? 'local development' : 'installed harness'} source`
+          ? `link target does not match ${activeLocals.has(identity.slice(0, identity.indexOf(':'))) ? 'local development' : 'installed backpack'} source`
           : 'linked'
     })
   }

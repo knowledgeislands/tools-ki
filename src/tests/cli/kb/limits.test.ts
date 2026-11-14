@@ -90,7 +90,7 @@ const fixture = async () => {
   const box = await sandbox()
   await box.project.write(
     '.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n[skills.ki-repo-kb]\n[skills.ki-repo]\nrepo_type = "kb"\nprimary_shape = "ki-repo-kb"\nstore_roles = ["notes"]\nrepository = "https://github.com/example/alpha"\ntitle = "Alpha"\ndescription = "Synthetic resource limits"\nrepo_code = "ALPHA"\nvisibility = "private"\n'
+    '[repo]\nbackpacks = ["example/backpack"]\n[skills.ki-repo-kb]\n[skills.ki-repo]\nrepo_type = "kb"\nprimary_shape = "ki-repo-kb"\nstore_roles = ["notes"]\nrepository = "https://github.com/example/alpha"\ntitle = "Alpha"\ndescription = "Synthetic resource limits"\nrepo_code = "ALPHA"\nvisibility = "private"\n'
   )
   await box.project.write('Resources/Note.md', 'safe fixture')
   fault.root = await realpath(box.project.path)

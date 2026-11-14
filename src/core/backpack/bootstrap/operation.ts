@@ -21,17 +21,17 @@ export const bootstrapEnvironment = async <Agent, Skill, Projection>(
   // Move remembered checkouts out of the portable configuration before reading them from their host-local file.
   const movedLocals = await port.migrateLocalSources()
   const previous = await port.inspectConfiguration()
-  const canonicalPrefix = `${port.canonicalHarnessIdentifier}:`
+  const canonicalPrefix = `${port.canonicalBackpackIdentifier}:`
   const configuredCanonical = new Set(
     previous.skills
       .filter((skill) => skill.startsWith(canonicalPrefix))
       .map((skill) => skill.slice(canonicalPrefix.length))
   )
-  const canonicalLocal = previous.locals.find((local) => local.harness === port.canonicalHarnessIdentifier)
+  const canonicalLocal = previous.locals.find((local) => local.backpack === port.canonicalBackpackIdentifier)
   const binding = await port.developmentBinding(canonicalLocal)
   // An active binding is only reported for a configured source, so the checkout to keep is always known.
   const activeLocal =
-    canonicalLocal && binding.state === 'active' ? await port.inspectLocalHarness(canonicalLocal) : undefined
+    canonicalLocal && binding.state === 'active' ? await port.inspectLocalBackpack(canonicalLocal) : undefined
   const migrated = options.refresh ? await port.migrateLegacyRepositories() : 0
   const configuration = await port.configureAgents({
     refresh: options.refresh,
@@ -54,7 +54,7 @@ export const bootstrapEnvironment = async <Agent, Skill, Projection>(
       )
     )
     for (const skill of skills.map(port.skillName)) {
-      selected.set(skill, `${port.canonicalHarnessIdentifier}:${skill}`)
+      selected.set(skill, `${port.canonicalBackpackIdentifier}:${skill}`)
     }
     await port.setConfiguredSkills([...selected.values()].sort((left, right) => left.localeCompare(right)))
   }
@@ -67,18 +67,18 @@ export const bootstrapEnvironment = async <Agent, Skill, Projection>(
       replace: true,
       finalize: () => reconcileConfiguration(activeLocal.skills)
     })
-    emit({ kind: 'canonical-harness-local', path: activeLocal.harness })
+    emit({ kind: 'canonical-backpack-local', path: activeLocal.backpack })
   } else {
     if (binding.state === 'unavailable') {
       emit({
         kind: 'development-binding-lost',
-        harness: port.canonicalHarnessIdentifier,
+        backpack: port.canonicalBackpackIdentifier,
         reason: binding.reason,
         target: binding.target,
         ...(canonicalLocal ? { configured: canonicalLocal.path } : {})
       })
     }
-    const installation = await port.restoreCanonicalHarness()
+    const installation = await port.restoreCanonicalBackpack()
     const bootstrapSkills = await port.installedSkills()
     // Links left by a lost development binding point into its checkout, so every configured canonical
     // skill the archive provides is re-pointed, as `ki dev local off` does, not only the core set.
@@ -88,7 +88,7 @@ export const bootstrapEnvironment = async <Agent, Skill, Projection>(
       binding.state === 'unavailable'
         ? withConfiguredSkills(
             bootstrapSkills,
-            await port.installedHarnessSkills(),
+            await port.installedBackpackSkills(),
             configuredCanonical,
             port.skillName
           )
@@ -97,7 +97,7 @@ export const bootstrapEnvironment = async <Agent, Skill, Projection>(
       replace: options.refresh || binding.state === 'unavailable',
       finalize: () => reconcileConfiguration(skills)
     })
-    emit({ kind: 'canonical-harness', ...installation })
+    emit({ kind: 'canonical-backpack', ...installation })
   }
   if (refreshed) emit({ kind: 'configuration-refreshed', agents: agents.length, ...refreshed })
   if (migrated) emit({ kind: 'repositories-migrated', repositories: migrated })

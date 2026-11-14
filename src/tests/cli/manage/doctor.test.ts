@@ -64,10 +64,10 @@ describe('[ki doctor]', () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n')
 
     const valid = await box.run('ki doctor')
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.repository]\n')
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.repository]\n')
     const legacyDeclaration = await box.run('ki doctor')
     await rm(`${box.project.path}/.ki.toml`)
     await box.project.mkdir('.ki.toml')
@@ -88,21 +88,21 @@ describe('[ki doctor]', () => {
     expect(symbolic.output).toContain('✗ Repository declaration: .ki.toml must be a regular file')
   })
 
-  test('reports broken environment with invalid config and missing harness', async () => {
+  test('reports broken environment with invalid config and missing backpack', async () => {
     const box = await sandbox()
     const invalidConfig = `schema = 2
 [agents]
 ids = ["claude-code"]
 
-[harnesses]
-ids = ["nonexistent/harness"]
+[backpacks]
+ids = ["nonexistent/backpack"]
 `
     await box.config.write('ki/config.toml', invalidConfig)
 
     const doctor = await box.run('ki doctor')
 
     expect(doctor.output).toContain('✗ Configuration')
-    expect(doctor.output).toContain('✗ Harness inventory')
+    expect(doctor.output).toContain('✗ Backpack inventory')
     expect(doctor.exitCode).toBe(1)
   })
 
@@ -118,7 +118,7 @@ ids = [
   "claude-code",
 ]
 
-[harnesses]
+[backpacks]
 ids = [
   "knowledgeislands/ki-agent-backpack",
 ]
@@ -135,16 +135,18 @@ ids = [
     expect(doctor.exitCode).toBe(1)
   })
 
-  test('reports a harness inventory failure when the installed harnesses directory is malformed', async () => {
+  test('reports a backpack inventory failure when the installed backpacks directory is malformed', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    // A non-directory entry directly under ki/harnesses is an unsafe owner entry.
-    await box.data.write('ki/harnesses/not-a-directory', 'x')
+    // A non-directory entry directly under ki/backpacks is an unsafe owner entry.
+    await box.data.write('ki/backpacks/not-a-directory', 'x')
 
     const doctor = await box.run('ki doctor')
 
-    expect(doctor.output).toContain('✗ Harness inventory: installed harnesses directory contains an unsafe owner entry')
+    expect(doctor.output).toContain(
+      '✗ Backpack inventory: installed backpacks directory contains an unsafe owner entry'
+    )
     expect(doctor.exitCode).toBe(1)
   })
 
@@ -159,7 +161,7 @@ ids = [
   "unknown-agent",
 ]
 
-[harnesses]
+[backpacks]
 ids = [
   "knowledgeislands/ki-agent-backpack",
 ]
@@ -188,18 +190,18 @@ ids = [
 [agents]
 ids = ["claude-code"]
 
-[harnesses]
+[backpacks]
 ids = []
 
 [skills.ki-example]
-backpack = "example/harness"
+backpack = "example/backpack"
 `
     )
 
     const doctor = await box.run('ki doctor')
 
     expect(doctor.output).toContain(
-      '✗ User skill ki-example: configured skill cannot be resolved from the active source example/harness'
+      '✗ User skill ki-example: configured skill cannot be resolved from the active source example/backpack'
     )
     expect(doctor.exitCode).toBe(1)
   })
@@ -220,9 +222,9 @@ backpack = "example/harness"
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
     await box.setupAgentHome('chatgpt-codex')
-    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
+    await box.setupExampleBackpack({ name: 'example-skill', prefix: 'example' })
     await box.data.write(
-      'ki/harnesses/example/harness/skills/example-skill/SKILL.md',
+      'ki/backpacks/example/backpack/skills/example-skill/SKILL.md',
       '---\nname: example-skill\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
     )
     await box.run('ki bootstrap')
@@ -237,9 +239,9 @@ backpack = "example/harness"
   test('reports a runtime-bound user skill with no compatible configured agent', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
-    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
+    await box.setupExampleBackpack({ name: 'example-skill', prefix: 'example' })
     await box.data.write(
-      'ki/harnesses/example/harness/skills/example-skill/SKILL.md',
+      'ki/backpacks/example/backpack/skills/example-skill/SKILL.md',
       '---\nname: example-skill\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
     )
     await box.config.write(
@@ -249,11 +251,11 @@ backpack = "example/harness"
 [agents]
 ids = ["claude-code"]
 
-[harnesses]
-ids = ["example/harness"]
+[backpacks]
+ids = ["example/backpack"]
 
 [skills.example-skill]
-backpack = "example/harness"
+backpack = "example/backpack"
 `
     )
 
@@ -272,11 +274,11 @@ backpack = "example/harness"
 [agents]
 ids = []
 
-[harnesses]
+[backpacks]
 ids = []
 
 [skills.""]
-backpack = "example/harness"
+backpack = "example/backpack"
 `
     )
 
@@ -286,7 +288,7 @@ backpack = "example/harness"
       exitCode: 1,
       output: expect.stringContaining('✓ Configuration:')
     })
-    expect(doctor.output).toContain('✗ User skill example/harness:: invalid identity')
+    expect(doctor.output).toContain('✗ User skill example/backpack:: invalid identity')
   })
 
   test('exits zero for a complete report with only passing checks', async () => {
@@ -313,7 +315,7 @@ backpack = "example/harness"
       await box.root.write(
         `kb/${name}/.ki.toml`,
         // gamma claims to be a Capital without territory metadata, so only its suggested path is lost.
-        `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-kb"\nrepository = "https://github.com/example/${name}"\n${name === 'gamma' ? 'capital = "https://github.com/example/gamma"\n' : ''}repo_type = "kb"\nstore_roles = ["notes", "sources", "legacy"]\n`
+        `[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-kb"\nrepository = "https://github.com/example/${name}"\n${name === 'gamma' ? 'capital = "https://github.com/example/gamma"\n' : ''}repo_type = "kb"\nstore_roles = ["notes", "sources", "legacy"]\n`
       )
       entries.push([
         name,
@@ -359,10 +361,10 @@ backpack = "example/harness"
 
   test('reports a wrong managed user-skill target while local development is active', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/current/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/current/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     await box.run('ki dev local on')
     const link = `${box.home.path}/.claude/skills/ki-recap`
     await unlink(link)
@@ -370,22 +372,22 @@ backpack = "example/harness"
 
     const doctor = await box.run('ki doctor')
 
-    expect(doctor.output).toContain(`✓ Local development knowledgeislands/ki-agent-backpack: active ${harnessPath}`)
+    expect(doctor.output).toContain(`✓ Local development knowledgeislands/ki-agent-backpack: active ${backpackPath}`)
     expect(doctor.output).toContain('✗ User skill ki-recap: link target does not match local development source')
     expect(doctor.exitCode).toBe(1)
   })
 
-  test('reports a canonical Harness root that points away from the configured local source', async () => {
+  test('reports a canonical backpack root that points away from the configured local source', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/current/knowledgeislands/ki-agent-backpack')
-    const otherHarnessPath = await box.setupLocalCanonicalHarness('dev/other/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/current/knowledgeislands/ki-agent-backpack')
+    const otherBackpackPath = await box.setupLocalCanonicalBackpack('dev/other/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     await box.run('ki dev local on')
-    const link = `${box.data.path}/ki/harnesses/knowledgeislands/ki-agent-backpack`
+    const link = `${box.data.path}/ki/backpacks/knowledgeislands/ki-agent-backpack`
     await unlink(link)
-    await symlink(otherHarnessPath, link, 'dir')
+    await symlink(otherBackpackPath, link, 'dir')
 
     const doctor = await box.run('ki doctor')
 
@@ -397,33 +399,35 @@ backpack = "example/harness"
 
   test('reports a broken remembered source while local development is active', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     await box.run('ki dev local on')
-    await rm(`${harnessPath}/skills/change-management/ki-recap/SKILL.md`)
+    await rm(`${backpackPath}/skills/change-management/ki-recap/SKILL.md`)
 
     const doctor = await box.run('ki doctor')
 
     expect(doctor.output).toContain(
-      '✗ Local development knowledgeislands/ki-agent-backpack: local harness knowledgeislands/ki-agent-backpack does not provide ki-keystone'
+      '✗ Local development knowledgeislands/ki-agent-backpack: local backpack knowledgeislands/ki-agent-backpack does not provide ki-keystone'
     )
     expect(doctor.exitCode).toBe(1)
   })
 
-  test('reports unresolved skills when the unified active harness inventory is unavailable', async () => {
+  test('reports unresolved skills when the unified active backpack inventory is unavailable', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     await box.run('ki dev local on')
-    await box.data.write('ki/harnesses/not-a-directory', 'x')
+    await box.data.write('ki/backpacks/not-a-directory', 'x')
 
     const doctor = await box.run('ki doctor')
 
-    expect(doctor.output).toContain('✗ Harness inventory: installed harnesses directory contains an unsafe owner entry')
+    expect(doctor.output).toContain(
+      '✗ Backpack inventory: installed backpacks directory contains an unsafe owner entry'
+    )
     expect(doctor.output).toContain(
       '✗ User skill ki-recap: configured skill cannot be resolved from the active source knowledgeislands/ki-agent-backpack'
     )
@@ -432,18 +436,18 @@ backpack = "example/harness"
 
   test('checks installed sources when a remembered local source is off', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     const link = `${box.home.path}/.claude/skills/ki-recap`
     await unlink(link)
-    await symlink(`${harnessPath}/skills/change-management/ki-recap`, link, 'dir')
+    await symlink(`${backpackPath}/skills/change-management/ki-recap`, link, 'dir')
 
     const doctor = await box.run('ki doctor')
 
     expect(doctor.output).not.toContain('Local development')
-    expect(doctor.output).toContain('✗ User skill ki-recap: link target does not match installed harness source')
+    expect(doctor.output).toContain('✗ User skill ki-recap: link target does not match installed backpack source')
     expect(doctor.exitCode).toBe(1)
   })
 })

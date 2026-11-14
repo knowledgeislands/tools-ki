@@ -226,7 +226,7 @@ describe('[ki repo target sets]', () => {
         '.mgit.toml',
         'schema = 1\nkind = "workspace"\ndefault = "default"\nlocations = ["local", "repo:../shared"]\n\n[groups.default.members.first]\nkind = "repository"\ntype = "standard"\n\n[groups.default.members."hnr-shared"]\nkind = "repository"\ntype = "standard"\n\n[groups.default.members.group]\nkind = "workspace"\n\n[groups.default.members.nested]\nkind = "repository"\ntype = "nested"\n\n[groups.default.members."archive.git"]\nkind = "repository"\ntype = "bare"\n'
       )
-      await box.project.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.project.write('first/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
       await box.project.mkdir('hnr-shared')
       await box.project.write(
         'group/.mgit.toml',
@@ -234,11 +234,11 @@ describe('[ki repo target sets]', () => {
       )
       await box.project.write(
         'group/second/.ki.toml',
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n'
+        '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n'
       )
       await box.project.mkdir('group/outsider')
       await box.project.mkdir('nested/main')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
 
       const result = await box.run('ki repo audit')
       const concise = await box.run('ki repo audit --concise')
@@ -475,14 +475,14 @@ describe('[ki repo target sets]', () => {
 
     test('audits the repository a repository-kind mGit manifest sits in', async () => {
       const box = await sandbox()
-      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
       const root = await realpath(box.project.path)
 
       for (const schema of ['', 'schema = 1\n']) {
         await box.project.write(
           '.mgit.toml',
-          `${schema}kind = "repository"\n\n[symlinks]\n".claude/skills/ki-example" = "~/harness/skills/ki-example"\n`
+          `${schema}kind = "repository"\n\n[symlinks]\n".claude/skills/ki-example" = "~/backpack/skills/ki-example"\n`
         )
         const result = await box.run('ki repo audit')
         expect(result.exitCode).toBe(0)
@@ -495,7 +495,7 @@ describe('[ki repo target sets]', () => {
       const box = await sandbox()
       await box.project.write(
         '.mgit.toml',
-        'schema = 1\nkind = "repository"\n\n[symlinks]\n".claude/skills/ki-example" = "~/harness/skills/ki-example"\n'
+        'schema = 1\nkind = "repository"\n\n[symlinks]\n".claude/skills/ki-example" = "~/backpack/skills/ki-example"\n'
       )
 
       const result = await box.run('ki repo audit')
@@ -507,9 +507,9 @@ describe('[ki repo target sets]', () => {
 
     test('runs audit independently for every preflighted explicit target', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.root.write('second/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.root.write('first/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.root.write('second/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
       const first = await realpath(`${box.root.path}/first`)
       const second = await realpath(`${box.root.path}/second`)
 
@@ -531,8 +531,8 @@ describe('[ki repo target sets]', () => {
 
     test('audits a repository named through a symbolic link at its real location', async () => {
       const box = await sandbox()
-      await box.root.write('real/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.root.write('real/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({ rubric: rubric('[]') })
       await symlink(`${box.root.path}/real`, `${box.root.path}/link`)
       const real = await realpath(`${box.root.path}/real`)
 
@@ -544,10 +544,10 @@ describe('[ki repo target sets]', () => {
 
     test('recaps every repository verdict and aggregate finding volume', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.root.write('second/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.root.write('third/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.root.write('first/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.root.write('second/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.root.write('third/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [
           {
             kind: 'mechanical', code: 'WARN-1', title: 'Warning', level: 'WARN', phase: 'PRIMARY',
@@ -580,9 +580,9 @@ describe('[ki repo target sets]', () => {
 
     test('conforms every explicit target independently after all targets preflight', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.root.write('second/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.root.write('first/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.root.write('second/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'MARK-1', title: 'Marker', level: 'FAIL', phase: 'PRIMARY',
           audit: async ({ repository }) => {
@@ -604,9 +604,9 @@ describe('[ki repo target sets]', () => {
 
     test('does not mutate an earlier target when a later target fails preflight', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('first/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
       await box.root.mkdir('not-a-repository')
-      await box.setupExampleHarness({
+      await box.setupExampleBackpack({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'MARK-1', title: 'Marker', level: 'FAIL', phase: 'PRIMARY',
           audit: async ({ repository }) => {
@@ -637,9 +637,9 @@ describe('[ki repo target sets]', () => {
 
     test('retains an earlier mutation when a later selected target fails', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.root.write('second/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.setupExampleHarness({
+      await box.root.write('first/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.root.write('second/.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+      await box.setupExampleBackpack({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'MARK-1', title: 'Marker', level: 'FAIL', phase: 'PRIMARY',
           audit: async ({ repository }) => {

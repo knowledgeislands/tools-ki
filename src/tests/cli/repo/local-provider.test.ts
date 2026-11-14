@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
-const declaration = (name = 'ki-self'): string => `[repo]\nharnesses = ["example/harness"]\n\n[skills.${name}]\n`
+const declaration = (name = 'ki-self'): string => `[repo]\nbackpacks = ["example/backpack"]\n\n[skills.${name}]\n`
 
 const rubric = (name = 'ki-self', publication = false, importSentinel?: string): string => `
 ${importSentinel ? `await Bun.write(${JSON.stringify(importSentinel)}, 'imported')` : ''}
@@ -72,7 +72,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
   test('ignores an undeclared local source without importing it', async () => {
     const box = await sandbox()
     const sentinel = join(box.project.path, 'imported.txt')
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n')
     await box.setupRepositoryLocalSkill({ rubric: rubric('ki-self', false, sentinel) })
 
     const result = await box.run('ki repo audit --skill ki-self')
@@ -94,7 +94,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
     const result = await box.run('ki repo audit --skill ki-other')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('declared skill ki-other is provided by no declared harness')
+    expect(result.output).toContain('declared skill ki-other is provided by no declared backpack')
   })
 
   test('rejects a declared source with no catalogue', async () => {
@@ -182,15 +182,15 @@ describe('[ki repo] repository-local ki-self provider', () => {
     expect(result.output).toContain('must name ki-self')
   })
 
-  test('leaves installed Harness resolution unchanged for every other skill', async () => {
+  test('leaves installed backpack resolution unchanged for every other skill', async () => {
     const box = await sandbox()
     await box.project.write('.ki.toml', declaration('ki-example'))
-    await box.setupExampleHarness({ rubric: rubric('ki-example') })
+    await box.setupExampleBackpack({ rubric: rubric('ki-example') })
 
     const result = await box.run('ki repo audit --skill ki-example --reporter-levels info')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('example/harness:ki-example')
+    expect(result.output).toContain('example/backpack:ki-example')
     expect(result.output).not.toContain('repository-local:')
   })
 
@@ -198,10 +198,10 @@ describe('[ki repo] repository-local ki-self provider', () => {
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')
     await box.run('ki bootstrap')
-    await box.setupExampleHarness({ name: 'ki-repo' })
+    await box.setupExampleBackpack({ name: 'ki-repo' })
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-self]\n'
+      '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-self]\n'
     )
     await box.setupRepositoryLocalSkill({ rubric: rubric() })
 

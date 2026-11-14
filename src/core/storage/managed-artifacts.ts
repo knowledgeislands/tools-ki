@@ -5,13 +5,13 @@ import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
 
 const artifactIdentifier = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-const harnessOwner = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
+const backpackOwner = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 
 type ArtifactState = 'creating' | 'active' | 'recoverable' | 'retired'
 
 interface ManagedArtifact {
   readonly id: string
-  readonly operation: 'harness-install'
+  readonly operation: 'backpack-install'
   readonly state: ArtifactState
   readonly paths: readonly [string]
   readonly lock: string
@@ -116,7 +116,7 @@ const readManifest = async (path: string): Promise<ManagedArtifact> => {
   const { schema, id, operation, state, paths, lock } = parsed
   if (schema !== 1) throw new Error('schema 1 is required')
   if (typeof id !== 'string' || !artifactIdentifier.test(id)) throw new Error('id must be a UUID')
-  if (operation !== 'harness-install') throw new Error('operation is not supported')
+  if (operation !== 'backpack-install') throw new Error('operation is not supported')
   if (!validState(state)) throw new Error('state is invalid')
   if (
     !Array.isArray(paths) ||
@@ -129,13 +129,13 @@ const readManifest = async (path: string): Promise<ManagedArtifact> => {
 }
 
 const installPath = async (dataDirectory: string, path: string): Promise<boolean> => {
-  const harnesses = await realpath(resolve(dataDirectory, 'harnesses')).catch(() => undefined)
-  if (!harnesses) return false
-  if (!contained(harnesses, path)) return false
-  const relativePath = relative(harnesses, path).split('/')
+  const backpacks = await realpath(resolve(dataDirectory, 'backpacks')).catch(() => undefined)
+  if (!backpacks) return false
+  if (!contained(backpacks, path)) return false
+  const relativePath = relative(backpacks, path).split('/')
   if (relativePath.length !== 2) return false
   const [owner, name] = relativePath as [string, string]
-  return harnessOwner.test(owner) && name.startsWith('.install-')
+  return backpackOwner.test(owner) && name.startsWith('.install-')
 }
 
 const expectedLock = (stateDirectory: string, artifact: ManagedArtifact): boolean =>
@@ -172,9 +172,9 @@ export const createInstallStagingArtifact = async (
   await ensureDirectory(locks, 'managed artifacts locks directory')
   const lock = join(locks, id)
   await mkdir(lock)
-  const ownerDirectory = await realpath(join(dataDirectory, 'harnesses', owner))
+  const ownerDirectory = await realpath(join(dataDirectory, 'backpacks', owner))
   const staging = join(ownerDirectory, `.install-${id}`)
-  let artifact: ManagedArtifact = { id, operation: 'harness-install', state: 'creating', paths: [staging], lock }
+  let artifact: ManagedArtifact = { id, operation: 'backpack-install', state: 'creating', paths: [staging], lock }
   const path = manifestPath(stateDirectory, id)
   try {
     await writeAtomically(path, render(artifact))
@@ -227,7 +227,7 @@ const reportManifest = async (
   if (basename(path) !== `${artifact.id}.toml`)
     return report(artifact.id, 'unreadable-manifest', 'manifest name does not match id')
   if (!(await installPath(dataDirectory, artifact.paths[0])) || !expectedLock(stateDirectory, artifact))
-    return report(artifact.id, 'foreign', 'declared path or lock is outside the harness-install boundary')
+    return report(artifact.id, 'foreign', 'declared path or lock is outside the backpack-install boundary')
   if (!locksArePhysical || (await lockHeld(artifact.lock)))
     return report(artifact.id, 'live', 'operation lock is held or unverifiable', artifact.paths[0])
   const state = await lstat(artifact.paths[0]).catch(() => undefined)
@@ -245,7 +245,7 @@ const reportManifest = async (
   return report(
     artifact.id,
     'candidate',
-    `retired harness-install · would remove ${artifact.paths[0]}`,
+    `retired backpack-install · would remove ${artifact.paths[0]}`,
     artifact.paths[0]
   )
 }

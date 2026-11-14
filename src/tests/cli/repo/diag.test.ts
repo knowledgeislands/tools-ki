@@ -4,7 +4,7 @@ import { sandbox } from '../_cli_helper.ts'
 
 const repositoryConfiguration = `
 [repo]
-harnesses = ["knowledgeislands/ki-agent-backpack"]
+backpacks = ["knowledgeislands/ki-agent-backpack"]
 
 [skills.ki-repo-project]
 
@@ -25,8 +25,8 @@ const preparedRepository = async () => {
   const box = await sandbox()
   await box.setupAgentHome('chatgpt-codex')
   await box.run('ki bootstrap')
-  await box.setupExampleHarness({ name: 'ki-repo' })
-  await box.setupExampleHarness()
+  await box.setupExampleBackpack({ name: 'ki-repo' })
+  await box.setupExampleBackpack()
   await box.project.write('.ki.toml', repositoryConfiguration)
   return box
 }
@@ -51,14 +51,14 @@ describe('[ki repo diag]', () => {
     await box.project.write(
       '.ki.toml',
       repositoryConfiguration
-        .replace('knowledgeislands/ki-agent-backpack', 'missing/harness')
+        .replace('knowledgeislands/ki-agent-backpack', 'missing/backpack')
         .replace('[skills.ki-example]', '[skills.ki-missing]')
     )
 
     const diag = await box.run('ki repo diag')
 
     expect(diag.exitCode).toBe(1)
-    expect(diag.output).toContain('missing/harness is not installed')
+    expect(diag.output).toContain('missing/backpack is not installed')
     expect(diag.output).toContain('summary: REPOSITORIES=1 HEALTHY=0 REPAIRABLE=0 UNREPAIRABLE=1')
   })
   test('reports dangling undeclared ki- links and ignores entries KI does not own', async () => {

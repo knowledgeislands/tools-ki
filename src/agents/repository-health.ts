@@ -1,11 +1,11 @@
 import { lstat, readdir, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
+import { discoverInstalledBackpacks } from '../core/backpack/index.ts'
 import {
   type ResolvedSkill,
   readRepositoryDeclaration,
   resolveRepositoryDeclaredSkills
 } from '../core/configuration/index.ts'
-import { discoverInstalledHarnesses } from '../core/harness/index.ts'
 import { configuredAgents } from './configuration.ts'
 import type { InstalledAgent } from './internal.ts'
 import { compatibleWithSkill, repositorySupportedRuntimes, runtimeForAgent } from './runtimes.ts'
@@ -104,21 +104,21 @@ export const inspectRepositoryHealth = async (
 ): Promise<RepositoryHealth> => {
   try {
     const declarations = await readRepositoryDeclaration(location.declaration)
-    const [harnesses, agents, runtimes] = await Promise.all([
-      discoverInstalledHarnesses(options.dataDirectory),
+    const [backpacks, agents, runtimes] = await Promise.all([
+      discoverInstalledBackpacks(options.dataDirectory),
       configuredAgents({
         homeDirectory: options.homeDirectory,
         configurationDirectory: options.configurationDirectory
       }),
       repositorySupportedRuntimes(location.declaration)
     ])
-    const skills = await resolveRepositoryDeclaredSkills(location.root, declarations, harnesses, options.dataDirectory)
+    const skills = await resolveRepositoryDeclaredSkills(location.root, declarations, backpacks, options.dataDirectory)
     const localProviders = skills.filter((skill) => skill.provider.kind === 'repository-local')
     const repositoryAgents = agents.filter((agent) => runtimes.includes(runtimeForAgent(agent)))
     const projections = (
       await Promise.all(
         skills
-          .filter((skill) => skill.provider.kind === 'installed-harness')
+          .filter((skill) => skill.provider.kind === 'installed-backpack')
           .flatMap((skill) =>
             repositoryAgents
               .filter((agent) => compatibleWithSkill(agent, skill.capability.supportedRuntimes))

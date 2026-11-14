@@ -26,13 +26,13 @@ const diskState = async (
   const state = await lstat(join(root, path)).catch(() => undefined)
   if (!state) return { state: 'missing' }
   if (!state.isFile() || state.isSymbolicLink())
-    throw new KiError(`generated surface ${path} must be a regular file below the Harness root`, 1)
+    throw new KiError(`generated surface ${path} must be a regular file below the backpack root`, 1)
   const current = await readFile(join(root, path), 'utf8')
   return { state: current === content ? 'in-sync' : 'stale', mode: state.mode & 0o777 }
 }
 
 /**
- * Import a skill's `scripts/generate/index.ts`, render its surfaces against the resolved Harness root and compare each
+ * Import a skill's `scripts/generate/index.ts`, render its surfaces against the resolved backpack root and compare each
  * with the bytes on disk. The module renders and never writes; only the host publishes.
  */
 export const prepareSkillGeneration = async (skill: ResolvedSkill): Promise<PreparedSkillGeneration> => {

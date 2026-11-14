@@ -1,12 +1,12 @@
 import { lstat, mkdir, readlink, realpath, symlink, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
+import { discoverInstalledBackpacks, type SupportedRuntime } from '../core/backpack/index.ts'
 import {
   declareRepositorySkill,
   readRepositoryDeclaration,
   undeclareRepositorySkill
 } from '../core/configuration/index.ts'
 import { KiError } from '../core/errors.ts'
-import { discoverInstalledHarnesses, type SupportedRuntime } from '../core/harness/index.ts'
 import { resolveRepository } from '../core/repository/index.ts'
 import { configuredAgents, inspectUserConfiguration, setConfiguredUserSkills } from './configuration.ts'
 import { type InstalledAgent, requiredPhysicalDirectory } from './internal.ts'
@@ -90,21 +90,21 @@ const installedSkillSource = async (
     readonly source: string
     readonly supportedRuntimes?: readonly SupportedRuntime[]
   }
-  readonly harness: string
+  readonly backpack: string
 }> => {
-  const harnesses = await discoverInstalledHarnesses(dataDirectory)
-  const matches = harnesses.flatMap((harness) =>
-    harness.capabilities
+  const backpacks = await discoverInstalledBackpacks(dataDirectory)
+  const matches = backpacks.flatMap((backpack) =>
+    backpack.capabilities
       .filter((capability) => capability.kind === 'skill' && capability.name === name)
-      .map((capability) => ({ harness, capability }))
+      .map((capability) => ({ backpack, capability }))
   )
   const [match] = matches
-  if (!match) throw new KiError(`no installed harness provides skill ${name}`, 1)
+  if (!match) throw new KiError(`no installed backpack provides skill ${name}`, 1)
   const source = await requiredPhysicalDirectory(
-    join(match.harness.root, match.capability.source),
-    `installed harness ${match.harness.id} ${name} skill`
+    join(match.backpack.root, match.capability.source),
+    `installed backpack ${match.backpack.id} ${name} skill`
   )
-  return { skill: { name, source, supportedRuntimes: match.capability.supportedRuntimes }, harness: match.harness.id }
+  return { skill: { name, source, supportedRuntimes: match.capability.supportedRuntimes }, backpack: match.backpack.id }
 }
 
 const skillNameOf = (identity: string): string => identity.slice(identity.lastIndexOf(':') + 1)
@@ -125,7 +125,7 @@ export const addUserSkill = async (options: {
   if (compatible.length === 0)
     throw new KiError(`skill ${resolved.skill.name} is incompatible with every configured agent`, 1)
   for (const agent of compatible) await linkManagedSkill(agent, { scope: 'user' }, resolved.skill, options.replace)
-  const identity = `${resolved.harness}:${resolved.skill.name}`
+  const identity = `${resolved.backpack}:${resolved.skill.name}`
   const current = (await inspectUserConfiguration(options.configurationDirectory)).skills
   const next = [...current.filter((entry) => skillNameOf(entry) !== resolved.skill.name), identity].sort(
     (left, right) => left.localeCompare(right)
@@ -180,7 +180,7 @@ export const addRepoSkill = async (options: {
     throw new KiError(`skill ${resolved.skill.name} is incompatible with this repository's configured agents`, 1)
   for (const agent of compatible)
     await linkManagedSkill(agent, { scope: 'repo', repository: location.root }, resolved.skill, options.replace)
-  await declareRepositorySkill(location.declaration, resolved.harness, resolved.skill.name)
+  await declareRepositorySkill(location.declaration, resolved.backpack, resolved.skill.name)
   return {
     skill: resolved.skill.name,
     repository: location.root,

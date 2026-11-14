@@ -14,11 +14,11 @@ const provenance: Record<string, string> = {
   'scripts/shared/rubric.ts': 'bcd03279b7ccccf217ad56d0ebb92fa7d973a983a1bb2f52b84ad5c919404c6c'
 }
 
-export const gitDeclaration = '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-git]\n'
+export const gitDeclaration = '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-git]\n'
 
 export const installGitCatalogue = async (box: Sandbox, writer = false): Promise<void> => {
-  await box.setupExampleHarness({ name: 'ki-git' })
-  const base = 'ki/harnesses/example/harness/skills/ki-git'
+  await box.setupExampleBackpack({ name: 'ki-git' })
+  const base = 'ki/backpacks/example/backpack/skills/ki-git'
   const files: Record<string, string> = JSON.parse(gunzipSync(Buffer.from(archive, 'base64')).toString())
   for (const [path, content] of Object.entries(files)) {
     if (createHash('sha256').update(content).digest('hex') !== provenance[path])

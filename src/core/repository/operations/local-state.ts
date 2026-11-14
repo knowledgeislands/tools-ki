@@ -1,11 +1,11 @@
 import { lstat, mkdir, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
+import { discoverInstalledBackpacks } from '../../backpack/inspection.ts'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../configuration/declaration.ts'
 import { resolveRepositoryDeclaredSkills } from '../../configuration/local-provider.ts'
 import type { ResolvedSkill } from '../../configuration/resolution.ts'
 import { KiError } from '../../errors.ts'
 import { prepareWrites } from '../../filesystem/publication.ts'
-import { discoverInstalledHarnesses } from '../../harness/inspection.ts'
 import { gitPrimaryWorkingTreeRoot } from '../../runtime/git.ts'
 import {
   inspectLocalRegistry,
@@ -88,10 +88,10 @@ export const repositorySkillActivation = async (
   const declaration = await readRepositoryDeclaration(repository.declaration)
   const runtimeConfiguration = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration
   if (!runtimeConfiguration || !Object.hasOwn(runtimeConfiguration, 'supported_runtimes')) return undefined
-  const harnesses = await discoverInstalledHarnesses(context.dataDirectory)
+  const backpacks = await discoverInstalledBackpacks(context.dataDirectory)
   const skills = (
-    await resolveRepositoryDeclaredSkills(repository.root, declaration, harnesses, context.dataDirectory)
-  ).filter((skill) => skill.provider.kind === 'installed-harness')
+    await resolveRepositoryDeclaredSkills(repository.root, declaration, backpacks, context.dataDirectory)
+  ).filter((skill) => skill.provider.kind === 'installed-backpack')
   const registry = await inspectLocalRegistry(context.stateDirectory)
   const inspectionRepository = await registeredCheckout(context, repository.root, registry.repositories)
   return context.createSkillActivation({

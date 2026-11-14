@@ -25,7 +25,7 @@ const firstDocument = (mapping: Mapping) => {
   return entry
 }
 const declaration = (id: keyof typeof bodies) => `[repo]
-harnesses = ["example/harness"]
+backpacks = ["example/backpack"]
 [skills.ki-repo]
 repo_type = "kb"
 primary_shape = "ki-repo-kb"

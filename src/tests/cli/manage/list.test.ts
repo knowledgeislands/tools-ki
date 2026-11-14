@@ -4,7 +4,7 @@ import { sandbox } from '../_cli_helper.ts'
 describe('[ki inventory]', () => {
   test('lists installed capabilities and declared user skills without inspecting the current repository', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness()
+    await box.setupExampleBackpack()
     await box.config.write(
       'ki/config.toml',
       [
@@ -13,14 +13,14 @@ describe('[ki inventory]', () => {
         '[agents]',
         'ids = []',
         '',
-        '[harnesses]',
+        '[backpacks]',
         'ids = []',
         '',
         '[skills.ki-a]',
-        'backpack = "example/harness"',
+        'backpack = "example/backpack"',
         '',
         '[skills.ki-example]',
-        'backpack = "example/harness"',
+        'backpack = "example/backpack"',
         ''
       ].join('\n')
     )
@@ -32,7 +32,7 @@ describe('[ki inventory]', () => {
     expect(result).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI INVENTORY\n├─ harnesses (1)\n│  ╰─ example/harness (1)\n│     ╰─ skill ki-example\n├─ user skills (2)\n│  ├─ example/harness:ki-a\n│  ╰─ example/harness:ki-example\n├─ repositories (0)\n│  ╰─ none\n╰─ summary: HARNESSES=1 CAPABILITIES=1 USER_SKILLS=2 REPOSITORIES=0\n'
+        '╭─ KI INVENTORY\n├─ backpacks (1)\n│  ╰─ example/backpack (1)\n│     ╰─ skill ki-example\n├─ user skills (2)\n│  ├─ example/backpack:ki-a\n│  ╰─ example/backpack:ki-example\n├─ repositories (0)\n│  ╰─ none\n╰─ summary: BACKPACKS=1 CAPABILITIES=1 USER_SKILLS=2 REPOSITORIES=0\n'
     })
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
   })
@@ -45,23 +45,23 @@ describe('[ki inventory]', () => {
     expect(result).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI INVENTORY\n├─ harnesses (0)\n│  ╰─ none\n├─ user skills (0)\n│  ╰─ none\n├─ repositories (0)\n│  ╰─ none\n╰─ summary: HARNESSES=0 CAPABILITIES=0 USER_SKILLS=0 REPOSITORIES=0\n'
+        '╭─ KI INVENTORY\n├─ backpacks (0)\n│  ╰─ none\n├─ user skills (0)\n│  ╰─ none\n├─ repositories (0)\n│  ╰─ none\n╰─ summary: BACKPACKS=0 CAPABILITIES=0 USER_SKILLS=0 REPOSITORIES=0\n'
     })
   })
 
-  test('renders every installed harness in its capability section', async () => {
+  test('renders every installed backpack in its capability section', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
+    await box.setupExampleBackpack()
+    await box.data.write('ki/backpacks/other/backpack/.ki.toml', '[skills.ki-repo-backpack]\nprefix = "other"\n')
     await box.data.write(
-      'ki/harnesses/other/harness/skills/other-example/SKILL.md',
+      'ki/backpacks/other/backpack/skills/other-example/SKILL.md',
       '---\nname: other-example\nki-depends-on: []\n---\n'
     )
 
     const result = await box.run('ki inventory')
 
     expect(result.output).toContain(
-      '│  ├─ example/harness (1)\n│  │  ╰─ skill ki-example\n│  ╰─ other/harness (1)\n│     ╰─ skill other-example'
+      '│  ├─ example/backpack (1)\n│  │  ╰─ skill ki-example\n│  ╰─ other/backpack (1)\n│     ╰─ skill other-example'
     )
   })
 
@@ -89,7 +89,7 @@ describe('[ki inventory]', () => {
     await box.project.write('.ki.toml', '[ki-example\n')
     const grammar = await box.run('ki inventory unexpected')
     const invalidDeclaration = await box.run('ki inventory')
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
     await box.config.write('ki/config.toml', '[agents\n')
     const invalidConfiguration = await box.run('ki inventory')
 
@@ -101,7 +101,7 @@ describe('[ki inventory]', () => {
     expect(invalidDeclaration).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI INVENTORY\n├─ harnesses (0)\n│  ╰─ none\n├─ user skills (0)\n│  ╰─ none\n├─ repositories (0)\n│  ╰─ none\n╰─ summary: HARNESSES=0 CAPABILITIES=0 USER_SKILLS=0 REPOSITORIES=0\n'
+        '╭─ KI INVENTORY\n├─ backpacks (0)\n│  ╰─ none\n├─ user skills (0)\n│  ╰─ none\n├─ repositories (0)\n│  ╰─ none\n╰─ summary: BACKPACKS=0 CAPABILITIES=0 USER_SKILLS=0 REPOSITORIES=0\n'
     })
     expect(invalidConfiguration).toEqual({
       exitCode: 1,

@@ -3,10 +3,10 @@
 export {
   configureBootstrapAgents,
   installBootstrapSkills,
+  installedBackpackSkillSources,
   installedBootstrapSkillSources,
-  installedHarnessSkillSources,
-  localBootstrapHarness,
-  localHarness,
+  localBackpack,
+  localBootstrapBackpack,
   refreshUserConfiguration
 } from './bootstrap.ts'
 export {
@@ -22,7 +22,7 @@ export {
   migrateLocalSources,
   rememberedCheckout,
   requireLocalSources,
-  setLocalBootstrapHarness
+  setLocalBootstrapBackpack
 } from './local-sources.ts'
 export {
   inspectRepositoryHealth,

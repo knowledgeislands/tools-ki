@@ -6,7 +6,7 @@ import { realpath } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 
-const DECLARATION = '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n'
+const DECLARATION = '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n'
 
 // A catalogue whose one item reports the findings the caller lists, each as `[status, message,
 // subject?, level?]`; a subject written as `<root>/…` is made absolute against the repository.
@@ -51,7 +51,7 @@ export default {
 
 const repository = async (box: Sandbox, findings: string): Promise<string> => {
   await box.project.write('.ki.toml', DECLARATION)
-  await box.setupExampleHarness({ rubric: rubric(findings) })
+  await box.setupExampleBackpack({ rubric: rubric(findings) })
   return realpath(box.project.path)
 }
 
@@ -224,7 +224,7 @@ describe('[ki repo audit verdict scope]', () => {
 
   test('keeps a local registration failure blocking under a scoped verdict', async () => {
     const box = await sandbox()
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       name: 'ki-repo',
       rubric: `
 export default {
@@ -238,9 +238,9 @@ export default {
     })
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
+      '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
     )
-    await box.config.write('ki/config.toml', 'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n')
+    await box.config.write('ki/config.toml', 'schema = 1\n\n[agents]\nids = []\n\n[backpacks]\nids = []\n\n[skills]\n')
 
     const result = await box.run('ki repo audit --paths docs')
 
@@ -255,7 +255,7 @@ export default {
     const box = await sandbox()
     await box.root.write('first/.ki.toml', DECLARATION)
     await box.root.write('second/.ki.toml', DECLARATION)
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       rubric: rubric(`[['VIOLATION', 'broken', 'docs/a.md'], ['VIOLATION', 'elsewhere', 'notes/c.md']]`)
     })
     const first = await realpath(`${box.root.path}/first`)

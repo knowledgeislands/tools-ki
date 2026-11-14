@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 
-const modulePath = 'ki/harnesses/example/harness/skills/ki-repo/scripts/rubric/contexts/canonical-hooks.ts'
+const modulePath = 'ki/backpacks/example/backpack/skills/ki-repo/scripts/rubric/contexts/canonical-hooks.ts'
 const shape = 'ki-repo-project'
 const hook = (name: string, selectedShape = shape, variant = 'no-package') =>
   `#!/bin/sh\n# ${selectedShape} ${variant} ${name}\nexit 0\n`
@@ -13,7 +13,7 @@ const data = `export const canonicalHooks = (shape, variant) => shape === 'ki-re
 })\n`
 const setup = async (selectedShape = shape, source = data): Promise<Sandbox> => {
   const box = await sandbox()
-  await box.setupExampleHarness({
+  await box.setupExampleBackpack({
     name: 'ki-repo',
     rubric: `export default {
     contract: 1, name: 'ki-repo', concern: 'hooks', families: [],
@@ -22,21 +22,21 @@ const setup = async (selectedShape = shape, source = data): Promise<Sandbox> => 
   })
   if (selectedShape !== shape)
     await box.data.write(
-      `ki/harnesses/example/harness/skills/${selectedShape}/SKILL.md`,
+      `ki/backpacks/example/backpack/skills/${selectedShape}/SKILL.md`,
       `---\nname: ${selectedShape}\nki-depends-on: []\n---\n`
     )
   await box.data.write(
-    `ki/harnesses/example/harness/skills/${selectedShape}/scripts/rubric/items/index.ts`,
+    `ki/backpacks/example/backpack/skills/${selectedShape}/scripts/rubric/items/index.ts`,
     `export default {
     contract: 1, name: '${selectedShape}', concern: 'shape', families: [],
     createSession: async () => ({ subjects: [], proposal: () => ({ writes: [] }) })
   }`
   )
   await box.data.write(modulePath, source)
-  await box.config.write('ki/config.toml', 'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n')
+  await box.config.write('ki/config.toml', 'schema = 1\n\n[agents]\nids = []\n\n[backpacks]\nids = []\n\n[skills]\n')
   await box.project.write(
     '.ki.toml',
-    `[repo]\nharnesses = ["example/harness"]\n\n[skills.${selectedShape}]\n\n[skills.ki-repo]\nrepo_type = "${selectedShape === 'ki-repo-kb' ? 'kb' : 'project'}"\nprimary_shape = "${selectedShape}"\nrepository = "https://github.com/example/project"\n`
+    `[repo]\nbackpacks = ["example/backpack"]\n\n[skills.${selectedShape}]\n\n[skills.ki-repo]\nrepo_type = "${selectedShape === 'ki-repo-kb' ? 'kb' : 'project'}"\nprimary_shape = "${selectedShape}"\nrepository = "https://github.com/example/project"\n`
   )
   await box.project.git(['init', '-q'])
   return box

@@ -8,8 +8,8 @@ import {
 } from '../../agents/index.ts'
 import { linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
+import { canonicalBackpackIdentifier, discoverInstalledBackpacks } from '../../core/backpack/index.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
-import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { type ManageRepairItem, type ManageRepairPort, runManageRepair } from '../../core/manage/index.ts'
 import { acquireManagedArtifactRecovery, planOrphanRecovery, recoverInstallOrphans } from '../../core/storage/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
@@ -43,7 +43,7 @@ const repairPort = (context: KiContext): ManageRepairPort => ({
         await linkManagedSkill(agent, { scope: 'user' }, { name, source: expected }, true)
       }
     })),
-  discoverHarnesses: () => discoverInstalledHarnesses(context.paths.data),
+  discoverBackpacks: () => discoverInstalledBackpacks(context.paths.data),
   realpath,
   linkedTo
 })
@@ -68,7 +68,7 @@ export const createRepairCommand = (context: KiContext): Command =>
       if (options.dryRun && options.apply) throw new KiError('--dry-run and --apply cannot be combined', 2)
       const result = await runManageRepair(repairPort(context), {
         dryRun: !options.apply,
-        canonicalHarnessIdentifier
+        canonicalBackpackIdentifier
       })
       context.stdout.write(
         `${renderTree({

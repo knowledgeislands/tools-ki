@@ -100,11 +100,11 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const rubricWithRuntimeProposal = runtimeActivationRubric('ki-runtime')
-    await box.setupExampleHarness({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
+    await box.setupExampleBackpack({
       name: 'ki-runtime',
       rubric: rubricWithRuntimeProposal.replace("name: 'ki-repo'", "name: 'ki-runtime'")
     })
@@ -129,14 +129,14 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-zeta]\n\n[skills.ki-alpha]\n'
+      '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-zeta]\n\n[skills.ki-alpha]\n'
     )
     const runtimeRubric = runtimeActivationRubric('ki-runtime')
       .replace("repositorySkills?.inspect(['ki-runtime'])", "repositorySkills?.inspect(['ki-zeta', 'ki-alpha'])")
       .replace("repositorySkills?.propose(['ki-runtime'])", "repositorySkills?.propose(['ki-zeta', 'ki-alpha'])")
-    await box.setupExampleHarness({ rubric: runtimeRubric, name: 'ki-repo' })
+    await box.setupExampleBackpack({ rubric: runtimeRubric, name: 'ki-repo' })
     for (const name of ['ki-zeta', 'ki-alpha']) {
-      await box.setupExampleHarness({
+      await box.setupExampleBackpack({
         name,
         rubric: runtimeRubric.replace("name: 'ki-repo'", `name: '${name}'`)
       })
@@ -158,14 +158,14 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const runtimeRubric = runtimeActivationRubric('ki-runtime').replace(
       "? [{ status: 'PASS', message: 'runtime skill active' }]",
       "? [{ status: 'VIOLATION', message: 'activated runtime remains unacceptable' }]"
     )
-    await box.setupExampleHarness({ rubric: runtimeRubric, name: 'ki-repo' })
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({ rubric: runtimeRubric, name: 'ki-repo' })
+    await box.setupExampleBackpack({
       name: 'ki-runtime',
       rubric: runtimeRubric.replace("name: 'ki-repo'", "name: 'ki-runtime'")
     })
@@ -185,11 +185,11 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const rubricWithRuntimeProposal = runtimeActivationRubric('ki-runtime')
-    await box.setupExampleHarness({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
+    await box.setupExampleBackpack({
       name: 'ki-runtime',
       rubric: rubricWithRuntimeProposal.replace("name: 'ki-repo'", "name: 'ki-runtime'")
     })
@@ -227,12 +227,12 @@ describe('[ki repo conform execution]', () => {
       await box.run('ki bootstrap')
       await box.project.write(
         '.ki.toml',
-        `[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["${runtime}"]\n\n${declaration}`
+        `[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["${runtime}"]\n\n${declaration}`
       )
       const rubricWithRuntimeProposal = runtimeActivationRubric(requested)
-      await box.setupExampleHarness({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
+      await box.setupExampleBackpack({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
       if (declaration)
-        await box.setupExampleHarness({
+        await box.setupExampleBackpack({
           name: requested,
           rubric: rubricWithRuntimeProposal.replace("name: 'ki-repo'", `name: '${requested}'`)
         })
@@ -260,17 +260,17 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const runtimeRubric = runtimeActivationRubric('ki-runtime')
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       rubric: runtimeRubric.replace(
         "repositorySkills?.inspect(['ki-runtime'])",
         `repositorySkills?.inspect(${request})`
       ),
       name: 'ki-repo'
     })
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       name: 'ki-runtime',
       rubric: runtimeRubric.replace("name: 'ki-repo'", "name: 'ki-runtime'")
     })
@@ -287,11 +287,11 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const runtimeRubric = runtimeActivationRubric('ki-runtime')
-    await box.setupExampleHarness({ rubric: runtimeRubric, name: 'ki-repo' })
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({ rubric: runtimeRubric, name: 'ki-repo' })
+    await box.setupExampleBackpack({
       name: 'ki-runtime',
       rubric: runtimeRubric.replace("name: 'ki-repo'", "name: 'ki-runtime'")
     })
@@ -310,11 +310,11 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const runtimeRubric = runtimeActivationRubric('ki-runtime')
-    await box.setupExampleHarness({ rubric: runtimeRubric, name: 'ki-repo' })
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({ rubric: runtimeRubric, name: 'ki-repo' })
+    await box.setupExampleBackpack({
       name: 'ki-runtime',
       rubric: runtimeRubric.replace("name: 'ki-repo'", "name: 'ki-runtime'")
     })
@@ -338,7 +338,7 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const runtimeRubric = runtimeActivationRubric('ki-runtime')
     const blockedBeforeApply = runtimeRubric
@@ -352,8 +352,8 @@ describe('[ki repo conform execution]', () => {
         await fs.writeFile(repository + '/.agents/skills/ki-runtime', 'foreign skill\\n')
       }`
       )
-    await box.setupExampleHarness({ rubric: blockedBeforeApply, name: 'ki-repo' })
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({ rubric: blockedBeforeApply, name: 'ki-repo' })
+    await box.setupExampleBackpack({
       name: 'ki-runtime',
       rubric: runtimeRubric.replace("name: 'ki-repo'", "name: 'ki-runtime'")
     })
@@ -371,7 +371,7 @@ describe('[ki repo conform execution]', () => {
     const box = await sandbox()
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n[skills.ki-extra]\n'
+      '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n[skills.ki-extra]\n'
     )
     await box.home.write('.managed/setting.txt', 'before\n')
     const userHomeRubric = (skill: string, code: string, content: string): string =>
@@ -386,13 +386,13 @@ describe('[ki repo conform execution]', () => {
         "concern: 'test governance',",
         "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },"
       )
-    await box.setupExampleHarness({ rubric: userHomeRubric('ki-example', 'EXAMPLE-1', 'first\\n') })
+    await box.setupExampleBackpack({ rubric: userHomeRubric('ki-example', 'EXAMPLE-1', 'first\\n') })
     await box.data.write(
-      'ki/harnesses/example/harness/skills/ki-extra/SKILL.md',
+      'ki/backpacks/example/backpack/skills/ki-extra/SKILL.md',
       '---\nname: ki-extra\nki-depends-on: []\n---\n'
     )
     await box.data.write(
-      'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts',
+      'ki/backpacks/example/backpack/skills/ki-extra/scripts/rubric/items/index.ts',
       userHomeRubric('ki-extra', 'EXTRA-1', 'second\\n')
     )
 
@@ -405,9 +405,9 @@ describe('[ki repo conform execution]', () => {
 
   test('refuses a user-home write outside the declaring skill filesystem scope', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
     await box.home.write('.outside/setting.txt', 'before\n')
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       rubric: rubric(
         `[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
@@ -432,9 +432,9 @@ describe('[ki repo conform execution]', () => {
 
   test('refuses user-home conform commands before running them', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
     await box.home.write('.managed/setting.txt', 'before\n')
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       rubric: rubric(
         `[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
@@ -459,9 +459,9 @@ describe('[ki repo conform execution]', () => {
 
   test('refuses an explicit create target that already exists', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
     await box.project.write('created.txt', 'existing\n')
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
@@ -477,8 +477,8 @@ describe('[ki repo conform execution]', () => {
 
   test('an unfixed violation (no conform function) blocks conform and is reported', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-    await box.setupExampleHarness({
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+    await box.setupExampleBackpack({
       rubric: rubric(`[{
           code: 'F', title: 'Family',
           items: [{
@@ -497,8 +497,8 @@ describe('[ki repo conform execution]', () => {
 
   test('a conform proposing no writes leaves its violation reported and unfixed', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-    await box.setupExampleHarness({
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+    await box.setupExampleBackpack({
       rubric: rubric(`[{
           code: 'F', title: 'Family',
           items: [{
@@ -517,8 +517,8 @@ describe('[ki repo conform execution]', () => {
 
   test('reports subprocess conforms in dry-run mode without executing them, then runs and re-audits them', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-    await box.setupExampleHarness({
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+    await box.setupExampleBackpack({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'NORMALISE',
           audit: async ({ repository }) => {
@@ -542,8 +542,8 @@ describe('[ki repo conform execution]', () => {
 
   test('reports a failed subprocess conform with its command output', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-    await box.setupExampleHarness({
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+    await box.setupExampleBackpack({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
@@ -561,8 +561,8 @@ describe('[ki repo conform execution]', () => {
 
   test('combines stdout and stderr from a failed subprocess conform', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-    await box.setupExampleHarness({
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+    await box.setupExampleBackpack({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
@@ -580,9 +580,9 @@ describe('[ki repo conform execution]', () => {
 
   test('conforms INFO outcomes explicitly opted into conforming and retains a fixed subject', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
     await box.project.write('governed.txt', 'before\n')
-    await box.setupExampleHarness({
+    await box.setupExampleBackpack({
       rubric: `
 import { readFile } from 'node:fs/promises'
 
@@ -633,8 +633,8 @@ export default {
 
   test('orders same-phase conform actions by their family declaration', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-    await box.setupExampleHarness({
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+    await box.setupExampleBackpack({
       rubric: rubric(`[
           { code: 'SECOND', title: 'Second', items: [{
             kind: 'mechanical', code: 'SECOND-1', title: 'Second item', level: 'WARN', phase: 'PRIMARY',
@@ -659,8 +659,8 @@ export default {
 
   test('refuses an unsafe direct conform write before publication', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-    await box.setupExampleHarness({
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+    await box.setupExampleBackpack({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
@@ -677,8 +677,8 @@ export default {
 
   test('reports a failed silent subprocess conform without an empty detail line', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-    await box.setupExampleHarness({
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+    await box.setupExampleBackpack({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
@@ -696,8 +696,8 @@ export default {
 
   test('reports a subprocess terminated by a signal as a failed conform', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-    await box.setupExampleHarness({
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+    await box.setupExampleBackpack({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
@@ -719,8 +719,8 @@ export default {
 
   test('rejects a malformed subprocess conform proposal before execution', async () => {
     const box = await sandbox()
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-    await box.setupExampleHarness({
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n')
+    await box.setupExampleBackpack({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],

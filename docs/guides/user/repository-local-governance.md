@@ -1,6 +1,6 @@
 # Repository-local governance
 
-Use a repository-local `ki-self` when a Knowledge Islands repository needs auditable rules that are specific to that repository and do not belong in a portable Harness skill. The host treats this as one narrow repository-owned provider, not as installed Harness content.
+Use a repository-local `ki-self` when a Knowledge Islands repository needs auditable rules that are specific to that repository and do not belong in a portable backpack skill. The host treats this as one narrow repository-owned provider, not as installed backpack content.
 
 ## Declare the provider
 
@@ -39,12 +39,12 @@ The report identifies the provider as `repository-local:ki-self`. Run conform wh
 ki repo conform --skill ki-self --repo /path/to/repository
 ```
 
-Conform uses the same repository-scoped transaction and re-audit as installed capabilities. It does not activate the local source as a managed runtime skill or turn it into an installed Harness.
+Conform uses the same repository-scoped transaction and re-audit as installed capabilities. It does not activate the local source as a managed runtime skill or turn it into an installed backpack.
 
 ## Diagnose failures
 
-The host fails before importing catalogue code when the declaration is missing, the canonical source or catalogue is absent, an entry in the source tree is a symbolic link, the source escapes the physical repository, or `SKILL.md` names another capability. Restore a physical canonical source and rerun the focused audit; do not add a caller-selected local path or copy the skill into an installed Harness.
+The host fails before importing catalogue code when the declaration is missing, the canonical source or catalogue is absent, an entry in the source tree is a symbolic link, the source escapes the physical repository, or `SKILL.md` names another capability. Restore a physical canonical source and rerun the focused audit; do not add a caller-selected local path or copy the skill into an installed backpack.
 
-`ki repo diag` reports the canonical local provider without expecting a managed projection. `ki repo upgrade` refreshes only installed Harness providers and ignores repository-local `ki-self`.
+`ki repo diag` reports the canonical local provider without expecting a managed projection. `ki repo upgrade` refreshes only installed backpack providers and ignores repository-local `ki-self`.
 
-The provider boundary is narrow: only the canonical physical `.agents/skills/ki-self/` source inside the selected repository can satisfy the declaration, and no operation projects it into installed Harness state.
+The provider boundary is narrow: only the canonical physical `.agents/skills/ki-self/` source inside the selected repository can satisfy the declaration, and no operation projects it into installed backpack state.

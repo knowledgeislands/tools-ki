@@ -1,7 +1,7 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
+import { backpackIdentifier } from '../core/backpack/index.ts'
 import { KiError } from '../core/errors.ts'
-import { backpackIdentifier } from '../core/harness/index.ts'
 import type { AgentDescriptor } from './shared/types.ts'
 import { chatgptCodex, claudeCode } from './vendors/index.ts'
 
@@ -26,7 +26,7 @@ export interface StringListSection {
   readonly ids?: unknown
 }
 
-export interface HarnessSection {
+export interface BackpackSection {
   readonly ids?: unknown
   readonly releases?: unknown
 }
@@ -36,11 +36,11 @@ export interface LocalSourceSection {
 }
 
 export interface LocalDevelopmentConfiguration {
-  readonly harness: string
+  readonly backpack: string
   readonly path: string
 }
 
-/** A `[locals]` table of harness `owner/name` identities to remembered checkout paths, sorted by harness. */
+/** A `[locals]` table of backpack `owner/name` identities to remembered checkout paths, sorted by backpack. */
 export const inspectLocalsTable = (
   value: unknown,
   errors: string[],
@@ -52,28 +52,28 @@ export const inspectLocalsTable = (
     return []
   }
   const locals: LocalDevelopmentConfiguration[] = []
-  for (const [harness, entry] of Object.entries(value)) {
-    if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(harness)) {
-      errors.push(`locals.${harness} must name a harness owner/name identifier`)
+  for (const [identifier, entry] of Object.entries(value)) {
+    if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(identifier)) {
+      errors.push(`locals.${identifier} must name a backpack owner/name identifier`)
       continue
     }
-    if (!isRecord(entry)) errors.push(`locals.${harness} must be a TOML table`)
+    if (!isRecord(entry)) errors.push(`locals.${identifier} must be a TOML table`)
     const source: LocalSourceSection = isRecord(entry) ? entry : {}
     for (const key of Object.keys(source)) {
-      if (key !== 'path') warnings.push(`locals.${harness} has unrecognised key ${key}`)
+      if (key !== 'path') warnings.push(`locals.${identifier} has unrecognised key ${key}`)
     }
     if (typeof source.path !== 'string' || !source.path) {
-      errors.push(`locals.${harness}.path must be a non-empty string`)
+      errors.push(`locals.${identifier}.path must be a non-empty string`)
       continue
     }
-    const backpack = backpackIdentifier(harness)
-    if (locals.some((local) => local.harness === backpack)) {
+    const backpack = backpackIdentifier(identifier)
+    if (locals.some((local) => local.backpack === backpack)) {
       errors.push(`locals names ${backpack} under both its backpack and its retired harness spelling`)
       continue
     }
-    locals.push({ harness: backpack, path: source.path })
+    locals.push({ backpack, path: source.path })
   }
-  return locals.toSorted((left, right) => left.harness.localeCompare(right.harness))
+  return locals.toSorted((left, right) => left.backpack.localeCompare(right.backpack))
 }
 
 export interface RepositoriesSection {
@@ -84,7 +84,7 @@ export interface UserConfigurationInspection {
   readonly path: string
   readonly state: 'missing' | 'valid' | 'invalid'
   readonly agents: readonly string[]
-  readonly harnesses: readonly string[]
+  readonly backpacks: readonly string[]
   readonly skills: readonly string[]
   /** `config.toml` `[locals]` entries, read only as one-time migration input to the host-local file. */
   readonly legacyLocals: readonly LocalDevelopmentConfiguration[]

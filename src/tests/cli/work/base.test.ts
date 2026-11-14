@@ -7,7 +7,7 @@ const WORK = '+/_WORK/ex.reg.alpha'
 const declaration = (repository: string): string =>
   [
     '[repo]',
-    'harnesses = ["example/harness"]',
+    'backpacks = ["example/backpack"]',
     '',
     '[skills.ki-repo-project]',
     '',
@@ -18,7 +18,7 @@ const declaration = (repository: string): string =>
     ''
   ].join('\n')
 
-interface Harness {
+interface Backpack {
   /** The base commit every document is written against, abbreviated as a document writes it. */
   readonly base: string
   /** A commit on the checkout's main that origin/main does not hold. */
@@ -26,38 +26,38 @@ interface Harness {
 }
 
 /**
- * A harness checkout whose origin/main has moved on from the base: one touched standard modified, one renamed, one
+ * A backpack checkout whose origin/main has moved on from the base: one touched standard modified, one renamed, one
  * deleted, one added, one file renamed into a touched folder, and one standard left alone; then an unpushed commit.
  */
-const harness = async (box: Sandbox): Promise<Harness> => {
-  const git = (arguments_: readonly string[]) => box.root.git(arguments_, 'harness')
+const backpack = async (box: Sandbox): Promise<Backpack> => {
+  const git = (arguments_: readonly string[]) => box.root.git(arguments_, 'backpack')
   await git(['init', '-q', '-b', 'main'])
   for (const path of ['skills/a/standard.md', 'skills/b/old.md', 'skills/c/gone.md', 'skills/d/steady.md'])
-    await box.root.write(`harness/${path}`, `# ${path}\n`)
-  await box.root.write('harness/docs/elsewhere.md', '# elsewhere\n')
+    await box.root.write(`backpack/${path}`, `# ${path}\n`)
+  await box.root.write('backpack/docs/elsewhere.md', '# elsewhere\n')
   await git(['add', '-A'])
   await git(['commit', '-q', '-m', 'base'])
   const base = (await git(['rev-parse', 'HEAD'])).slice(0, 9)
-  await box.root.write('harness/skills/a/standard.md', '# a, revised\n')
+  await box.root.write('backpack/skills/a/standard.md', '# a, revised\n')
   await git(['mv', 'skills/b/old.md', 'skills/b/new.md'])
   await git(['rm', '-q', 'skills/c/gone.md'])
-  await box.root.mkdir('harness/skills/e')
+  await box.root.mkdir('backpack/skills/e')
   await git(['mv', 'docs/elsewhere.md', 'skills/e/arrived.md'])
-  await box.root.write('harness/skills/f/added.md', '# added\n')
-  await box.root.write('harness/README.md', '# unrelated\n')
+  await box.root.write('backpack/skills/f/added.md', '# added\n')
+  await box.root.write('backpack/README.md', '# unrelated\n')
   await git(['add', '-A'])
   await git(['commit', '-q', '-m', 'main moves on'])
   await git(['update-ref', 'refs/remotes/origin/main', 'HEAD'])
-  await box.root.write('harness/skills/a/standard.md', '# a, unpushed\n')
+  await box.root.write('backpack/skills/a/standard.md', '# a, unpushed\n')
   await git(['commit', '-q', '-am', 'unpushed'])
   return { base, unpushed: await git(['rev-parse', 'HEAD']) }
 }
 
-/** The registry: the harness under its Base: name, the principal holding the documents, and a checkout with no origin/main. */
+/** The registry: the backpack under its Base: name, the principal holding the documents, and a checkout with no origin/main. */
 const register = async (box: Sandbox): Promise<string> => {
   const root = await realpath(box.root.path)
   const entries = [
-    ['ki-agent-backpack', 'example/ki-agent-backpack', 'harness'],
+    ['ki-agent-backpack', 'example/ki-agent-backpack', 'backpack'],
     ['principal', 'example/principal', 'principal'],
     ['unfetched', 'example/unfetched', 'unfetched']
   ]
@@ -100,7 +100,7 @@ const verdicts = (json: { documents: { path: string; verdict: string; files: unk
 describe('ki work base', () => {
   test('reports moved, renamed, deleted and current documents against origin/main, and skips the graduated', async () => {
     const box = await sandbox()
-    const { base } = await harness(box)
+    const { base } = await backpack(box)
     await register(box)
     await document(box, 'moved.change.md', [
       'Status: draft',
@@ -176,7 +176,7 @@ describe('ki work base', () => {
 
   test('reports unknown, never a pass, where the base or the touched files cannot be checked', async () => {
     const box = await sandbox()
-    const { base, unpushed } = await harness(box)
+    const { base, unpushed } = await backpack(box)
     await register(box)
     await box.root.git(['init', '-q', '-b', 'main'], 'unfetched')
     await document(box, 'missing.change.md', ['Base: ki-agent-backpack@deadbeef0', 'Touches: `skills/a/standard.md`'])
@@ -187,7 +187,7 @@ describe('ki work base', () => {
     await document(box, 'no-base.change.md', ['Touches: `skills/a/standard.md`'])
     await document(box, 'no-touches.change.md', [`Base: ki-agent-backpack@${base}`])
     await document(box, 'malformed.change.md', ['Base: ki-agent-backpack', 'Touches: `skills/a/standard.md`'])
-    await document(box, 'unregistered.change.md', ['Base: other-harness@abcd123', 'Touches: `skills/a/standard.md`'])
+    await document(box, 'unregistered.change.md', ['Base: other-backpack@abcd123', 'Touches: `skills/a/standard.md`'])
     await document(box, 'unfetched.change.md', ['Base: unfetched@abcd123', 'Touches: `skills/a/standard.md`'])
     await document(box, 'elsewhere.change.md', [
       `Base: ki-agent-backpack@${base}`,
@@ -214,7 +214,7 @@ describe('ki work base', () => {
       'missing.change.md': {
         verdict: 'unknown',
         files: [],
-        reason: `base deadbeef0 is not in ki-agent-backpack at ${checkout}/harness; fetch it, or correct the Base: line`
+        reason: `base deadbeef0 is not in ki-agent-backpack at ${checkout}/backpack; fetch it, or correct the Base: line`
       },
       'no-base.change.md': { verdict: 'unknown', files: [], reason: 'no Base: line' },
       'no-touches.change.md': { verdict: 'unknown', files: [], reason: 'no Touches: line' },
@@ -231,7 +231,7 @@ describe('ki work base', () => {
       'unregistered.change.md': {
         verdict: 'unknown',
         files: [],
-        reason: 'other-harness is not in the local registry'
+        reason: 'other-backpack is not in the local registry'
       }
     })
     expect(json.documents.find((entry: { path: string }) => entry.path.endsWith('malformed.change.md')).base).toBe(null)
@@ -239,7 +239,7 @@ describe('ki work base', () => {
 
   test('renders the text report and exits 0 when every document is current', async () => {
     const box = await sandbox()
-    const { base } = await harness(box)
+    const { base } = await backpack(box)
     await register(box)
     await document(box, 'current.change.md', [`Base: ki-agent-backpack@${base}`, 'Touches: `skills/d/steady.md`'])
     await document(box, 'graduated.change.md', ['Status: Graduated 8 November 2026', 'Touches: `skills/a/standard.md`'])
@@ -263,7 +263,7 @@ describe('ki work base', () => {
 
   test('renders moved files and unknown reasons as text and exits 1', async () => {
     const box = await sandbox()
-    const { base } = await harness(box)
+    const { base } = await backpack(box)
     await register(box)
     await document(box, 'renamed.change.md', [
       `Base: ki-agent-backpack@${base}`,
@@ -294,7 +294,7 @@ describe('ki work base', () => {
 
   test('reads only the repository --repo names, keyed by the registry or else by its folder name', async () => {
     const box = await sandbox()
-    const { base } = await harness(box)
+    const { base } = await backpack(box)
     await register(box)
     await document(box, 'current.change.md', [`Base: ki-agent-backpack@${base}`, 'Touches: `skills/d/steady.md`'])
     await box.root.write('loose/.ki.toml', declaration('https://github.com/example/loose'))

@@ -8,7 +8,7 @@ describe('[ki bootstrap]', () => {
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')
     await box.data.write(
-      'ki/harnesses/knowledgeislands/ki-agent-backpack/skills/governance/ki-authoring/SKILL.md',
+      'ki/backpacks/knowledgeislands/ki-agent-backpack/skills/governance/ki-authoring/SKILL.md',
       '---\nname: ki-authoring\nki-depends-on: []\n---\n'
     )
 
@@ -20,7 +20,7 @@ describe('[ki bootstrap]', () => {
     expect(bootstrapped).toEqual({
       exitCode: 0,
       output: `created KI agent configuration for chatgpt-codex
-canonical harness already installed\tarchive abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404
+canonical backpack already installed\tarchive abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404
 ki-bootstrap for chatgpt-codex installed
 ki-next for chatgpt-codex installed
 ki-plan for chatgpt-codex installed
@@ -33,7 +33,7 @@ ki-work-design for chatgpt-codex installed
     })
     expect(repeated).toEqual({
       exitCode: 0,
-      output: `canonical harness already installed\tarchive abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404
+      output: `canonical backpack already installed\tarchive abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404
 ki-bootstrap for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
 ki-plan for chatgpt-codex already installed
@@ -47,8 +47,8 @@ ki-work-design for chatgpt-codex already installed
     expect(refreshed).toEqual({
       exitCode: 0,
       output: `refreshed KI agents: chatgpt-codex
-canonical harness already installed\tarchive abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404
-refreshed ki configuration: 1 agents, 1 harnesses, 8 skills
+canonical backpack already installed\tarchive abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404
+refreshed ki configuration: 1 agents, 1 backpacks, 8 skills
 ki-bootstrap for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
 ki-plan for chatgpt-codex already installed
@@ -60,7 +60,7 @@ ki-work-design for chatgpt-codex already installed
 `
     })
     expect(checked.output).toContain('✓ Configuration:')
-    expect(checked.output).toContain('✓ Harness inventory: 1 installed')
+    expect(checked.output).toContain('✓ Backpack inventory: 1 installed')
     expect(checked.output).toContain('✓ Agent chatgpt-codex: ready')
     expect(checked.output).not.toContain('✗')
     const config = await box.config.read('ki/config.toml')
@@ -70,7 +70,7 @@ ids = [
   "chatgpt-codex",
 ]
 
-[harnesses]
+[backpacks]
 ids = [
   "knowledgeislands/ki-agent-backpack",
 ]
@@ -109,11 +109,11 @@ backpack = "knowledgeislands/ki-agent-backpack"
     await box.setupAgentHome('chatgpt-codex')
     const legacyConfig = `schema = 1
 agents = ["chatgpt-codex"]
-harnesses = []
+backpacks = []
 skills = []
 `
     await box.config.write('ki/config.toml', legacyConfig)
-    await box.setupCanonicalHarness()
+    await box.setupCanonicalBackpack()
 
     const refreshed = await box.run('ki bootstrap --refresh')
     const config = await box.config.read('ki/config.toml')
@@ -129,10 +129,10 @@ ids = [
 
   test('preserves registered local and repository settings while refreshing configuration', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('chatgpt-codex')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     const repository = await realpath(box.project.path)
     const existing = await box.config.read('ki/config.toml')
     await box.config.write(
@@ -141,9 +141,9 @@ ids = [
     )
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
+      '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
     )
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     expect(await box.config.read('ki/config.toml')).toContain('[repositories]')
 
     const migrated = await box.run('ki bootstrap --refresh')
@@ -153,7 +153,7 @@ ids = [
     )
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
+      '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     box.setRunner(async (command, arguments_) =>
       command === 'git' && arguments_.join(' ') === `-C ${repository} remote get-url origin`
@@ -165,7 +165,7 @@ ids = [
     expect(migrated.output).toContain('migrated local KI repository registry: 1 repositories')
     expect(refreshed.exitCode).toBe(0)
     expect(await box.state.read('ki/locals.toml')).toBe(
-      `[locals."knowledgeislands/ki-agent-backpack"]\npath = ${JSON.stringify(harnessPath)}\n`
+      `[locals."knowledgeislands/ki-agent-backpack"]\npath = ${JSON.stringify(backpackPath)}\n`
     )
     expect(await box.config.read('ki/config.toml')).not.toContain('[repositories]')
     expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(repository)}`)
@@ -182,7 +182,7 @@ ids = [
       'ki/config.toml',
       `${existing}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`
     )
-    await box.project.write('.ki.toml', '[repo]\nharnesses = ["knowledgeislands/ki-agent-backpack"]\n')
+    await box.project.write('.ki.toml', '[repo]\nbackpacks = ["knowledgeislands/ki-agent-backpack"]\n')
     box.setRunner(async () => ({ exitCode: 1, output: 'no origin\n' }))
 
     const failed = await box.run('ki bootstrap --refresh')
@@ -207,7 +207,7 @@ ids = [
     const source = join(
       box.data.path,
       'ki',
-      'harnesses',
+      'backpacks',
       'knowledgeislands',
       'ki-agent-backpack',
       'skills',
@@ -236,7 +236,7 @@ ids = [
     const refused = await foreign.run('ki bootstrap --refresh')
 
     expect(refreshed.exitCode).toBe(0)
-    expect(await fresh.config.read('ki/config.toml')).toContain('[harnesses]')
+    expect(await fresh.config.read('ki/config.toml')).toContain('[backpacks]')
     expect(refused.output).toContain('chatgpt-codex ki-bootstrap skill is not KI-managed')
   })
 
@@ -267,7 +267,7 @@ ids = ["chatgpt-codex", 5]
 
     expect(bootstrapped.exitCode).toBe(1)
     expect(bootstrapped.output).toContain(
-      'ki configuration must declare an agents.ids string array and optional locals.<harness-id>.path strings'
+      'ki configuration must declare an agents.ids string array and optional locals.<backpack-id>.path strings'
     )
   })
 
@@ -321,12 +321,12 @@ ids = ["claude-code"]
     expect(rejectedAgents).toEqual({
       exitCode: 1,
       output:
-        'ki: error: ki configuration must declare an agents.ids string array and optional locals.<harness-id>.path strings\n'
+        'ki: error: ki configuration must declare an agents.ids string array and optional locals.<backpack-id>.path strings\n'
     })
     expect(rejectedLocal).toEqual({
       exitCode: 1,
       output:
-        'ki: error: ki configuration must declare an agents.ids string array and optional locals.<harness-id>.path strings\n'
+        'ki: error: ki configuration must declare an agents.ids string array and optional locals.<backpack-id>.path strings\n'
     })
   })
 
@@ -354,10 +354,10 @@ ids = ["claude-code"]
   test('uses a configured agent’s repository skill path when linking a repository skill', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
-    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
+    await box.setupExampleBackpack({ name: 'example-skill', prefix: 'example' })
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n'
+      '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n'
     )
     await box.run('ki bootstrap')
 
@@ -371,7 +371,7 @@ ids = ["claude-code"]
 
   test('reports an empty detected inventory when creating and refreshing configuration', async () => {
     const box = await sandbox()
-    await box.setupCanonicalHarness()
+    await box.setupCanonicalBackpack()
 
     const created = await box.run('ki bootstrap')
     const refreshed = await box.run('ki bootstrap --refresh')
@@ -380,10 +380,10 @@ ids = ["claude-code"]
     expect(refreshed.output).toContain('refreshed KI agents: none')
   })
 
-  test('refuses an installed canonical harness missing a required bootstrap skill', async () => {
+  test('refuses an installed canonical backpack missing a required bootstrap skill', async () => {
     const box = await sandbox()
-    await box.setupCanonicalHarness()
-    await rm(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agent-backpack/skills/change-management/ki-implement`, {
+    await box.setupCanonicalBackpack()
+    await rm(`${box.data.path}/ki/backpacks/knowledgeislands/ki-agent-backpack/skills/change-management/ki-implement`, {
       recursive: true
     })
 
@@ -392,13 +392,13 @@ ids = ["claude-code"]
     expect(bootstrapped).toEqual({
       exitCode: 1,
       output:
-        'created KI agent configuration for no detected agents\nki: error: canonical harness is incomplete: missing required bootstrap skill ki-keystone\n'
+        'created KI agent configuration for no detected agents\nki: error: canonical backpack is incomplete: missing required bootstrap skill ki-keystone\n'
     })
   })
 
   test('keeps an active local development binding without contacting the archive', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.setupAgentHome('chatgpt-codex')
     await box.run('ki bootstrap')
@@ -406,7 +406,7 @@ ids = ["claude-code"]
       'dev/knowledgeislands/ki-agent-backpack/skills/governance/ki-authoring/SKILL.md',
       '---\nname: ki-authoring\nki-depends-on: []\n---\n'
     )
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     await box.run('ki dev local on')
     expect((await box.run('ki skill add ki-authoring')).exitCode).toBe(0)
     box.setFetcher(async () => {
@@ -418,58 +418,58 @@ ids = ["claude-code"]
     const doctor = await box.run('ki doctor')
 
     expect(bootstrapped.exitCode).toBe(0)
-    expect(bootstrapped.output).toContain(`canonical harness kept in local development\t${harnessPath}\n`)
+    expect(bootstrapped.output).toContain(`canonical backpack kept in local development\t${backpackPath}\n`)
     expect(bootstrapped.output).not.toContain('warning')
     expect(refreshed.exitCode).toBe(0)
-    expect(refreshed.output).toContain(`canonical harness kept in local development\t${harnessPath}\n`)
+    expect(refreshed.output).toContain(`canonical backpack kept in local development\t${backpackPath}\n`)
     expect(refreshed.output).toContain('ki-bootstrap for chatgpt-codex already installed')
-    expect(await realpath(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agent-backpack`)).toBe(harnessPath)
-    expect(await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agent-backpack')).toBe(true)
+    expect(await realpath(`${box.data.path}/ki/backpacks/knowledgeislands/ki-agent-backpack`)).toBe(backpackPath)
+    expect(await box.data.isSymlink('ki/backpacks/knowledgeislands/ki-agent-backpack')).toBe(true)
     for (const home of ['.claude', '.agents'])
       expect(await realpath(`${box.home.path}/${home}/skills/ki-bootstrap`)).toBe(
-        `${harnessPath}/skills/keystone/ki-bootstrap`
+        `${backpackPath}/skills/keystone/ki-bootstrap`
       )
     for (const home of ['.claude', '.agents'])
       expect(await realpath(`${box.home.path}/${home}/skills/ki-authoring`)).toBe(
-        `${harnessPath}/skills/governance/ki-authoring`
+        `${backpackPath}/skills/governance/ki-authoring`
       )
     expect(await box.config.read('ki/config.toml')).toContain('[skills.ki-authoring]')
     expect(doctor.exitCode).toBe(0)
-    expect(doctor.output).toContain(`✓ Local development knowledgeislands/ki-agent-backpack: active ${harnessPath}`)
+    expect(doctor.output).toContain(`✓ Local development knowledgeislands/ki-agent-backpack: active ${backpackPath}`)
     expect(doctor.output).not.toContain('✗')
   })
 
   test('rolls back local skill projections when refresh fails after linking them', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     await box.run('ki dev local on')
     const configuration = await box.config.read('ki/config.toml')
     const skills = `${box.home.path}/.claude/skills`
     await unlink(`${skills}/ki-recap`)
     await unlink(`${skills}/ki-plan`)
     await symlink(`${box.root.path}/elsewhere`, `${skills}/ki-plan`, 'dir')
-    await box.data.write('ki/harnesses/stray', '')
+    await box.data.write('ki/backpacks/stray', '')
 
     const refreshed = await box.run('ki bootstrap --refresh')
 
     expect(refreshed.exitCode).toBe(1)
-    expect(refreshed.output).toContain('installed harnesses directory contains an unsafe owner entry stray')
+    expect(refreshed.output).toContain('installed backpacks directory contains an unsafe owner entry stray')
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
-    expect(await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agent-backpack')).toBe(true)
+    expect(await box.data.isSymlink('ki/backpacks/knowledgeislands/ki-agent-backpack')).toBe(true)
     expect(await lstat(`${skills}/ki-recap`).catch(() => undefined)).toBeUndefined()
     expect(await readlink(`${skills}/ki-plan`)).toBe(`${box.root.path}/elsewhere`)
-    expect(await realpath(`${skills}/ki-bootstrap`)).toBe(`${harnessPath}/skills/keystone/ki-bootstrap`)
+    expect(await realpath(`${skills}/ki-bootstrap`)).toBe(`${backpackPath}/skills/keystone/ki-bootstrap`)
   })
 
   test('warns loudly before restoring the archive when a local development binding cannot be kept', async () => {
-    const link = 'ki/harnesses/knowledgeislands/ki-agent-backpack'
-    const prepare = async (box: Awaited<ReturnType<typeof sandbox>>, harnessPath: string) => {
+    const link = 'ki/backpacks/knowledgeislands/ki-agent-backpack'
+    const prepare = async (box: Awaited<ReturnType<typeof sandbox>>, backpackPath: string) => {
       await box.setupAgentHome('claude-code')
       await box.run('ki bootstrap')
-      await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+      await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
       await box.run('ki dev local on')
       box.setFetcher(async () => {
         throw new Error('offline')
@@ -479,21 +479,21 @@ ids = ["claude-code"]
     const advice = `${restoring} To resume, run ki dev local on knowledgeislands/ki-agent-backpack once its checkout is available\n`
 
     const missing = await sandbox()
-    const missingPath = await missing.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const missingPath = await missing.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await prepare(missing, missingPath)
     await rm(missingPath, { recursive: true })
     const missingResult = await missing.run('ki bootstrap')
 
     const mismatched = await sandbox()
-    const configured = await mismatched.setupLocalCanonicalHarness('dev/current/knowledgeislands/ki-agent-backpack')
-    const other = await mismatched.setupLocalCanonicalHarness('dev/other/knowledgeislands/ki-agent-backpack')
+    const configured = await mismatched.setupLocalCanonicalBackpack('dev/current/knowledgeislands/ki-agent-backpack')
+    const other = await mismatched.setupLocalCanonicalBackpack('dev/other/knowledgeislands/ki-agent-backpack')
     await prepare(mismatched, configured)
     await unlink(`${mismatched.data.path}/${link}`)
     await symlink(other, `${mismatched.data.path}/${link}`, 'dir')
     const mismatchedResult = await mismatched.run('ki bootstrap')
 
     const unconfigured = await sandbox()
-    const unconfiguredPath = await unconfigured.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const unconfiguredPath = await unconfigured.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await prepare(unconfigured, unconfiguredPath)
     await unconfigured.state.write('ki/locals.toml', '')
     const unconfiguredResult = await unconfigured.run('ki bootstrap')
@@ -502,7 +502,7 @@ ids = ["claude-code"]
     expect(missingResult.exitCode).toBe(1)
     expect(missingResult.stderr).toContain(`${warning} its checkout ${missingPath} is missing; ${advice}`)
     expect(missingResult.stdout).not.toContain('warning')
-    expect(missingResult.output).toContain('could not download configured harness knowledgeislands/ki-agent-backpack')
+    expect(missingResult.output).toContain('could not download configured backpack knowledgeislands/ki-agent-backpack')
     expect(mismatchedResult.exitCode).toBe(1)
     expect(mismatchedResult.stderr).toContain(
       `${warning} its link targets ${other}, not the configured checkout ${configured}; ${advice}`
@@ -517,24 +517,24 @@ ids = ["claude-code"]
 
   test('fails closed without leaving local development when the active checkout is incomplete', async () => {
     const box = await sandbox()
-    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agent-backpack')
+    const backpackPath = await box.setupLocalCanonicalBackpack('dev/knowledgeislands/ki-agent-backpack')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
     await box.run('ki dev local on')
-    await rm(`${harnessPath}/skills/keystone/ki-bootstrap`, { recursive: true })
+    await rm(`${backpackPath}/skills/keystone/ki-bootstrap`, { recursive: true })
 
     const bootstrapped = await box.run('ki bootstrap')
 
     expect(bootstrapped.exitCode).toBe(1)
     expect(bootstrapped.output).toContain('does not provide ki-keystone')
-    expect(await realpath(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agent-backpack`)).toBe(harnessPath)
+    expect(await realpath(`${box.data.path}/ki/backpacks/knowledgeislands/ki-agent-backpack`)).toBe(backpackPath)
   })
 
   test('refresh ignores a dangling managed link and a non-link skill entry', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
-    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
+    await box.setupExampleBackpack({ name: 'example-skill', prefix: 'example' })
     await box.run('ki bootstrap')
     await box.run('ki skill add example-skill')
     const skillDirectory = join(box.home.path, '.claude', 'skills')
@@ -547,14 +547,14 @@ ids = ["claude-code"]
     const config = await box.config.read('ki/config.toml')
 
     expect(refreshed.exitCode).toBe(0)
-    expect(refreshed.output).toContain('refreshed ki configuration: 1 agents, 2 harnesses, 8 skills')
+    expect(refreshed.output).toContain('refreshed ki configuration: 1 agents, 2 backpacks, 8 skills')
     expect(config).not.toContain('[skills.example-skill]')
   })
 
   test('keeps user skills beyond the minimum on bootstrap and refresh', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
-    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
+    await box.setupExampleBackpack({ name: 'example-skill', prefix: 'example' })
     await box.run('ki bootstrap')
     const added = await box.run('ki skill add example-skill')
 

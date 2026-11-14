@@ -1,69 +1,69 @@
 import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, readdir, rename, rm } from 'node:fs/promises'
 import { basename, join } from 'node:path'
-import { KiError } from '../errors.ts'
-import { acquireVerifiedArchive, extractArchive, type Fetcher } from '../harness/acquire.ts'
-import { bootstrapUserSkills, minimumBootstrapUserSkills } from '../harness/bootstrap-capabilities.ts'
-import { sameBackpack } from '../harness/identity.ts'
+import { acquireVerifiedArchive, extractArchive, type Fetcher } from '../backpack/acquire.ts'
+import { bootstrapUserSkills, minimumBootstrapUserSkills } from '../backpack/bootstrap-capabilities.ts'
+import { sameBackpack } from '../backpack/identity.ts'
 import {
-  canonicalHarnessIdentifier,
-  discoverInstalledHarnesses,
-  type InstalledHarness,
-  inspectInstalledHarnessRoot,
+  canonicalBackpackIdentifier,
+  discoverInstalledBackpacks,
+  type InstalledBackpack,
+  inspectInstalledBackpackRoot,
   parkedPayloadEntry,
-  readInstalledHarness,
-  requireUniqueHarnessPrefixes
-} from '../harness/inspection.ts'
+  readInstalledBackpack,
+  requireUniqueBackpackPrefixes
+} from '../backpack/inspection.ts'
+import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
 import {
+  backpackDirectory,
+  backpackIdentifierPattern,
+  backpackMetadataFile,
   ensureDirectory,
-  harnessDirectory,
-  harnessIdentifier,
-  harnessMetadataFile,
   payloadRoots,
   physicalDirectory
-} from './harness-paths.ts'
+} from './backpack-paths.ts'
 import { createInstallStagingArtifact } from './managed-artifacts.ts'
-import { readHarnessRegistry } from './registry.ts'
+import { readBackpackRegistry } from './registry.ts'
 
-export type { Fetcher } from '../harness/acquire.ts'
+export type { Fetcher } from '../backpack/acquire.ts'
 
-export interface HarnessInstallationOptions {
+export interface BackpackInstallationOptions {
   /** Capabilities the replacement must retain, so active projections remain valid. */
   readonly requiredCapabilities?: readonly string[]
   /** Give canonical bootstrap inventory failures their actionable archive diagnostic. */
   readonly requiredCapabilitiesContext?: 'canonical-bootstrap'
-  /** Replace an existing verified harness only after the replacement is fully inspected. */
+  /** Replace an existing verified backpack only after the replacement is fully inspected. */
   readonly replace?: boolean
-  /** Restore the exact Harness whose recognised development projection is active. */
+  /** Restore the exact backpack whose recognised development projection is active. */
   readonly allowDevelopmentReplace?: boolean
 }
 
-export interface HarnessInstallation {
+export interface BackpackInstallation {
   readonly installed: boolean
   readonly replaced: boolean
   readonly archiveSha256: string
 }
 
-const requireCapabilities = (harness: InstalledHarness, options: HarnessInstallationOptions): void => {
+const requireCapabilities = (backpack: InstalledBackpack, options: BackpackInstallationOptions): void => {
   // A canonical backpack may still offer the retired bootstrap skills for this one release.
   const required = new Set(
     options.requiredCapabilitiesContext === 'canonical-bootstrap'
-      ? bootstrapUserSkills(harness.capabilities.map((capability) => capability.name))
+      ? bootstrapUserSkills(backpack.capabilities.map((capability) => capability.name))
       : (options.requiredCapabilities ?? [])
   )
   for (const capability of required) {
-    if (!harness.capabilities.some((candidate) => candidate.name === capability)) {
+    if (!backpack.capabilities.some((candidate) => candidate.name === capability)) {
       if (options.requiredCapabilitiesContext === 'canonical-bootstrap') {
-        throw new KiError(`canonical harness is incomplete: missing required bootstrap skill ${capability}`, 1)
+        throw new KiError(`canonical backpack is incomplete: missing required bootstrap skill ${capability}`, 1)
       }
-      throw new KiError(`harness ${harness.id} does not provide skill ${capability}`, 1)
+      throw new KiError(`backpack ${backpack.id} does not provide skill ${capability}`, 1)
     }
   }
 }
 
-export const installHarness = async (
+export const installBackpack = async (
   configurationDirectory: string,
   dataDirectory: string,
   stateDirectory: string,
@@ -71,27 +71,28 @@ export const installHarness = async (
   fetcher: Fetcher,
   runner: Runner,
   environment: Environment,
-  options: HarnessInstallationOptions = {}
-): Promise<HarnessInstallation> => {
-  if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
-  const releases = await readHarnessRegistry(configurationDirectory)
+  options: BackpackInstallationOptions = {}
+): Promise<BackpackInstallation> => {
+  if (!backpackIdentifierPattern.test(identifier))
+    throw new KiError('backpack identifier must be an owner/name identifier', 2)
+  const releases = await readBackpackRegistry(configurationDirectory)
   const release = releases.find((candidate) => sameBackpack(candidate.id, identifier))
-  if (!release) throw new KiError(`harness ${identifier} is not configured in the immutable release registry`, 1)
+  if (!release) throw new KiError(`backpack ${identifier} is not configured in the immutable release registry`, 1)
   const owner = identifier.slice(0, identifier.indexOf('/'))
-  const harnesses = join(dataDirectory, 'harnesses')
-  await ensureDirectory(harnesses, 'installed harnesses directory')
-  const ownerDirectory = join(harnesses, owner)
-  await ensureDirectory(ownerDirectory, `installed harness owner ${owner}`)
-  const destination = harnessDirectory(dataDirectory, identifier)
+  const backpacks = join(dataDirectory, 'backpacks')
+  await ensureDirectory(backpacks, 'installed backpacks directory')
+  const ownerDirectory = join(backpacks, owner)
+  await ensureDirectory(ownerDirectory, `installed backpack owner ${owner}`)
+  const destination = backpackDirectory(dataDirectory, identifier)
   const existing = await lstat(destination).catch(() => undefined)
   if (existing) {
     const developmentLink = existing.isSymbolicLink()
     // A replaced development link may no longer resolve, so only the verified candidate's inventory is required.
     if (!options.replace || !developmentLink)
-      requireCapabilities(await readInstalledHarness(dataDirectory, identifier), options)
+      requireCapabilities(await readInstalledBackpack(dataDirectory, identifier), options)
     if (!options.replace) return { installed: false, replaced: false, archiveSha256: release.sha256 }
     if (developmentLink && !options.allowDevelopmentReplace)
-      throw new KiError(`harness ${identifier} is development-linked; run ki dev local off before replacing it`, 1)
+      throw new KiError(`backpack ${identifier} is development-linked; run ki dev local off before replacing it`, 1)
   }
 
   const payload = await acquireVerifiedArchive(fetcher, release, { runner, environment })
@@ -102,11 +103,11 @@ export const installHarness = async (
     await mkdir(staging)
     await artifact.transition('active')
     await extractArchive(payload, staging)
-    const candidate = await inspectInstalledHarnessRoot(staging, identifier)
+    const candidate = await inspectInstalledBackpackRoot(staging, identifier)
     requireCapabilities(candidate, options)
     // The slot being replaced may be a development link whose checkout is gone, so it is not read.
-    const installed = await discoverInstalledHarnesses(dataDirectory, { except: identifier })
-    requireUniqueHarnessPrefixes([...installed, candidate])
+    const installed = await discoverInstalledBackpacks(dataDirectory, { except: identifier })
+    requireUniqueBackpackPrefixes([...installed, candidate])
     if (!existing) {
       await artifact.transition('retired')
       await rename(staging, destination)
@@ -135,7 +136,7 @@ export const installHarness = async (
   }
 }
 
-export const restoreHarness = async (
+export const restoreBackpack = async (
   configurationDirectory: string,
   dataDirectory: string,
   stateDirectory: string,
@@ -144,12 +145,12 @@ export const restoreHarness = async (
   runner: Runner,
   environment: Environment
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
-  installHarness(configurationDirectory, dataDirectory, stateDirectory, identifier, fetcher, runner, environment, {
+  installBackpack(configurationDirectory, dataDirectory, stateDirectory, identifier, fetcher, runner, environment, {
     replace: Boolean(
-      (await lstat(harnessDirectory(dataDirectory, identifier)).catch(() => undefined))?.isSymbolicLink()
+      (await lstat(backpackDirectory(dataDirectory, identifier)).catch(() => undefined))?.isSymbolicLink()
     ),
     allowDevelopmentReplace: true,
-    ...(sameBackpack(identifier, canonicalHarnessIdentifier)
+    ...(sameBackpack(identifier, canonicalBackpackIdentifier)
       ? {
           requiredCapabilities: minimumBootstrapUserSkills,
           requiredCapabilitiesContext: 'canonical-bootstrap' as const
@@ -157,7 +158,7 @@ export const restoreHarness = async (
       : {})
   })
 
-export const restoreCanonicalHarness = async (
+export const restoreCanonicalBackpack = async (
   configurationDirectory: string,
   dataDirectory: string,
   stateDirectory: string,
@@ -165,48 +166,49 @@ export const restoreCanonicalHarness = async (
   runner: Runner,
   environment: Environment
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
-  restoreHarness(
+  restoreBackpack(
     configurationDirectory,
     dataDirectory,
     stateDirectory,
-    canonicalHarnessIdentifier,
+    canonicalBackpackIdentifier,
     fetcher,
     runner,
     environment
   )
 
-export const uninstallHarness = async (dataDirectory: string, identifier: string): Promise<void> => {
+export const uninstallBackpack = async (dataDirectory: string, identifier: string): Promise<void> => {
   // The public command validates both conditions before calling this filesystem primitive; retain its defensive core guard.
   /* v8 ignore next -- no public CLI path can bypass the command validation. */
-  if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
+  if (!backpackIdentifierPattern.test(identifier))
+    throw new KiError('backpack identifier must be an owner/name identifier', 2)
   /* v8 ignore next -- no public CLI path can bypass the command validation. */
-  if (sameBackpack(identifier, canonicalHarnessIdentifier))
-    throw new KiError(`the canonical harness ${identifier} cannot be uninstalled`, 1)
+  if (sameBackpack(identifier, canonicalBackpackIdentifier))
+    throw new KiError(`the canonical backpack ${identifier} cannot be uninstalled`, 1)
 
-  await readInstalledHarness(dataDirectory, identifier)
+  await readInstalledBackpack(dataDirectory, identifier)
   const owner = identifier.slice(0, identifier.indexOf('/'))
-  const harnesses = join(dataDirectory, 'harnesses')
-  const ownerDirectory = join(harnesses, owner)
-  await physicalDirectory(ownerDirectory, `installed harness owner ${owner}`)
-  const destination = harnessDirectory(dataDirectory, identifier)
-  await physicalDirectory(destination, `installed harness ${identifier}`)
+  const backpacks = join(dataDirectory, 'backpacks')
+  const ownerDirectory = join(backpacks, owner)
+  await physicalDirectory(ownerDirectory, `installed backpack owner ${owner}`)
+  const destination = backpackDirectory(dataDirectory, identifier)
+  await physicalDirectory(destination, `installed backpack ${identifier}`)
   const entries = await readdir(destination, { withFileTypes: true })
   if (
     !entries.length ||
     entries.some(
       (entry) =>
-        (entry.name !== harnessMetadataFile && !payloadRoots.includes(entry.name as (typeof payloadRoots)[number])) ||
-        (entry.name === harnessMetadataFile
+        (entry.name !== backpackMetadataFile && !payloadRoots.includes(entry.name as (typeof payloadRoots)[number])) ||
+        (entry.name === backpackMetadataFile
           ? !entry.isFile() || entry.isSymbolicLink()
           : !entry.isDirectory() || entry.isSymbolicLink())
     )
   ) {
-    throw new KiError(`installed harness ${identifier} has unrecognised state and will not be removed`, 1)
+    throw new KiError(`installed backpack ${identifier} has unrecognised state and will not be removed`, 1)
   }
   const removal = join(ownerDirectory, `.uninstall-${randomUUID()}`)
   await rename(destination, removal)
   try {
-    await inspectInstalledHarnessRoot(removal, identifier)
+    await inspectInstalledBackpackRoot(removal, identifier)
     await rm(removal, { recursive: true, force: true })
     return
     /* v8 ignore start -- Recovery needs a filesystem failure or replacement after the successful rename; no single CLI input can cause it. */

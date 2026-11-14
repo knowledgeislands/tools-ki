@@ -5,7 +5,7 @@
 import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 
-const DECLARATION = '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n'
+const DECLARATION = '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-example]\n'
 
 // A catalogue whose one item reports the findings the caller lists, each as `[status, message, level?]`.
 const rubric = (findings: string): string => `
@@ -49,7 +49,7 @@ export default {
 const repository = async (findings: string): Promise<Sandbox> => {
   const box = await sandbox()
   await box.project.write('.ki.toml', DECLARATION)
-  await box.setupExampleHarness({ rubric: rubric(findings) })
+  await box.setupExampleBackpack({ rubric: rubric(findings) })
   return box
 }
 

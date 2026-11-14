@@ -14,7 +14,7 @@ const evidenceCommit = '4'.repeat(40)
 
 const configuration = [
   '[repo]',
-  'harnesses = ["knowledgeislands/ki-agent-backpack"]',
+  'backpacks = ["knowledgeislands/ki-agent-backpack"]',
   '',
   '[skills.ki-repo-project]',
   '',

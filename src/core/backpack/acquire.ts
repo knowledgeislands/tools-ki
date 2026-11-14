@@ -5,14 +5,14 @@ import { gunzipSync } from 'node:zlib'
 import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
-import type { HarnessRelease } from '../storage/registry.ts'
-import { HARNESS_DECLARATION_FILE } from './inspection.ts'
+import type { BackpackRelease } from '../storage/registry.ts'
+import { BACKPACK_DECLARATION_FILE } from './inspection.ts'
 
 const decoder = new TextDecoder('utf-8', { fatal: true })
 
 export type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
 
-export interface HarnessAcquisitionContext {
+export interface BackpackAcquisitionContext {
   readonly environment: Environment
   readonly runner: Runner
 }
@@ -27,11 +27,11 @@ export const tarString = (archive: Uint8Array, start: number, length: number): s
 
 export const tarSize = (archive: Uint8Array, start: number): number => {
   const raw = tarString(archive, start, 12).trim()
-  if (!/^[0-7]*$/.test(raw)) throw new KiError('harness archive has an invalid tar entry size', 1)
+  if (!/^[0-7]*$/.test(raw)) throw new KiError('backpack archive has an invalid tar entry size', 1)
   const size = Number.parseInt(raw || '0', 8)
   // A twelve-byte octal tar size is necessarily a non-negative safe JavaScript integer.
   /* v8 ignore next */
-  if (!Number.isSafeInteger(size) || size < 0) throw new KiError('harness archive has an unsafe tar entry size', 1)
+  if (!Number.isSafeInteger(size) || size < 0) throw new KiError('backpack archive has an unsafe tar entry size', 1)
   return size
 }
 
@@ -46,8 +46,8 @@ interface ParsedTarEntry {
 }
 
 /**
- * Parses every payload entry and the root `.ki.toml` Harness source declaration,
- * optionally nested one level under a harness-source prefix, without writing anything
+ * Parses every payload entry and the root `.ki.toml` Backpack source declaration,
+ * optionally nested one level under a backpack-source prefix, without writing anything
  * to disk. Runtime projections such as `.agents/skills/` are source metadata, not payloads.
  */
 const parsePayloadEntries = (archive: Uint8Array): readonly ParsedTarEntry[] => {
@@ -64,27 +64,27 @@ const parsePayloadEntries = (archive: Uint8Array): readonly ParsedTarEntry[] => 
     const contentsStart = offset + 512
     const contentsEnd = contentsStart + size
     if (!safeRelativePath(path) || contentsEnd > archive.length)
-      throw new KiError('harness archive contains an unsafe entry', 1)
+      throw new KiError('backpack archive contains an unsafe entry', 1)
     const parts = path.split('/')
     const directPayload = parts[0] === 'skills' || parts[0] === 'subagents' || parts[0] === 'hooks'
-    const directMetadata = parts.length === 1 && parts[0] === HARNESS_DECLARATION_FILE
+    const directMetadata = parts.length === 1 && parts[0] === BACKPACK_DECLARATION_FILE
     const nested =
       !parts[0]?.startsWith('.') &&
       (parts[1] === 'skills' ||
         parts[1] === 'subagents' ||
         parts[1] === 'hooks' ||
-        (parts.length === 2 && parts[1] === HARNESS_DECLARATION_FILE))
+        (parts.length === 2 && parts[1] === BACKPACK_DECLARATION_FILE))
     if (directPayload || directMetadata || nested) {
       const entryPrefix = directPayload || directMetadata ? '' : (parts[0] as string)
       if (payloadPrefix !== undefined && payloadPrefix !== entryPrefix)
-        throw new KiError('harness archive mixes payload roots', 1)
+        throw new KiError('backpack archive mixes payload roots', 1)
       payloadPrefix = entryPrefix
       const payloadPath = parts.slice(directPayload || directMetadata ? 0 : 1).join('/')
       entries.push({ payloadPath, type, contentsStart, contentsEnd })
     }
     offset = contentsStart + Math.ceil(size / 512) * 512
   }
-  throw new KiError('harness archive is missing its terminating tar block', 1)
+  throw new KiError('backpack archive is missing its terminating tar block', 1)
 }
 
 export const extractArchive = async (payload: Uint8Array, target: string): Promise<void> => {
@@ -92,48 +92,48 @@ export const extractArchive = async (payload: Uint8Array, target: string): Promi
   try {
     archive = gunzipSync(payload)
   } catch {
-    throw new KiError('harness release must be a gzip-compressed tar archive', 1)
+    throw new KiError('backpack release must be a gzip-compressed tar archive', 1)
   }
   const entries = parsePayloadEntries(archive)
-  const metadata = entries.filter((entry) => entry.payloadPath === HARNESS_DECLARATION_FILE)
+  const metadata = entries.filter((entry) => entry.payloadPath === BACKPACK_DECLARATION_FILE)
   if (metadata.length !== 1)
     throw new KiError(
       metadata.length === 0
-        ? `harness archive must contain ${HARNESS_DECLARATION_FILE}`
-        : `harness archive must contain ${HARNESS_DECLARATION_FILE} exactly once`,
+        ? `backpack archive must contain ${BACKPACK_DECLARATION_FILE}`
+        : `backpack archive must contain ${BACKPACK_DECLARATION_FILE} exactly once`,
       1
     )
 
   let retainedPayload = 0
   for (const entry of entries) {
     if (entry.type === '5') {
-      if (entry.contentsEnd !== entry.contentsStart) throw new KiError('harness archive directory has contents', 1)
+      if (entry.contentsEnd !== entry.contentsStart) throw new KiError('backpack archive directory has contents', 1)
     } else if (entry.type !== '' && entry.type !== '0') {
-      throw new KiError('harness archive may contain only regular files and directories', 1)
+      throw new KiError('backpack archive may contain only regular files and directories', 1)
     }
     const destination = join(target, entry.payloadPath)
     // payloadPath passed safeRelativePath before this join; this only guards a future extraction refactor.
     /* v8 ignore next */
     if (relative(target, destination).startsWith('..'))
-      throw new KiError('harness archive entry escapes its staging directory', 1)
+      throw new KiError('backpack archive entry escapes its staging directory', 1)
     if (entry.type === '5') await mkdir(destination, { recursive: true })
     else {
       await mkdir(dirname(destination), { recursive: true })
       await writeFile(destination, archive.subarray(entry.contentsStart, entry.contentsEnd), { flag: 'wx' })
-      if (entry.payloadPath !== HARNESS_DECLARATION_FILE) retainedPayload += 1
+      if (entry.payloadPath !== BACKPACK_DECLARATION_FILE) retainedPayload += 1
     }
   }
-  if (retainedPayload === 0) throw new KiError('harness archive contains no skills, agents, or hooks payload', 1)
+  if (retainedPayload === 0) throw new KiError('backpack archive contains no skills, agents, or hooks payload', 1)
 }
 
 /**
- * Downloads a configured harness release and verifies its bytes against the
+ * Downloads a configured backpack release and verifies its bytes against the
  * immutable SHA-256 evidence recorded in the release registry, returning the
  * verified archive payload for extraction. Never follows redirects — the
  * digest is only meaningful against the exact bytes served at the configured
  * URL.
  */
-const githubCliToken = async (context: HarnessAcquisitionContext): Promise<string> => {
+const githubCliToken = async (context: BackpackAcquisitionContext): Promise<string> => {
   let result: Awaited<ReturnType<Runner>>
   try {
     result = await context.runner('gh', ['auth', 'token'], context.environment)
@@ -147,8 +147,8 @@ const githubCliToken = async (context: HarnessAcquisitionContext): Promise<strin
 }
 
 const releaseHeaders = async (
-  release: HarnessRelease,
-  context: HarnessAcquisitionContext
+  release: BackpackRelease,
+  context: BackpackAcquisitionContext
 ): Promise<Readonly<Record<string, string>> | undefined> => {
   if (release.auth !== 'github-cli') return undefined
   return { Authorization: `Bearer ${await githubCliToken(context)}` }
@@ -156,20 +156,21 @@ const releaseHeaders = async (
 
 export const acquireVerifiedArchive = async (
   fetcher: Fetcher,
-  release: HarnessRelease,
-  context: HarnessAcquisitionContext
+  release: BackpackRelease,
+  context: BackpackAcquisitionContext
 ): Promise<Uint8Array> => {
   const headers = await releaseHeaders(release, context)
   let response: Response
   try {
     response = await fetcher(release.url, { redirect: 'error', ...(headers === undefined ? {} : { headers }) })
   } catch {
-    throw new KiError(`could not download configured harness ${release.id}`, 1)
+    throw new KiError(`could not download configured backpack ${release.id}`, 1)
   }
-  if (!response.ok) throw new KiError(`could not download configured harness ${release.id}: HTTP ${response.status}`, 1)
+  if (!response.ok)
+    throw new KiError(`could not download configured backpack ${release.id}: HTTP ${response.status}`, 1)
   const payload = new Uint8Array(await response.arrayBuffer())
   const digest = createHash('sha256').update(payload).digest('hex')
   if (digest !== release.sha256)
-    throw new KiError(`configured harness ${release.id} archive does not match its SHA-256`, 1)
+    throw new KiError(`configured backpack ${release.id} archive does not match its SHA-256`, 1)
   return payload
 }

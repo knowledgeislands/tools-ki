@@ -1,12 +1,12 @@
+import { installerEnvironment, requireCurrentInstallerReceipt } from '../backpack/installation.ts'
+import type { BackpackRefreshResult } from '../backpack/operations/types.ts'
 import { KiError } from '../errors.ts'
-import { installerEnvironment, requireCurrentInstallerReceipt } from '../harness/installation.ts'
-import type { HarnessRefreshResult } from '../harness/operations/types.ts'
 import type { Environment, KiInstallationMode } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
 
 export interface ManageUpdatePort {
   readonly runner: Runner
-  readonly refreshHarnesses: () => Promise<readonly HarnessRefreshResult[]>
+  readonly refreshBackpacks: () => Promise<readonly BackpackRefreshResult[]>
 }
 
 export interface ManageUpdateOptions {
@@ -19,7 +19,7 @@ export interface ManageUpdateOptions {
 
 export interface ManageUpdateResult {
   readonly cli: { readonly kind: 'updated' } | { readonly kind: 'unavailable'; readonly detail: string }
-  readonly harnesses?: readonly HarnessRefreshResult[]
+  readonly backpacks?: readonly BackpackRefreshResult[]
 }
 
 const updateExecutable = async (port: ManageUpdatePort, options: ManageUpdateOptions): Promise<void> => {
@@ -50,5 +50,5 @@ export const runManageUpdate = async (
     if (!(error instanceof KiError)) throw error
     cli = { kind: 'unavailable', detail: error.message }
   }
-  return { cli, harnesses: await port.refreshHarnesses() }
+  return { cli, backpacks: await port.refreshBackpacks() }
 }

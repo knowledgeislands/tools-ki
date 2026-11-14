@@ -12,8 +12,8 @@ export const REPAIR: RubricFamily<SelfRubricContext, SelfRubricContext> = {
     {
       code: 'SELF-BOOTSTRAP-001',
       title: 'Shared bootstrap inventory',
-      description: 'Bootstrap and canonical Harness restoration consume the authoritative minimum inventory.',
-      sources: ['src/agents/bootstrap.ts', 'src/core/storage/harness-installation.ts'],
+      description: 'Bootstrap and canonical backpack restoration consume the authoritative minimum inventory.',
+      sources: ['src/agents/bootstrap.ts', 'src/core/storage/backpack-installation.ts'],
       mechanical: {
         level: 'FAIL',
         remediation: diagnosticRemediation(
@@ -23,7 +23,7 @@ export const REPAIR: RubricFamily<SelfRubricContext, SelfRubricContext> = {
           phase: 'PRIMARY',
           run: (context) => [
             ...sourceContains(context, 'src/agents/bootstrap.ts', ['bootstrapUserSkills(']),
-            ...sourceContains(context, 'src/core/storage/harness-installation.ts', [
+            ...sourceContains(context, 'src/core/storage/backpack-installation.ts', [
               'requiredCapabilities: minimumBootstrapUserSkills'
             ])
           ]
@@ -50,19 +50,19 @@ export const REPAIR: RubricFamily<SelfRubricContext, SelfRubricContext> = {
     {
       code: 'SELF-REPAIR-002',
       title: 'Local capability resolution',
-      description: 'Local Harness development resolves sources through inspected capability metadata.',
+      description: 'Local backpack development resolves sources through inspected capability metadata.',
       sources: ['src/agents/bootstrap.ts'],
       mechanical: {
         level: 'FAIL',
         remediation: diagnosticRemediation(
-          'Keep localBootstrapHarness on inspectHarnessSourceRoot and capability.source.'
+          'Keep localBootstrapBackpack on inspectBackpackSourceRoot and capability.source.'
         ),
         audit: {
           phase: 'PRIMARY',
           run: (context) =>
             sourceContains(context, 'src/agents/bootstrap.ts', [
-              'localBootstrapHarness',
-              'inspectHarnessSourceRoot',
+              'localBootstrapBackpack',
+              'inspectBackpackSourceRoot',
               'capability.source'
             ])
         }

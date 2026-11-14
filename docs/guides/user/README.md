@@ -7,12 +7,12 @@ These guides are for people and agents operating `ki` against Knowledge Islands 
 If `ki` is not yet on this machine, or you have never run it, read these three in order. Between them they take you from nothing installed to a governed repository you can audit.
 
 1. [Install ki and run it for the first time](getting-started.md) — install a signed release, create the user environment with `ki bootstrap`, and register your first repository.
-2. [Install harnesses and activate their skills](capability-lifecycle.md) — where capabilities come from, and the difference between installing a harness and activating one of its skills in user or repository scope.
+2. [Install backpacks and activate their skills](capability-lifecycle.md) — where capabilities come from, and the difference between installing a backpack and activating one of its skills in user or repository scope.
 3. [Audit and conform repositories](repository-operations.md) — selecting targets with `--repo`, `--territory`, `--estate`, and `--principals`, reading an audit, and applying a conform safely.
 
 ## Keep it working
 
-- [Maintain a local installation](local-installation.md) — update the executable and harnesses, install shell completion, diagnose with `diag` and `doctor`, and repair user skill links or recognised legacy configuration metadata.
+- [Maintain a local installation](local-installation.md) — update the executable and backpacks, install shell completion, diagnose with `diag` and `doctor`, and repair user skill links or recognised legacy configuration metadata.
 - [Manage local VS Code projections](vscode-management.md) — reconcile the chezmoi-owned workspace inventory and trusted-folder source state against the registry.
 
 ## Bring material in

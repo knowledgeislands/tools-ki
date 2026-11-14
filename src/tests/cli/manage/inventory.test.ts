@@ -4,6 +4,7 @@ import { buildCommandInventory, renderCommandInventory } from '../../../../scrip
 import { sandbox } from '../_cli_helper.ts'
 
 const rootHelpCommands = [
+  'backpack',
   'bootstrap',
   'cleanup',
   'completion',
@@ -13,7 +14,6 @@ const rootHelpCommands = [
   'doctor',
   'estate',
   'git',
-  'harness',
   'help',
   'inventory',
   'kb',
@@ -73,7 +73,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   kb: ['index', 'search', 'status'],
   markdown: ['gfm'],
   git: ['check-message'],
-  harness: ['info', 'install', 'list', 'missing', 'outdated', 'reinstall', 'search', 'uninstall'],
+  backpack: ['info', 'install', 'list', 'missing', 'outdated', 'reinstall', 'search', 'uninstall'],
   'repo trade': [
     'abandon',
     'list',
@@ -210,13 +210,13 @@ describe('[ki command inventory]', () => {
     )
     for (const command of registryCommands) expect(changelog).toContain(`\`ki registry ${command}`)
 
-    expect(changelog).toContain('`ki dev local set <harness-id> <local-harness-path>`')
-    expect(changelog).toContain('`ki dev local on [harness-id]`')
-    expect(changelog).toContain('`ki dev local off [harness-id]`')
-    expect(changelog).toContain('Harness-qualified skill keys are invalid')
-    expect(changelog).not.toContain('`ki dev local set <local-harness-path>`')
+    expect(changelog).toContain('`ki dev local set <backpack-id> <local-backpack-path>`')
+    expect(changelog).toContain('`ki dev local on [backpack-id]`')
+    expect(changelog).toContain('`ki dev local off [backpack-id]`')
+    expect(changelog).toContain('Backpack-qualified skill keys are invalid')
+    expect(changelog).not.toContain('`ki dev local set <local-backpack-path>`')
     expect(changelog).not.toContain('keeps a quoted, fully-qualified key')
-    expect(manual).toContain('.B ki dev local off <harness-id>.')
+    expect(manual).toContain('.B ki dev local off <backpack-id>.')
     expect(manual).not.toContain('.B ki dev local off knowledgeislands/ki-agent-backpack')
 
     for (const command of territoryCommands) expect(manual).toContain(`.B ki territory ${command}`)

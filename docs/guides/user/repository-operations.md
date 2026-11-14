@@ -44,7 +44,7 @@ Record roots without applying any repair using `ki registry add --repo <path-or-
 
 A linked Git worktree inherits its registered primary checkout's registration only after Git proves their common repository and both declarations match the registered identity. Runtime activation checks retain every declared skill and may read missing links from that verified primary checkout. An unsafe link in the worktree still fails; conformance writes new links only into the selected worktree.
 
-From a linked development Harness worktree, `ki dev skill generate --write` reads the generator and source from that worktree and publishes there. It leaves the primary checkout unchanged and refuses an unrelated repository.
+From a linked development backpack worktree, `ki dev skill generate --write` reads the generator and source from that worktree and publishes there. It leaves the primary checkout unchanged and refuses an unrelated repository.
 
 ## Migrate work-record targets
 
@@ -54,7 +54,7 @@ From v0.13.0, a supplied `resolution_target` must identify another work record i
 
 Run `ki repo audit --skill ki-git` to review the Git facts available for one selected checkout, or combine the same skill with `--estate`, `--territory`, `--principals`, repeated `--repo` roots or `--filter`. Have `mgit` available on `PATH`. KI invokes its read-only overview separately for each selected physical root; extra checkouts reported by mgit do not become additional KI audit targets. This command does not fetch remote refs or contact a pull-request provider.
 
-The Harness assesses reported merged and patch-equivalent branches, stale branches including automation branches, the checked-out branch's upstream divergence, stashes, prunable or detached worktrees, and staged or untracked counts. Remote findings retain the last-fetch age, including an unknown age: collecting again does not refresh remote evidence. A non-standard stale threshold leaves the fixed 30-day stale check unassessed. A secondary checkout without repository-wide facts leaves branch retirement, stale branches, stashes and worktree retirement unassessed there.
+The backpack assesses reported merged and patch-equivalent branches, stale branches including automation branches, the checked-out branch's upstream divergence, stashes, prunable or detached worktrees, and staged or untracked counts. Remote findings retain the last-fetch age, including an unknown age: collecting again does not refresh remote evidence. A non-standard stale threshold leaves the fixed 30-day stale check unassessed. A secondary checkout without repository-wide facts leaves branch retirement, stale branches, stashes and worktree retirement unassessed there.
 
 Read each finding's scope before acting. Open pull requests, unexplained worktree locks, merged branches in other worktrees, divergence of non-checked-out branches and unpublished commits without an upstream remain matters for review. Staged and untracked leftovers are heuristic because Git cannot tell whether a thread is using the tree. Neither mgit's summary clean count nor an audit PASS establishes a clean estate. Use `--reporter-levels all` to include informational context when the results tree is displayed; a result with no warning or failure retains the compact summary.
 
@@ -123,7 +123,7 @@ Three output controls are worth knowing:
 
 Redirected output with `--progress always` defaults to the single-row form, and `--progress-style single` requests it explicitly. Under the default `--progress auto`, redirected output keeps standard output unchanged, but once a minute standard error names the step still running and how long it has taken, so a long step such as a full coverage run does not look like a hang.
 
-To make quiet output the default without adding flags to every call, as an agent harness might, set `KI_QUIET`:
+To make quiet output the default without adding flags to every call, as an agent backpack might, set `KI_QUIET`:
 
 ```sh
 KI_QUIET=1 ki repo audit --estate
@@ -162,7 +162,7 @@ Conform collects safe write proposals for each selected repository and completes
 
 Conform labels its second rubric pass `re-audit`, because it repeats the audit after staged writes or commands land. When nothing is staged it says so and stops after the initial pass.
 
-With `ki-repo` selected, conform writes both `.githooks/pre-commit` and `.githooks/commit-msg` at mode `0755`, creating missing hooks and replacing drift byte-exact from the resolved harness's canonical `ki-repo` data for `primary_shape` and whether `package.json` exists. There is no extension point: repository-specific lines are replaced. The dotfiles shape receives no hook changes, and a repository without `.ki.toml` is not a conform target. Wherever hooks are due, conform sets the clone's `core.hooksPath` to the literal relative `.githooks`, including when a foreign or absolute binding was configured. Existing bounded Husky retirement remains: `husky` leaves the manifest and `bun.lock`, `prepare` retains any command after Husky while binding `.githooks`, and `.husky/` is removed. Conform also points Knip's Husky plugin at the canonical hooks and removes redundant tool ignores, preserving unrelated settings. Unsafe files, unsupported lockfiles or unrecognised package/Knip configurations refuse publication. `--dry-run` reports each planned write, removal and binding with `would`, without changing hooks, Git configuration or the registry.
+With `ki-repo` selected, conform writes both `.githooks/pre-commit` and `.githooks/commit-msg` at mode `0755`, creating missing hooks and replacing drift byte-exact from the resolved backpack's canonical `ki-repo` data for `primary_shape` and whether `package.json` exists. There is no extension point: repository-specific lines are replaced. The dotfiles shape receives no hook changes, and a repository without `.ki.toml` is not a conform target. Wherever hooks are due, conform sets the clone's `core.hooksPath` to the literal relative `.githooks`, including when a foreign or absolute binding was configured. Existing bounded Husky retirement remains: `husky` leaves the manifest and `bun.lock`, `prepare` retains any command after Husky while binding `.githooks`, and `.husky/` is removed. Conform also points Knip's Husky plugin at the canonical hooks and removes redundant tool ignores, preserving unrelated settings. Unsafe files, unsupported lockfiles or unrecognised package/Knip configurations refuse publication. `--dry-run` reports each planned write, removal and binding with `would`, without changing hooks, Git configuration or the registry.
 
 Always run `--dry-run` first on a repository you have not conformed before. The publication boundary protects you from a partial write within one repository; it does not cover the independent registry update, later selected repositories, subprocess conforms, or rollback once publication has begun.
 
@@ -176,7 +176,7 @@ ki repo repair --repo .
 ki repo upgrade --repo .
 ```
 
-`repair` records each selected physical root and then reconciles only missing, dangling, or stale KI-managed projections, and removes a dangling `ki-` link that no declared skill accounts for, such as one left by a retired skill. It does not create declarations, change configuration, or touch anything it does not manage; `--dry-run` changes nothing. Use it when `ki repo diag` shows a declared skill whose local projection has gone missing — for instance after a harness moved.
+`repair` records each selected physical root and then reconciles only missing, dangling, or stale KI-managed projections, and removes a dangling `ki-` link that no declared skill accounts for, such as one left by a retired skill. It does not create declarations, change configuration, or touch anything it does not manage; `--dry-run` changes nothing. Use it when `ki repo diag` shows a declared skill whose local projection has gone missing — for instance after a backpack moved.
 
 `upgrade` refreshes the uniquely resolved providers declared by the selected repositories. It changes no skill activation in either scope. When a declared provider does not resolve uniquely, the upgrade reports it rather than choosing.
 
