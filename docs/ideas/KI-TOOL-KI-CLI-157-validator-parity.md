@@ -38,9 +38,9 @@ The shared table covers work-record fields, their vocabularies, the migration-wi
 
 ## Shaping
 
-**Approach:** one field rule table in ki-agentic-harness beside the roadmap checker, consumed by tools-ki as a vendored copy under a drift check or a pinned reference, with one conformance fixture set run by both suites.
+**Approach:** one field rule table in ki-agent-backpack beside the roadmap checker, consumed by tools-ki as a vendored copy under a drift check or a pinned reference, with one conformance fixture set run by both suites.
 
-**Dependencies:** a linked ki-agentic-harness change for the table and its fixtures, which this record would hand off rather than make.
+**Dependencies:** a linked ki-agent-backpack change for the table and its fixtures, which this record would hand off rather than make.
 
 **Decisions still needed:** where the table lives, harness or KI Specifications, and how tools-ki takes it.
 
@@ -50,7 +50,7 @@ The shared table covers work-record fields, their vocabularies, the migration-wi
 
 ### Where the table lives
 
-The harness owns the wording, so the table most likely lives in ki-agentic-harness beside the roadmap checker, with tools-ki taking a vendored copy under a drift check or a pinned reference, as the cross-repository sharing preference sets. Planning should weigh that against a KI Specifications contract, which owns portable normative rules.
+The harness owns the wording, so the table most likely lives in ki-agent-backpack beside the roadmap checker, with tools-ki taking a vendored copy under a drift check or a pinned reference, as the cross-repository sharing preference sets. Planning should weigh that against a KI Specifications contract, which owns portable normative rules.
 
 ### Conformance cases
 

@@ -33,9 +33,9 @@ The machine-local registry at `$XDG_STATE_HOME/ki/registry.toml` is what `--terr
 ```toml
 schema = 1
 
-[repositories."ki-agentic-harness"]
-repository = "https://github.com/knowledgeislands/ki-agentic-harness"
-path = "/Users/example/workspaces/knowledgeislands/ki-agentic-harness"
+[repositories."ki-agent-backpack"]
+repository = "https://github.com/knowledgeislands/ki-agent-backpack"
+path = "/Users/example/workspaces/knowledgeislands/ki-agent-backpack"
 ```
 
 Record roots without applying any repair using `ki registry add --repo <path-or-pattern>`, and list them with `ki registry list`. Use `ki registry list --format json` for the path-free `ki/registry/v1` projection of canonical identity and declared metadata. Each entry has `repoType`: `project` or `kb` when available, and `null` when unavailable. Remove exactly one entry by key with `ki registry remove <key>`, or by its exact path with `ki registry remove --repo <path>`; add `--dry-run` to preview either removal. Bulk selectors are deliberately unavailable for removal.
