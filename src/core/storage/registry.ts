@@ -19,14 +19,13 @@ export interface HarnessRelease {
 /**
  * The one harness every KI installation can acquire without user-managed
  * registry configuration. The Git commit and archive digest together are the
- * immutable acquisition evidence; additional harnesses remain opt-in. The archive is still the
- * one published under the repository's retired `ki-agentic-harness` name, whose digest the
- * pin records; it moves to `ki-agent-backpack` with the next pin.
+ * immutable acquisition evidence; additional harnesses remain opt-in. The archive is the one
+ * published under the repository's `ki-agent-backpack` name, whose digest the pin records.
  */
 export const canonicalHarnessRelease: HarnessRelease = {
   id: canonicalHarnessIdentifier,
-  url: 'https://codeload.github.com/knowledgeislands/ki-agentic-harness/tar.gz/c5103027c3f6d3e81d1321702330ace232bc8cc6',
-  sha256: '6a80c07e5f79e7e4f39b22159739ada0c2b72aa445b1c49a6255d4e687578ca8'
+  url: 'https://codeload.github.com/knowledgeislands/ki-agent-backpack/tar.gz/3875d72be8eff2e0f0a8910488d19e304ba131cb',
+  sha256: 'abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404'
 }
 
 type RegistryValue = Record<string, unknown> & { readonly harnesses?: unknown }
