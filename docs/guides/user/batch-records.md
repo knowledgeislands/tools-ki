@@ -58,7 +58,7 @@ ki repo batch close KI-EXAMPLE-BATCH-001 \
   --evidence-commit 89abcdef0123456789abcdef0123456789abcdef
 ```
 
-The evidence commit must resolve in the repository. Closing appends structural evidence to the batch record; it never performs acceptance. Human approval and `ki-accept` remain responsible for moving review-ready work to `done`.
+The evidence commit must resolve in the repository. Closing appends structural evidence to the batch record; it never performs acceptance. Human approval and `ki-work accept` remain responsible for moving review-ready work to `done`.
 
 ## Retained records and recovery
 
