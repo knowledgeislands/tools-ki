@@ -5,11 +5,11 @@ title: Git-style extension veneer
 priority: medium
 size: m
 status: triage
-blocks: []
+blocks: [KI-TOOL-KI-CLI-177]
 blocked_by: []
 baseline_ref: null
 created_at: 2026-11-05T02:20:48Z
-updated_at: 2026-11-05T02:20:48Z
+updated_at: 2026-11-14T06:47:14Z
 ---
 
 # Git-style extension veneer
