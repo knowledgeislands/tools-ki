@@ -100,6 +100,10 @@ ki repo diag --repo /path/to/repository
 
 - A skill is declared but not projected — Likely cause: The link is missing, dangling, or stale. Action: `ki repo repair --dry-run`, review, then rerun without the flag.
 
+- A warning says ki moved `harnesses` to `backpacks`, or renamed a slot — Likely cause: The first command after upgrading from ki 0.16 moved the installed backpacks to their new names, leaving links under the old ones for one release. Action: Run `ki repair --apply` and `ki repo --estate repair` so that no skill link still passes through an old name.
+
+- A warning names the retired `[repo] harnesses` key or `[harnesses]` table — Likely cause: The file predates the backpack rename. Action: Run `ki repo repair` for a repository declaration; rename `[harnesses]` to `[backpacks]` in `config.toml`, or in its source where another tool manages it.
+
 - `ki backpack missing` names a capability — Likely cause: No installed backpack provides it. Action: Install the providing backpack, then activate the skill.
 
 Exact grammar for every command here is in `ki <command> --help` and the installed `man ki` manual. Installation never activates a skill, activation never installs a provider, and repair reconciles only the scope it reports.

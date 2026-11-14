@@ -20,13 +20,20 @@ Once installed, run `ki -h` for an alphabetical command list, then `ki <command>
 
 ## Manage installed capabilities
 
-A territory's bundle of skills is its backpack, published from an `<owner>/<territory>-agent-backpack` repository such as `knowledgeislands/ki-agent-backpack`. `ki backpack install`, `ki backpack reinstall`, and `ki backpack uninstall` manage verified backpack payloads without activating or deactivating skills; the command keeps its `backpack` name.
+A territory's bundle of skills is its backpack, published from an `<owner>/<territory>-agent-backpack` repository such as `knowledgeislands/ki-agent-backpack`. `ki backpack install`, `ki backpack reinstall`, and `ki backpack uninstall` manage verified backpack payloads without activating or deactivating skills. Installed backpacks live in `$XDG_DATA_HOME/ki/backpacks/<owner>/<name>`.
 
 Use a backpack identifier such as `example/backpack`.
 
 A compatible backpack declares its stable capability namespace in its root `.ki.toml`, for example `[skills.ki-repo-backpack]` with `prefix = "ki"`. Every published skill uses that prefix (`ki-*`), and `ki` refuses a second installed backpack claiming it. Distinct prefixes such as `ki` and `hnr` coexist; competing backpacks using the same prefix do not.
 
-Backpack repositories were named `<owner>/<territory>-agentic-harness` until 14 November 2026. For this one release `ki` still reads that spelling wherever an identifier appears — in `config.toml`, a repository's `.ki.toml`, or a command argument — as the same backpack, finds an installed backpack still on disk under it, and reads the retired `[skills.ki-repo-harness]` prefix declaration. In `config.toml`, each user skill names its provider with `backpack = "<owner>/<name>"`; the retired `backpack =` key is still read, with a warning, and bootstrap writes it as `backpack =`.
+Backpack repositories were named `<owner>/<territory>-agentic-harness` until 14 November 2026. For this one release `ki` still reads that spelling wherever an identifier appears — in `config.toml`, a repository's `.ki.toml`, or a command argument — as the same backpack, and reads the retired `[skills.ki-repo-harness]` prefix declaration. In `config.toml`, each user skill names its provider with `backpack = "<owner>/<name>"`; the retired `harness =` key is still read, with a warning, and bootstrap writes it as `backpack =`.
+
+ki itself called backpacks "harnesses" until ki 0.17. For this one release it still answers the retired names, each with a warning on standard error:
+
+- `ki harness` runs `ki backpack`.
+- A repository's `[repo] harnesses` key is read when `[repo] backpacks` is absent; `ki repo repair` renames it. A declaration with both is refused.
+- The `[harnesses]` table in `config.toml` is read when `[backpacks]` is absent, and is written as `[backpacks]` whenever `ki` next writes the file. A file with both is refused.
+- The first command moves `$XDG_DATA_HOME/ki/harnesses/` to `backpacks/` with one rename and leaves `harnesses` as a link to it, and moves a slot still named `*-agentic-harness` to its backpack name the same way, so every existing skill link keeps working. `ki repair --apply` and `ki repo --estate repair` then re-point links that still pass through the old names, before the next release removes them.
 
 An immutable private GitHub backpack archive may opt into the local GitHub CLI credential without placing a token in configuration, by declaring `auth = "github-cli"` alongside its commit-pinned codeload URL and SHA-256.
 

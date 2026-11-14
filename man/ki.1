@@ -1904,7 +1904,26 @@ User configuration in the KI configuration directory. Each user skill is a
 backpack that provides it. The retired \fBharness\fR key is still read for this
 one release, with a warning, and is written as \fBbackpack\fR the next time
 .B ki bootstrap
-writes the file; a table with both keys is invalid.
+writes the file; a table with both keys is invalid. Installed backpacks are
+listed in the \fB[backpacks]\fR table; the retired \fB[harnesses]\fR table is
+read the same way for this one release, and written as \fB[backpacks]\fR
+whenever ki next writes the file.
+.TP
+.I backpacks/
+Installed backpacks in the KI data directory, one
+\fIowner\fR/\fIname\fR slot each. Until ki 0.17 this was \fBharnesses/\fR.
+For this one release the first command moves it with one rename and leaves
+\fBharnesses\fR as a link to \fBbackpacks\fR, and moves a slot still named
+-agentic-harness to its backpack name the same way, so existing skill links
+keep resolving;
+.B ki repair --apply
+and
+.B ki repo repair
+re-point the links that still pass through the old names.
+.B ki harness
+runs
+.B ki backpack
+for this one release, with a deprecation warning.
 .TP
 .I .ki.toml
 Required repository declaration at a KI repository root.
@@ -1918,8 +1937,10 @@ Installed backpacks declare distinct capability prefixes through
 A backpack is published from an \fIowner\fR/\fIterritory\fR-agent-backpack
 repository. For this one release, an identifier spelt with the retired
 -agentic-harness suffix, in any configuration, declaration or argument, names
-the same backpack, and an installed backpack still on disk under that spelling
-is found under either.
+the same backpack. The retired \fB[repo]\fR harnesses key is still read, with a
+warning, when backpacks is absent, and
+.B ki repo repair
+renames it; a declaration with both is invalid.
 Repository identity and metadata live in \fB[skills.ki-repo]\fR, and trade
 routes in \fB[skills.ki-trades.routes]\fR, keyed once per partner.
 .SH DEVELOPMENT INSTALLATIONS
