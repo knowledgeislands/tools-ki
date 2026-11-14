@@ -36,7 +36,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### HARN-004 — Explicit capability prefix
 
-Every installed Harness MUST declare a lowercase alphanumeric `prefix` in `[skills.ki-repo-harness]` in its root `.ki.toml`, and every published skill name MUST begin with `<prefix>-`.
+Every installed backpack MUST declare a lowercase alphanumeric `prefix` in `[skills.ki-repo-backpack]` in its root `.ki.toml`, and every published skill name MUST begin with `<prefix>-`. For one release, `ki` MUST still read the prefix from the retired `[skills.ki-repo-harness]` table when `[skills.ki-repo-backpack]` is absent.
 
 _Conformance:_ conforming
 

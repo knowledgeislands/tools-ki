@@ -6,7 +6,7 @@ Optional `ki kb index`, `ki kb search` and `ki kb status` operate one explicitly
 
 ## Place in the Knowledge Islands ecosystem
 
-`tools-ki` is the canonical source of the `ki` executable platform. It installs verified compatible harnesses, resolves repositories, activates skills in explicit user or repository scope, and hosts registered native operations. It consumes reusable agentic capabilities from the [KI Agentic Harness](https://github.com/knowledgeislands/ki-agentic-harness), does not define their standards, and supplies implementation evidence that [KI Specifications](https://github.com/knowledgeislands/ki-specifications) may formalise as portable contracts.
+`tools-ki` is the canonical source of the `ki` executable platform. It installs verified compatible harnesses, resolves repositories, activates skills in explicit user or repository scope, and hosts registered native operations. It consumes reusable agentic capabilities from the [KI Agentic Harness](https://github.com/knowledgeislands/ki-agent-backpack), does not define their standards, and supplies implementation evidence that [KI Specifications](https://github.com/knowledgeislands/ki-specifications) may formalise as portable contracts.
 
 [Arcadia Principal](https://github.com/knowledgeislands/ki-principal) remains the source of Knowledge Islands philosophy and model, and its [Engineering Practice](https://github.com/knowledgeislands/ki-principal/blob/main/Pillars/Engineering%20Practice/Engineering%20Practice.md) translates that philosophy into engineering practice. The [KI Website](https://github.com/knowledgeislands/ki-website) may vendor source-labelled CLI material for public publication, while this repository remains canonical for the executable and its release artifacts. The mirrored [ecosystem decision](https://github.com/knowledgeislands/ki-principal/blob/main/Admin/Governance/Decisions/GDR-KI-PRINCIPAL-006-knowledge-islands-ecosystem-fundamentals.md) defines the six authorities and publication flows.
 
@@ -20,11 +20,13 @@ Once installed, run `ki -h` for an alphabetical command list, then `ki <command>
 
 ## Manage installed capabilities
 
-`ki harness install`, `ki harness reinstall`, and `ki harness uninstall` manage verified harness payloads without activating or deactivating skills.
+A territory's bundle of skills is its backpack, published from an `<owner>/<territory>-agent-backpack` repository such as `knowledgeislands/ki-agent-backpack`. `ki harness install`, `ki harness reinstall`, and `ki harness uninstall` manage verified backpack payloads without activating or deactivating skills; the command keeps its `harness` name.
 
-Use a harness identifier such as `example/harness`.
+Use a backpack identifier such as `example/harness`.
 
-A compatible Harness declares its stable capability namespace in its root `.ki.toml`, for example `[skills.ki-repo-harness]` with `prefix = "ki"`. Every published skill uses that prefix (`ki-*`), and `ki` refuses a second installed Harness claiming it. Distinct prefixes such as `ki` and `hnr` coexist; competing Harnesses using the same prefix do not.
+A compatible backpack declares its stable capability namespace in its root `.ki.toml`, for example `[skills.ki-repo-backpack]` with `prefix = "ki"`. Every published skill uses that prefix (`ki-*`), and `ki` refuses a second installed backpack claiming it. Distinct prefixes such as `ki` and `hnr` coexist; competing backpacks using the same prefix do not.
+
+Backpack repositories were named `<owner>/<territory>-agentic-harness` until 14 November 2026. For this one release `ki` still reads that spelling wherever an identifier appears — in `config.toml`, a repository's `.ki.toml`, or a command argument — as the same backpack, finds an installed backpack still on disk under it, and reads the retired `[skills.ki-repo-harness]` prefix declaration. In `config.toml`, each user skill names its provider with `backpack = "<owner>/<name>"`; the retired `harness =` key is still read, with a warning, and bootstrap writes it as `backpack =`.
 
 An immutable private GitHub harness archive may opt into the local GitHub CLI credential without placing a token in configuration, by declaring `auth = "github-cli"` alongside its commit-pinned codeload URL and SHA-256.
 
@@ -46,7 +48,7 @@ A Capital owns its territory through `[skills.ki-repo].territory_name` and `terr
 
 The optional Capital-only `territory_prefix` supplies the territory handle, such as `ki`. Without it, use the Capital's local registry key. An explicit prefix replaces that key as a selector. A Capital may also declare `territory_aliases`, extra selectors that resolve to its canonical handle; they never appear in output or name a sources store. `ki territory list` discovers these handles; `show`, `audit`, `open` and `inspect` accept `-t, --territory <handle>`, `--estate` or `--principals`.
 
-`--principals` selects only the registered territory Capitals. The system Capital — the one whose territory includes the canonical KI Harness, `knowledgeislands/ki-agentic-harness` — comes first, then the others by territory name. `ki territory open --principals --target zed` opens them so Zed's project list follows that order; VS Code and Delta receive the same order.
+`--principals` selects only the registered territory Capitals. The system Capital — the one whose territory includes the canonical KI backpack, `knowledgeislands/ki-agent-backpack` — comes first, then the others by territory name. `ki territory open --principals --target zed` opens them so Zed's project list follows that order; VS Code and Delta receive the same order.
 
 A personal `[territories] ranking` of handles in `config.toml` puts your territories in your own order of priority. `--principals`, `ki territory list` and `--estate` follow it, and territories it omits keep the order above. See [Select a territory or the estate](docs/guides/user/territory-selection.md#rank-your-territories).
 
@@ -69,9 +71,9 @@ After target selection, operations run in target order. Read-only operations iso
 ```toml
 schema = 1
 
-[repositories."ki-agentic-harness"]
-repository = "https://github.com/knowledgeislands/ki-agentic-harness"
-path = "/Users/example/workspaces/knowledgeislands/ki-agentic-harness"
+[repositories."ki-agent-backpack"]
+repository = "https://github.com/knowledgeislands/ki-agent-backpack"
+path = "/Users/example/workspaces/knowledgeislands/ki-agent-backpack"
 ```
 
 For each selected repository, `ki repo conform` collects safe write proposals and completes every initial audit before publishing any of those proposals. A failing initial audit aborts that repository's conform publication: no proposed conform write is applied. With `ki-repo` selected, conform first moves a Husky commit gate into a committed, bound `.githooks/` and removes Husky. On a terminal, audit and conform use a compact receipt stream with one mutable activity row that signals activity without estimating completion.

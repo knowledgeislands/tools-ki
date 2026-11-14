@@ -1,4 +1,4 @@
-.TH KI 1 "2026-11-08" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-11-14" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -338,7 +338,7 @@ Capital's territory_prefix handle, or its registry key when no prefix exists;
 a declared territory_aliases entry selects the same territory.
 Exactly one of --territory, --estate and --principals is required for scoped
 commands. --principals selects only the registered Capitals: first the system
-Capital, whose territory includes knowledgeislands/ki-agentic-harness, then
+Capital, whose territory includes knowledgeislands/ki-agent-backpack, then
 the rest by territory name.
 A territories.ranking list of handles in config.toml puts ranked territories
 first, in that order, for --principals, territory list and --estate; the
@@ -479,14 +479,14 @@ Use this command to bootstrap the user-managed KI environment.
 .TP
 .B ki bootstrap
 Create the user-managed KI environment configuration from detected supported
-agents, install the built-in verified canonical harness, then install the core
+agents, install the built-in verified canonical backpack, then install the core
 user skills —
-.BR ki-bootstrap ,
-.BR ki-next ,
-.BR ki-plan ,
+.B ki-keystone
 and
-.BR ki-recap
-— into every configured agent's user skill directory. An existing agent
+.B ki-work
+— into every configured agent's user skill directory. For this one release, a
+canonical backpack that does not yet provide both still has its retired core
+skills installed instead. An existing agent
 configuration is reused without replacement. Pass
 .B --refresh
 to redetect every supported runtime and rebuild the user configuration's
@@ -1525,7 +1525,7 @@ Capital's territory_prefix handle, or its registry key when no prefix exists;
 a declared territory_aliases entry selects the same territory.
 Exactly one of --territory, --estate and --principals is required for scoped
 commands. --principals selects only the registered Capitals: first the system
-Capital, whose territory includes knowledgeislands/ki-agentic-harness, then
+Capital, whose territory includes knowledgeislands/ki-agent-backpack, then
 the rest by territory name.
 A territories.ranking list of handles in config.toml puts ranked territories
 first, in that order, for --principals, territory list and --estate; the
@@ -1824,9 +1824,11 @@ are moved to the host-local file once, by
 or
 .BR "ki bootstrap" ;
 they are left in place and then ignored with a warning.
-When the selected harness is the canonical harness, the checkout must contain
-the core bootstrap skill at
-.IR skills/keystone/ki-bootstrap/SKILL.md
+When the selected backpack is the canonical backpack, the checkout must contain
+the core bootstrap skills
+.B ki-keystone
+and
+.B ki-work
 and physical
 .IR skills ,
 .IR subagents ,
@@ -1896,14 +1898,28 @@ with its FAIL findings. Exit status is unchanged. Any explicit
 .SH FILES
 \&
 .TP
+.I config.toml
+User configuration in the KI configuration directory. Each user skill is a
+\fB[skills.\fR\fIname\fR\fB]\fR table whose \fBbackpack\fR key names the
+backpack that provides it. The retired \fBharness\fR key is still read for this
+one release, with a warning, and is written as \fBbackpack\fR the next time
+.B ki bootstrap
+writes the file; a table with both keys is invalid.
+.TP
 .I .ki.toml
 Required repository declaration at a KI repository root.
-\fB[repo]\fR names the harnesses that provide the repository's skills, and each
-governing skill is declared by its bare name under \fB[skills]\fR, carrying its
-own configuration. A provider must appear in the Harness list before its skill
-can be added; Harness-qualified skill keys are invalid. Installed Harnesses
-declare distinct capability prefixes through \fB[skills.ki-repo-harness]\fR in
-their own root configuration.
+\fB[repo]\fR names, in its harnesses list, the backpacks that provide the
+repository's skills, and each governing skill is declared by its bare name under
+\fB[skills]\fR, carrying its own configuration. A provider must appear in that
+list before its skill can be added; backpack-qualified skill keys are invalid.
+Installed backpacks declare distinct capability prefixes through
+\fB[skills.ki-repo-backpack]\fR in their own root configuration; the retired
+\fB[skills.ki-repo-harness]\fR is still read for this one release.
+A backpack is published from an \fIowner\fR/\fIterritory\fR-agent-backpack
+repository. For this one release, an identifier spelt with the retired
+-agentic-harness suffix, in any configuration, declaration or argument, names
+the same backpack, and an installed backpack still on disk under that spelling
+is found under either.
 Repository identity and metadata live in \fB[skills.ki-repo]\fR, and trade
 routes in \fB[skills.ki-trades.routes]\fR, keyed once per partner.
 .SH DEVELOPMENT INSTALLATIONS

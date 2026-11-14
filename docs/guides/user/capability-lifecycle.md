@@ -24,7 +24,7 @@ ki harness info example/harness
 
 `install` fetches one configured compatible harness, verifies its immutable archive, and unpacks only recognised payload directories. `info` then shows its capability inventory without changing user state, which is the quickest way to learn what a harness actually offers before you activate anything from it.
 
-A harness declares its stable capability namespace in its own root `.ki.toml` — for example `[skills.ki-repo-harness]` with `prefix = "ki"`. Every skill it publishes uses that prefix, and `ki` refuses to install a second harness claiming a prefix that is already owned. Distinct prefixes such as `ki` and `hnr` coexist happily; two harnesses competing for one prefix do not, and the refusal is the point — it keeps `ki-plan` unambiguous about which harness supplies it.
+A harness declares its stable capability namespace in its own root `.ki.toml` — for example `[skills.ki-repo-backpack]` with `prefix = "ki"`. Every skill it publishes uses that prefix, and `ki` refuses to install a second harness claiming a prefix that is already owned. Distinct prefixes such as `ki` and `hnr` coexist happily; two harnesses competing for one prefix do not, and the refusal is the point — it keeps `ki-plan` unambiguous about which harness supplies it.
 
 ### Private GitHub archives
 
@@ -47,7 +47,7 @@ Find what is available, then turn on what you need:
 ```sh
 ki inventory
 ki harness search roadmap
-ki skill add ki-plan
+ki skill add ki-work
 ```
 
 `ki inventory` inventories installed harness capabilities and declared skills; `ki harness search` matches a query case-insensitively against harness identifier, capability kind, and capability name. Neither consults a network or discovers a repository, so both are safe to run anywhere.
@@ -69,7 +69,7 @@ Deactivate before you uninstall. The commands enforce that order for you:
 
 ```sh
 ki repo skill remove ki-guides --repo /path/to/repository
-ki skill remove ki-plan
+ki skill remove ki-work
 ki harness uninstall example/harness
 ```
 
