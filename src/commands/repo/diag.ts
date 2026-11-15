@@ -7,6 +7,7 @@ import {
   describeRepositoryLocalProvider,
   describeRepositoryOrphan,
   describeRepositoryProjection,
+  describeRepositoryVendoredSkill,
   inspectRepositoryHealth
 } from './shared/repository-health.ts'
 
@@ -48,6 +49,7 @@ export const createRepoDiagCommand = (
                     { label: `Declaration: ${health.declaration}` },
                     { label: `Status: ${health.health}` },
                     ...health.localProviders.map((skill) => ({ label: describeRepositoryLocalProvider(skill) })),
+                    ...health.vendored.map((skill) => ({ label: describeRepositoryVendoredSkill(skill) })),
                     ...health.projections.map((projection) => ({ label: describeRepositoryProjection(projection) })),
                     ...health.orphans.map((orphan) => ({ label: describeRepositoryOrphan(orphan) }))
                   ]

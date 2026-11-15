@@ -182,6 +182,13 @@ export const addRepoSkill = async (options: {
     homeDirectory: options.homeDirectory,
     configurationDirectory: options.configurationDirectory
   })
+  // A vendored skill is the repository's committed copy; linking it from a backpack would replace it.
+  if (
+    (await readRepositoryDeclaration(location.declaration)).skills.some(
+      (skill) => skill.name === options.skill && skill.mode === 'vendored'
+    )
+  )
+    throw new KiError(`skill ${options.skill} is declared vendored; ki leaves its committed copy alone`, 1)
   const resolved = await installedSkillSource(options.dataDirectory, options.skill)
   const runtimes = await repositorySupportedRuntimes(location.declaration)
   const compatible = agents.filter(
@@ -226,6 +233,11 @@ export const removeRepoSkill = async (options: {
       1
     )
   const declaration = repositoryDeclaration.skills.find((candidate) => candidate.name === options.skill)
+  if (declaration?.mode === 'vendored')
+    throw new KiError(
+      `skill ${options.skill} is declared vendored; remove its committed copy and declaration by hand`,
+      1
+    )
   const agents = await configuredAgents({
     homeDirectory: options.homeDirectory,
     configurationDirectory: options.configurationDirectory

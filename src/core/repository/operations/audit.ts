@@ -1,8 +1,10 @@
+import { discoverInstalledBackpacks } from '../../backpack/inspection.ts'
 import { gatherSkillAuditEvidence, runGatheredSkillAudit } from '../../runtime/audit.ts'
 import type { AuditCriteria, Finding, PreparedSkill } from '../../runtime/types.ts'
 import { completedAudit, incompleteAudit, recordAuditHealth } from '../audit-health.ts'
 import { gatherGitOverview, withGitOverviewFindings } from '../git-overview.ts'
 import { runWithEvidenceProgress } from '../progress/run.ts'
+import { gatherVendoredSkillFindings, withVendoredSkillFindings } from '../vendored-skills.ts'
 import { localRepositoryRegistration, repositorySkillActivation } from './local-state.ts'
 import { selectRepositorySkills } from './selection.ts'
 import type { RepositoryOperationContext, RepositorySelection } from './types.ts'
@@ -58,7 +60,7 @@ export const auditRepositories = async (
   const recorded = !selection.skill && !selection.verdict
   const completed: RepositoryAuditResult[] = []
   let failed = false
-  for (const [index, { repository, skills, resolvedSkills }] of selected.entries()) {
+  for (const [index, { repository, declaration, skills, resolvedSkills }] of selected.entries()) {
     // Resolved before the frame opens, so an unreadable index fails the command, not the audit.
     const scope = selection.verdict
       ? await resolveVerdictScope(selection.verdict, repository.root, context.runner, context.environment)
@@ -66,6 +68,16 @@ export const auditRepositories = async (
     observer.repositoryStarted(repository.root, skills, index, scope)
     try {
       const gitEvidence = await gatherGitOverview(context, repository.root, skills)
+      const vendoredFindings =
+        skills.some((skill) => skill.declaration.name === 'ki-repo') &&
+        declaration.skills.some((skill) => skill.mode === 'vendored' && skill.commit !== undefined)
+          ? await gatherVendoredSkillFindings(
+              context,
+              repository.root,
+              declaration,
+              await discoverInstalledBackpacks(context.dataDirectory)
+            )
+          : []
       const repositorySkills = await repositorySkillActivation(context, repository, skills)
       const results = await runWithEvidenceProgress(
         skills,
@@ -85,14 +97,18 @@ export const auditRepositories = async (
           ),
         async (skill, evidence, itemProgress) => ({
           skill,
-          audit: withGitOverviewFindings(
+          audit: withVendoredSkillFindings(
             skill.skill.declaration.name,
-            await runGatheredSkillAudit(skill, evidence, {
-              onItemStart: (item) => itemProgress.onItemStart(item.code),
-              onItemComplete: (item) => itemProgress.onItemComplete(item.code),
-              onProgressEvent: itemProgress.onProgressEvent
-            }),
-            gitEvidence
+            withGitOverviewFindings(
+              skill.skill.declaration.name,
+              await runGatheredSkillAudit(skill, evidence, {
+                onItemStart: (item) => itemProgress.onItemStart(item.code),
+                onItemComplete: (item) => itemProgress.onItemComplete(item.code),
+                onProgressEvent: itemProgress.onProgressEvent
+              }),
+              gitEvidence
+            ),
+            vendoredFindings
           )
         }),
         context.progress.resolved(skills, 'audit', 'root'),

@@ -2,6 +2,7 @@ import { lstat, readdir, readlink, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
 import { discoverInstalledBackpacks } from '../core/backpack/index.ts'
 import {
+  type DeclaredSkill,
   type ResolvedSkill,
   readRepositoryDeclaration,
   resolveRepositoryDeclaredSkills
@@ -35,6 +36,8 @@ export interface RepositoryHealth {
   readonly health: Health
   readonly diagnostic?: string
   readonly localProviders: readonly ResolvedSkill[]
+  /** Skills declared `mode = "vendored"`: committed copies that ki neither links nor repairs. */
+  readonly vendored: readonly DeclaredSkill[]
   readonly projections: readonly RepositoryProjection[]
   readonly orphans: readonly RepositoryOrphan[]
 }
@@ -96,6 +99,7 @@ const failure = (root: string, declaration: string, detail: string): RepositoryH
   health: 'unrepairable',
   diagnostic: detail,
   localProviders: [],
+  vendored: [],
   projections: [],
   orphans: []
 })
@@ -129,10 +133,11 @@ export const inspectRepositoryHealth = async (
           )
       )
     ).sort((left, right) => left.path.localeCompare(right.path))
+    // A vendored skill's committed links are the repository's, never an orphan to remove.
     const orphans = await inspectOrphans(
       repositoryAgents,
       location.root,
-      new Set(skills.map((skill) => skill.declaration.name))
+      new Set(declarations.skills.map((skill) => skill.name))
     )
     const broken = projections.filter((projection) => projection.state !== 'linked')
     const health: Health = broken.some((projection) => projection.state === 'foreign')
@@ -145,6 +150,7 @@ export const inspectRepositoryHealth = async (
       declaration: location.declaration,
       health,
       localProviders,
+      vendored: declarations.skills.filter((skill) => skill.mode === 'vendored'),
       projections,
       orphans
     }

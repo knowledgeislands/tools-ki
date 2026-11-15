@@ -1,3 +1,4 @@
+export type { DeclaredSkill } from './declaration.ts'
 export {
   DEFAULT_BACKPACK,
   declaredKnowledgeBaseStoreRoles,

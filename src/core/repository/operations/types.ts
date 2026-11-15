@@ -1,4 +1,5 @@
 import type { lstat } from 'node:fs/promises'
+import type { RepositoryDeclaration } from '../../configuration/declaration.ts'
 import type { ResolvedSkill } from '../../configuration/resolution.ts'
 import type { Environment } from '../../paths.ts'
 import type { RepositorySkillActivation } from '../../rubric/index.ts'
@@ -69,6 +70,8 @@ export interface RepositorySelection {
 
 export interface SelectedRepositorySkills {
   readonly repository: RepositoryLocation
+  /** The repository's parsed declaration, vendored skills included. */
+  readonly declaration: RepositoryDeclaration
   readonly skills: readonly ResolvedSkill[]
   /** All repository-declared resolved skills, independent of an execution filter. */
   readonly resolvedSkills: readonly ResolvedSkill[]

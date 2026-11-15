@@ -10,11 +10,22 @@ import { canonicalRepositoryIdentity } from '../storage/local-registry.ts'
 export const REPOSITORY_DECLARATION_FILE = '.ki.toml'
 export const DEFAULT_BACKPACK = 'knowledgeislands/ki-agent-backpack'
 
+/**
+ * How a repository holds a declared skill: `current` links it from an installed backpack, and
+ * `vendored` keeps a committed copy at `.agents/skills/<name>/` that ki leaves alone.
+ */
+export type DeclaredSkillMode = 'current' | 'vendored'
+
 export interface DeclaredSkill {
   /** The skill's bare capability name under `[skills]`. */
   readonly key: string
   readonly name: string
+  /** The skill's own table, without the host-owned `mode` and, for a vendored skill, `commit` keys. */
   readonly configuration: Readonly<Record<string, unknown>>
+  /** Absent `mode` declares `current`. */
+  readonly mode: DeclaredSkillMode
+  /** The backpack commit a vendored copy was taken from, when the declaration records it. */
+  readonly commit?: string
 }
 
 export interface RepositoryDeclaration {
@@ -158,6 +169,21 @@ const declaredBackpacks = (parsed: Record<string, unknown>, path: string): reado
   return identifiers
 }
 
+/** A full SHA-1 or SHA-256 Git object name. */
+const commitName = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/
+
+/** The host-owned `mode` and `commit` keys, read by ki and kept from the skill's own configuration. */
+const declaredSkill = (key: string, table: Readonly<Record<string, unknown>>): DeclaredSkill => {
+  const { mode = 'current', ...rest } = table
+  if (mode !== 'current' && mode !== 'vendored')
+    throw new KiError(`declared skill ${key} mode must be "current" or "vendored"`, 1)
+  if (mode === 'current') return { key, name: key, configuration: rest, mode }
+  const { commit, ...configuration } = rest
+  if (commit !== undefined && (typeof commit !== 'string' || !commitName.test(commit)))
+    throw new KiError(`declared skill ${key} commit must be a full lower-case Git commit hash`, 1)
+  return { key, name: key, configuration, mode, ...(commit === undefined ? {} : { commit }) }
+}
+
 const declaredSkills = (parsed: Record<string, unknown>, path: string): readonly DeclaredSkill[] => {
   const skills = parsed['skills']
   if (skills === undefined) return []
@@ -165,7 +191,7 @@ const declaredSkills = (parsed: Record<string, unknown>, path: string): readonly
   const declared = Object.entries(skills).map(([key, configuration]) => {
     if (!isRecord(configuration)) throw new KiError(`declared skill ${key} must use a TOML table`, 1)
     if (!skillName.test(key)) throw new KiError(`declared skill ${key} must be [skills.<prefix>-<name>]`, 1)
-    return { key, name: key, configuration }
+    return declaredSkill(key, configuration)
   })
   return declared
 }

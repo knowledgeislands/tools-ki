@@ -22,6 +22,7 @@ export const resolveSkillsForRepositories = async (
       )
       return {
         repository,
+        declaration,
         resolvedSkills,
         skills: skill
           ? await resolveRepositoryDeclaredSkills(repository.root, declaration, backpacks, dataDirectory, skill)

@@ -50,37 +50,41 @@ const skillCandidates = (backpacks: readonly InstalledBackpack[], name: string):
       .filter((capability) => capability.kind === 'skill' && capability.name === name)
       .map((capability) => ({
         identity: `${backpack.id}:${capability.name}`,
-        declaration: { key: name, name, configuration: {} },
+        declaration: { key: name, name, configuration: {}, mode: 'current' },
         provider: installedProvider(backpack),
         capability
       }))
   )
 
-const orderedSkills = (skills: readonly ResolvedSkill[]): readonly ResolvedSkill[] => {
+/**
+ * Orders resolved skills after their dependencies. A vendored skill satisfies a dependency on
+ * its name, but takes no place in the order, since ki runs nothing from its committed copy.
+ */
+const orderedSkills = (
+  skills: readonly ResolvedSkill[],
+  vendored: ReadonlySet<string> = new Set()
+): readonly ResolvedSkill[] => {
   const byName = new Map(skills.map((skill) => [skill.declaration.name, skill]))
-  const remaining = new Map(
-    [...skills]
-      .sort((left, right) => left.declaration.name.localeCompare(right.declaration.name))
-      .map((skill) => [
-        skill.declaration.name,
-        {
-          skill,
-          dependencies: new Set([
-            ...skill.capability.dependsOn,
-            ...skill.capability.optionalDependsOn.filter((name) => byName.has(name))
-          ])
-        }
-      ])
-  )
-  const ordered: ResolvedSkill[] = []
-
-  for (const [name, { dependencies }] of remaining) {
-    for (const dependencyName of dependencies) {
-      if (!byName.has(dependencyName)) {
-        throw new KiError(`declared skill ${name} requires declared dependency ${dependencyName}`, 1)
+  const sorted = [...skills].sort((left, right) => left.declaration.name.localeCompare(right.declaration.name))
+  for (const skill of sorted) {
+    for (const dependencyName of skill.capability.dependsOn) {
+      if (!byName.has(dependencyName) && !vendored.has(dependencyName)) {
+        throw new KiError(`declared skill ${skill.declaration.name} requires declared dependency ${dependencyName}`, 1)
       }
     }
   }
+  const remaining = new Map(
+    sorted.map((skill) => [
+      skill.declaration.name,
+      {
+        skill,
+        dependencies: new Set(
+          [...skill.capability.dependsOn, ...skill.capability.optionalDependsOn].filter((name) => byName.has(name))
+        )
+      }
+    ])
+  )
+  const ordered: ResolvedSkill[] = []
 
   while (remaining.size) {
     const next = [...remaining.values()]
@@ -127,38 +131,45 @@ export const resolveDeclaredSkills = (
 ): readonly ResolvedSkill[] => {
   const declared = declaration.backpacks.flatMap((id) => backpacks.filter((candidate) => candidate.id === id))
   const absent = declaration.backpacks.filter((id) => !backpacks.some((candidate) => candidate.id === id))
-  const resolved = declaration.skills.map((skill) => {
-    const local = localCandidates.find((candidate) => candidate.capability.name === skill.name)
-    if (local) {
-      return {
-        identity: `repository-local:${local.capability.name}`,
-        declaration: skill,
-        provider: local.provider,
-        capability: local.capability
+  // A vendored skill is the repository's committed copy, not a backpack skill: it resolves to no
+  // provider, so ki neither runs its operations nor activates or links it.
+  const vendored = new Set(declaration.skills.filter((skill) => skill.mode === 'vendored').map((skill) => skill.name))
+  if (selected && vendored.has(selected))
+    throw new KiError(`--skill ${selected} names a vendored skill, which ki does not run`, 2)
+  const resolved = declaration.skills
+    .filter((skill) => skill.mode !== 'vendored')
+    .map((skill) => {
+      const local = localCandidates.find((candidate) => candidate.capability.name === skill.name)
+      if (local) {
+        return {
+          identity: `repository-local:${local.capability.name}`,
+          declaration: skill,
+          provider: local.provider,
+          capability: local.capability
+        }
       }
-    }
 
-    const providers = declared.flatMap((backpack) => {
-      const capability = providedSkill(backpack, skill.name)
-      return capability ? [{ backpack, capability }] : []
+      const providers = declared.flatMap((backpack) => {
+        const capability = providedSkill(backpack, skill.name)
+        return capability ? [{ backpack, capability }] : []
+      })
+      const [provider] = providers
+      if (!provider) {
+        throw new KiError(
+          `declared skill ${skill.name} is provided by no declared backpack (${declaration.backpacks.join(', ')})${
+            absent.length ? `; ${absent.join(', ')} is not installed${dataRootHint(dataRoot)}` : ''
+          }`,
+          1
+        )
+      }
+      return {
+        identity: `${provider.backpack.id}:${skill.name}`,
+        declaration: skill,
+        provider: installedProvider(provider.backpack),
+        capability: provider.capability
+      }
     })
-    const [provider] = providers
-    if (!provider) {
-      throw new KiError(
-        `declared skill ${skill.name} is provided by no declared backpack (${declaration.backpacks.join(', ')})${
-          absent.length ? `; ${absent.join(', ')} is not installed${dataRootHint(dataRoot)}` : ''
-        }`,
-        1
-      )
-    }
-    return {
-      identity: `${provider.backpack.id}:${skill.name}`,
-      declaration: skill,
-      provider: installedProvider(provider.backpack),
-      capability: provider.capability
-    }
-  })
-  const ordered = orderedSkills(resolved)
+  const ordered = orderedSkills(resolved, vendored)
   if (!selected) return ordered
 
   const selectedSkill = resolved.find((skill) => skill.declaration.name === selected)

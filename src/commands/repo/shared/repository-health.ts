@@ -25,6 +25,9 @@ export const describeRepositoryOrphan = (orphan: RepositoryOrphan): string =>
 export const describeRepositoryLocalProvider = (skill: RepositoryHealth['localProviders'][number]): string =>
   `${presentation('status.pass').terminal} ${skill.identity}: canonical repository source`
 
+export const describeRepositoryVendoredSkill = (skill: RepositoryHealth['vendored'][number]): string =>
+  `${presentation('status.info').terminal} ${skill.name}: vendored copy${skill.commit ? ` from ${skill.commit.slice(0, 12)}` : ''}, left alone`
+
 export const inspectRepositoryHealth = (context: KiContext, location: RepositoryLocation): Promise<RepositoryHealth> =>
   inspectAgentRepositoryHealth(
     {

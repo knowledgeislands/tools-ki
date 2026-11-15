@@ -26,6 +26,7 @@ import { presentation, renderTree } from '../presentation/index.ts'
 import {
   describeRepositoryOrphan,
   describeRepositoryProjection,
+  describeRepositoryVendoredSkill,
   inspectRepositoryHealth
 } from './shared/repository-health.ts'
 
@@ -107,6 +108,7 @@ export const createRepairCommand = (
         if (health.diagnostic) entries.push(`${failedMark} Repository: ${health.diagnostic}`)
         else
           entries.push(
+            ...health.vendored.map(describeRepositoryVendoredSkill),
             ...health.projections.map(describeRepositoryProjection),
             ...health.orphans.map(describeRepositoryOrphan)
           )
