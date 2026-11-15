@@ -54,6 +54,7 @@ export interface RepositoryOperationContext {
     readonly inspectionRepository?: string | undefined
     readonly repositoryDeclaration: string
     readonly skills: readonly ResolvedSkill[]
+    readonly vendored: readonly string[]
   }) => Promise<RepositorySkillActivationHost>
   readonly progress: RepositoryOperationProgress
 }

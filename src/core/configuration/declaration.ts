@@ -181,6 +181,9 @@ const declaredSkill = (key: string, table: Readonly<Record<string, unknown>>): D
   const { commit, ...configuration } = rest
   if (commit !== undefined && (typeof commit !== 'string' || !commitName.test(commit)))
     throw new KiError(`declared skill ${key} commit must be a full lower-case Git commit hash`, 1)
+  if (key === 'ki-self') throw new KiError('declared skill ki-self is repository-local and cannot be vendored', 1)
+  // ki-repo checks vendored copies, so a vendored ki-repo would leave none of them checked.
+  if (key === 'ki-repo') throw new KiError('declared skill ki-repo audits vendored copies and cannot be vendored', 1)
   return { key, name: key, configuration, mode, ...(commit === undefined ? {} : { commit }) }
 }
 

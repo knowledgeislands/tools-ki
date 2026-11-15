@@ -7,6 +7,7 @@ import {
   readRepositoryDeclaration,
   resolveRepositoryDeclaredSkills
 } from '../core/configuration/index.ts'
+import { VENDORED_SKILL_ROOT } from '../core/repository/vendored-skills.ts'
 import { configuredAgents } from './configuration.ts'
 import type { InstalledAgent } from './internal.ts'
 import { compatibleWithSkill, repositorySupportedRuntimes, runtimeForAgent } from './runtimes.ts'
@@ -37,7 +38,7 @@ export interface RepositoryHealth {
   readonly diagnostic?: string
   readonly localProviders: readonly ResolvedSkill[]
   /** Skills declared `mode = "vendored"`: committed copies that ki neither links nor repairs. */
-  readonly vendored: readonly DeclaredSkill[]
+  readonly vendored: readonly (DeclaredSkill & { readonly present: boolean })[]
   readonly projections: readonly RepositoryProjection[]
   readonly orphans: readonly RepositoryOrphan[]
 }
@@ -150,7 +151,18 @@ export const inspectRepositoryHealth = async (
       declaration: location.declaration,
       health,
       localProviders,
-      vendored: declarations.skills.filter((skill) => skill.mode === 'vendored'),
+      vendored: await Promise.all(
+        declarations.skills
+          .filter((skill) => skill.mode === 'vendored')
+          .map(async (skill) => ({
+            ...skill,
+            present: Boolean(
+              (
+                await lstat(join(location.root, VENDORED_SKILL_ROOT, skill.name, 'SKILL.md')).catch(() => undefined)
+              )?.isFile()
+            )
+          }))
+      ),
       projections,
       orphans
     }

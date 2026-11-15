@@ -2,6 +2,7 @@ import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { ResolvedSkill } from '../core/configuration/index.ts'
 import { KiError } from '../core/errors.ts'
+import { VENDORED_SKILL_ROOT } from '../core/repository/vendored-skills.ts'
 import type { RepositorySkillActivation, RepositorySkillActivationState } from '../core/rubric/index.ts'
 import { configuredAgents } from './configuration.ts'
 import { compatibleWithSkill, repositorySupportedRuntimes, runtimeForAgent } from './runtimes.ts'
@@ -52,6 +53,16 @@ const messageForState = (name: string, state: 'active' | 'missing' | 'blocked'):
   return `${name} has an unsafe or incompatible managed-skill link`
 }
 
+// A vendored skill is active through the repository's own committed copy, which ki never links.
+const vendoredState = async (repository: string, name: string): Promise<RepositorySkillActivationState> =>
+  (await lstat(join(repository, VENDORED_SKILL_ROOT, name, 'SKILL.md')).catch(() => undefined))?.isFile()
+    ? { name, status: 'active', message: `${name} is active through the repository's vendored copy` }
+    : {
+        name,
+        status: 'blocked',
+        message: `${name} is declared vendored but has no committed copy at ${VENDORED_SKILL_ROOT}/${name}`
+      }
+
 export const createRepositorySkillActivation = async (options: {
   readonly configurationDirectory: string
   readonly homeDirectory: string
@@ -59,6 +70,7 @@ export const createRepositorySkillActivation = async (options: {
   readonly inspectionRepository?: string | undefined
   readonly repositoryDeclaration: string
   readonly skills: readonly ResolvedSkill[]
+  readonly vendored: readonly string[]
 }): Promise<RepositorySkillActivationHost> => {
   const [agents, runtimes] = await Promise.all([
     configuredAgents({ configurationDirectory: options.configurationDirectory, homeDirectory: options.homeDirectory }),
@@ -111,7 +123,12 @@ export const createRepositorySkillActivation = async (options: {
         return { name, status, message: messageForState(name, status) }
       })
     )
-  const initial = new Map((await inspect([...skills.keys()])).map((state) => [state.name, state]))
+  const initial = new Map<string, RepositorySkillActivationState>([
+    ...(await inspect([...skills.keys()])).map((state) => [state.name, state] as const),
+    ...(await Promise.all(options.vendored.map((name) => vendoredState(options.repository, name)))).map(
+      (state) => [state.name, state] as const
+    )
+  ])
   const proposed = new Set<string>()
   let didStart = false
 

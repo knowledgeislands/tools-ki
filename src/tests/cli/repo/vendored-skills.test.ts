@@ -1,4 +1,5 @@
-import { lstat, readlink, rm, symlink } from 'node:fs/promises'
+import { execFileSync } from 'node:child_process'
+import { chmod, lstat, readlink, rm, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { runCommand, type Sandbox, sandbox } from '../_cli_helper.ts'
@@ -38,6 +39,34 @@ export default {
       }
     }]
   }]
+}
+`
+
+// A ki-repo catalogue whose RUNTIMES-2 requires ki-meeting to be active, and conform proposes it.
+const runtimeRubric = `
+export default {
+  contract: 1,
+  name: 'ki-repo',
+  concern: 'runtime activation',
+  scope: { kind: 'repository' },
+  families: [{
+    code: 'RUNTIMES', title: 'Runtime activation', description: 'Runtime activation', standard: 'standard.md', selectContext: (root) => root,
+    items: [{
+      code: 'RUNTIMES-2', title: 'Runtime skill', description: 'A runtime skill must be active.', sources: ['standard.md'],
+      mechanical: {
+        level: 'FAIL', remediation: { class: 'automatic', guidance: 'Activate the runtime skill.' },
+        audit: { phase: 'INSPECT', run: (context) => context.states.every((state) => state.status === 'active') ? [{ status: 'PASS', message: 'runtime skill active' }] : [{ status: 'VIOLATION', message: context.states.map((state) => state.message).join('; ') }] },
+        conform: { phase: 'PRIMARY', run: (context) => context.states.every((state) => state.status === 'active') ? undefined : context.request() }
+      }
+    }]
+  }],
+  createSession: async ({ repositorySkills }) => {
+    const states = repositorySkills?.inspect(['ki-meeting']) ?? []
+    return {
+      subjects: [{ families: ['RUNTIMES'], context: async () => ({ states, request: () => repositorySkills?.propose(['ki-meeting']) }) }],
+      proposal: async () => ({ writes: [], commands: [] })
+    }
+  }
 }
 `
 
@@ -176,6 +205,52 @@ describe('[ki repo] vendored skills', () => {
     expect(result.output).toContain('declared skill ki-self is repository-local and cannot be vendored')
   })
 
+  test('ki-repo, which checks vendored copies, cannot itself be vendored', async () => {
+    const box = await prepared()
+    await box.project.write(
+      '.ki.toml',
+      declaration('', '').replace('[skills.ki-repo]\n', '[skills.ki-repo]\nmode = "vendored"\n')
+    )
+
+    const result = await box.run('ki repo audit')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('declared skill ki-repo audits vendored copies and cannot be vendored')
+  })
+
+  test('a vendored runtime skill is active through its committed copy, and conform leaves it alone', async () => {
+    const box = await prepared()
+    await box.setupExampleBackpack({ name: 'ki-repo', rubric: runtimeRubric })
+
+    const audit = await box.run('ki repo audit --reporter-levels all')
+    const conform = await box.run('ki repo conform')
+
+    // A passing RUNTIMES-2 is not rendered; the blocked case below shows the failing one.
+    expect(audit.output).toContain('knowledgeislands/ki-agent-backpack:ki-repo')
+    expect(audit.output).not.toContain('(RUNTIMES-2)')
+    expect(conform.exitCode).toBe(0)
+    expect(conform.output).not.toContain('activate repository skill ki-meeting')
+    expect((await lstat(join(box.project.path, '.agents/skills/ki-meeting'))).isDirectory()).toBe(true)
+    expect(await readlink(join(box.project.path, '.claude/skills/ki-meeting'))).toBe('../../.agents/skills/ki-meeting')
+  })
+
+  test('a vendored runtime skill without its copy is blocked, never linked from the backpack', async () => {
+    const box = await prepared()
+    await box.setupExampleBackpack({ name: 'ki-repo', rubric: runtimeRubric })
+    await rm(join(box.project.path, '.agents/skills/ki-meeting'), { recursive: true })
+
+    const audit = await box.run('ki repo audit')
+    const conform = await box.run('ki repo conform')
+
+    expect(audit.exitCode).toBe(1)
+    expect(audit.output).toContain(
+      'ki-meeting is declared vendored but has no committed copy at .agents/skills/ki-meeting'
+    )
+    expect(conform.exitCode).toBe(1)
+    expect(conform.output).toContain('repository skill ki-meeting is not available for activation')
+    expect(await lstat(join(box.project.path, '.agents/skills/ki-meeting')).catch(() => undefined)).toBeUndefined()
+  })
+
   test('repair leaves the committed copy and its link alone', async () => {
     const box = await prepared()
 
@@ -205,6 +280,20 @@ describe('[ki repo] vendored skills', () => {
     const diag = await box.run('ki repo diag')
 
     expect(diag.output).toContain(`i ki-meeting: vendored copy from ${'a'.repeat(12)}, left alone`)
+  })
+
+  test('diag and a dry-run repair warn of a missing copy, which ki does not restore', async () => {
+    const box = await prepared()
+    await rm(join(box.project.path, '.agents/skills/ki-meeting'), { recursive: true })
+
+    const diag = await box.run('ki repo diag')
+    const repair = await box.run('ki repo repair --dry-run')
+
+    for (const output of [diag.output, repair.output])
+      expect(output).toContain(
+        '! ki-meeting: vendored copy missing from .agents/skills/ki-meeting; ki does not restore it'
+      )
+    expect(await lstat(join(box.project.path, '.agents/skills/ki-meeting')).catch(() => undefined)).toBeUndefined()
   })
 
   test('skill add and remove refuse a vendored skill', async () => {
@@ -266,6 +355,63 @@ describe('[ki repo] vendored skills', () => {
       const result = await box.run('ki repo audit --reporter-levels all')
 
       expect(result.output).toContain('vendored ki-meeting matches')
+    })
+
+    test('a copy that Git ignores is a warning, since the repository does not commit it', async () => {
+      const box = await prepared()
+      const commit = await committedBackpack(box)
+      await box.project.write('.ki.toml', declaration(`mode = "vendored"\ncommit = "${commit}"`))
+      await box.project.git(['init', '-q'])
+      await vendorFromBackpack(box)
+      await box.project.write('.gitignore', '/.agents/skills/*\n')
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.output).toContain(
+        'Git ignores vendored ki-meeting, so the repository does not commit it; re-include .agents/skills/ki-meeting/ in .gitignore'
+      )
+      expect(result.output).not.toContain('removed')
+    })
+
+    test('an unreadable copy leaves it unverified rather than failing the audit', async () => {
+      const box = await prepared()
+      const commit = await committedBackpack(box)
+      await box.project.write('.ki.toml', declaration(`mode = "vendored"\ncommit = "${commit}"`))
+      await vendorFromBackpack(box)
+      await chmod(join(box.project.path, '.agents/skills/ki-meeting/SKILL.md'), 0o000)
+
+      const result = await box.run('ki repo audit --reporter-levels all')
+      await chmod(join(box.project.path, '.agents/skills/ki-meeting/SKILL.md'), 0o644)
+
+      expect(result.output).toContain(`vendored ki-meeting cannot be checked against ${commit.slice(0, 12)}: EACCES`)
+      expect(result.output).toContain('knowledgeislands/ki-agent-backpack:ki-repo')
+    })
+
+    test('a special file in the copy is never read', async () => {
+      const box = await prepared()
+      const commit = await committedBackpack(box)
+      await box.project.write('.ki.toml', declaration(`mode = "vendored"\ncommit = "${commit}"`))
+      await vendorFromBackpack(box)
+      execFileSync('mkfifo', [join(box.project.path, '.agents/skills/ki-meeting/pipe')])
+
+      const result = await box.run('ki repo audit --reporter-levels all')
+
+      expect(result.output).toContain('vendored ki-meeting matches')
+    })
+
+    test('a commit holding the skill in two places, neither now in use, leaves the copy unverified', async () => {
+      const box = await prepared()
+      await box.data.write(`${BACKPACK}/skills/retired/ki-meeting/SKILL.md`, 'An older copy.\n')
+      const commit = await committedBackpack(box)
+      await rm(join(box.data.path, BACKPACK, 'skills/retired'), { recursive: true })
+      await rm(join(box.data.path, BACKPACK, 'skills/ki-meeting'), { recursive: true })
+      await box.project.write('.ki.toml', declaration(`mode = "vendored"\ncommit = "${commit}"`))
+
+      const result = await box.run('ki repo audit --reporter-levels all')
+
+      expect(result.output).toContain(
+        'knowledgeislands/ki-agent-backpack holds 2 copies of ki-meeting at that commit and uses none of them now'
+      )
     })
 
     test('a backpack that is not a Git checkout leaves the copy unverified, as information', async () => {

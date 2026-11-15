@@ -41,8 +41,6 @@ export const resolveRepositoryDeclaredSkills = async (
 ): Promise<readonly ResolvedSkill[]> => {
   const dataRoot = await dataRootEvidence(dataDirectory)
   const declared = declaration.skills.find((skill) => skill.name === repositoryLocalSkillName)
-  if (declared?.mode === 'vendored')
-    throw new KiError(`declared skill ${repositoryLocalSkillName} is repository-local and cannot be vendored`, 1)
   if (!declared) return resolveDeclaredSkills(declaration, backpacks, dataRoot, selected)
 
   const root = await physicalRepositoryRoot(repositoryRoot)

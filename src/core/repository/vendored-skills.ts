@@ -63,14 +63,16 @@ const committedSkillDirectory = (
   blobs: readonly CommittedBlob[],
   backpack: InstalledBackpack,
   name: string
-): string | undefined => {
+): { readonly directory?: string; readonly candidates: number } => {
   const candidates = blobs
     .map(({ path }) => path)
     .filter((path) => posix.basename(path) === 'SKILL.md' && posix.basename(posix.dirname(path)) === name)
     .map((path) => posix.dirname(path))
-  return candidates.length === 1
-    ? candidates[0]
-    : candidates.find((candidate) => backpack.capabilities.some((capability) => capability.source === candidate))
+  const directory =
+    candidates.length === 1
+      ? candidates[0]
+      : candidates.find((candidate) => backpack.capabilities.some((capability) => capability.source === candidate))
+  return { ...(directory === undefined ? {} : { directory }), candidates: candidates.length }
 }
 
 const walk = async (root: string, relative = ''): Promise<string[]> => {
@@ -88,17 +90,20 @@ const walk = async (root: string, relative = ''): Promise<string[]> => {
 /**
  * The copy's files as Git would record them. In a Git checkout these are the tracked and the
  * untracked, unignored files, so an ignored `.DS_Store` is not drift; elsewhere, every file.
+ * `ignored` means Git ignores every file the copy holds, so the repository does not commit it.
  */
-const copyTree = async (context: GitContext, copy: string, format: 'sha1' | 'sha256'): Promise<Tree> => {
+const copyTree = async (context: GitContext, copy: string, format: 'sha1' | 'sha256'): Promise<Tree | 'ignored'> => {
   const listed = await git(context, copy, ['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '.'])
   const paths =
     listed === undefined ? await walk(copy) : [...new Set(listed.split('\0').filter((path) => path.length > 0))]
+  if (!paths.length && (await walk(copy)).includes('SKILL.md')) return 'ignored'
   const tree = new Map<string, string>()
   for (const path of paths) {
     const absolute = join(copy, path)
     const state = await lstat(absolute).catch(() => undefined)
-    // A tracked file deleted from the working tree is missing from the copy.
-    if (!state || state.isDirectory()) continue
+    // A tracked file deleted from the working tree is missing from the copy; Git records only
+    // regular files and links, so anything else, such as a FIFO, is never read.
+    if (!state || !(state.isFile() || state.isSymbolicLink())) continue
     const content = state.isSymbolicLink() ? Buffer.from(await readlink(absolute), 'utf8') : await readFile(absolute)
     tree.set(path, blobId(content, format))
   }
@@ -129,17 +134,33 @@ const vendoredSkillFinding = async (
   // lstat reports a linked directory as a link, never as a directory.
   if (!state?.isDirectory()) return unverified(`${copyPath} is not a physical directory`)
 
+  const absent: string[] = []
   for (const backpack of backpacks) {
     const blobs = await committedBlobs(context, backpack.root, skill.commit)
     if (!blobs) continue
-    const directory = committedSkillDirectory(blobs, backpack, skill.name)
-    if (!directory) return unverified(`${backpack.id} has no ${skill.name} at that commit`)
+    const { directory, candidates } = committedSkillDirectory(blobs, backpack, skill.name)
+    if (!directory) {
+      absent.push(
+        candidates
+          ? `${backpack.id} holds ${candidates} copies of ${skill.name} at that commit and uses none of them now`
+          : `${backpack.id} has no ${skill.name} at that commit`
+      )
+      continue
+    }
     const expected: Tree = new Map(
       blobs
         .filter(({ path }) => path.startsWith(`${directory}/`))
         .map(({ path, id }) => [posix.relative(directory, path), id])
     )
     const actual = await copyTree(context, copy, skill.commit.length === 64 ? 'sha256' : 'sha1')
+    if (actual === 'ignored')
+      return {
+        level: 'warn',
+        code: CODE,
+        title: TITLE,
+        subject: copyPath,
+        message: `Git ignores vendored ${skill.name}, so the repository does not commit it; re-include ${copyPath}/ in .gitignore`
+      }
     const changed = [...expected].filter(([path, id]) => actual.has(path) && actual.get(path) !== id).map(([p]) => p)
     const removed = [...expected.keys()].filter((path) => !actual.has(path))
     const added = [...actual.keys()].filter((path) => !expected.has(path))
@@ -164,7 +185,7 @@ const vendoredSkillFinding = async (
       message: `vendored ${skill.name} has drifted from ${backpack.id} at ${short}: ${parts.join('; ')}; ki leaves the copy alone, so refresh it from the backpack or record the commit it now matches`
     }
   }
-  return unverified('no declared backpack is a Git checkout holding that commit')
+  return unverified(absent.length ? absent.join('; ') : 'no declared backpack is a Git checkout holding that commit')
 }
 
 /**
@@ -182,7 +203,19 @@ export const gatherVendoredSkillFindings = async (
       skill.mode === 'vendored' && skill.commit !== undefined
   )
   const backpacks = declaration.backpacks.flatMap((id) => installed.filter((backpack) => backpack.id === id))
-  return Promise.all(vendored.map((skill) => vendoredSkillFinding(context, repository, skill, backpacks)))
+  return Promise.all(
+    vendored.map((skill) =>
+      vendoredSkillFinding(context, repository, skill, backpacks).catch(
+        (error: unknown): Finding => ({
+          level: 'info',
+          code: CODE,
+          title: TITLE,
+          subject: posix.join(VENDORED_SKILL_ROOT, skill.name),
+          message: `vendored ${skill.name} cannot be checked against ${skill.commit.slice(0, 12)}: ${(error as Error).message}`
+        })
+      )
+    )
+  )
 }
 
 /** Vendored-copy findings accompany the ki-repo report, whose `.ki.toml` contract declares the key. */

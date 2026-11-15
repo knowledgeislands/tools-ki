@@ -98,6 +98,7 @@ export const repositorySkillActivation = async (
     repository: repository.root,
     inspectionRepository,
     repositoryDeclaration: repository.declaration,
-    skills
+    skills,
+    vendored: declaration.skills.filter((skill) => skill.mode === 'vendored').map((skill) => skill.name)
   })
 }

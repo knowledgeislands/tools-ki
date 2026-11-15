@@ -26,7 +26,9 @@ export const describeRepositoryLocalProvider = (skill: RepositoryHealth['localPr
   `${presentation('status.pass').terminal} ${skill.identity}: canonical repository source`
 
 export const describeRepositoryVendoredSkill = (skill: RepositoryHealth['vendored'][number]): string =>
-  `${presentation('status.info').terminal} ${skill.name}: vendored copy${skill.commit ? ` from ${skill.commit.slice(0, 12)}` : ''}, left alone`
+  skill.present
+    ? `${presentation('status.info').terminal} ${skill.name}: vendored copy${skill.commit ? ` from ${skill.commit.slice(0, 12)}` : ''}, left alone`
+    : `${presentation('status.warn').terminal} ${skill.name}: vendored copy missing from .agents/skills/${skill.name}; ki does not restore it`
 
 export const inspectRepositoryHealth = (context: KiContext, location: RepositoryLocation): Promise<RepositoryHealth> =>
   inspectAgentRepositoryHealth(

@@ -180,8 +180,7 @@ export const resolveDeclaredSkills = (
     selectedNames.add(skill.declaration.name)
     for (const dependencyName of skill.capability.dependsOn) {
       const dependency = resolved.find((candidate) => candidate.declaration.name === dependencyName)
-      // Dependency existence is already validated by orderedSkills() above, so dependency is always found here.
-      /* v8 ignore next */
+      // orderedSkills() has validated every dependency; one not found here is vendored, which ki does not run.
       if (dependency) includeDependencies(dependency)
     }
     for (const dependencyName of skill.capability.optionalDependsOn) {
