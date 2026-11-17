@@ -28,6 +28,13 @@ const renderItem = (item: RubricItem<unknown>): string => {
   return `- **${item.code} [${classification(item)}] — ${item.title}** — ${item.description} (${item.sources.join(', ')})${remediation}${judgment}`
 }
 
+/**
+ * The rubric format's version, the `ki-revised` of `ki-skills`' `standard-formats-rubric.md`, which every generated
+ * rubric names in its `ki-document-type` (SKILL-FORMAT a, Kris, 17 November 2026). It moves with that standard, and every
+ * rubric is then regenerated.
+ */
+export const RUBRIC_FORMAT_VERSION = '2026-11-17T00:55:00Z'
+
 /** The same loaded catalogue drives both execution and publication. */
 export const renderRubricMarkdown = (definition: SkillRubricDefinition<unknown>): string => {
   const contents = definition.families
@@ -43,7 +50,11 @@ export const renderRubricMarkdown = (definition: SkillRubricDefinition<unknown>)
     )
     .join('\n\n')
 
-  return `<!-- GENERATED FILE: produced by \`ki dev skill rubric\`. Do not hand-edit; edit scripts/rubric/items/, then rerun \`ki dev skill rubric <skill> --write\`. -->
+  return `---
+ki-document-type: rubric@${RUBRIC_FORMAT_VERSION}
+---
+
+<!-- GENERATED FILE: produced by \`ki dev skill rubric\`. Do not hand-edit; edit scripts/rubric/items/, then rerun \`ki dev skill rubric <skill> --write\`. -->
 
 # Generated rubric — ${definition.concern}
 

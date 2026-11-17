@@ -32,6 +32,10 @@ const mixedFamilies = `[{
 }]`
 
 const expectedRendered = [
+  '---',
+  'ki-document-type: rubric@2026-11-17T00:55:00Z',
+  '---',
+  '',
   '<!-- GENERATED FILE: produced by `ki dev skill rubric`. Do not hand-edit; edit scripts/rubric/items/, then rerun `ki dev skill rubric <skill> --write`. -->',
   '',
   '# Generated rubric — example governance',
