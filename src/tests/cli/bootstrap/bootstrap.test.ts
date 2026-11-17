@@ -8,7 +8,7 @@ describe('[ki bootstrap]', () => {
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')
     await box.data.write(
-      'ki/backpacks/knowledgeislands/ki-agent-backpack/skills/governance/ki-authoring/SKILL.md',
+      'ki/backpacks/knowledgeislands/ki-agent-backpack/skills/keystone/ki-authoring/SKILL.md',
       '---\nname: ki-authoring\nki-depends-on: []\n---\n'
     )
 
@@ -403,7 +403,7 @@ ids = ["claude-code"]
     await box.setupAgentHome('chatgpt-codex')
     await box.run('ki bootstrap')
     await box.root.write(
-      'dev/knowledgeislands/ki-agent-backpack/skills/governance/ki-authoring/SKILL.md',
+      'dev/knowledgeislands/ki-agent-backpack/skills/keystone/ki-authoring/SKILL.md',
       '---\nname: ki-authoring\nki-depends-on: []\n---\n'
     )
     await box.run(`ki dev local set knowledgeislands/ki-agent-backpack ${backpackPath}`)
@@ -431,7 +431,7 @@ ids = ["claude-code"]
       )
     for (const home of ['.claude', '.agents'])
       expect(await realpath(`${box.home.path}/${home}/skills/ki-authoring`)).toBe(
-        `${backpackPath}/skills/governance/ki-authoring`
+        `${backpackPath}/skills/keystone/ki-authoring`
       )
     expect(await box.config.read('ki/config.toml')).toContain('[skills.ki-authoring]')
     expect(doctor.exitCode).toBe(0)
