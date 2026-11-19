@@ -1,4 +1,4 @@
-.TH KI 1 "2026-11-14" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-11-19" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -398,6 +398,9 @@ Show a repository's work by view, read-only, from its work files.
 .TP
 .B ki work base [--repo <dir>] [--format text|json]
 Flag change documents whose touched files moved since their base.
+.TP
+.B ki work banner [<package>] [--store <dir>] [--full|--short] [--no-art] [--running <n>] [--queued <n>] [--blocked <n>] [--item <line>]... [--heading-for <line>] [--meeting <id>]... [--host <name>]
+Print a work package's closing banner from the Cairn store.
 .SS Estate convergence
 \&
 .TP
@@ -1720,6 +1723,57 @@ report, each document with its repository, path, base, touches, status,
 verdict, files and reason, and the graduated documents. The command
 exits 0 when every checked document is current and 1 when any is moved
 or unknown.
+.TP
+.B ki work banner [<package>] [--store <dir>] [--full|--short] [--no-art] [--running <n>] [--queued <n>] [--blocked <n>] [--item <line>]... [--heading-for <line>] [--meeting <id>]... [--host <name>]
+Print a work package's closing banner, read-only, exactly as the
+.B ki-coordination
+standard lays it out: the Knowledge Islands art with its scroll, the
+state's heading, the counts line, the roadmap and package lines, the
+items, the heading-for and listening lines, and the seat's thread line.
+The package is named by its work id, as
+.IR ki.summit ,
+or a sub-package's
+.IR <parent>+<focus> ,
+and found under
+.I work/<territory>/
+in the Cairn store, which is
+.BR --store ,
+then
+.BR MCP_CAIRN_STORE ,
+then
+.B [store] path
+in the rig's
+.IR $XDG_CONFIG_HOME/cairn/config.toml ;
+with none named, it is the package whose folder holds the working
+directory. The command reads the package's
+.I _index.md
+for its state, hold and seat, the open queries of its change
+documents, oldest first, the open meetings it sits in, the seat's role
+glyph and actor name from the store's roster, and the roadmap records
+of each repository the package names, through the local registry.
+.BR --running ,
+.B --queued
+and
+.B --blocked
+give the session's live counts, each 0 where not given;
+.B --item
+adds a live item,
+.B --heading-for
+the line after the heading-for glyph while the work is With worker, and
+.B --meeting
+a meeting the session sits in.
+.BR --full ,
+the default, prints the art, the roadmap and the package lines;
+.B --short
+leaves them out, for a Medium or Short reply, and
+.B --no-art
+leaves out the art alone. The scroll names
+.B --host ,
+or
+.B [rig] name
+in the same configuration. The command exits 1 when the package, its
+store or anything it reads cannot be found or read, naming the file and
+field, and 2 on a usage error.
 .SS Estate convergence
 \&
 .PP

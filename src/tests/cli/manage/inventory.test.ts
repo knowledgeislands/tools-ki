@@ -95,7 +95,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   'dev local': ['off', 'on', 'set'],
   'dev skill': ['generate', 'rubric'],
   estate: ['converge'],
-  work: ['base', 'status']
+  work: ['banner', 'base', 'status']
 }
 
 describe('[ki command inventory]', () => {

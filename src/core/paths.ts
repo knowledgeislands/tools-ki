@@ -16,6 +16,9 @@ export const userHome = (environment: Environment): string => environment.HOME ?
 const xdg = (environment: Environment, name: string, fallback: string): string =>
   environment[name] || resolve(userHome(environment), fallback)
 
+/** The user's XDG configuration home, where other tools' configuration, such as the rig's Cairn configuration, lives. */
+export const xdgConfigHome = (environment: Environment): string => xdg(environment, 'XDG_CONFIG_HOME', '.config')
+
 const kiPath = (environment: Environment, kiName: string, xdgName: string, fallback: string): string =>
   environment[kiName] || resolve(xdg(environment, xdgName, fallback), 'ki')
 

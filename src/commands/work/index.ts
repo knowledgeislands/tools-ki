@@ -2,7 +2,8 @@ import { basename, resolve } from 'node:path'
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../core/configuration/index.ts'
-import { KiExit } from '../../core/errors.ts'
+import { grammarError, KiExit } from '../../core/errors.ts'
+import { xdgConfigHome } from '../../core/paths.ts'
 import { resolveRepository } from '../../core/repository/index.ts'
 import { requiredLocalRegistry } from '../../core/storage/index.ts'
 import {
@@ -13,6 +14,13 @@ import {
   checkChangeDocumentBases
 } from '../../core/work/base.ts'
 import {
+  enclosingWorkPackage,
+  locateWorkPackage,
+  readCairnConfiguration,
+  readWorkPackageBanner,
+  resolveCairnStore
+} from '../../core/work/package.ts'
+import {
   deriveWorkViews,
   readWorkStatus,
   type WorkStatus,
@@ -22,6 +30,7 @@ import {
   workViews
 } from '../../core/work/status.ts'
 import { presentation, renderTree, type TreeEntry } from '../presentation/index.ts'
+import { renderBanner } from './banner.ts'
 
 const viewLabels: Readonly<Record<WorkView, { readonly glyph: string; readonly label: string; readonly key: string }>> =
   {
@@ -116,6 +125,28 @@ const renderBaseCheck = (report: BaseCheckReport): string => {
   return renderTree({ title: 'KI WORK BASE', entries }).join('\n')
 }
 
+/** A live count from the session: a whole number, zero or more. */
+const liveCount = (value: string): number => {
+  if (!/^\d+$/.test(value)) throw grammarError(`a live count must be a whole number, zero or more, not ${value}`)
+  return Number(value)
+}
+
+const collect = (value: string, previous: readonly string[] = []): readonly string[] => [...previous, value]
+
+interface BannerCommandOptions {
+  readonly store?: string
+  readonly full?: boolean
+  readonly short?: boolean
+  readonly art: boolean
+  readonly running: number
+  readonly queued: number
+  readonly blocked: number
+  readonly item: readonly string[]
+  readonly headingFor?: string
+  readonly meeting: readonly string[]
+  readonly host?: string
+}
+
 export const createWorkCommand = (context: KiContext): Command => {
   const command = new Command('work').description(
     'read the work model: work packages, their state and views, and change-document bases'
@@ -192,6 +223,75 @@ export const createWorkCommand = (context: KiContext): Command => {
         if (options.format === 'json') context.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
         else context.stdout.write(`${renderBaseCheck(report)}\n`)
         if (report.documents.some((document) => document.verdict !== 'current')) throw new KiExit(1)
+      })
+  )
+  command.addCommand(
+    new Command('banner')
+      .description(
+        "print a work package's closing banner from the Cairn store, art included, exactly as ki-coordination lays it out"
+      )
+      .argument(
+        '[package]',
+        "the package's work id, as ki.summit; default, the package whose folder holds the working directory"
+      )
+      .option(
+        '--store <dir>',
+        "the Cairn store clone; default, MCP_CAIRN_STORE, then [store] path in the rig's cairn/config.toml"
+      )
+      .addOption(
+        new Option('--full', 'the Full banner: the art, roadmap and package lines (default)').conflicts('short')
+      )
+      .addOption(
+        new Option('--short', 'the Medium and Short banner: no art, roadmap or package lines').conflicts('full')
+      )
+      .option('--no-art', 'leave the art out of a Full banner')
+      .option('--running <n>', 'runs the session has running', liveCount, 0)
+      .option('--queued <n>', 'runs the session has queued', liveCount, 0)
+      .option('--blocked <n>', 'items the session has stuck or blocked', liveCount, 0)
+      .option(
+        '--item <line>',
+        'a live item from the session, <glyph> <what> · <holder> · at <time> (repeatable)',
+        collect,
+        []
+      )
+      .option(
+        '--heading-for <line>',
+        'the line after ↪️ while the work heads for a hold or a handoff, as "draining → ⏸️ On hold"'
+      )
+      .option('--meeting <id>', 'a meeting the session sits in, for the listening line (repeatable)', collect, [])
+      .option('--host <name>', "the art scroll's host; default, [rig] name in the rig's cairn/config.toml")
+      .action(async (id: string | undefined, options: BannerCommandOptions) => {
+        const configuration = await readCairnConfiguration(xdgConfigHome(context.environment), context.homeDirectory)
+        const { store, folder } =
+          id === undefined
+            ? await enclosingWorkPackage(context.workingDirectory)
+            : await (async () => {
+                const root = resolveCairnStore(
+                  options.store,
+                  context.environment,
+                  configuration,
+                  context.workingDirectory
+                )
+                return { store: root, folder: await locateWorkPackage(root, id) }
+              })()
+        const banner = await readWorkPackageBanner(store, folder, await requiredLocalRegistry(context.paths.state))
+        const host = options.host ?? configuration.rig
+        const timeZone = context.environment['TZ'] || undefined
+        context.stdout.write(
+          `${renderBanner(banner, {
+            layout: options.short ? 'short' : 'full',
+            art: options.art,
+            running: options.running,
+            queued: options.queued,
+            blocked: options.blocked,
+            items: options.item,
+            meetings: options.meeting,
+            now: new Date(context.now()),
+            ...(options.headingFor === undefined ? {} : { headingFor: options.headingFor }),
+            ...(host === undefined ? {} : { host }),
+            ...(timeZone === undefined ? {} : { timeZone })
+          })}\n`
+        )
       })
   )
   return command

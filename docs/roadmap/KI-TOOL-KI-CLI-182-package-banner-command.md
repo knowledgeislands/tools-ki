@@ -7,13 +7,13 @@ purpose: capability
 priority: medium
 size: m
 assignee: work/ki.summit
-horizon: next
-status: ready
+horizon: now
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: a121c07cfdc9b9dab3fb59f62497815b46bbd100
 created_at: 2026-11-19T03:25:00Z
-updated_at: 2026-11-19T03:37:00Z
+updated_at: 2026-11-19T04:05:00Z
 ---
 
 # KI-TOOL-KI-CLI-182: Package banner command
@@ -47,14 +47,14 @@ In scope: reading one package, `work/<territory>/<id>/` in the Cairn store, its 
 
 **Acceptance criteria.**
 
-- [ ] For each state in the standard's table of states, the output matches the standard's finished banner examples exactly, glyphs, spacing and blank lines included, with zeros written in the counts line.
-- [ ] `--short` omits the art, roadmap and package lines; `--no-art` omits only the art; a run-report banner carries no heading-for or listening line.
-- [ ] The art is the 11-line, 88-column drawing below, unchanged but for the scroll's four lines, each centred in the 54 characters between its `|` marks, any odd space going on the right, and no scroll line longer than 54 characters.
-- [ ] The roadmap line reads `🗺️ roadmap · <n> records · <n> open · <n> done awaiting prune · <n> ideas` from the roadmap summary, ideas counting `triage` records and done awaiting prune counting `done` and `cancelled` records, or `🗺️ roadmap · none` where a repository has no roadmap.
-- [ ] The package line reads `📦 package · changes <n> · open <n> · held <n> · meetings <n>` with zeros written.
-- [ ] The thread line is `<Name> (<role glyph> 🔑 <work-id>)` where the seat's actor is named in the roster, and the bare form otherwise; it is always the last line.
-- [ ] A missing or unreadable field is reported as an error naming the file and field, never filled with a default.
-- [ ] Tests cover each state, `--short`, `--no-art`, an unnamed seat and a package with no roadmap; the repository's checks pass.
+- [x] For each state in the standard's table of states, the output matches the standard's finished banner examples exactly, glyphs, spacing and blank lines included, with zeros written in the counts line.
+- [x] `--short` omits the art, roadmap and package lines; `--no-art` omits only the art; a run-report banner carries no heading-for or listening line.
+- [x] The art is the 11-line, 88-column drawing below, unchanged but for the scroll's four lines, each centred in the 54 characters between its `|` marks, any odd space going on the right, and no scroll line longer than 54 characters.
+- [x] The roadmap line reads `🗺️ roadmap · <n> records · <n> open · <n> done awaiting prune · <n> ideas` from the roadmap summary, ideas counting `triage` records and done awaiting prune counting `done` and `cancelled` records, or `🗺️ roadmap · none` where a repository has no roadmap.
+- [x] The package line reads `📦 package · changes <n> · open <n> · held <n> · meetings <n>` with zeros written.
+- [x] The thread line is `<Name> (<role glyph> 🔑 <work-id>)` where the seat's actor is named in the roster, and the bare form otherwise; it is always the last line.
+- [x] A missing or unreadable field is reported as an error naming the file and field, never filled with a default.
+- [x] Tests cover each state, `--short`, `--no-art`, an unnamed seat and a package with no roadmap; the repository's checks pass.
 
 **Dependencies.** The roadmap summary prints only a table today, with no JSON output and none of the four banner counts directly; planning either adds a JSON form to `ki repo roadmap summary` or has the command count records itself through the shared roadmap reader. The store's path comes from the rig's configuration, the Cairn MCP's `MCP_CAIRN_STORE`.
 
@@ -71,6 +71,8 @@ Planned to Ready on 19 November 2026 by the ki.summit build run, on Loreward's b
 
 The roadmap counts' source is the shared roadmap reader: the command counts each package repository's records itself, so `ki repo roadmap summary` gains no JSON form here. That settles the promotion condition, and the record moves to Next and Ready together.
 
+Implemented on 19 November 2026 by the same run, from baseline `a121c07c`, and awaiting review: see Review.
+
 **Store and host.** STORE-SETTING, how `ki` finds the store, stays held for Kris under PARK-11-12 a, so the command adds no setting of its own. It reads `--store`, then the Cairn MCP's `MCP_CAIRN_STORE`, then `[store] path` in `$XDG_CONFIG_HOME/cairn/config.toml`, the rig's Cairn configuration chezmoi renders; with no package named, the package and store come from the working directory. The scroll's host is `--host`, or that file's `[rig] name`.
 
 **Reading rules.** Where the standard leaves a count's source open, the command reads:
@@ -83,17 +85,17 @@ The roadmap counts' source is the shared roadmap reader: the command counts each
 
 ## Steps
 
-- [ ] Read one package from the store in `src/core/work/package.ts`: resolve the store and the package, from an id, a `+` sub-package id or the working directory; read the state fields, the hold, target and blocking fields, the seat's role and actor, the roster's `ki-name` and the role's `ki-glyph`, Held, the change documents' Open sections, the meetings, and each `ki-repositories` repository's roadmap counts through the registry and the shared roadmap reader. A missing or malformed field is an error naming the file and field.
-- [ ] Move the art into `src/assets/banner-art.txt`, the 11-line, 88-column drawing with an empty scroll, and render it in `src/commands/work/banner.ts`: the four scroll lines centred, the extra space on the right, no line over 54 characters.
-- [ ] Render the banner from the one table of states: each state's heading, the counts line with zeros written or the hold line, the roadmap and package lines in a Full banner, the items in the standard's order, the heading-for and listening lines where they stand, and the thread line last, named first where the roster names the seat's actor.
-- [ ] Add `ki work banner [package] [--store <dir>] [--full|--short] [--no-art] [--running <n>] [--queued <n>] [--blocked <n>] [--item <line>]... [--heading-for <line>] [--meeting <id>]... [--host <name>]` beside `ki work status`, with the local time zone from `TZ` and the clock from the context.
-- [ ] Add CLI contract tests in `src/tests/cli/work/banner.test.ts` through the sandbox: each state's heading, the counts line with zeros written, Full against Medium and Short lines, `--no-art`, the scroll's centring with odd splits, the thread line named from the roster and bare where unnamed, a package with no roadmap, and each error.
-- [ ] Document it in the README, the manual and its command inventory, and the changelog; make `src/assets/assets.d.ts` describe the text assets it now serves.
-- [ ] Run the full gate.
+- [x] Read one package from the store in `src/core/work/package.ts`: resolve the store and the package, from an id, a `+` sub-package id or the working directory; read the state fields, the hold, target and blocking fields, the seat's role and actor, the roster's `ki-name` and the role's `ki-glyph`, Held, the change documents' Open sections, the meetings, and each `ki-repositories` repository's roadmap counts through the registry and the shared roadmap reader. A missing or malformed field is an error naming the file and field.
+- [x] Move the art into `src/assets/banner-art.txt`, the 11-line, 88-column drawing with an empty scroll, and render it in `src/commands/work/banner.ts`: the four scroll lines centred, the extra space on the right, no line over 54 characters.
+- [x] Render the banner from the one table of states: each state's heading, the counts line with zeros written or the hold line, the roadmap and package lines in a Full banner, the items in the standard's order, the heading-for and listening lines where they stand, and the thread line last, named first where the roster names the seat's actor.
+- [x] Add `ki work banner [package] [--store <dir>] [--full|--short] [--no-art] [--running <n>] [--queued <n>] [--blocked <n>] [--item <line>]... [--heading-for <line>] [--meeting <id>]... [--host <name>]` beside `ki work status`, with the local time zone from `TZ` and the clock from the context.
+- [x] Add CLI contract tests in `src/tests/cli/work/banner.test.ts` through the sandbox: each state's heading, the counts line with zeros written, Full against Medium and Short lines, `--no-art`, the scroll's centring with odd splits, the thread line named from the roster and bare where unnamed, a package with no roadmap, and each error.
+- [x] Document it in the README, the manual and its command inventory, and the changelog; make `src/assets/assets.d.ts` describe the text assets it now serves.
+- [x] Run the full gate.
 
 ## Files touched
 
-`src/core/work/package.ts`, `src/commands/work/banner.ts`, `src/commands/work/index.ts`, `src/assets/banner-art.txt`, `src/assets/assets.d.ts`, `src/tests/cli/work/banner.test.ts`, `README.md`, `man/ki.1`, `man/ki.commands.json`, `CHANGELOG.md` and this record. Not touched: the backpack, the Cairn store, `ki work status`, `ki repo roadmap summary`, `.ki.toml`, any release file or version.
+`src/core/work/package.ts`, `src/core/paths.ts`, `src/commands/work/banner.ts`, `src/commands/work/index.ts`, `src/assets/banner-art.txt`, `src/assets/assets.d.ts`, `src/tests/cli/work/banner.test.ts`, `src/tests/cli/manage/inventory.test.ts`, `vitest.config.ts`, `README.md`, `man/ki.1`, `man/ki.commands.json`, `CHANGELOG.md` and this record. Not touched: the backpack, the Cairn store, `ki work status`, `ki repo roadmap summary`, `.ki.toml`, any release file or version.
 
 ## Verify
 
@@ -120,6 +122,41 @@ The README's work-model section and the manual gain `ki work banner`.
 ### Roadmap
 
 This record only.
+
+## Review
+
+### Delivered
+
+The Goal is met. `ki work banner [<package>]` prints a package's closing banner from the Cairn store: the art with Kris's scroll, the state's heading, the counts or hold line, the roadmap and package lines in a Full banner, the items in the standard's order, the heading-for and listening lines where the caller passes them, and the thread line last, named from the roster. Run against the real store, `ki work banner ki.summit --full --running 0` prints `SOL  ·  WITH YOU`, `5 waiting on you  ·  nothing running` and the local date and time on the scroll, the With worker heading, `🗺️ roadmap · 4 records · 2 open · 0 done awaiting prune · 2 ideas`, `📦 package · changes 5 · open 5 · held 2 · meetings 0`, the five queries with Kris oldest first and `Loreward (🏛️ 🔑 ki.summit)`.
+
+### Change Summary
+
+- `src/core/work/package.ts` reads one package: the store from `--store`, `MCP_CAIRN_STORE` or the rig's `cairn/config.toml`; the package from its id, a `+` sub-package id or the working directory; its state, hold, target and blocking fields, Held, the change documents' open queries, its open meetings, the seat's role glyph and actor name from the roster, and each repository's roadmap counts through the registry and the shared roadmap reader. Every missing or malformed field is an error naming the file and field.
+- `src/assets/banner-art.txt` holds Kris's drawing with an empty scroll; `src/commands/work/banner.ts` fills the scroll and renders the banner from the one table of states.
+- `src/commands/work/index.ts` adds the subcommand and its options; `src/core/paths.ts` adds `xdgConfigHome`.
+- `vitest.config.ts` gains a small loader so the tests read a `.txt` asset as its text, as Bun does with `with { type: 'text' }`.
+- The README, manual, command inventory and changelog document the command.
+
+### Verification
+
+`bun run test:coverage`: 86 files, 1,397 tests, 100% statements, branches, functions and lines, 38 of them in `src/tests/cli/work/banner.test.ts`, covering every state's heading, the counts line with zeros written, Full against `--short`, `--no-art`, Kris's drawing reproduced byte for byte with its odd split, even splits, the thread line named, bare and `🧵`, a package with no roadmap, the item order with live items, and each error. `bunx tsc --noEmit`, `bunx biome check`, `bun run ki:tools:lint-man`, rumdl and the command inventory pass; knip reports only the unused export that also stands on `main`. `ki repo audit --repo .` reports the same failures as `main` and nothing new: KNIP-2 and DEPS-1, FILES-6, TOPICS-1, and the titles of CLI-178 and CLI-179.
+
+### Outstanding concerns
+
+- The reading rules are heuristics over prose the standard does not yet fix: a query is answered when its bold lead begins `Done`, parked when its first line says `(parked)`, and its time is its change document's `ki-revised`, not the query's own. A field the store adds for these would replace them.
+- The store's location reads the Cairn MCP's setting and the rig's Cairn configuration until STORE-SETTING is settled.
+- The scroll follows Kris's drawing and Kitteth's rules; the standard's F1 still reads KNOWLEDGE ISLANDS alone until ki.cairn settles FOOTER-AGORA.
+- A Project's `📥 <n> to accept` count is not read; the caller can pass it as an item.
+- A worker's `status` defaults to active and a package's label to its id where the fields are absent, as the work-package standard has them.
+- Nothing is released: TOOL-RELEASES is parked with Kris, and the primary checkout's `ki` on sol runs it from `main`.
+
+### Post-change review
+
+The command only reads. Its one wider change is the Vitest text loader, which affects only `.txt` imports, and none other exists. Live counts it cannot see come from the caller, so a coordinator still has to pass `--running`, `--queued` and `--blocked`.
+
+### Mini recap
+
+`ki work banner` prints any package's banner from the store, art and scroll included, exactly as the standard lays it out, with the live counts as options.
 
 ## Discussion
 

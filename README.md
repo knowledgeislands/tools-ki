@@ -135,6 +135,13 @@ ki work base
 ki work base --repo ~/workspaces/personal/inbox --format json
 ```
 
+`ki work banner [<package>]` prints a work package's closing banner from the Cairn store, exactly as the `ki-coordination` standard lays it out: the Knowledge Islands art with its scroll, the state's heading, the counts line, the roadmap and package lines, the items, the listening line and the seat's thread line. It reads the package's `_index.md`, its change documents' open queries, its open meetings, the seat's role glyph and actor name from the store's roster, and the roadmap records of each repository the package names, through the local registry. The session's live counts come in as `--running`, `--queued` and `--blocked`, 0 where not given, with `--item`, `--heading-for` and `--meeting` for its live items, its heading-for line and the meetings it sits in. With no package named, it reads the package whose folder holds the working directory. The store is `--store`, `MCP_CAIRN_STORE`, or `[store] path` in the rig's `cairn/config.toml`, and the scroll's host `--host` or that file's `[rig] name`. `--full`, the default, prints the Full banner; `--short` the Medium and Short one, without the art, roadmap or package lines; `--no-art` leaves the art out of a Full banner.
+
+```sh
+ki work banner ki.summit --full --running 0
+ki work banner --short --running 2 --queued 1
+```
+
 ## Check commit messages
 
 `ki git check-message <file>` checks a commit message against the deterministic `ki-git` rules, so that a repository's committed `.githooks/commit-msg` needs no package. A pass is silent; a failure exits 1 naming the rule and the remedy.
