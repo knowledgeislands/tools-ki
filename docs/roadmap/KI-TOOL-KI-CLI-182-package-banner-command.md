@@ -7,13 +7,13 @@ purpose: capability
 priority: medium
 size: m
 assignee: work/ki.summit
-horizon: soon
-status: draft
+horizon: next
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-11-19T03:25:00Z
-updated_at: 2026-11-19T03:25:00Z
+updated_at: 2026-11-19T03:37:00Z
 ---
 
 # KI-TOOL-KI-CLI-182: Package banner command
@@ -34,7 +34,7 @@ The layout is normative in the backpack's `ki-coordination` skill: `references/s
 
 ## Boundary
 
-Capture only; nothing is built. In scope when planned: reading one package, `work/<territory>/<id>/` in the Cairn store, its `_index.md` state fields, Now, Held and Changes, and its change documents' Open sections; the roadmap line from the roadmap summary of the package's repository; rendering the banner and the art. Out of scope: the report heading, the Summary's status table and queries, striking the mark or writing anything to the package, releases of `tools-ki` (TOOL-RELEASES, parked), and teaching `ki work status` the Cairn store, which is a separate, parked change.
+In scope: reading one package, `work/<territory>/<id>/` in the Cairn store, its `_index.md` state fields, Now, Held and Changes, and its change documents' Open sections; the roadmap line from the roadmap summary of the package's repository; rendering the banner and the art, with the live counts, items, heading-for line and meetings the caller passes in. Out of scope: the report heading, the Summary's status table and queries, striking the mark or writing anything to the package, releases of `tools-ki` (TOOL-RELEASES, parked), and teaching `ki work status` the Cairn store, which is a separate, parked change.
 
 ## Shaping
 
@@ -61,6 +61,65 @@ Capture only; nothing is built. In scope when planned: reading one package, `wor
 **Decisions needed.** Whether the art's scroll carries the host, state, counts and time, as the design note and Kitteth's rules have it, or only KNOWLEDGE ISLANDS, as the standard's part F1 reads; that is ki.cairn's under FOOTER-AGORA. Whether the command takes the live counts and items as options or as JSON on standard input.
 
 **Promotion.** To Next once the scroll question is settled and the roadmap counts' source is chosen; it is built on `main` under LAND-THEN-REVIEW and goes out in no release until TOOL-RELEASES is settled.
+
+## Current state
+
+Planned to Ready on 19 November 2026 by the ki.summit build run, on Loreward's brief from [14, step 2](https://github.com/krisb/ki-cairn-store/blob/main/work/ki/ki.summit/14-ki-command-surface.change.md#5-steps), under LAND-THEN-REVIEW: built on `main` without waiting for Kris, reviewed afterwards, and released in nothing until TOOL-RELEASES is settled. Both decisions the Shaping section names are taken, by Loreward on 19 November in [14, 4.1](https://github.com/krisb/ki-cairn-store/blob/main/work/ki/ki.summit/14-ki-command-surface.change.md#41-the-banner-command), within the package's remit and reversible:
+
+- **Live counts:** `--running`, `--queued` and `--blocked`, each defaulting to 0; everything else is read from the package. A `--json` input can follow when a second harness needs it.
+- **The scroll:** as Kris drew it, with Kitteth's four rules: the host and state in capitals; a blank line; the counts in words; the day, date and local time; each centred in the 54-character space, any odd space on the right. The standard's F1 wording stays ki.cairn's under FOOTER-AGORA, and the template is one file to change if ki.cairn rules otherwise.
+
+The roadmap counts' source is the shared roadmap reader: the command counts each package repository's records itself, so `ki repo roadmap summary` gains no JSON form here. That settles the promotion condition, and the record moves to Next and Ready together.
+
+**Store and host.** STORE-SETTING, how `ki` finds the store, stays held for Kris under PARK-11-12 a, so the command adds no setting of its own. It reads `--store`, then the Cairn MCP's `MCP_CAIRN_STORE`, then `[store] path` in `$XDG_CONFIG_HOME/cairn/config.toml`, the rig's Cairn configuration chezmoi renders; with no package named, the package and store come from the working directory. The scroll's host is `--host`, or that file's `[rig] name`.
+
+**Reading rules.** Where the standard leaves a count's source open, the command reads:
+
+- **Open queries:** the numbered items of each change document's Questions subsection, `### <n>.1 Questions` under `## <n>. Open`, its sub-packages' included; an item whose bold lead begins `Done` is answered, and one whose first line says `(parked)` is parked. On hold, every unanswered query counts as parked.
+- **With you:** the open queries that are not parked, each a `👤 <tag> · owner · at <time>` item, its tag the item's `TAG:` lead or first `(TAG)`, its time the change document's `ki-revised`, oldest first.
+- **Held:** the top-level items under `_index.md`'s `## Held`.
+- **Meetings:** the open meetings, `ki-status: open`, under the store's `meetings/` that sit at the package or count one of its `ki-workers` actors among their participants.
+- **The scroll's state:** `ON HOLD`, `SNOOZING`, `FINISHED`, or else `WITH YOU` when anything waits on Kris (a query with him, or the work with the supervisor or handed to him) and `ALL CLEAR` otherwise, as Kitteth's first rule has it.
+
+## Steps
+
+- [ ] Read one package from the store in `src/core/work/package.ts`: resolve the store and the package, from an id, a `+` sub-package id or the working directory; read the state fields, the hold, target and blocking fields, the seat's role and actor, the roster's `ki-name` and the role's `ki-glyph`, Held, the change documents' Open sections, the meetings, and each `ki-repositories` repository's roadmap counts through the registry and the shared roadmap reader. A missing or malformed field is an error naming the file and field.
+- [ ] Move the art into `src/assets/banner-art.txt`, the 11-line, 88-column drawing with an empty scroll, and render it in `src/commands/work/banner.ts`: the four scroll lines centred, the extra space on the right, no line over 54 characters.
+- [ ] Render the banner from the one table of states: each state's heading, the counts line with zeros written or the hold line, the roadmap and package lines in a Full banner, the items in the standard's order, the heading-for and listening lines where they stand, and the thread line last, named first where the roster names the seat's actor.
+- [ ] Add `ki work banner [package] [--store <dir>] [--full|--short] [--no-art] [--running <n>] [--queued <n>] [--blocked <n>] [--item <line>]... [--heading-for <line>] [--meeting <id>]... [--host <name>]` beside `ki work status`, with the local time zone from `TZ` and the clock from the context.
+- [ ] Add CLI contract tests in `src/tests/cli/work/banner.test.ts` through the sandbox: each state's heading, the counts line with zeros written, Full against Medium and Short lines, `--no-art`, the scroll's centring with odd splits, the thread line named from the roster and bare where unnamed, a package with no roadmap, and each error.
+- [ ] Document it in the README, the manual and its command inventory, and the changelog; make `src/assets/assets.d.ts` describe the text assets it now serves.
+- [ ] Run the full gate.
+
+## Files touched
+
+`src/core/work/package.ts`, `src/commands/work/banner.ts`, `src/commands/work/index.ts`, `src/assets/banner-art.txt`, `src/assets/assets.d.ts`, `src/tests/cli/work/banner.test.ts`, `README.md`, `man/ki.1`, `man/ki.commands.json`, `CHANGELOG.md` and this record. Not touched: the backpack, the Cairn store, `ki work status`, `ki repo roadmap summary`, `.ki.toml`, any release file or version.
+
+## Verify
+
+`bun run test:coverage` at the 100% thresholds, `bunx tsc --noEmit`, `bunx biome check`, `bunx knip`, `bun run ki:tools:lint-man`, `bun scripts/generate-command-inventory.ts` with no drift, and `ki repo audit --repo .` adding no failure to the known ones (records 178 and 179's titles, FILES-6, TOPICS-1). Then `ki work banner ki.summit --full --running 0`, run against the real store, matches the standard's layout by eye, and its scroll lines measure 54 characters between their marks.
+
+## Dependencies / blocks
+
+None to build. Going out waits on TOOL-RELEASES, parked with Kris; until then, the primary checkout's `ki` on sol runs it from `main`.
+
+## Documentation impact
+
+### Decision Records
+
+None. The two decisions are Loreward's, recorded in 14, 4.1.
+
+### Specifications
+
+None; the layout's normative source is the backpack's `ki-coordination` standard.
+
+### Guides
+
+The README's work-model section and the manual gain `ki work banner`.
+
+### Roadmap
+
+This record only.
 
 ## Discussion
 
