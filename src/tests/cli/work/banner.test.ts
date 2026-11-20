@@ -292,6 +292,68 @@ describe('ki work banner', () => {
     )
   })
 
+  test('reads questions asked as tagged headings, the one form, beside the older numbered ones', async () => {
+    const box = await setup()
+    await box.project.write(
+      'store/work/ex/ex.summit/20-beta.change.md',
+      markdown(
+        { 'ki-document-type': 'change@e11cee07f', 'ki-revised': '2026-11-19T00:30:00Z' },
+        [
+          '# B change',
+          '',
+          '## 7. Open',
+          '',
+          '### 7.1 Questions',
+          '',
+          'Questions for Kris, in the one form.',
+          '',
+          '#### ACCEPT-BANNER: accept the banner command',
+          '',
+          '- **Context.** Built, and not (parked) for all its context mentions (OTHER-TAG).',
+          '- **Query.** Does Kris accept it?',
+          '- **Options.**',
+          '  - a) (recommended, confidence high) Accept it.',
+          '  - b) Return it.',
+          '',
+          'Benefit: medium · Cascade: contained · Confidence: high · Waits on: none.',
+          '',
+          '#### STORE-SETTING: how ki finds the store (parked)',
+          '',
+          '- **Query.** Where?',
+          '',
+          '#### 3. OLD-DASH - an older dashed heading',
+          '',
+          '#### RUMI-NOTES: settled already',
+          '',
+          '- **Taken, 18 November:** a.',
+          '',
+          '#### a question with no tag',
+          '',
+          '### 7.2 Gaps',
+          '',
+          '#### NOT-ASKED: a heading under Gaps',
+          ''
+        ].join('\n')
+      )
+    )
+    const result = await banner(box, 'ex.summit --short')
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain(
+      [
+        '🤖 0 running · ⏳ 0 queued · 👤 7 with you · ⛔ 0 blocked · 🅿️ 2 parked',
+        '',
+        '- 👤 SUB-Q · owner · at Tuesday 17 November 10:00',
+        '- 👤 ALPHA-ONE · owner · at yesterday 22:00',
+        '- 👤 MENTION-TAG · owner · at yesterday 22:00',
+        '- 👤 10-alpha question 5 · owner · at yesterday 22:00',
+        '- 👤 ACCEPT-BANNER · owner · at 00:30',
+        '- 👤 OLD-DASH · owner · at 00:30',
+        '- 👤 20-beta question 5 · owner · at 00:30',
+        '- 🅿️ 2 queries in the change documents'
+      ].join('\n')
+    )
+  })
+
   test('takes the live counts, items, heading-for line and meetings from the session, in the standard’s order', async () => {
     const box = await setup()
     const result = await box.run(

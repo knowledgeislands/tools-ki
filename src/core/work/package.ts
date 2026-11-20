@@ -184,29 +184,82 @@ const section = (body: string, heading: RegExp, level: number): readonly string[
 
 const TAG_LEAD = /^\*\*([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*)(?=[ :(*])/
 const TAG_MENTION = /\(([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+|[A-Z][A-Z0-9]+)\)/
+/** A question asked as a heading, one level below Questions, as `#### ACCEPT-BANNER: accept the banner command`. */
+const QUESTION_HEADING = /^####\s+(.*?)\s*$/
+/**
+ * A question heading's tag, any section number taken off: the one form, `TAG: title`, or the older `TAG - title`
+ * the Wayfinder still reads while packages convert (QUESTIONS-FORM a).
+ */
+const HEADING_TAG = /^(?:\d+(?:\.\d+)*[a-z]?\.?\s+)?([A-Z][A-Z0-9]+(?:-[A-Z0-9]+)+|[A-Z][A-Z0-9]{2,})(?::|\s+[-–—])\s/
+/** A line recording a heading question's answer as its bold lead: `**Done …**`, `**Taken …**`, `**Agreed.**` and the like. */
+const ANSWERED = /^(?:[-*]\s+)?\*\*(?:Done|Taken|Answered|Agreed|Settled)\b/
+const PARKED = /\(parked\)/i
 
 interface DocumentQueries {
   readonly open: readonly WorkPackageQuery[]
   readonly parked: number
 }
 
-/** The numbered items of a change document's `### <n>.1 Questions` under `## <n>. Open`: answered, parked or open. */
+interface AskedQuestion {
+  readonly number: number
+  /** The heading of a question asked as one, or the numbered item's text. */
+  readonly text: string
+  readonly answered: boolean
+  readonly parked: boolean
+  readonly tag: string | undefined
+}
+
+/** Questions asked as headings, each with the lines under it: answered by a `Done`-style lead, parked in its heading. */
+const headedQuestions = (lines: readonly string[]): readonly AskedQuestion[] => {
+  const found: { heading: string; lines: string[] }[] = []
+  for (const line of lines) {
+    const heading = QUESTION_HEADING.exec(line)
+    if (heading) found.push({ heading: heading[1] as string, lines: [] })
+    else found.at(-1)?.lines.push(line)
+  }
+  return found.map((question, index) => ({
+    number: index + 1,
+    text: question.heading,
+    answered: question.lines.some((line) => ANSWERED.test(line.trim())),
+    parked: PARKED.test(question.heading),
+    tag: HEADING_TAG.exec(question.heading)?.[1]
+  }))
+}
+
+/** The older numbered questions: answered when the bold lead begins `Done`, parked when the item says `(parked)`. */
+const numberedQuestions = (lines: readonly string[]): readonly AskedQuestion[] =>
+  lines.flatMap((line) => {
+    const match = /^(\d+)\. (.*)$/.exec(line)
+    if (!match) return []
+    const text = match[2] as string
+    return [
+      {
+        number: Number(match[1]),
+        text,
+        answered: /^\*\*Done\b/.test(text),
+        parked: PARKED.test(text),
+        tag: TAG_LEAD.exec(text)?.[1] ?? TAG_MENTION.exec(text)?.[1]
+      }
+    ]
+  })
+
+/**
+ * The questions of a change document's `### <n>.1 Questions` under `## <n>. Open`: answered, parked or open. Each is
+ * asked in the one form, a `#### TAG: title` heading (QUESTIONS-FORM a), or, until every package converts, as a
+ * numbered item.
+ */
 const documentQueries = (file: MarkdownFile): DocumentQueries => {
   const open = section(file.body, /^## \d+\. Open\b/, 2)
-  const questions = section(open.join('\n'), /^### \d+\.1 Questions\b/, 3)
-  const items = questions.flatMap((line) => {
-    const match = /^(\d+)\. (.*)$/.exec(line)
-    return match ? [{ number: match[1] as string, text: match[2] as string }] : []
-  })
-  const live = items.filter((item) => !/^\*\*Done\b/.test(item.text))
-  const parked = live.filter((item) => /\(parked\)/i.test(item.text))
+  const lines = section(open.join('\n'), /^### \d+\.1 Questions\b/, 3)
+  const headed = headedQuestions(lines)
+  const live = (headed.length ? headed : numberedQuestions(lines)).filter((question) => !question.answered)
   const change = basename(file.path, '.change.md')
   return {
-    parked: parked.length,
+    parked: live.filter((question) => question.parked).length,
     open: live
-      .filter((item) => !parked.includes(item))
-      .map((item) => ({
-        tag: TAG_LEAD.exec(item.text)?.[1] ?? TAG_MENTION.exec(item.text)?.[1] ?? `${change} question ${item.number}`,
+      .filter((question) => !question.parked)
+      .map((question) => ({
+        tag: question.tag ?? `${change} question ${question.number}`,
         revised: timeField(file, 'ki-revised')
       }))
   }
