@@ -1729,7 +1729,7 @@ Print a work package's closing banner, read-only, exactly as the
 .B ki-coordination
 standard lays it out: the Knowledge Islands art with its scroll, the
 state's heading, the counts line, the roadmap and package lines, the
-items, the heading-for and listening lines, and the seat's thread line.
+items, the heading-for and meeting lines, and the seat's thread line.
 The package is named by its work id, as
 .IR ki.summit ,
 or a sub-package's
@@ -1761,7 +1761,12 @@ adds a live item,
 .B --heading-for
 the line after the heading-for glyph while the work is With worker, and
 .B --meeting
-a meeting the session sits in.
+a meeting the session sits in, by its id, the folder name its
+.I ki-id
+carries after
+.IR meeting: ;
+the meeting line names each one with the other participants there, by
+their roster names or a seat's id, the session's own seat left out.
 .BR --full ,
 the default, prints the art, the roadmap and the package lines;
 .B --short

@@ -172,8 +172,13 @@ const setup = async (fields: Fields = {}): Promise<Sandbox> => {
   await box.project.write('store/meetings/ex.summit/20261118-call/_index.md', meeting('ex.summit.call', 'open'))
   await box.project.write(
     'store/meetings/other.room/_index.md',
-    meeting('other.room', 'open', '\n  - id: actor:ward\n  - actor:loose\n  - ~')
+    meeting(
+      'other.room',
+      'open',
+      '\n  - id: actor:ward\n  - id: actor:quire\n  - actor:loose\n  - ~\n  - id: actor:ex.tools@reviewer'
+    )
   )
+  await box.project.write('store/roster/actors/quire/_index.md', markdown({ 'ki-name': 'Quire' }, '# Quire\n'))
   await box.project.write('store/meetings/other.room/old/_index.md', meeting('other.room.old', 'adjourned'))
   await box.project.write('store/meetings/elsewhere/_index.md', meeting('elsewhere', 'open', '\n  - id: actor:other'))
   await box.project.write('store/meetings/elsewhere/note/_index.md', markdown({ title: 'A note' }, '# Note\n'))
@@ -347,7 +352,7 @@ describe('ki work banner', () => {
         '',
         '↪️ draining → ⏸️ On hold',
         '',
-        '👂 in ex.summit.call, other.room',
+        '🤝 in ex.summit.call, other.room · with Quire, ex.tools@reviewer',
         '',
         'Ward (🏛️ 🔑 ex.summit)',
         ''
@@ -550,6 +555,22 @@ describe('ki work banner', () => {
     const host = await banner(box, 'ex.summit')
     expect(host.exitCode).toBe(2)
     expect(host.stderr).toContain('no host for the art scroll')
+  })
+
+  test('names each meeting with the others there, leaving off the with part where there are none', async () => {
+    const box = await setup()
+    const result = await banner(box, 'ex.summit --short --meeting other.room --meeting ex.summit.call')
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain(
+      '\n\n🤝 in other.room · with Quire, ex.tools@reviewer, ex.summit.call\n\nWard (🏛️ 🔑 ex.summit)\n'
+    )
+  })
+
+  test('refuses a meeting the store does not hold, naming it', async () => {
+    const box = await setup()
+    const result = await banner(box, 'ex.summit --short --meeting no.such.room')
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('no meeting no.such.room in')
   })
 
   test('refuses a working directory outside any package', async () => {

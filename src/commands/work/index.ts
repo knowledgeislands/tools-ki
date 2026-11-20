@@ -17,6 +17,7 @@ import {
   enclosingWorkPackage,
   locateWorkPackage,
   readCairnConfiguration,
+  readSessionMeetings,
   readWorkPackageBanner,
   resolveCairnStore
 } from '../../core/work/package.ts'
@@ -258,7 +259,12 @@ export const createWorkCommand = (context: KiContext): Command => {
         '--heading-for <line>',
         'the line after ↪️ while the work heads for a hold or a handoff, as "draining → ⏸️ On hold"'
       )
-      .option('--meeting <id>', 'a meeting the session sits in, for the listening line (repeatable)', collect, [])
+      .option(
+        '--meeting <id>',
+        'a meeting the session sits in, by its id, for the meeting line with the others there (repeatable)',
+        collect,
+        []
+      )
       .option('--host <name>', "the art scroll's host; default, [rig] name in the rig's cairn/config.toml")
       .action(async (id: string | undefined, options: BannerCommandOptions) => {
         const configuration = await readCairnConfiguration(xdgConfigHome(context.environment), context.homeDirectory)
@@ -285,7 +291,7 @@ export const createWorkCommand = (context: KiContext): Command => {
             queued: options.queued,
             blocked: options.blocked,
             items: options.item,
-            meetings: options.meeting,
+            meetings: await readSessionMeetings(store, options.meeting, banner.actor),
             now: new Date(context.now()),
             ...(options.headingFor === undefined ? {} : { headingFor: options.headingFor }),
             ...(host === undefined ? {} : { host }),

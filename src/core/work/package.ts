@@ -160,6 +160,8 @@ export interface WorkPackageBanner {
   readonly glyph: string | null
   /** The seat's actor's `ki-name` in the roster, or null for an unnamed seat. */
   readonly name: string | null
+  /** The seat's actor id, as `actor:loreward`, or null for a seat with no role or no active actor in it. */
+  readonly actor: string | null
   /** Open queries with the owner, oldest first; on hold, none. */
   readonly queries: readonly WorkPackageQuery[]
   readonly parked: number
@@ -228,8 +230,11 @@ const actorIds = (workers: unknown): readonly string[] =>
     return typeof id === 'string' ? [id] : []
   })
 
-/** Open meetings in the store's `meetings/` that sit at the package or count one of its actors among their participants. */
-const openMeetings = async (store: string, id: string, actors: readonly string[]): Promise<number> => {
+/** The id a meeting's entry file carries after `meeting:` in its `ki-id`, which is its folder's name. */
+const meetingId = (entry: MarkdownFile): string => String(entry.fields['ki-id']).replace(/^meeting:/, '')
+
+/** Every meeting entry file in the store's `meetings/`, at a node or one folder below it. */
+const meetingEntries = async (store: string): Promise<readonly MarkdownFile[]> => {
   const root = join(store, 'meetings')
   const folders = (
     await Promise.all(
@@ -242,22 +247,71 @@ const openMeetings = async (store: string, id: string, actors: readonly string[]
     )
   ).flat()
   const entries = await Promise.all(folders.map((folder) => readMarkdown(join(folder, ENTRY)).catch(() => undefined)))
-  return entries.filter((entry) => {
-    if (entry?.fields['ki-document-type'] !== 'meeting' || entry.fields['ki-status'] !== 'open') return false
-    const meeting = String(entry.fields['ki-id']).replace(/^meeting:/, '')
-    return (
-      meeting.startsWith(`${id}.`) || actorIds(entry.fields['ki-participants']).some((actor) => actors.includes(actor))
-    )
-  }).length
+  return entries.filter((entry): entry is MarkdownFile => entry?.fields['ki-document-type'] === 'meeting')
+}
+
+/** Open meetings in the store's `meetings/` that sit at the package or count one of its actors among their participants. */
+const openMeetings = async (store: string, id: string, actors: readonly string[]): Promise<number> =>
+  (await meetingEntries(store)).filter(
+    (entry) =>
+      entry.fields['ki-status'] === 'open' &&
+      (meetingId(entry).startsWith(`${id}.`) ||
+        actorIds(entry.fields['ki-participants']).some((actor) => actors.includes(actor)))
+  ).length
+
+/** An actor's `ki-name` in the store's roster, or undefined where its roster file names none. */
+const rosterName = async (store: string, actor: string): Promise<string | undefined> => {
+  const name = (await readMarkdown(join(store, 'roster', 'actors', actor.replace(/^actor:/, ''), ENTRY)))?.fields[
+    'ki-name'
+  ]
+  return typeof name === 'string' && name.trim() ? name : undefined
+}
+
+export interface WorkPackageMeeting {
+  /** The meeting's folder name, the id its entry file's `ki-id` carries after `meeting:`. */
+  readonly id: string
+  /** The other participants the session works with there, each by its roster name or, with none, its seat's id. */
+  readonly with: readonly string[]
+}
+
+/**
+ * The meetings the session sits in, each named by its id and the other participants under its `ki-participants`, the
+ * session's own actor left out. The owner is never listed there, so is never named; an unknown meeting is an error.
+ */
+export const readSessionMeetings = async (
+  store: string,
+  ids: readonly string[],
+  self: string | null
+): Promise<readonly WorkPackageMeeting[]> => {
+  if (ids.length === 0) return []
+  const entries = await meetingEntries(store)
+  return Promise.all(
+    ids.map(async (id) => {
+      const entry = entries.find((candidate) => meetingId(candidate) === id)
+      if (!entry)
+        throw new KiError(
+          `no meeting ${id} in ${join(store, 'meetings')}`,
+          1,
+          'name a meeting by the id after meeting: in its ki-id, as cairn.wayfinder.designs'
+        )
+      const others = actorIds(entry.fields['ki-participants']).filter((actor) => actor !== self)
+      return {
+        id,
+        with: await Promise.all(
+          others.map(async (actor) => (await rosterName(store, actor)) ?? actor.replace(/^actor:/, ''))
+        )
+      }
+    })
+  )
 }
 
 /** The seat's role glyph from the roster's role page, and its actor's `ki-name` where the roster names one. */
 const seat = async (
   store: string,
   entry: MarkdownFile
-): Promise<{ readonly glyph: string | null; readonly name: string | null }> => {
+): Promise<{ readonly glyph: string | null; readonly name: string | null; readonly actor: string | null }> => {
   const role = entry.fields['ki-role']
-  if (typeof role !== 'string') return { glyph: null, name: null }
+  if (typeof role !== 'string') return { glyph: null, name: null, actor: null }
   const rolePage = join(store, 'roster', 'roles', role, ENTRY)
   const page = await readMarkdown(rolePage)
   if (!page) throw missing(rolePage, 'ki-glyph', `is missing: no role page for ki-role ${role} in ${entry.path}`)
@@ -270,11 +324,8 @@ const seat = async (
     })
   )
   const actor = worker['id']
-  const name =
-    typeof actor === 'string'
-      ? (await readMarkdown(join(store, 'roster', 'actors', actor.replace(/^actor:/, ''), ENTRY)))?.fields['ki-name']
-      : undefined
-  return { glyph, name: typeof name === 'string' && name.trim() ? name : null }
+  if (typeof actor !== 'string') return { glyph, name: null, actor: null }
+  return { glyph, name: (await rosterName(store, actor)) ?? null, actor }
 }
 
 /** The roadmap counts of the package's repositories, each found in the local registry by its name. */

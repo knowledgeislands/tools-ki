@@ -1,6 +1,6 @@
 import art from '../../assets/banner-art.txt' with { type: 'text' }
 import { KiError } from '../../core/errors.ts'
-import type { WorkPackageBanner } from '../../core/work/package.ts'
+import type { WorkPackageBanner, WorkPackageMeeting } from '../../core/work/package.ts'
 
 /** The scroll's four lines sit at these lines of the art, each between the `|` marks at these columns. */
 const SCROLL_FIRST_LINE = 5
@@ -19,8 +19,8 @@ export interface BannerOptions {
   readonly items: readonly string[]
   /** The F7 line's text after `↪️`, while the work heads for a hold or a handoff. */
   readonly headingFor?: string
-  /** The meetings the session sits in, for the F8 line. */
-  readonly meetings: readonly string[]
+  /** The meetings the session sits in, each with the other participants it works with there, for the F8 line. */
+  readonly meetings: readonly WorkPackageMeeting[]
   /** The scroll's host; needed only when the art is printed. */
   readonly host?: string
   readonly now: Date
@@ -190,6 +190,12 @@ const itemLines = (banner: WorkPackageBanner, options: BannerOptions): readonly 
   )
 }
 
+/** The meeting line, F8: each meeting by its id, then `· with` the others there, two or more joined by `, `. */
+const meetingLine = (meetings: readonly WorkPackageMeeting[]): string =>
+  `🤝 in ${meetings
+    .map((meeting) => (meeting.with.length ? `${meeting.id} · with ${meeting.with.join(', ')}` : meeting.id))
+    .join(', ')}`
+
 /** The seat's thread line: named first where the roster names its actor, `🧵 <id>` for a seat with no role. */
 const threadLine = (banner: WorkPackageBanner): string => {
   if (banner.glyph === null) return `🧵 ${banner.id}`
@@ -211,7 +217,7 @@ export const renderBanner = (banner: WorkPackageBanner, options: BannerOptions):
     full ? packageLine(banner) : undefined,
     items.length ? items.join('\n') : undefined,
     options.headingFor === undefined ? undefined : `↪️ ${options.headingFor}`,
-    options.meetings.length ? `👂 in ${options.meetings.join(', ')}` : undefined,
+    options.meetings.length ? meetingLine(options.meetings) : undefined,
     threadLine(banner)
   ]
   return blocks.filter((block) => block !== undefined).join('\n\n')

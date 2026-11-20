@@ -13,7 +13,7 @@ blocks: []
 blocked_by: []
 baseline_ref: a121c07cfdc9b9dab3fb59f62497815b46bbd100
 created_at: 2026-11-19T03:25:00Z
-updated_at: 2026-11-19T04:05:00Z
+updated_at: 2026-11-20T12:15:00Z
 ---
 
 # KI-TOOL-KI-CLI-182: Package banner command
@@ -72,6 +72,8 @@ Planned to Ready on 19 November 2026 by the ki.summit build run, on Loreward's b
 The roadmap counts' source is the shared roadmap reader: the command counts each package repository's records itself, so `ki repo roadmap summary` gains no JSON form here. That settles the promotion condition, and the record moves to Next and Ready together.
 
 Implemented on 19 November 2026 by the same run, from baseline `a121c07c`, and awaiting review: see Review.
+
+**Meeting line, 20 November 2026.** Under FOOTER-DELEGATES (Kris, 19 November 2026) the standard's F8 became the meeting line, `🤝 in <meeting> · with <names>`, replacing `👂 in <meeting>`, and the build still printed the older form. A steer run from Loreward's brief changed it while the record awaits review: each `--meeting <id>` is now found in the store's `meetings/` by the id its `ki-id` carries after `meeting:`, an unknown one is an error, and the line names each meeting with the other participants under its `ki-participants`, by their roster `ki-name` or a seat's id where one has none, leaving out the seat's own actor; with no other participant the `· with` part is left off, and two or more meetings are joined by `, `, each with its own list, as in `🤝 in other.room · with Quire, ex.tools@reviewer, ex.summit.call`. The owner is never listed in `ki-participants`, so is never named.
 
 **Store and host.** STORE-SETTING, how `ki` finds the store, stays held for Kris under PARK-11-12 a, so the command adds no setting of its own. It reads `--store`, then the Cairn MCP's `MCP_CAIRN_STORE`, then `[store] path` in `$XDG_CONFIG_HOME/cairn/config.toml`, the rig's Cairn configuration chezmoi renders; with no package named, the package and store come from the working directory. The scroll's host is `--host`, or that file's `[rig] name`.
 
