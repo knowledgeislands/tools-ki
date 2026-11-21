@@ -1,4 +1,5 @@
 import { lstat, realpath, rm, symlink } from 'node:fs/promises'
+import { basename, dirname } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
@@ -191,6 +192,13 @@ describe('ki repo store', () => {
     )
     await box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-project')
     expect((await box.run('ki repo store list')).output).toContain(placeholder)
+    // The current layout's folder settles the fix even beside two older ones.
+    const current = await box.home.mkdir(
+      `Library/CloudStorage/OneDrive-Personal/sources-${basename(dirname(root))}/project`
+    )
+    expect((await box.run('ki repo store list')).output).toContain(
+      `fix: ki repo --repo ${root} store bind sources ${current} --write, or ki repo --repo ${root} store absent sources --write`
+    )
 
     const json = JSON.parse((await box.run('ki repo store list --format json')).output)
     expect(json.schema).toBe('ki/repository-stores/v1')
@@ -230,7 +238,8 @@ describe('ki repo store', () => {
     const box = await sandbox()
     const root = await realpath(box.project.path)
     const oneDrive = await box.home.mkdir('Library/CloudStorage/OneDrive-Personal')
-    const sources = `${oneDrive}/sources-${root.split('/').at(-1)}`
+    // Named by territory code, the checkout's parent folder, and basename; the territory folder is created too.
+    const sources = `${oneDrive}/sources-${basename(dirname(root))}/project`
     await box.project.write('.ki.toml', knowledgeBase('https://github.com/example/knowledge'))
 
     const preview = await box.run('ki repo store create sources')
@@ -296,15 +305,30 @@ describe('ki repo store', () => {
     )
   })
 
-  test('rejects an unsafe managed sources target', async () => {
+  test('rejects an unsafe managed sources target or territory folder', async () => {
     const box = await sandbox()
     await box.project.write('.ki.toml', knowledgeBase('https://github.com/example/knowledge'))
-    await box.home.mkdir('Library/CloudStorage/OneDrive-Personal')
-    await box.home.write('Library/CloudStorage/OneDrive-Personal/sources-project', 'not a directory\n')
+    const territory = `Library/CloudStorage/OneDrive-Personal/sources-${basename(dirname(await realpath(box.project.path)))}`
+    const parent = `${await realpath(box.home.path)}/${territory}`
+    await box.home.mkdir(territory)
+    await box.home.write(`${territory}/project`, 'not a directory\n')
 
     expect((await box.run('ki repo store create sources')).output).toContain(
       'sources store path must be absent or an existing direct directory'
     )
+
+    await rm(parent, { recursive: true })
+    await box.home.write(territory, 'not a directory\n')
+    const file = await box.run('ki repo store create sources --write')
+    expect(file.exitCode).toBe(1)
+    expect(file.output).toContain(`sources store parent must be absent or an existing direct directory: ${parent}`)
+
+    await rm(parent)
+    await symlink(await box.root.mkdir('elsewhere'), parent)
+    const linked = await box.run('ki repo store create sources --write')
+    expect(linked.output).toContain(`sources store parent must be absent or an existing direct directory: ${parent}`)
+    expect(await lstat(`${box.root.path}/elsewhere/project`).catch(() => undefined)).toBeUndefined()
+    await expect(box.state.read('ki/registry.toml')).rejects.toThrow()
   })
 
   test('rejects store management for repositories without declared roles', async () => {

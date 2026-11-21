@@ -69,7 +69,7 @@ ki repo store list
 ki repo --estate store list --format json
 ```
 
-To find conventional OneDrive `sources-<name>` directories that have no declared `sources` role, scan the current repository or selected estate:
+To find conventional OneDrive `sources-<territory-code>/<repository>` directories, or an older `sources-<name>` one, that have no declared `sources` role, scan the current repository or selected estate:
 
 ```sh
 ki repo store scan
@@ -87,9 +87,9 @@ ki repo store unbind sources
 ki repo store unbind sources --write
 ```
 
-The preview names the registry file it would write, and `bind --write` prints the `undo:` command that unbinds it again. Unbinding never deletes store content. For the established opt-in OneDrive source location, `ki repo store create sources` previews `sources-<repository-basename>` and `--write` creates and binds it. A territory Capital's store is instead named by its canonical territory handle, `territory_prefix` or else its registry key, so `-t ki` and `-t knowledge-islands` both create `sources-knowledge-islands`; a prefixless Capital must be registered first. `store scan` checks a Capital under both its handle and its old basename name. `legacy` has no automatic creation policy; bind its existing directory explicitly. Where the OneDrive root is missing, such as on a CI runner or a host without OneDrive, `create` refuses and names both routes. Do not use stores for credentials.
+The preview names the registry file it would write, and `bind --write` prints the `undo:` command that unbinds it again. Unbinding never deletes store content. For the established opt-in OneDrive source location, `ki repo store create sources` previews `sources-<territory-code>/<repository-basename>` and `--write` creates the territory folder if needed, then the store, and binds it. The territory code is the folder the checkout sits in, by the `~/kis/<territory-code>/<repository>` convention, so `~/kis/hnr/hnr-principal` creates `sources-hnr/hnr-principal`; every repository, Capital or not, is named this way. `create` refuses a `sources-<territory-code>` that is a symbolic link or not a directory. `store scan` and the fix below look for the current name first, then fall back to the names before it: a territory Capital's canonical territory handle, `territory_prefix` or else its registry key, as in `sources-knowledge-islands`, then `sources-<repository-basename>`, which is also how a store for a high-level purpose, such as `sources-inbox` for the `inbox` repository, is found. A fallback name equal to the territory code is the territory folder itself and never a store. `legacy` has no automatic creation policy; bind its existing directory explicitly. Where the OneDrive root is missing, such as on a CI runner or a host without OneDrive, `create` refuses and names both routes. Do not use stores for credentials.
 
-`store list` reports each store's availability on this host. A bound store is `available` or `unavailable`, with the reason; an unbound one is `missing` or, once you have recorded that this host does without it, `absent`. The text form prints the fix command for an unavailable or missing store, filling in the path when exactly one conventional `sources-<name>` folder matches, and the JSON form adds `availability` and `reason` beside the existing `role`, `state` and `path` fields of `ki/repository-stores/v1`.
+`store list` reports each store's availability on this host. A bound store is `available` or `unavailable`, with the reason; an unbound one is `missing` or, once you have recorded that this host does without it, `absent`. The text form prints the fix command for an unavailable or missing store, filling in the path of the current `sources-<territory-code>/<repository>` folder when it exists, or else of the one older conventional folder when exactly one matches, and the JSON form adds `availability` and `reason` beside the existing `role`, `state` and `path` fields of `ki/repository-stores/v1`.
 
 To record that this host does without a store, preview and then write the marker; `--clear` removes it, and binding the store clears it too:
 

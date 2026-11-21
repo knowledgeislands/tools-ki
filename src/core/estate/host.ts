@@ -130,7 +130,7 @@ const symlinkRoots = async (
   for (const provider of await entriesUnlessAbsent(storage, platform))
     if (provider.startsWith('OneDrive'))
       for (const store of await entriesUnlessAbsent(join(storage, provider), platform))
-        if (store.startsWith('sources-')) stores.push({ root: join(storage, provider, store), depth: 2 })
+        if (store.startsWith('sources-')) stores.push({ root: join(storage, provider, store), depth: 3 })
   return [{ root: join(homeDirectory, 'workspaces') }, ...stores]
 }
 

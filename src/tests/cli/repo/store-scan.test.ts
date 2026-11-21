@@ -51,7 +51,7 @@ test('warns about undeclared direct source stores without changing the registry 
   const box = await sandbox()
   const entries = []
   for (const [name, kind, roles] of [
-    ['project', 'project', ['notes']],
+    ['application', 'project', ['notes']],
     ['knowledge', 'kb', ['notes']],
     ['declared', 'kb', ['notes', 'sources']],
     ['absent', 'project', ['notes']]
@@ -69,7 +69,7 @@ test('warns about undeclared direct source stores without changing the registry 
   expect(result.exitCode).toBe(0)
   expect(result.output).toContain('KI REPO STORE SCAN')
   expect(result.output).toContain('undeclared (2)')
-  expect(result.output).toContain('example/project [project]')
+  expect(result.output).toContain('example/application [project]')
   expect(result.output).toContain('migrate to a Knowledge Base, or retire')
   expect(result.output).toContain('example/knowledge [kb]')
   expect(result.output).toContain('declare and bind sources, or retire')
@@ -77,8 +77,56 @@ test('warns about undeclared direct source stores without changing the registry 
   expect(result.output).not.toContain('example/absent')
   expect(result.output).toContain('summary: UNDECLARED=2 DIAGNOSTICS=0')
   expect(await box.state.read('ki/registry.toml')).toBe(source)
-  await expect(lstat(`${box.home.path}/Library/CloudStorage/OneDrive-Personal/sources-project`)).resolves.toBeDefined()
+  await expect(
+    lstat(`${box.home.path}/Library/CloudStorage/OneDrive-Personal/sources-application`)
+  ).resolves.toBeDefined()
   expect((await box.run('ki registry source-stores')).exitCode).toBe(2)
+})
+
+test('finds the current layout first, then a purpose store by basename, but never the territory folder', async () => {
+  const box = await sandbox()
+  const entries = []
+  for (const name of ['current', 'inbox', 'both', 'project']) {
+    const path = await box.project.mkdir(name)
+    entries.push({ name, path })
+    await box.project.write(`${name}/.ki.toml`, declaration(name, 'project'))
+  }
+  // Each checkout sits in the sandbox's `project` folder, its territory code.
+  for (const name of ['project/current', 'inbox', 'project/both', 'both'])
+    await box.home.mkdir(`Library/CloudStorage/OneDrive-Personal/sources-${name}`)
+  await box.state.write('ki/registry.toml', registry(entries))
+
+  const result = await box.run('ki repo --estate store scan')
+
+  expect(result.exitCode).toBe(0)
+  expect(result.output).toContain('undeclared (4)')
+  const listed = result.output
+    .split('\n')
+    .filter((line) => line.includes('OneDrive-Personal/'))
+    .map((line) => line.slice(line.indexOf('OneDrive-Personal/') + 18))
+  expect([...listed].sort()).toEqual([
+    'sources-both',
+    'sources-inbox',
+    'sources-project/both',
+    'sources-project/current'
+  ])
+  expect(listed.indexOf('sources-project/both')).toBe(listed.indexOf('sources-both') - 1)
+})
+
+test('diagnoses a linked territory folder in the current layout', async () => {
+  const box = await sandbox()
+  const path = await box.project.mkdir('linked-territory')
+  await box.project.write('linked-territory/.ki.toml', declaration('linked-territory', 'project'))
+  const target = await box.root.mkdir('external-territory')
+  await box.root.mkdir('external-territory/linked-territory')
+  await box.home.mkdir('Library/CloudStorage/OneDrive-Personal')
+  await symlink(target, `${box.home.path}/Library/CloudStorage/OneDrive-Personal/sources-project`)
+  const parent = `${await realpath(box.home.path)}/Library/CloudStorage/OneDrive-Personal/sources-project`
+
+  const result = await box.run(['ki', 'repo', '--repo', path, 'store', 'scan'])
+
+  expect(result.exitCode).toBe(1)
+  expect(result.output).toContain(`sources store parent is not a direct directory: ${parent}`)
 })
 
 test('scans the current repository and explicit selection without requiring registration', async () => {

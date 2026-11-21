@@ -114,10 +114,10 @@ const reshape = async (fixture: Estate): Promise<string> => {
   await symlink(join(home, 'workspaces/kit/org/alpha'), join(home, 'workspaces/kit/org/beta/tracked'))
   await box.home.git(['add', 'tracked'], 'workspaces/kit/org/beta')
   await box.home.git(['commit', '-qm', 'link'], 'workspaces/kit/org/beta')
-  await box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-test/notes')
+  await box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-test/repository/notes')
   await symlink(
     join(home, 'workspaces/kit/org/alpha'),
-    join(home, 'Library/CloudStorage/OneDrive-Personal/sources-test/notes/alpha')
+    join(home, 'Library/CloudStorage/OneDrive-Personal/sources-test/repository/notes/alpha')
   )
   await box.home.write('Library/CloudStorage/OneDrive-Broken', 'not a directory\n')
   await box.home.write('Library/CloudStorage/Dropbox/ignored', '\n')
@@ -229,7 +229,7 @@ describe('[ki estate converge]', () => {
       `  rewrite symlink ${home}/workspaces/acme/beta/relative: ../alpha/README.md -> ../alpha-renamed/README.md`
     )
     expect(result.output).toContain(
-      `  rewrite symlink ${home}/Library/CloudStorage/OneDrive-Personal/sources-test/notes/alpha: ${home}/workspaces/kit/org/alpha -> ${home}/workspaces/acme/alpha-renamed`
+      `  rewrite symlink ${home}/Library/CloudStorage/OneDrive-Personal/sources-test/repository/notes/alpha: ${home}/workspaces/kit/org/alpha -> ${home}/workspaces/acme/alpha-renamed`
     )
     expect(result.output).toContain(
       `  tracked symlink, report only ${home}/workspaces/acme/beta/tracked: ${home}/workspaces/kit/org/alpha -> ${home}/workspaces/acme/alpha-renamed`

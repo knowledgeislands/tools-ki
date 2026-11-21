@@ -82,7 +82,10 @@ export const storeFix = (
 ): string =>
   `ki repo --repo ${root} store bind ${role} ${candidates.length === 1 ? candidates[0] : '<absolute-path>'} --write, or ${bound ? `ki repo --repo ${root} store unbind ${role} --write then ` : ''}ki repo --repo ${root} store absent ${role} --write`
 
-/** Existing conventional `sources-<name>` folders for the given names; only the sources role has a convention. */
+/**
+ * Existing conventional `sources-<name>` folders for the given names, in order; only the sources role has a
+ * convention. A name may be nested, as `<territory code>/<repository>` is.
+ */
 export const conventionalStoreCandidates = async (
   homeDirectory: string,
   role: ExternalStoreRole,
@@ -155,7 +158,10 @@ export const unbindRepositoryStore = (
 const sourcesStoreRoot = (homeDirectory: string): string =>
   join(homeDirectory, 'Library', 'CloudStorage', 'OneDrive-Personal')
 
-/** The conventional source-store directory for a store name, such as a territory handle or basename. */
+/**
+ * The conventional source-store directory for a store name: `<territory code>/<repository>` in the current
+ * layout, so `sources-hnr/hnr-principal`, or an older single name such as a territory handle or basename.
+ */
 export const conventionalSourcesStore = (homeDirectory: string, name: string): string =>
   join(sourcesStoreRoot(homeDirectory), `sources-${name}`)
 
@@ -205,7 +211,14 @@ export const inspectUndeclaredSourcesStores = async (
       continue
     }
     for (const name of names)
-      await inspectSourcesStore(entry, conventionalSourcesStore(homeDirectory, name), undeclared, diagnostics, platform)
+      await inspectSourcesStore(
+        entry,
+        sourcesStoreRoot(homeDirectory),
+        conventionalSourcesStore(homeDirectory, name),
+        undeclared,
+        diagnostics,
+        platform
+      )
   }
   return { undeclared, diagnostics }
 }
@@ -213,6 +226,7 @@ export const inspectUndeclaredSourcesStores = async (
 /** Inspect one conventional directory, rechecking the repository after the directory is seen. */
 const inspectSourcesStore = async (
   entry: SourcesStoreTarget,
+  storeRoot: string,
   path: string,
   undeclared: UndeclaredSourcesStore[],
   diagnostics: SourcesStoreDiagnostic[],
@@ -227,9 +241,18 @@ const inspectSourcesStore = async (
     if (!state) return
     if (!state.isDirectory() || state.isSymbolicLink())
       throw new KiError('conventional sources path is not a direct directory', 1)
-    const parent = await lstat(dirname(path))
-    if (!parent.isDirectory() || parent.isSymbolicLink())
-      throw new KiError('OneDrive source-store root is not a direct directory', 1)
+    // Every folder from the store up to the OneDrive root must be direct, so a nested name sees its territory folder.
+    for (let parent = dirname(path); ; parent = dirname(parent)) {
+      const state = await lstat(parent)
+      if (!state.isDirectory() || state.isSymbolicLink())
+        throw new KiError(
+          parent === storeRoot
+            ? 'OneDrive source-store root is not a direct directory'
+            : `sources store parent is not a direct directory: ${parent}`,
+          1
+        )
+      if (parent === storeRoot) break
+    }
     const root = await lstat(entry.path)
     if (!root.isDirectory() || root.isSymbolicLink()) throw new KiError('repository root is not a direct directory', 1)
     const declarationPath = join(entry.path, REPOSITORY_DECLARATION_FILE)
@@ -248,7 +271,11 @@ const inspectSourcesStore = async (
   }
 }
 
-/** The managed store path; where the OneDrive root is missing the refusal names `fix`, the routes that remain. */
+/**
+ * The managed store path for a `<territory code>/<repository>` name, refusing a territory folder that is
+ * not absent or a direct directory; where the OneDrive root is missing the refusal names `fix`, the routes
+ * that remain.
+ */
 export const managedSourcesStore = async (
   homeDirectory: string,
   name: string,
@@ -260,6 +287,9 @@ export const managedSourcesStore = async (
   if (!state?.isDirectory() || state.isSymbolicLink())
     throw new KiError(`OneDrive source-store root is unavailable: ${root}`, 1, fix)
   const path = conventionalSourcesStore(homeDirectory, name)
+  const parent = await lstatUnlessAbsent(dirname(path), platform)
+  if (parent && (!parent.isDirectory() || parent.isSymbolicLink()))
+    throw new KiError(`sources store parent must be absent or an existing direct directory: ${dirname(path)}`, 1)
   const store = await lstatUnlessAbsent(path, platform)
   if (store && (!store.isDirectory() || store.isSymbolicLink()))
     throw new KiError('sources store path must be absent or an existing direct directory', 1)

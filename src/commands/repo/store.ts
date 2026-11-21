@@ -258,18 +258,14 @@ const createStoreCreateCommand = (context: KiContext, selection: SelectRepositor
         throw new KiError('legacy store has no managed creation location; bind an existing directory instead', 2)
       const entries = await registryEntries(context)
       const current = registryEntryForRepository(repository.root, repository.identity, entries).stores?.[externalRole]
+      // Every repository, Capital or not, creates its store under its territory code (SOURCES-LAYOUT a).
       const names = await sourcesStoreNames(
         repository.root,
         entries.find((entry) => entry.repository === repository.identity)?.key
       )
-      if (names.capital && !names.canonical)
-        throw new KiError(
-          'territory Capital has no territory handle to name its sources store; register it with ki registry add or declare territory_prefix',
-          1
-        )
       const path = await managedSourcesStore(
         context.homeDirectory,
-        names.canonical ?? names.historical,
+        names.conventional,
         storeFix(repository.root, externalRole, [], Boolean(current)),
         context.platform
       )
@@ -280,7 +276,7 @@ const createStoreCreateCommand = (context: KiContext, selection: SelectRepositor
       const write = Boolean(options.write)
       if (!exists) {
         context.stdout.write(`${write ? 'create' : 'would create'} ${path}\n`)
-        if (write) await mkdir(path)
+        if (write) await mkdir(path, { recursive: true })
       }
       const registryChanged = await publishRegistry(context, entry, write)
       context.stdout.write(

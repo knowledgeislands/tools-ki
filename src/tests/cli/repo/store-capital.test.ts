@@ -55,7 +55,7 @@ const estate = async (box: Sandbox, capitals: readonly CapitalFixture[]): Promis
 }
 
 describe('Capital sources-store naming', () => {
-  test('creates a Capital store under its canonical territory handle, whichever selector chose it', async () => {
+  test('creates a Capital store under its territory code and basename, whichever selector chose it', async () => {
     const box = await sandbox()
     const oneDrive = await box.home.mkdir(SOURCES)
     const [prefixed, keyed] = await estate(box, [
@@ -66,7 +66,8 @@ describe('Capital sources-store naming', () => {
       },
       { directory: 'sample-principal', key: 'sample-team' }
     ])
-    const canonical = `${oneDrive}/sources-knowledge-islands`
+    // Each checkout sits in the sandbox's `project` folder, its territory code.
+    const canonical = `${oneDrive}/sources-project/ki-principal`
 
     const byPath = await box.run(['ki', 'repo', '--repo', prefixed as string, 'store', 'create', 'sources'])
     expect(byPath.exitCode).toBe(0)
@@ -76,24 +77,23 @@ describe('Capital sources-store naming', () => {
 
     expect((await box.run(['ki', 'repo', '-t', 'ki', 'store', 'create', 'sources', '--write'])).exitCode).toBe(0)
     expect((await lstat(canonical)).isDirectory()).toBe(true)
-    expect(await lstat(`${oneDrive}/sources-ki`).catch(() => undefined)).toBeUndefined()
-    expect(await lstat(`${oneDrive}/sources-ki-principal`).catch(() => undefined)).toBeUndefined()
+    for (const old of ['knowledge-islands', 'ki', 'ki-principal'])
+      expect(await lstat(`${oneDrive}/sources-${old}`).catch(() => undefined)).toBeUndefined()
 
-    const fallback = await box.run(['ki', 'repo', '--repo', keyed as string, 'store', 'create', 'sources'])
-    expect(fallback.exitCode).toBe(0)
-    expect(fallback.output).toContain(`would create ${oneDrive}/sources-sample-team`)
+    const keyedResult = await box.run(['ki', 'repo', '--repo', keyed as string, 'store', 'create', 'sources'])
+    expect(keyedResult.exitCode).toBe(0)
+    expect(keyedResult.output).toContain(`would create ${oneDrive}/sources-project/sample-principal`)
   })
 
-  test('refuses to name a store for a prefixless Capital that is not registered', async () => {
+  test('creates a store for a prefixless, unregistered Capital by its territory code like any repository', async () => {
     const box = await sandbox()
-    await box.home.mkdir(SOURCES)
+    const oneDrive = await box.home.mkdir(SOURCES)
     const [root] = await estate(box, [{ directory: 'loose-principal' }])
 
     const result = await box.run(['ki', 'repo', '--repo', root as string, 'store', 'create', 'sources', '--write'])
 
-    expect(result.exitCode).toBe(1)
-    expect(result.stderr).toContain('territory Capital has no territory handle to name its sources store')
-    expect(await lstat(`${box.home.path}/${SOURCES}/sources-loose-principal`).catch(() => undefined)).toBeUndefined()
+    expect(result.exitCode).toBe(0)
+    expect((await lstat(`${oneDrive}/sources-project/loose-principal`)).isDirectory()).toBe(true)
   })
 
   test('scans canonical and historical Capital store names, reporting an equal name once', async () => {
@@ -102,19 +102,27 @@ describe('Capital sources-store naming', () => {
       { directory: 'both-principal', key: 'both-principal', kind: 'project', territory: ['territory_prefix = "both"'] },
       { directory: 'old-principal', key: 'old-principal', kind: 'project', territory: ['territory_prefix = "old"'] },
       { directory: 'new-principal', key: 'new', kind: 'project' },
-      { directory: 'same', key: 'same', kind: 'project', territory: ['territory_prefix = "same"'] }
+      { directory: 'same', key: 'same', kind: 'project', territory: ['territory_prefix = "same"'] },
+      // A handle equal to the territory code names the current layout's territory folder, never a store.
+      {
+        directory: 'home-principal',
+        key: 'home-principal',
+        kind: 'project',
+        territory: ['territory_prefix = "project"']
+      }
     ])
-    for (const name of ['both', 'both-principal', 'old-principal', 'new', 'same'])
+    for (const name of ['both', 'both-principal', 'old-principal', 'new', 'same', 'project/home-principal'])
       await box.home.mkdir(`${SOURCES}/sources-${name}`)
 
     const result = await box.run('ki repo --estate store scan')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('undeclared (5)')
-    for (const name of ['both', 'both-principal', 'old-principal', 'new', 'same'])
+    expect(result.output).toContain('undeclared (6)')
+    for (const name of ['both', 'both-principal', 'old-principal', 'new', 'same', 'project/home-principal'])
       expect(result.output.split(`sources-${name}\n`).length - 1).toBe(1)
     expect(result.output).not.toContain('sources-old\n')
     expect(result.output).not.toContain('sources-new-principal')
+    expect(result.output).not.toContain('sources-project\n')
   })
 
   test('diagnoses malformed Capital naming metadata without hiding other repositories', async () => {
