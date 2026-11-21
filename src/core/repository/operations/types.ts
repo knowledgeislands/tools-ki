@@ -41,6 +41,8 @@ export interface RepositoryOperationContext {
   readonly stateDirectory: string
   readonly workingDirectory: string
   readonly homeDirectory: string
+  /** Finds the Cairn store whose territory register ranks an estate or the Capitals. */
+  readonly store: () => Promise<string | undefined>
   readonly environment: Environment
   readonly lstat: typeof lstat
   /** Injected process runner, so a Git read stays reachable from a CLI test. */

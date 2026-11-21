@@ -56,6 +56,8 @@ export interface RoadmapOperationContext {
   readonly stateDirectory: string
   readonly workingDirectory: string
   readonly homeDirectory: string
+  /** Finds the Cairn store whose territory register ranks an estate or the Capitals. */
+  readonly store: () => Promise<string | undefined>
   readonly now: () => number
   readonly locateTrades: () => Promise<readonly LocatedTrade[]>
 }
@@ -172,7 +174,8 @@ const resolveTargets = (
     configurationDirectory: context.configurationDirectory,
     stateDirectory: context.stateDirectory,
     workingDirectory: context.workingDirectory,
-    homeDirectory: context.homeDirectory
+    homeDirectory: context.homeDirectory,
+    store: context.store
   })
 
 const oneMutationTarget = async (

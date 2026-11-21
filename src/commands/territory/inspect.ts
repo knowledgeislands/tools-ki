@@ -11,6 +11,7 @@ import {
 } from '../../core/territory/index.ts'
 import type { TerritorySelection } from '../../core/territory/resolution.ts'
 import { renderTree } from '../presentation/index.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 import { collectFilters } from './selection.ts'
 
 const pathLabel = (value: ProjectionPath): string => {
@@ -42,7 +43,7 @@ export const createTerritoryInspectCommand = (context: KiContext): Command =>
         }
       ) => {
         const territory = await resolveTerritory(
-          { state: context.paths.state, configuration: context.paths.config },
+          { state: context.paths.state, configuration: context.paths.config, store: cairnStoreLocator(context) },
           { ...options, filters: options.filter },
           (message) => context.stderr.write(`ki: warning: ${message}\n`)
         )

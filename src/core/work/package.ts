@@ -471,18 +471,31 @@ export const readWorkPackageBanner = async (
   }
 }
 
-/** The store a named package is read from: the given folder, then `MCP_CAIRN_STORE`, then the rig's Cairn configuration. */
+/** The rig's store: `MCP_CAIRN_STORE`, then the rig's Cairn configuration, or undefined where neither names one. */
+export const configuredCairnStore = (
+  environment: NodeJS.ProcessEnv,
+  configuration: CairnConfiguration,
+  workingDirectory: string
+): string | undefined => {
+  const store = (environment['MCP_CAIRN_STORE'] || undefined) ?? configuration.store
+  return store === undefined ? undefined : resolve(workingDirectory, store)
+}
+
+/** The store a named package is read from: the given folder, then the rig's store. */
 export const resolveCairnStore = (
   given: string | undefined,
   environment: NodeJS.ProcessEnv,
   configuration: CairnConfiguration,
   workingDirectory: string
 ): string => {
-  const store = given ?? (environment['MCP_CAIRN_STORE'] || undefined) ?? configuration.store
+  const store =
+    given === undefined
+      ? configuredCairnStore(environment, configuration, workingDirectory)
+      : resolve(workingDirectory, given)
   if (store === undefined)
     throw new KiError(
       "no Cairn store: pass --store <dir>, set MCP_CAIRN_STORE, or set [store] path in the rig's cairn/config.toml",
       1
     )
-  return resolve(workingDirectory, store)
+  return store
 }

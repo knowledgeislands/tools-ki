@@ -14,6 +14,7 @@ import {
   publishLocalRegistryProposal
 } from '../../core/storage/local-registry.ts'
 import { registryEntryForRepository } from '../../core/storage/repository-stores.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 import type { RegistrySelection } from './types.ts'
 
 export const createRegistryAddCommand = (context: KiContext, selectedRepositories: () => RegistrySelection): Command =>
@@ -27,7 +28,8 @@ export const createRegistryAddCommand = (context: KiContext, selectedRepositorie
         configurationDirectory: context.paths.config,
         stateDirectory: context.paths.state,
         workingDirectory: context.workingDirectory,
-        homeDirectory: context.homeDirectory
+        homeDirectory: context.homeDirectory,
+        store: cairnStoreLocator(context)
       })
       const declarations = await Promise.all(
         repositories.map(async (repository) => ({

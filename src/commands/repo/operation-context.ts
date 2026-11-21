@@ -2,6 +2,7 @@ import { inspectUserConfiguration } from '../../agents/index.ts'
 import { createRepositorySkillActivation } from '../../agents/repository-skill-activation.ts'
 import type { KiContext } from '../../context.ts'
 import type { RepositoryOperationContext } from '../../core/repository/index.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 
 export const repositoryOperationContext = (
   context: KiContext,
@@ -12,6 +13,7 @@ export const repositoryOperationContext = (
   stateDirectory: context.paths.state,
   workingDirectory: context.workingDirectory,
   homeDirectory: context.homeDirectory,
+  store: cairnStoreLocator(context),
   environment: context.environment,
   lstat: context.lstat,
   runner: context.runner,

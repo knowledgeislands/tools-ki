@@ -63,7 +63,8 @@ const repositoryTargets = (context: RepositoryOperationContext, selection: Repos
     configurationDirectory: context.configurationDirectory,
     stateDirectory: context.stateDirectory,
     workingDirectory: context.workingDirectory,
-    homeDirectory: context.homeDirectory
+    homeDirectory: context.homeDirectory,
+    store: context.store
   })
 
 export const conformRepositories = async (

@@ -36,6 +36,7 @@ import {
   renderTree,
   type TreeEntry
 } from '../presentation/index.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 import { type RoadmapTextOptions, renderRoadmapItem, roadmapLinkLegend } from './roadmap-links.ts'
 
 interface RoadmapOptions {
@@ -65,6 +66,7 @@ const operationContext = (context: KiContext): RoadmapOperationContext => ({
   stateDirectory: context.paths.state,
   workingDirectory: context.workingDirectory,
   homeDirectory: context.homeDirectory,
+  store: cairnStoreLocator(context),
   now: context.now,
   locateTrades: () => locateTrades(context)
 })

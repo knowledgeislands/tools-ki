@@ -40,7 +40,19 @@ Use `ki territory open -t knowledge-islands --target zed` to open local roots. F
 
 ## Rank your territories
 
-To list, select and open territories in your own order of priority, rank their handles in your `ki` user configuration, `$XDG_CONFIG_HOME/ki/config.toml`:
+`--principals` and `ki territory list` follow your order of priority, and `--estate` groups its roots by the ranked territory that declares them, in path order within each. Territories with no rank follow in the usual order: Knowledge Islands first, then by name; repositories no ranked territory declares keep their path order at the end. Selecting one territory with `-t` is unaffected. Tools that read `ki territory roots`, such as `mgit --principals`, inherit the same order.
+
+The ranking comes from the Cairn store's territory register first (TERRITORY-RANK a). Each record, `roster/territories/<code>/_index.md`, carries its territory's rank, 1 highest, and the handle it joins its Capital by:
+
+```yaml
+ki-id: territory:ki
+ki-handle: knowledge-islands
+ki-rank: 2
+```
+
+`ki` finds the store as `ki work banner` does: `MCP_CAIRN_STORE`, then `[store] path` in the rig's `$XDG_CONFIG_HOME/cairn/config.toml`. A record that has no rank or handle yet ranks nothing, and a territory whose Capital this machine does not hold is passed over quietly. A malformed record, one whose front matter does not parse, whose `ki-id` does not name its folder, or whose rank or handle is not valid, is passed over with a warning; an unreadable Cairn configuration is a warning too.
+
+Your `ki` user configuration, `$XDG_CONFIG_HOME/ki/config.toml`, keeps a copy of the ranking as the fallback:
 
 ```toml
 [territories]
@@ -48,10 +60,8 @@ To list, select and open territories in your own order of priority, rank their h
 ranking = [
   "personal",
   "knowledge-islands",
-  "legal",
+  "humans-not-robots",
 ]
 ```
 
-`--principals` and `ki territory list` then follow the ranking, and `--estate` groups its roots by the ranked territory that declares them, in path order within each. Territories missing from the ranking follow it in the usual order: Knowledge Islands first, then by name; repositories no ranked territory declares keep their path order at the end. Selecting one territory with `-t` is unaffected. The ranking is a personal preference, so it lives in your configuration rather than in any repository.
-
-Use the handles that `ki territory list` shows. A handle that no registered Capital declares, for example a territory whose Capital is not checked out on this machine, is skipped with a warning from `ki territory` commands; a malformed ranking stops the command with a configuration error. Tools that read `ki territory roots`, such as `mgit --principals`, inherit the same order.
+It ranks the territories the register does not, after the register's, and is the whole ranking where the rig names no store or the store holds no register. Use the handles that `ki territory list` shows. A handle that no registered Capital declares is skipped with a warning from `ki territory` commands; a malformed ranking stops the command with a configuration error.

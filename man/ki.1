@@ -340,9 +340,12 @@ Exactly one of --territory, --estate and --principals is required for scoped
 commands. --principals selects only the registered Capitals: first the system
 Capital, whose territory includes knowledgeislands/ki-agent-backpack, then
 the rest by territory name.
-A territories.ranking list of handles in config.toml puts ranked territories
-first, in that order, for --principals, territory list and --estate; the
-estate groups roots by their ranked territory.
+Each territory's ki-rank in the Cairn store's register,
+roster/territories/<code>/_index.md, puts ranked territories first, in that
+order, for --principals, territory list and --estate; the estate groups roots
+by their ranked territory. The store is MCP_CAIRN_STORE or the rig's
+cairn/config.toml [store] path. A territories.ranking list of handles in
+config.toml ranks the territories the register does not, after it.
 Repeated --filter values match directory basenames literally and
 case-sensitively.
 .TP
@@ -1538,9 +1541,12 @@ Exactly one of --territory, --estate and --principals is required for scoped
 commands. --principals selects only the registered Capitals: first the system
 Capital, whose territory includes knowledgeislands/ki-agent-backpack, then
 the rest by territory name.
-A territories.ranking list of handles in config.toml puts ranked territories
-first, in that order, for --principals, territory list and --estate; the
-estate groups roots by their ranked territory.
+Each territory's ki-rank in the Cairn store's register,
+roster/territories/<code>/_index.md, puts ranked territories first, in that
+order, for --principals, territory list and --estate; the estate groups roots
+by their ranked territory. The store is MCP_CAIRN_STORE or the rig's
+cairn/config.toml [store] path. A territories.ranking list of handles in
+config.toml ranks the territories the register does not, after it.
 Repeated --filter values match directory basenames literally and
 case-sensitively.
 .TP

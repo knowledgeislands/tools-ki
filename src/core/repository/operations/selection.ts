@@ -45,6 +45,7 @@ export const selectRepositorySkills = async (
     stateDirectory: context.stateDirectory,
     workingDirectory: context.workingDirectory,
     homeDirectory: context.homeDirectory,
+    store: context.store,
     onSkippedMgitMembers: options.onSkippedMgitMembers
   })
   const backpacks = await discoverInstalledBackpacks(context.dataDirectory)

@@ -144,6 +144,8 @@ interface RepositorySelection {
   readonly stateDirectory: string
   readonly workingDirectory: string
   readonly homeDirectory: string
+  /** Finds the Cairn store whose territory register ranks an estate or the Capitals. */
+  readonly store: () => Promise<string | undefined>
   readonly onSkippedMgitMembers?: (members: readonly string[]) => void
 }
 
@@ -182,7 +184,7 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
   }
   if (options.territory !== undefined || options.estate || options.principals) {
     const profile = await resolveTerritory(
-      { state: options.stateDirectory, configuration: options.configurationDirectory },
+      { state: options.stateDirectory, configuration: options.configurationDirectory, store: options.store },
       { ...options, filters }
     )
     return profile.roots.map((member) => ({

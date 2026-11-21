@@ -5,6 +5,7 @@ import { readRepositoryDeclaration, resolveRepositoryDeclaredSkills } from '../.
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { renderTree } from '../presentation/index.ts'
 import { refreshBackpacks } from '../shared/backpack-refresh.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 
 export const createUpgradeCommand = (
   context: KiContext,
@@ -22,7 +23,8 @@ export const createUpgradeCommand = (
         configurationDirectory: context.paths.config,
         stateDirectory: context.paths.state,
         workingDirectory: context.workingDirectory,
-        homeDirectory: context.homeDirectory
+        homeDirectory: context.homeDirectory,
+        store: cairnStoreLocator(context)
       })
       const backpacks = await discoverInstalledBackpacks(context.paths.data)
       const reports: { readonly root: string; readonly providers: readonly string[] }[] = []

@@ -5,6 +5,7 @@ import { registeredRepositories } from '../../core/trade/estate.ts'
 import { localRegisteredRepository } from '../../core/trade/index.ts'
 import { type RegisteredRepository, tradeError } from '../../core/trade/model.ts'
 import type { SelectRepositories } from '../repo/selection.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 
 export interface TradeSelection {
   readonly selected: () => Promise<readonly RepositoryLocation[]>
@@ -24,7 +25,8 @@ export const tradeSelection = (context: KiContext, selection: SelectRepositories
       configurationDirectory: context.paths.config,
       stateDirectory: context.paths.state,
       workingDirectory: context.workingDirectory,
-      homeDirectory: context.homeDirectory
+      homeDirectory: context.homeDirectory,
+      store: cairnStoreLocator(context)
     })
     await Promise.all(
       repositories.map((repository) => localRegisteredRepository({ ...context, workingDirectory: repository.root }))

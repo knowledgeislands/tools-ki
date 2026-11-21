@@ -19,6 +19,7 @@ test('distinguishes unrequested, empty, and unavailable trade evidence in core r
     stateDirectory: `${box.state.path}/ki`,
     workingDirectory: box.project.path,
     homeDirectory: box.home.path,
+    store: async () => undefined,
     now: Date.now,
     locateTrades: async () => {
       calls += 1

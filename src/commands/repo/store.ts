@@ -29,6 +29,7 @@ import {
 } from '../../core/storage/index.ts'
 import { repositoryStoreFix, scannedSourcesStoreNames, sourcesStoreNames } from '../../core/territory/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 import type { RepositorySelection } from './selection.ts'
 
 type SelectRepositories = () => RepositorySelection
@@ -39,7 +40,8 @@ const repositoryTargets = (context: KiContext, selection: SelectRepositories) =>
     configurationDirectory: context.paths.config,
     stateDirectory: context.paths.state,
     workingDirectory: context.workingDirectory,
-    homeDirectory: context.homeDirectory
+    homeDirectory: context.homeDirectory,
+    store: cairnStoreLocator(context)
   })
 
 interface SelectedStoreRepository {

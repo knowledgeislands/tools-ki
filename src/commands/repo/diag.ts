@@ -3,6 +3,7 @@ import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 import {
   describeRepositoryLocalProvider,
   describeRepositoryOrphan,
@@ -25,7 +26,8 @@ export const createRepoDiagCommand = (
       configurationDirectory: context.paths.config,
       stateDirectory: context.paths.state,
       workingDirectory: context.workingDirectory,
-      homeDirectory: context.homeDirectory
+      homeDirectory: context.homeDirectory,
+      store: cairnStoreLocator(context)
     })
     const reports = await Promise.all(
       repositories.map(async (repository) => ({

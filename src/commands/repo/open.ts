@@ -19,6 +19,7 @@ import {
   openTargetNames,
   repositoryStoreFix
 } from '../../core/territory/index.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 
 interface OpenOptions {
   readonly target: OpenTargetName
@@ -56,7 +57,8 @@ export const createRepoOpenCommand = (
         configurationDirectory: context.paths.config,
         stateDirectory: context.paths.state,
         workingDirectory: context.workingDirectory,
-        homeDirectory: context.homeDirectory
+        homeDirectory: context.homeDirectory,
+        store: cairnStoreLocator(context)
       })
       const includeStores = options.target !== 'delta' && options.stores !== false
       const roots: string[] = []

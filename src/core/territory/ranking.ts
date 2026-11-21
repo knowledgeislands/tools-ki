@@ -4,7 +4,7 @@ import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
 
 /** A Capital key or `territory_prefix`; the registry key grammar admits both. */
-const HANDLE = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/
+export const HANDLE = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)

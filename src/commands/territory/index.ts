@@ -13,6 +13,7 @@ import {
 import type { TerritorySelection } from '../../core/territory/resolution.ts'
 import type { TerritoryAbsence, TerritoryAbsenceCondition } from '../../core/territory/types.ts'
 import { renderTree } from '../presentation/index.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 import { createTerritoryInspectCommand } from './inspect.ts'
 import { territoryOptions } from './selection.ts'
 
@@ -61,7 +62,11 @@ type Options = TerritorySelection & {
   readonly target?: OpenTargetName
 }
 export const createTerritoryCommand = (context: KiContext): Command => {
-  const directories = { state: context.paths.state, configuration: context.paths.config }
+  const directories = {
+    state: context.paths.state,
+    configuration: context.paths.config,
+    store: cairnStoreLocator(context)
+  }
   const warn = (message: string) => context.stderr.write(`ki: warning: ${message}\n`)
   const resolve = (options: Options) => resolveTerritory(directories, { ...options, filters: options.filter }, warn)
   const command = new Command('territory').description('discover and select territories from their Capitals')

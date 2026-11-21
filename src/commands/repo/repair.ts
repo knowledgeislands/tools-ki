@@ -23,6 +23,7 @@ import {
 } from '../../core/storage/index.ts'
 import { repositoryStoreFix } from '../../core/territory/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 import {
   describeRepositoryOrphan,
   describeRepositoryProjection,
@@ -56,7 +57,8 @@ export const createRepairCommand = (
         configurationDirectory: context.paths.config,
         stateDirectory: context.paths.state,
         workingDirectory: context.workingDirectory,
-        homeDirectory: context.homeDirectory
+        homeDirectory: context.homeDirectory,
+        store: cairnStoreLocator(context)
       })
       const reports: { readonly root: string; readonly entries: string[] }[] = []
       let failed = false

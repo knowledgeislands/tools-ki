@@ -2,6 +2,7 @@ import { Command } from 'commander'
 import { addRepoSkill, removeRepoSkill } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 
 export const createRepoSkillCommand = (
   context: KiContext,
@@ -24,7 +25,8 @@ export const createRepoSkillCommand = (
             configurationDirectory: context.paths.config,
             stateDirectory: context.paths.state,
             workingDirectory: context.workingDirectory,
-            homeDirectory: context.homeDirectory
+            homeDirectory: context.homeDirectory,
+            store: cairnStoreLocator(context)
           })
           for (const repository of repositories) {
             const result = await addRepoSkill({
@@ -52,7 +54,8 @@ export const createRepoSkillCommand = (
             configurationDirectory: context.paths.config,
             stateDirectory: context.paths.state,
             workingDirectory: context.workingDirectory,
-            homeDirectory: context.homeDirectory
+            homeDirectory: context.homeDirectory,
+            store: cairnStoreLocator(context)
           })
           for (const repository of repositories) {
             const result = await removeRepoSkill({

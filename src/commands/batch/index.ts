@@ -11,6 +11,7 @@ import {
 import { KiError } from '../../core/errors.ts'
 import { type RepositoryLocation, resolveRepositoryTargets } from '../../core/repository/index.ts'
 import type { SelectRepositories } from '../repo/selection.ts'
+import { cairnStoreLocator } from '../shared/cairn-store.ts'
 
 const batchOperationContext = (context: KiContext): BatchOperationContext => ({
   workingDirectory: context.workingDirectory,
@@ -42,7 +43,8 @@ export const createRepoBatchCommand = (context: KiContext, selectedRepositories:
       configurationDirectory: context.paths.config,
       stateDirectory: context.paths.state,
       workingDirectory: context.workingDirectory,
-      homeDirectory: context.homeDirectory
+      homeDirectory: context.homeDirectory,
+      store: cairnStoreLocator(context)
     })
     if (repositories.length !== 1) throw new KiError('ki repo batch requires exactly one repository', 2)
     return (repositories[0] as RepositoryLocation).root

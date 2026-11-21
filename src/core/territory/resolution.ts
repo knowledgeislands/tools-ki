@@ -9,6 +9,7 @@ import { type LocalRegistryEntry, requiredLocalRegistry } from '../storage/index
 import { claimedRepository, type TerritoryDeclaration, territoryDeclarationFrom } from './declaration.ts'
 import { matchesDirectoryName, validateFilters } from './filters.ts'
 import { readTerritoryRanking } from './ranking.ts'
+import { readRegisterRanking } from './register.ts'
 import type { TerritoryAbsence, TerritoryMember, TerritoryProfile } from './types.ts'
 
 export interface TerritorySelection {
@@ -19,10 +20,15 @@ export interface TerritorySelection {
   /** Report members that cannot be resolved on the profile instead of failing; for roots, show and audit only. */
   readonly absent?: 'report'
 }
-/** Where selection reads the local registry and the user's territory ranking. */
+/** Where selection reads the local registry and the territory ranking. */
 export interface TerritoryDirectories {
   readonly state: string
   readonly configuration: string
+  /**
+   * Finds the Cairn store clone whose territory register ranks territories, read only when a
+   * selection is ranked; without one, or with no register in it, the configuration ranking applies.
+   */
+  readonly store: () => Promise<string | undefined>
 }
 /** Receives a diagnostic that does not stop the selection. */
 export type TerritoryWarning = (message: string) => void
@@ -113,17 +119,25 @@ const territoryOrder = (found: readonly Capital[], ranking: readonly string[]): 
       left.handle.localeCompare(right.handle, 'en')
   )
 }
-/** Capitals in ranked order; a ranked handle no registered Capital declares is a warning, never a failure. */
+/**
+ * Capitals in ranked order. The store's register ranks first (TERRITORY-RANK a); the configuration
+ * ranking, still validated, ranks the territories the register does not, after it. A ranked handle
+ * no registered Capital declares is a warning, never a failure, for the configuration only: the
+ * register lists every territory, including those whose Capital this machine does not hold.
+ */
 const rankedCapitals = async (
   entries: readonly LocalRegistryEntry[],
-  configurationDirectory: string,
+  directories: TerritoryDirectories,
   warn?: TerritoryWarning
 ): Promise<{ readonly ordered: readonly Capital[]; readonly ranking: readonly string[] }> => {
-  const ranking = await readTerritoryRanking(configurationDirectory)
+  const configured = await readTerritoryRanking(directories.configuration)
   const found = await capitals(entries)
-  for (const handle of ranking)
+  for (const handle of configured)
     if (!found.some((capital) => capital.handle === handle))
       warn?.(`territory ranking names ${handle}, which no registered Capital declares`)
+  const store = await directories.store()
+  const registered = (store === undefined ? undefined : await readRegisterRanking(store, warn)) ?? []
+  const ranking = [...registered, ...configured.filter((handle) => !registered.includes(handle))]
   return { ordered: territoryOrder(found, ranking), ranking }
 }
 /** The identity a checkout's `.ki.toml` claims, or undefined where it has none readable. */
@@ -215,7 +229,7 @@ export const resolveTerritory = async (
   // The ranking orders territories, so a single territory neither reads nor reports it.
   const { ordered, ranking } =
     selection.territory === undefined
-      ? await rankedCapitals(entries, directories.configuration, warn)
+      ? await rankedCapitals(entries, directories, warn)
       : { ordered: await capitals(entries), ranking: [] }
   if (selection.principals) return resolvePrincipals(ordered, filters)
   const capital = selection.territory === undefined ? undefined : selectedCapital(ordered, selection.territory)
@@ -284,11 +298,9 @@ export const listTerritories = async (
     readonly members: number
   }[]
 > =>
-  (await rankedCapitals(await requiredLocalRegistry(directories.state), directories.configuration, warn)).ordered.map(
-    (entry) => ({
-      handle: entry.handle,
-      name: entry.declaration.territory.name,
-      capital: entry.entry,
-      members: entry.declaration.territory.members.length
-    })
-  )
+  (await rankedCapitals(await requiredLocalRegistry(directories.state), directories, warn)).ordered.map((entry) => ({
+    handle: entry.handle,
+    name: entry.declaration.territory.name,
+    capital: entry.entry,
+    members: entry.declaration.territory.members.length
+  }))
