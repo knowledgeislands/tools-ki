@@ -22,7 +22,7 @@ updated_at: 2026-10-21T01:30:50Z
 
 ## Goal
 
-`ki` can keep a repository's copy of the EBU 5G-EMERGE SharePoint documents it uses in step with SharePoint, from sources that repository declares in tracked configuration, and can tell the other copies on the same machine when they hold an older version. `hnr-principal` is the first user: it has no toolchain of its own, so its recorded copy in the `sources-humans-not-robots` store is synchronised by `ki`.
+`ki` can keep a repository's copy of the EBU 5G-EMERGE SharePoint documents it uses in step with SharePoint, from sources that repository declares in tracked configuration, and can tell the other copies on the same machine when they hold an older version. `hnr-principal` is the first user: it has no toolchain of its own, so its recorded copy in the `sources-hnr/hnr-principal` store is synchronised by `ki`.
 
 ## Context
 
