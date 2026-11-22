@@ -48,7 +48,7 @@ From a linked development backpack worktree, `ki dev skill generate --write` rea
 
 ## Migrate work-record targets
 
-From v0.13.0, a supplied `resolution_target` must identify another work record in the same repository, including a different declared area where applicable. It is permitted only with `duplicate`, `merged` or `superseded`. For a cross-repository disposition, describe the receiving repository and record in `## Cancelled` and omit `resolution_target`. The reader rejects a cross-repository target and never rewrites the record; make any correction through the owning work's approved lifecycle.
+From v0.13.0, a supplied `resolution_target` must identify another work record in the same repository, including a different declared area where applicable. It is permitted only with `duplicate`, `merged` or `superseded`. For a cross-repository disposition, describe the receiving repository and record in `## Cancelled` and omit `resolution_target`. A record whose work went back to ideas, such as a Soon or Future record leaving the roadmap, is cancelled with `resolution: returned`, which takes no target: its `## Cancelled` names where the idea now waits. The reader rejects a cross-repository target and never rewrites the record; make any correction through the owning work's approved lifecycle.
 
 ## Read Git hygiene evidence
 

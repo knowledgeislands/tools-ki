@@ -89,7 +89,8 @@ export type WorkItemSize = (typeof workItemSizes)[number]
 export const WORK_ITEM_ASSIGNEE = /^(?:owner|(?:work|run|person|repo)\/[A-Za-z0-9][A-Za-z0-9._-]*)$/
 export const holdReasons = ['waiting-for', 'parked'] as const
 export type HoldReason = (typeof holdReasons)[number]
-export const workItemResolutions = ['obsolete', 'rejected', 'duplicate', 'merged', 'superseded'] as const
+/** Why a cancelled record ended; `returned` work went back to ideas, which is not the same as being declined. */
+export const workItemResolutions = ['obsolete', 'rejected', 'duplicate', 'merged', 'superseded', 'returned'] as const
 const targetedResolutions = new Set<string>(['duplicate', 'merged', 'superseded'])
 /** Where a record sits in reports: an adopted open horizon, unadopted intake, or a terminal ending. */
 export const workItemLanes = [...workItemHorizons, 'triage', 'done', 'cancelled'] as const

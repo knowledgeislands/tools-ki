@@ -184,6 +184,30 @@ test.each(['duplicate', 'merged', 'superseded'])(
   }
 )
 
+test('reads a returned resolution, whose idea waits elsewhere, and forbids it a target', async () => {
+  const box = await sandbox()
+  await box.project.write('repo/.ki.toml', declaration(home('example/repo')))
+  const returned = record(
+    { horizon: undefined, status: 'cancelled', resolution: 'returned' },
+    '## Cancelled\n\nThe idea went back to the alpha Project note, where it waits.\n'
+  )
+  await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-003', returned)
+  const result = await box.run('ki repo --repo repo roadmap list --format json')
+  expect(result.exitCode).toBe(0)
+  expect(JSON.parse(result.output).items[0]).toMatchObject({ status: 'cancelled', resolution: 'returned' })
+  expect(JSON.parse(result.output).items[0]).not.toHaveProperty('resolutionTarget')
+  expect(await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-003-item.md')).toBe(returned)
+  await roadmapFile(
+    box,
+    'repo',
+    'KI-TOOL-KI-CLI-003',
+    record({ horizon: undefined, status: 'cancelled', resolution: 'returned', resolution_target: 'KI-TOOL-KI-CLI-004' })
+  )
+  const refused = await box.run('ki repo --repo repo roadmap list')
+  expect(refused.exitCode).toBe(1)
+  expect(refused.output).toContain('resolution returned forbids resolution_target')
+})
+
 describe('[ki repo roadmap] model fields', () => {
   test('reads classification, hold and resolution fields and projects them in JSON', async () => {
     const box = await sandbox()
