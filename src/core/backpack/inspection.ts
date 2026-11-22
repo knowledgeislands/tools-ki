@@ -11,8 +11,6 @@ const backpackComponent = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const payloadRoots = ['skills', 'subagents', 'hooks'] as const
 
 export const canonicalBackpackIdentifier = 'knowledgeislands/ki-agent-backpack'
-/** The canonical backpack's retired spelling, still recognised for this one release. */
-export const retiredCanonicalBackpackIdentifier = retiredBackpackIdentifier(canonicalBackpackIdentifier) as string
 /** The skill a backpack's root `.ki.toml` declares its capability prefix under. */
 export const BACKPACK_SHAPE_SKILL = 'ki-repo-backpack'
 /** The retired name of that skill, still read for this one release. */
