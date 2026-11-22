@@ -15,9 +15,10 @@ export interface RepositoryPlanningSource {
   readonly areas: ReadonlyMap<string, string | undefined>
 }
 
+// A Knowledge Base's Streams roadmap records belong to ki-work-roadmap since ki-repo-kb-streams was split (KB-FOLD b).
 const adapterSkills = {
   roadmap: 'ki-work-roadmap',
-  'kb-streams': 'ki-repo-kb-streams',
+  'kb-streams': 'ki-work-roadmap',
   'github-issues': 'ki-work-github-issues',
   linear: 'ki-work-linear'
 } as const

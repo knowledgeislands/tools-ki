@@ -134,8 +134,20 @@ const skillName = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[a-z0-9](?:[a-z0-9-]*[a-z0-9
 
 const shapeError = (path: string, detail: string): KiError => new KiError(`${basename(path)} ${detail}`, 1)
 
-/** Shape skills retired on 22 November 2026 (REPO-CORE a, REPO-OTHERS a): ki-repo and ki-repo-tools took them in. */
-const RETIRED_SHAPE_SKILLS: readonly string[] = ['ki-repo-project', 'ki-repo-homebrew-tap', 'ki-repo-specifications']
+/**
+ * Skills retired on 22 November 2026. The shape skills went into ki-repo and ki-repo-tools (REPO-CORE a,
+ * REPO-OTHERS a); three knowledge-base satellites went into ki-repo-kb, and ki-repo-kb-streams was split between
+ * ki-repo-kb, ki-work-roadmap and ki-work (KB-FOLD b).
+ */
+const RETIRED_SKILLS: readonly string[] = [
+  'ki-repo-project',
+  'ki-repo-homebrew-tap',
+  'ki-repo-specifications',
+  'ki-repo-kb-activities',
+  'ki-repo-kb-live-artifacts',
+  'ki-repo-kb-principal',
+  'ki-repo-kb-streams'
+]
 
 /** The `[repo]` key naming a repository's backpacks; it was `harnesses` until the rename of 14 November 2026. */
 const REPOSITORY_BACKPACKS_KEY = 'backpacks'
@@ -195,9 +207,9 @@ const declaredSkills = (parsed: Record<string, unknown>, path: string): readonly
     if (!skillName.test(key)) throw new KiError(`declared skill ${key} must be [skills.<prefix>-<name>]`, 1)
     return declaredSkill(key, configuration)
   })
-  // For one release a retired shape skill's leftover table is skipped, so a repository not yet tidied
+  // For one release a retired skill's leftover table is skipped, so a repository not yet tidied
   // keeps working after its backpack drops the skill; ki-repo's audit names the table to remove.
-  return declared.filter((skill) => !RETIRED_SHAPE_SKILLS.includes(skill.name))
+  return declared.filter((skill) => !RETIRED_SKILLS.includes(skill.name))
 }
 
 export const parseRepositoryDeclaration = (raw: string, configurationPath: string): RepositoryDeclaration => {

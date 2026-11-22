@@ -35,7 +35,6 @@ const knowledgeBaseConfiguration = configuration
   .replace('repo_type = "project"', 'repo_type = "kb"')
   .replaceAll('ki-repo-project', 'ki-repo-kb')
   .replace('adapter = "roadmap"', 'adapter = "kb-streams"')
-  .replace('[skills.ki-work-roadmap]', '[skills.ki-repo-kb-streams]')
 
 const item = (
   id: string,
@@ -613,9 +612,7 @@ describe('[ki repo batch]', () => {
 
     await box.project.write(
       'repository/.ki.toml',
-      configuration
-        .replace('adapter = "roadmap"', 'adapter = "kb-streams"')
-        .replace('[skills.ki-work-roadmap]', '[skills.ki-repo-kb-streams]')
+      configuration.replace('adapter = "roadmap"', 'adapter = "kb-streams"')
     )
     const wrongLocalAdapter = await box.run(prepare('EXAMPLE-001'), { now: () => now })
     expect(wrongLocalAdapter.stderr).toContain('cannot use kb-streams for this repository kind')

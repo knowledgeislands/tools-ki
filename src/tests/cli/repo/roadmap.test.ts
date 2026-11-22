@@ -102,7 +102,7 @@ store_roles = ["notes"]
 [skills.ki-work]
 adapter = "kb-streams"
 
-[skills.ki-repo-kb-streams]
+[skills.ki-work-roadmap]
 
 [skills.ki-decision-records]
 ${extra}`
@@ -351,7 +351,8 @@ describe('[ki repo roadmap]', () => {
 
   test('pins the KB Streams known fields to the backpack Streams checker', async () => {
     // Mirrors RECORD_FIELDS plus KB_NOTE_FIELDS in ki-agent-backpack
-    // skills/repo-structure/ki-repo-kb-streams/scripts/rubric/contexts/streams.ts (origin/main 05ee5b1f).
+    // skills/work/ki-work-roadmap/scripts/rubric/contexts/kb-roadmap.ts, where ki-repo-kb-streams' record checks
+    // went under KB-FOLD b.
     // A change to either list needs the matching change on the other side.
     const known = [
       'id',
@@ -415,7 +416,7 @@ describe('[ki repo roadmap]', () => {
     await box.project.write('unknown/.ki.toml', `${project}\n[skills.ki-work]\nadapter = "jira"\n`)
     await box.project.write(
       'inapplicable/.ki.toml',
-      `${project}\n[skills.ki-work]\nadapter = "kb-streams"\n\n[skills.ki-repo-kb-streams]\n`
+      `${project}\n[skills.ki-work]\nadapter = "kb-streams"\n\n[skills.ki-work-roadmap]\n`
     )
     const undeclared = await realpath(`${box.project.path}/undeclared`)
 

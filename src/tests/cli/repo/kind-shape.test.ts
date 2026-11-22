@@ -22,21 +22,26 @@ test.each([
   expect(await box.state.read('ki/registry.toml')).toContain('https://github.com/example/project')
 })
 
-test.each(['ki-repo-project', 'ki-repo-homebrew-tap', 'ki-repo-specifications'])(
-  'skips the retired [skills.%s] table a repository has not yet removed',
-  async (retired) => {
-    const box = await sandbox()
-    await box.project.write(
-      '.ki.toml',
-      declaration('repo_type = "project"\nprimary_shape = "ki-repo-project"', [retired, 'ki-repo-tools'])
-    )
+test.each([
+  'ki-repo-project',
+  'ki-repo-homebrew-tap',
+  'ki-repo-specifications',
+  'ki-repo-kb-activities',
+  'ki-repo-kb-live-artifacts',
+  'ki-repo-kb-principal',
+  'ki-repo-kb-streams'
+])('skips the retired [skills.%s] table a repository has not yet removed', async (retired) => {
+  const box = await sandbox()
+  await box.project.write(
+    '.ki.toml',
+    declaration('repo_type = "project"\nprimary_shape = "ki-repo-project"', [retired, 'ki-repo-tools'])
+  )
 
-    const result = await box.run('ki registry add')
+  const result = await box.run('ki registry add')
 
-    expect(result.exitCode).toBe(0)
-    expect(result.stderr).toBe('')
-  }
-)
+  expect(result.exitCode).toBe(0)
+  expect(result.stderr).toBe('')
+})
 
 test('requires ki-repo-tools for the Homebrew tap shape it now owns', async () => {
   const box = await sandbox()
