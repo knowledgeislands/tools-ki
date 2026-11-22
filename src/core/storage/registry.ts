@@ -25,8 +25,8 @@ export interface BackpackRelease {
  */
 export const canonicalBackpackRelease: BackpackRelease = {
   id: canonicalBackpackIdentifier,
-  url: 'https://codeload.github.com/knowledgeislands/ki-agent-backpack/tar.gz/3875d72be8eff2e0f0a8910488d19e304ba131cb',
-  sha256: 'abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404'
+  url: 'https://codeload.github.com/knowledgeislands/ki-agent-backpack/tar.gz/ec0078018250b2ceb6f114ac0085a38e0f969a7c',
+  sha256: 'bfd8b6f78c5f672eedaf4201686e7b2f7f2cdbdf258f5e5d581f6324dd5c9a2f'
 }
 
 type RegistryValue = Record<string, unknown>

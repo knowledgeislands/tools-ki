@@ -20,7 +20,7 @@ describe('[ki bootstrap]', () => {
     expect(bootstrapped).toEqual({
       exitCode: 0,
       output: `created KI agent configuration for chatgpt-codex
-canonical backpack already installed\tarchive abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404
+canonical backpack already installed\tarchive bfd8b6f78c5f672eedaf4201686e7b2f7f2cdbdf258f5e5d581f6324dd5c9a2f
 ki-bootstrap for chatgpt-codex installed
 ki-next for chatgpt-codex installed
 ki-plan for chatgpt-codex installed
@@ -33,7 +33,7 @@ ki-work-design for chatgpt-codex installed
     })
     expect(repeated).toEqual({
       exitCode: 0,
-      output: `canonical backpack already installed\tarchive abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404
+      output: `canonical backpack already installed\tarchive bfd8b6f78c5f672eedaf4201686e7b2f7f2cdbdf258f5e5d581f6324dd5c9a2f
 ki-bootstrap for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
 ki-plan for chatgpt-codex already installed
@@ -47,7 +47,7 @@ ki-work-design for chatgpt-codex already installed
     expect(refreshed).toEqual({
       exitCode: 0,
       output: `refreshed KI agents: chatgpt-codex
-canonical backpack already installed\tarchive abb4eb541e0cb7c46a17ac3dbf6f2f4a6334f782cea0e7165c81976a6fc12404
+canonical backpack already installed\tarchive bfd8b6f78c5f672eedaf4201686e7b2f7f2cdbdf258f5e5d581f6324dd5c9a2f
 refreshed ki configuration: 1 agents, 1 backpacks, 8 skills
 ki-bootstrap for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
