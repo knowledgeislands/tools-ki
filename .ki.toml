@@ -102,9 +102,3 @@ components = [
 [skills.ki-work-roadmap.areas]
 CLI = "Command-line interface"
 VENDOR = "Cross-repository skill vendoring"
-
-# -----------------------------------------------------------------------------
-# Relationships
-# -----------------------------------------------------------------------------
-
-[skills.ki-trades]
