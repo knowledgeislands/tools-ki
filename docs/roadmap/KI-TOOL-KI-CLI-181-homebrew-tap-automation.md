@@ -5,11 +5,12 @@ title: Homebrew tap automation
 priority: medium
 size: s
 status: triage
+assignee: work/ki.tools
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-11-14T19:09:45Z
-updated_at: 2026-11-14T19:09:45Z
+updated_at: 2026-11-22T18:15:54Z
 ---
 
 # Homebrew tap automation

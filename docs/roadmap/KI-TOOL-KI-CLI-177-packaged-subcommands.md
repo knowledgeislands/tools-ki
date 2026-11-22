@@ -5,11 +5,12 @@ title: Packaged subcommands
 priority: low
 size: l
 status: triage
+assignee: work/ki.summit
 blocks: []
 blocked_by: [KI-TOOL-KI-CLI-176]
 baseline_ref: null
 created_at: 2026-11-05T02:20:48Z
-updated_at: 2026-11-05T02:20:48Z
+updated_at: 2026-11-22T18:15:54Z
 ---
 
 # Packaged subcommands

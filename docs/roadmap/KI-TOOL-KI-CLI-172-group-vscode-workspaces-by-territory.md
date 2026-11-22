@@ -6,11 +6,12 @@ component: manage
 priority: medium
 size: m
 status: triage
+assignee: work/ki.tools
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-27T03:48:28Z
-updated_at: 2026-10-27T03:48:28Z
+updated_at: 2026-11-22T18:15:54Z
 ---
 
 # KI-TOOL-KI-CLI-172: Group VS Code workspaces
