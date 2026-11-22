@@ -53,7 +53,7 @@ fi
 
 case "${1:-}" in
   '') ;;
-  --link) mode=link ;;
+  --link) mode='link' ;;
   -h|--help) usage; exit 0 ;;
   v*) requested_version=$1 ;;
   *) printf 'ki: error: expected an exact version such as v1.2.3, or --link\n' >&2; exit 2 ;;
@@ -190,7 +190,7 @@ discover_latest_version() {
     *) die 'refusing a non-HTTPS release lookup' ;;
   esac
   latest=${final_url##*/releases/tag/}
-  [ "$latest" != "$final_url" ] && is_exact_version "$latest" || die 'latest release did not resolve to an exact semantic version'
+  if ! { [ "$latest" != "$final_url" ] && is_exact_version "$latest"; }; then die 'latest release did not resolve to an exact semantic version'; fi
   printf '%s\n' "$latest"
 }
 
@@ -274,12 +274,12 @@ install_pair() {
     die 'could not replace installed executable'
   fi
   if [ "${KI_INSTALL_TEST_MODE:-}" = '1' ] && [ "${KI_INSTALL_TEST_FAIL_MAN_REPLACE:-}" = '1' ]; then
-    replacement_failed=yes
+    :
   elif replace_file "$new_man" "$man_target" "$backup_man" "$marker_man" "$placed_man"; then
     rm -f "$backup_ki" "$backup_man"
     return
   else
-    replacement_failed=yes
+    :
   fi
 
   rollback_file "$target" "$backup_ki" "$marker_ki" "$placed_ki"
