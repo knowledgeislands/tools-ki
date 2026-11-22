@@ -7,13 +7,12 @@ purpose: capability
 priority: medium
 size: s
 assignee: work/ki.summit
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 5f855bb8546c710eab9f5b839e295de052318d52
 created_at: 2026-11-21T18:45:00Z
-updated_at: 2026-11-21T19:05:00Z
+updated_at: 2026-11-22T00:34:30Z
 ---
 
 # KI-TOOL-KI-CLI-184: Territory rank from store
@@ -50,7 +49,7 @@ In scope: reading the register's rank and handle, finding the store as `ki work 
 
 ## Current state
 
-Captured, planned and built on 21 November 2026 by a ki.summit background run on Loreward's brief, from baseline `5f855bb8`; awaiting Kris's review.
+Captured, planned and built on 21 November 2026 by a ki.summit background run on Loreward's brief, from baseline `5f855bb8`; accepted by Kris on 22 November 2026. Unreleased until TOOL-RELEASES is settled.
 
 ## Steps
 
@@ -125,7 +124,15 @@ The change reads only. Its wider reach is the new required `store` locator on re
 
 Territories rank by the store's register, with the configuration copy as the per-territory fallback.
 
+## Done
+
+Accepted 22 November 2026 by Kris on the review packet above.
+
 ## Discussion
+
+### Acceptance
+
+Kris answered ACCEPT-CLI184 on Orca item 54, 22 November 2026, about 00:20 UTC: "Accept it (recommended, high confidence)". The answer is recorded in ki.summit's change 14, 4.2 Decided, in the Cairn store, `work/ki/ki.summit/14-ki-command-surface.change.md`. The first outstanding concern, `legal` in the configuration copy, went to chezmoi under LEGAL-CONFIG a on Orca item 55 at the same time; the release waits on TOOL-RELEASES.
 
 ### Why the fallback is per territory
 
