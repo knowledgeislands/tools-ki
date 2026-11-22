@@ -7,13 +7,12 @@ purpose: capability
 priority: medium
 size: m
 assignee: work/ki.summit
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: a121c07cfdc9b9dab3fb59f62497815b46bbd100
 created_at: 2026-11-19T03:25:00Z
-updated_at: 2026-11-20T12:40:00Z
+updated_at: 2026-11-22T18:39:04Z
 ---
 
 # KI-TOOL-KI-CLI-182: Package banner command
@@ -71,7 +70,7 @@ Planned to Ready on 19 November 2026 by the ki.summit build run, on Loreward's b
 
 The roadmap counts' source is the shared roadmap reader: the command counts each package repository's records itself, so `ki repo roadmap summary` gains no JSON form here. That settles the promotion condition, and the record moves to Next and Ready together.
 
-Implemented on 19 November 2026 by the same run, from baseline `a121c07c`, and awaiting review: see Review.
+Implemented on 19 November 2026 by the same run, from baseline `a121c07c`, and reviewed: see Review. It went out in `ki` v0.17.0 on 22 November 2026, with KI-TOOL-KI-CLI-180, while still awaiting review, and Kris accepted it on 22 November 2026.
 
 **Meeting line, 20 November 2026.** Under FOOTER-DELEGATES (Kris, 19 November 2026) the standard's F8 became the meeting line, `🤝 in <meeting> · with <names>`, replacing `👂 in <meeting>`, and the build still printed the older form. A steer run from Loreward's brief changed it while the record awaits review: each `--meeting <id>` is now found in the store's `meetings/` by the id its `ki-id` carries after `meeting:`, an unknown one is an error, and the line names each meeting with the other participants under its `ki-participants`, by their roster `ki-name` or a seat's id where one has none, leaving out the seat's own actor; with no other participant the `· with` part is left off, and two or more meetings are joined by `, `, each with its own list, as in `🤝 in other.room · with Quire, ex.tools@reviewer, ex.summit.call`. The owner is never listed in `ki-participants`, so is never named.
 
@@ -162,7 +161,15 @@ The command only reads. Its one wider change is the Vitest text loader, which af
 
 `ki work banner` prints any package's banner from the store, art and scroll included, exactly as the standard lays it out, with the live counts as options.
 
+## Done
+
+Accepted 22 November 2026 by Kris on the review packet above. Already released in `ki` v0.17.0.
+
 ## Discussion
+
+### Acceptance
+
+Kris answered ACCEPT-BANNER a by voice through Natter, 22 November 2026, about 18:37 GMT: "Yes, accept." The answer is in the Cairn store, `meetings/cairn.summit/20261114-voice/messages/20261122T1837Z-voice-accept-banner-answer.md`, and is recorded in ki.summit's change 14, 4.2 Decided, `work/ki/ki.summit/14-ki-command-surface.change.md`. The first outstanding concern, the inferred raised time and state of each question, goes to one follow-up record, KI-TOOL-KI-CLI-185, as option a set out.
 
 ### The art
 
