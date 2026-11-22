@@ -9,12 +9,12 @@ priority: high
 size: m
 assignee: run/backpack-rename
 horizon: now
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked_by: []
 baseline_ref: 099bba9a3a82e45421d07c82ef55d045ef48f955
 created_at: 2026-11-14T13:45:00Z
-updated_at: 2026-11-14T14:30:00Z
+updated_at: 2026-11-22T01:50:00Z
 ---
 
 # KI-TOOL-KI-CLI-180: Backpack rename
