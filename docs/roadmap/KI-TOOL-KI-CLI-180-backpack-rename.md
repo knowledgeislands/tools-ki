@@ -9,12 +9,12 @@ priority: high
 size: m
 assignee: run/backpack-rename
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 099bba9a3a82e45421d07c82ef55d045ef48f955
 created_at: 2026-11-14T13:45:00Z
-updated_at: 2026-11-22T01:50:00Z
+updated_at: 2026-11-22T02:05:00Z
 ---
 
 # KI-TOOL-KI-CLI-180: Backpack rename
@@ -35,7 +35,9 @@ In scope: tools-ki's own command surface, configuration keys, data folder, inter
 
 ## Current state
 
-Built and verified in a detached linked worktree from `main` at `61a6e204`, and awaiting review. On sol the installed `ki` runs the primary checkout's `src/main.ts`, so fast-forwarding the primary checkout installs this change. Landing waits for Kris's word.
+Landed on `main` on 14 November 2026 (`9657d476`, `0cf92526`, `01aa1611`) and unreleased: the latest release is v0.16.1. On sol the installed `ki` runs the primary checkout's `src/main.ts`, so sol already runs it. Returned from review on 22 November 2026 and re-delivered the same day; awaiting Kris's acceptance, which the next release waits for.
+
+The repositories moved ahead of the release. On 14 November 2026, two hours after landing, every Knowledge Islands repository's `.ki.toml` was rewritten to `[repo] backpacks` (tools-ki `3cb87c8e` among them) and the chezmoi source of `~/.config/ki/config.toml` to `[backpacks]`. `ki` from `main` reads both spellings. Released ki 0.16.1, and v0.13.0, which CI pins in `.github/ki-version` across the estate, read only the retired names, so they refuse those files until the release and the pin bumps.
 
 ## Steps
 
@@ -59,7 +61,7 @@ All tracked product, test, specification, guide, manual and README files that na
 
 ## Dependencies / blocks
 
-None to build. Landing waits for Kris's release word. After the release, each rig installs the new `ki`, runs one command to migrate its data folder, and repairs links. Then the `.ki.toml` files are rewritten, and the chezmoi source of `~/.config/ki/config.toml` changes to `[backpacks]`. Both must wait until every rig runs the new `ki`, because 0.16.1 requires the retired keys.
+None to build. The release waits for Kris's acceptance of this record. After it, each rig installs the new `ki`, which moves its data folder on first use, and runs `ki repair --apply`; the `update-ki-pin.yml` receivers then propose each repository's CI pin bump. The `.ki.toml` files and the chezmoi configuration were rewritten on 14 November 2026, ahead of the release rather than after it, so until the release a rig still on 0.16.1 refuses them (see Current state).
 
 ## Documentation impact
 
@@ -83,7 +85,7 @@ This record only.
 
 ### Delivered
 
-The Goal is unchanged and met. `ki backpack`, `[repo] backpacks`, the `[backpacks]` table and `$XDG_DATA_HOME/ki/backpacks/` are ki's own names, and its help, errors, specifications, guides, manual and README say backpack. The only "harness" left in product, test and documentation sources is in the one-release compatibility paths, in ids such as HARN-004 and KI-HARNESS-GOV-022, and in tools-ki's own `.ki.toml` and CI step, which keep the retired spelling until the release and its pin bump because CI installs the released ki.
+The Goal is unchanged and met. `ki backpack`, `[repo] backpacks`, the `[backpacks]` table and `$XDG_DATA_HOME/ki/backpacks/` are ki's own names, and its help, errors, specifications, guides, manual and README say backpack. The only "harness" left in product, test and documentation sources is in the one-release compatibility paths, in ids such as HARN-004 and KI-HARNESS-GOV-022, and in tools-ki's CI step, which keeps `ki harness list` until the release and its pin bump because CI installs the released ki. tools-ki's own `.ki.toml` says `backpacks` since `3cb87c8e`, rewritten after delivery (see Current state).
 
 ### Change Summary
 
@@ -105,7 +107,7 @@ It also adds HARN-008 to HARN-012 with their tests, and updates the guides, READ
 
 ### Outstanding concerns
 
-The warning channel uses `AsyncLocalStorage` rather than an injected port, because the reads that raise warnings sit deep in core code that has no context. Removing the compatibility paths, the `harnesses` link and the slot aliases is next-release work. The chezmoi-managed configuration and hook paths, other repositories' `.ki.toml` files, the CI pin and the release itself are outside this record.
+The warning channel uses `AsyncLocalStorage` rather than an injected port, because the reads that raise warnings sit deep in core code that has no context. Removing the compatibility paths, the `harnesses` link and the slot aliases is next-release work. The chezmoi-managed configuration and hook paths, other repositories' `.ki.toml` files, the CI pin and the release itself are outside this record. The `.ki.toml` files and the chezmoi configuration already say `backpacks`, so until the release a rig on 0.16.1 and any CI run on the v0.13.0 pin refuse them; CI runs only by hand.
 
 ### Post-change review
 
@@ -116,6 +118,17 @@ The move is one rename, and it leaves a link behind, so live sessions on a rig k
 ki now says backpack everywhere. For one release it still reads every retired name with a warning, moves the data folder and retired slots on first use without breaking links, and repairs links through the old names on request.
 
 ## Discussion
+
+### Returned and re-delivered, 22 November 2026
+
+Kris returned this record from review on 22 November 2026 (ACCEPT-CLI180 a, in ki.summit's change 20): its Current state was stale, and the review found a live compatibility break between the `harnesses` and `backpacks` spellings. Both are now addressed.
+
+- **The record.** Current state, Dependencies and the Review now say what happened: the change landed on 14 November, and the repositories' `.ki.toml` files and the chezmoi configuration moved to `backpacks` the same day, ahead of the release.
+- **Reading `harnesses`.** `ki` from `main` already reads the retired `[repo] harnesses` key and `[harnesses]` table as deprecated aliases, with a warning, and writes only `backpacks`, so no machine has to migrate on upgrade. A new contract test (`60f6057d`) shows that both `[repo]` spellings give the same `ki repo diag` result and that only the retired one warns.
+- **Released `ki` and the CI pins.** ki 0.16.1 and the v0.13.0 CI pin refuse `backpacks`. Restoring `harnesses` would mean reverting about eighty repositories' `.ki.toml` files and the chezmoi configuration, then migrating them again. The release and its pin bumps close the break in one step, so that is the fix, and it waits for acceptance. Until then, CI, which runs only by hand, and any rig still on 0.16.1 refuse those files; sol runs `main`.
+- **The backpack.** ki-agent-backpack's bootstrap specification and its bootstrap eval still named `ki harness`; both now say `ki backpack`.
+
+Re-verified on 22 November 2026: `bun run test:coverage` ran 87 files and 1,409 tests at 100% coverage. `bunx tsc --noEmit`, `bunx biome check` and `bun run ki:tools:lint-man` pass. `ki repo audit --repo .` reports only the six failures already on `main`: Knip, dependency age, the ignore file, GitHub topics, and the titles of CLI-178 and CLI-179.
 
 ### Links across the move
 
