@@ -1,7 +1,7 @@
 ---
 id: KI-TOOL-KI-CLI-179
 area: CLI
-title: Age from last touch and ACTION-DONE in mcp-m365
+title: mcp-m365 last-touch ageing
 priority: medium
 size: m
 assignee: work/ki.sop.main

@@ -1,7 +1,7 @@
 ---
 id: KI-TOOL-KI-CLI-178
 area: CLI
-title: Sent pass and forward-match logging in mcp-m365
+title: mcp-m365 sent-pass logging
 priority: medium
 size: m
 assignee: work/ki.sop.main
