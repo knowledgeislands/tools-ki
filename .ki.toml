@@ -11,6 +11,7 @@ backpacks = [
 ]
 
 [skills.ki-repo]
+maturity = "growing"
 repo_type = "project"
 primary_shape = "ki-repo-tools"
 repository = "https://github.com/knowledgeislands/tools-ki"
