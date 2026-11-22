@@ -8,13 +8,12 @@ component: backpack
 priority: high
 size: m
 assignee: run/backpack-rename
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 099bba9a3a82e45421d07c82ef55d045ef48f955
 created_at: 2026-11-14T13:45:00Z
-updated_at: 2026-11-22T02:05:00Z
+updated_at: 2026-11-22T02:40:00Z
 ---
 
 # KI-TOOL-KI-CLI-180: Backpack rename
@@ -35,7 +34,7 @@ In scope: tools-ki's own command surface, configuration keys, data folder, inter
 
 ## Current state
 
-Landed on `main` on 14 November 2026 (`9657d476`, `0cf92526`, `01aa1611`) and unreleased: the latest release is v0.16.1. On sol the installed `ki` runs the primary checkout's `src/main.ts`, so sol already runs it. Returned from review on 22 November 2026 and re-delivered the same day; awaiting Kris's acceptance, which the next release waits for.
+Landed on `main` on 14 November 2026 (`9657d476`, `0cf92526`, `01aa1611`) and unreleased: the latest release is v0.16.1. On sol the installed `ki` runs the primary checkout's `src/main.ts`, so sol already runs it. Returned from review on 22 November 2026 and re-delivered the same day; accepted by Kris on 22 November 2026, with the next release approved.
 
 The repositories moved ahead of the release. On 14 November 2026, two hours after landing, every Knowledge Islands repository's `.ki.toml` was rewritten to `[repo] backpacks` (tools-ki `3cb87c8e` among them) and the chezmoi source of `~/.config/ki/config.toml` to `[backpacks]`. `ki` from `main` reads both spellings. Released ki 0.16.1, and v0.13.0, which CI pins in `.github/ki-version` across the estate, read only the retired names, so they refuse those files until the release and the pin bumps.
 
@@ -117,7 +116,15 @@ The move is one rename, and it leaves a link behind, so live sessions on a rig k
 
 ki now says backpack everywhere. For one release it still reads every retired name with a warning, moves the data folder and retired slots on first use without breaking links, and repairs links through the old names on request.
 
+## Done
+
+Accepted 22 November 2026 by Kris on the review packet above.
+
 ## Discussion
+
+### Acceptance
+
+Kris answered ACCEPT-CLI180-REDELIVERED on Orca item 142, 22 November 2026, about 02:27 UTC: "Accept and release". It accepts the record and approves the next ki release. The answer is recorded in ki.summit's change 20, 4.2 Decided, in the Cairn store, `work/ki/ki.summit/20-ki-sop-main-legacy.change.md`.
 
 ### Returned and re-delivered, 22 November 2026
 
