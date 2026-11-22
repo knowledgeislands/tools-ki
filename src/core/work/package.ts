@@ -182,7 +182,8 @@ const section = (body: string, heading: RegExp, level: number): readonly string[
   return lines.slice(start + 1, end < 0 ? undefined : end)
 }
 
-const TAG_LEAD = /^\*\*([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*)(?=[ :(*])/
+/** A numbered question's tag as its bold lead: `**ALPHA-ONE:**`, `**MATURITY-DECLARE.**` or `**SOMETHING (parked):**`. */
+const TAG_LEAD = /^\*\*([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*)(?=[ :.(*])/
 const TAG_MENTION = /\(([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+|[A-Z][A-Z0-9]+)\)/
 /** A question asked as a heading, one level below Questions, as `#### ACCEPT-BANNER: accept the banner command`. */
 const QUESTION_HEADING = /^####\s+(.*?)\s*$/
@@ -194,6 +195,25 @@ const HEADING_TAG = /^(?:\d+(?:\.\d+)*[a-z]?\.?\s+)?([A-Z][A-Z0-9]+(?:-[A-Z0-9]+
 /** A line recording a heading question's answer as its bold lead: `**Done …**`, `**Taken …**`, `**Agreed.**` and the like. */
 const ANSWERED = /^(?:[-*]\s+)?\*\*(?:Done|Taken|Answered|Agreed|Settled)\b/
 const PARKED = /\(parked\)/i
+/** The lead words that say a numbered question is settled, kept only as its record: `**Done, 18 November:**`, `**Closed**`. */
+const SETTLED_LEAD =
+  /^\*\*\s*(?:done|closed|withdrawn|landed|dropped|overtaken|superseded|retired|cancelled|answered|taken|agreed|settled)\b/i
+/** A lead struck through as settled: `~~**BOUNDARY-SNAPSHOT.**~~ settled …` or `**~~ZIP-TRANSPORT~~**`. */
+const STRUCK_LEAD = /^(?:~~\s*\*\*|\*\*\s*~~)/
+/** An answer recorded in place after the lead, in italics or bold: `… _Answered a (Kris, 22 November)._`. */
+const ANSWERED_MARK = /(?:^|[\s(])(?:_|\*{1,2})\s*(?:answered|taken|agreed|settled|withdrawn)\b/i
+/** A settled word straight after the bold lead: `**REFS-PUSH** cleared as overtaken (…)`. */
+const SETTLED_AFTER = /^\s*[,.:;]?\s*(?:answered|settled|cleared|overtaken|withdrawn|superseded)\b/i
+
+/**
+ * Whether a numbered question is settled, as the Wayfinder's questions reader reads it: its lead struck through or
+ * saying so, or its answer recorded after its lead (STRUCK-NUMBERED).
+ */
+const settledItem = (text: string): boolean => {
+  if (STRUCK_LEAD.test(text) || SETTLED_LEAD.test(text)) return true
+  const rest = text.replace(/^\*\*.+?\*\*/, '')
+  return ANSWERED_MARK.test(rest) || (rest !== text && SETTLED_AFTER.test(rest))
+}
 
 interface DocumentQueries {
   readonly open: readonly WorkPackageQuery[]
@@ -226,7 +246,7 @@ const headedQuestions = (lines: readonly string[]): readonly AskedQuestion[] => 
   }))
 }
 
-/** The older numbered questions: answered when the bold lead begins `Done`, parked when the item says `(parked)`. */
+/** The older numbered questions: answered when struck through or settled (`settledItem`), parked when the item says `(parked)`. */
 const numberedQuestions = (lines: readonly string[]): readonly AskedQuestion[] =>
   lines.flatMap((line) => {
     const match = /^(\d+)\. (.*)$/.exec(line)
@@ -236,7 +256,7 @@ const numberedQuestions = (lines: readonly string[]): readonly AskedQuestion[] =
       {
         number: Number(match[1]),
         text,
-        answered: /^\*\*Done\b/.test(text),
+        answered: settledItem(text),
         parked: PARKED.test(text),
         tag: TAG_LEAD.exec(text)?.[1] ?? TAG_MENTION.exec(text)?.[1]
       }

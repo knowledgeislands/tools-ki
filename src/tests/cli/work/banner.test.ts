@@ -354,6 +354,34 @@ describe('ki work banner', () => {
     )
   })
 
+  test('counts struck or settled numbered questions as answered, and reads a tag led `**TAG.**` (STRUCK-NUMBERED)', async () => {
+    const box = await setup()
+    await box.project.write(
+      'store/work/ex/ex.summit/20-beta.change.md',
+      change('2026-11-19T00:30:00Z', [
+        '~~**DEPS-ADOPT**~~ settled 22 November 2026 as a, the warden’s call under HIGH-CONF-GO.',
+        '~~**BOUNDARY-SNAPSHOT.**~~ settled 22 November 2026: Loreward fixed the check in the backpack.',
+        '~~**TURBO-TRANSIT.**~~ settled 22 November 2026: giving it a script would break the script naming law (SCR-1).',
+        '**REFS-PUSH** cleared as overtaken (22 November).',
+        '**MATURITY-DECLARE.** Context: MATURITY-1 warns that neither `.ki.toml` declares a maturity.'
+      ])
+    )
+    const result = await banner(box, 'ex.summit --short')
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain(
+      [
+        '🤖 0 running · ⏳ 0 queued · 👤 5 with you · ⛔ 0 blocked · 🅿️ 1 parked',
+        '',
+        '- 👤 SUB-Q · owner · at Tuesday 17 November 10:00',
+        '- 👤 ALPHA-ONE · owner · at yesterday 22:00',
+        '- 👤 MENTION-TAG · owner · at yesterday 22:00',
+        '- 👤 10-alpha question 5 · owner · at yesterday 22:00',
+        '- 👤 MATURITY-DECLARE · owner · at 00:30',
+        '- 🅿️ 1 query in the change documents'
+      ].join('\n')
+    )
+  })
+
   test('takes the live counts, items, heading-for line and meetings from the session, in the standard’s order', async () => {
     const box = await setup()
     const result = await box.run(
