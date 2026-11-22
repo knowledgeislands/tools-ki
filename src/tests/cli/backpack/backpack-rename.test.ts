@@ -243,6 +243,22 @@ describe('[backpack rename]', () => {
       )
     })
 
+    test('reads either spelling to the same result, warning only for the retired harnesses key', async () => {
+      const current = await prepared('backpacks')
+      const retired = await prepared('harnesses')
+
+      const fromCurrent = await current.run('ki repo diag')
+      const fromRetired = await retired.run('ki repo diag')
+
+      expect(fromCurrent.exitCode).toBe(0)
+      expect(fromRetired.exitCode).toBe(0)
+      expect(fromRetired.stdout.replaceAll(retired.project.path, '<project>')).toBe(
+        fromCurrent.stdout.replaceAll(current.project.path, '<project>')
+      )
+      expect(fromCurrent.stderr).not.toContain('retired')
+      expect(fromRetired.stderr).toContain('uses the retired [repo] key harnesses; rename it to backpacks')
+    })
+
     test('refuses a declaration that has both the backpacks key and the retired harnesses key', async () => {
       const box = await prepared('backpacks')
       await box.project.write(
