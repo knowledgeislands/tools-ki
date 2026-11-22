@@ -2007,6 +2007,12 @@ list before its skill can be added; backpack-qualified skill keys are invalid.
 Installed backpacks declare distinct capability prefixes through
 \fB[skills.ki-repo-backpack]\fR in their own root configuration; the retired
 \fB[skills.ki-repo-harness]\fR is still read for this one release.
+The retired shape tables \fB[skills.ki-repo-project]\fR,
+\fB[skills.ki-repo-homebrew-tap]\fR and \fB[skills.ki-repo-specifications]\fR
+are skipped for this one release;
+\fBprimary_shape = "ki-repo-project"\fR names the general Project shape
+\fBki-repo\fR owns, and the Homebrew tap shape needs
+\fB[skills.ki-repo-tools]\fR.
 A backpack is published from an \fIowner\fR/\fIterritory\fR-agent-backpack
 repository. For this one release, an identifier spelt with the retired
 -agentic-harness suffix, in any configuration, declaration or argument, names

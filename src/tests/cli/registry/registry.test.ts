@@ -119,12 +119,6 @@ const declaredLayout = (capital: string, territory: readonly string[] = []): str
     ']',
     'visibility = "private"',
     ...territory,
-    '',
-    `# ${'-'.repeat(77)}`,
-    '# Repository shape',
-    `# ${'-'.repeat(77)}`,
-    '',
-    '[skills.ki-repo-project]',
     ''
   ].join('\n')
 
@@ -398,7 +392,7 @@ test('audits, conforms, and lists the local ki-repo registry without discovering
   expect(repeatedConform.exitCode).toBe(0)
   expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(repository)}`)
   expect(listed).toEqual({ exitCode: 0, output: `${repository}\n` })
-  expect((await box.run('ki repo audit')).output).toContain('╰─ summary: KI REPO AUDIT on project PASS · 2 skills')
+  expect((await box.run('ki repo audit')).output).toContain('╰─ summary: KI REPO AUDIT on project PASS · 1 skill')
 })
 
 test('registers a selected KI repository carrying a canonical identity', async () => {

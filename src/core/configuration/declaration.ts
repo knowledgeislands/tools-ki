@@ -125,10 +125,6 @@ export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisa
     ...multilineArray('supported_runtimes', initialisation.supportedRuntimes),
     `visibility = ${JSON.stringify(visibility)}`,
     ...territory,
-    '',
-    ...banner('Repository shape'),
-    '',
-    '[skills.ki-repo-project]',
     ''
   ].join('\n')
 }
@@ -137,6 +133,9 @@ const backpackIdentifierPattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:
 const skillName = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 
 const shapeError = (path: string, detail: string): KiError => new KiError(`${basename(path)} ${detail}`, 1)
+
+/** Shape skills retired on 22 November 2026 (REPO-CORE a, REPO-OTHERS a): ki-repo and ki-repo-tools took them in. */
+const RETIRED_SHAPE_SKILLS: readonly string[] = ['ki-repo-project', 'ki-repo-homebrew-tap', 'ki-repo-specifications']
 
 /** The `[repo]` key naming a repository's backpacks; it was `harnesses` until the rename of 14 November 2026. */
 const REPOSITORY_BACKPACKS_KEY = 'backpacks'
@@ -196,7 +195,9 @@ const declaredSkills = (parsed: Record<string, unknown>, path: string): readonly
     if (!skillName.test(key)) throw new KiError(`declared skill ${key} must be [skills.<prefix>-<name>]`, 1)
     return declaredSkill(key, configuration)
   })
-  return declared
+  // For one release a retired shape skill's leftover table is skipped, so a repository not yet tidied
+  // keeps working after its backpack drops the skill; ki-repo's audit names the table to remove.
+  return declared.filter((skill) => !RETIRED_SHAPE_SKILLS.includes(skill.name))
 }
 
 export const parseRepositoryDeclaration = (raw: string, configurationPath: string): RepositoryDeclaration => {
@@ -235,10 +236,21 @@ const projectShapes = [
   'ki-repo-harness',
   'ki-repo-homebrew-tap',
   'ki-repo-mcp',
+  // Retired with its skill on 22 November 2026, still accepted for this one release.
   'ki-repo-specifications',
   'ki-repo-tools',
   'ki-repo-website'
 ] as const
+
+/**
+ * Shape names whose skill was folded into another on 22 November 2026 (REPO-CORE a, REPO-OTHERS a):
+ * each value stays a primary shape, owned by the skill named here, which is the table it requires.
+ */
+const SHAPE_OWNERS: Readonly<Record<string, string>> = {
+  'ki-repo-project': 'ki-repo',
+  'ki-repo-homebrew-tap': 'ki-repo-tools',
+  'ki-repo-specifications': 'ki-repo'
+}
 
 export const declaredRepositoryKind = (declaration: RepositoryDeclaration): 'project' | 'kb' => {
   const configuration = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration
@@ -253,8 +265,9 @@ export const declaredRepositoryKind = (declaration: RepositoryDeclaration): 'pro
   const allowed: readonly string[] = kind === 'kb' ? ['ki-repo-kb'] : projectShapes
   if (typeof shape !== 'string' || !allowed.includes(shape))
     throw new KiError(`[skills.ki-repo].primary_shape is required and must be ${allowed.join(', ')} for ${kind}`, 1)
-  if (!declaration.skills.some((skill) => skill.name === shape))
-    throw new KiError(`[skills.ki-repo].primary_shape must name a declared skill: add [skills.${shape}]`, 1)
+  const owner = SHAPE_OWNERS[shape] ?? shape
+  if (!declaration.skills.some((skill) => skill.name === owner))
+    throw new KiError(`[skills.ki-repo].primary_shape must name a declared skill: add [skills.${owner}]`, 1)
   return kind
 }
 

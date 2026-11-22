@@ -238,7 +238,7 @@ export default {
     })
     await box.project.write(
       '.ki.toml',
-      '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
+      '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
     )
     await box.config.write('ki/config.toml', 'schema = 1\n\n[agents]\nids = []\n\n[backpacks]\nids = []\n\n[skills]\n')
 
@@ -247,7 +247,7 @@ export default {
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('[Local repository registration (REPO-REG-1)]')
     expect(result.output).toContain(
-      'FAIL · SCOPE: 1 path FAIL=1 WARN=0 · PASS=2 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0'
+      'FAIL · SCOPE: 1 path FAIL=1 WARN=0 · PASS=1 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0'
     )
   })
 

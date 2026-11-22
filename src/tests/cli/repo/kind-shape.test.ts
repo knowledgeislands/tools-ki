@@ -5,32 +5,57 @@ const declaration = (fields: string, skills: readonly string[] = []): string =>
   `[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n${fields}\n${skills.map((skill) => `\n[skills.${skill}]\n`).join('')}`
 
 test.each([
-  'ki-repo-project',
-  'ki-repo-backpack',
-  'ki-repo-dotfiles-chezmoi',
-  'ki-repo-harness',
-  'ki-repo-homebrew-tap',
-  'ki-repo-mcp',
-  'ki-repo-specifications',
-  'ki-repo-tools',
-  'ki-repo-website'
-])('registers an explicit Project primary shape: %s', async (shape) => {
+  ['ki-repo-project', []],
+  ['ki-repo-backpack', ['ki-repo-backpack']],
+  ['ki-repo-dotfiles-chezmoi', ['ki-repo-dotfiles-chezmoi']],
+  ['ki-repo-harness', ['ki-repo-harness']],
+  ['ki-repo-homebrew-tap', ['ki-repo-tools']],
+  ['ki-repo-mcp', ['ki-repo-mcp']],
+  ['ki-repo-specifications', []],
+  ['ki-repo-tools', ['ki-repo-tools']],
+  ['ki-repo-website', ['ki-repo-website']]
+] as const)('registers an explicit Project primary shape: %s', async (shape, skills) => {
   const box = await sandbox()
-  await box.project.write('.ki.toml', declaration(`repo_type = "project"\nprimary_shape = "${shape}"`, [shape]))
+  await box.project.write('.ki.toml', declaration(`repo_type = "project"\nprimary_shape = "${shape}"`, skills))
 
   expect((await box.run('ki registry add')).exitCode).toBe(0)
   expect(await box.state.read('ki/registry.toml')).toContain('https://github.com/example/project')
+})
+
+test.each(['ki-repo-project', 'ki-repo-homebrew-tap', 'ki-repo-specifications'])(
+  'skips the retired [skills.%s] table a repository has not yet removed',
+  async (retired) => {
+    const box = await sandbox()
+    await box.project.write(
+      '.ki.toml',
+      declaration('repo_type = "project"\nprimary_shape = "ki-repo-project"', [retired, 'ki-repo-tools'])
+    )
+
+    const result = await box.run('ki registry add')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stderr).toBe('')
+  }
+)
+
+test('requires ki-repo-tools for the Homebrew tap shape it now owns', async () => {
+  const box = await sandbox()
+  await box.project.write(
+    '.ki.toml',
+    declaration('repo_type = "project"\nprimary_shape = "ki-repo-homebrew-tap"', ['ki-repo-homebrew-tap'])
+  )
+
+  const result = await box.run('ki registry add')
+
+  expect(result.exitCode).toBe(1)
+  expect(result.stderr).toContain('must name a declared skill: add [skills.ki-repo-tools]')
 })
 
 test('allows an explicitly selected baseline alongside composable specialist shapes', async () => {
   const box = await sandbox()
   await box.project.write(
     '.ki.toml',
-    declaration('repo_type = "project"\nprimary_shape = "ki-repo-project"', [
-      'ki-repo-project',
-      'ki-repo-mcp',
-      'ki-repo-tools'
-    ])
+    declaration('repo_type = "project"\nprimary_shape = "ki-repo-project"', ['ki-repo-mcp', 'ki-repo-tools'])
   )
   expect((await box.run('ki registry add')).exitCode).toBe(0)
 })
@@ -84,7 +109,7 @@ test.each(['repo_type = "project"', 'primary_shape = "ki-repo-project"'])(
     const box = await sandbox()
     await box.project.write(
       '.ki.toml',
-      `${declaration('repo_type = "project"\nprimary_shape = "ki-repo-project"', ['ki-repo-project']) + field}\n`
+      `${declaration('repo_type = "project"\nprimary_shape = "ki-repo-project"', ['ki-repo-mcp']) + field}\n`
     )
     const result = await box.run('ki registry add')
     expect(result.exitCode).toBe(1)
