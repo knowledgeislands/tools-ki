@@ -20,7 +20,8 @@ export type RecordLink = { readonly link: string } | { readonly reason: string }
 const recordIdentifier = /^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d+$/
 const areaAndNumber = /^([A-Z][A-Z0-9]*)-(\d+)$/
 const roadmapDirectories = ['docs/roadmap', 'Streams/Roadmap'] as const
-const ISSUE_LEDGER = '_ISSUES.md'
+/** The roadmap folder's ledger, preferred first: `_index.md`, then `_ISSUES.md`, its name until renamed (INDEX-ENTRY). */
+const LEDGERS = ['_index.md', '_ISSUES.md'] as const
 
 const repositoryCode = async (repository: string): Promise<string | undefined> => {
   try {
@@ -42,13 +43,22 @@ const liveRecord = async (repository: string, identifier: string): Promise<strin
   return undefined
 }
 
-/** The issuing area's high-water mark in the repository's `_ISSUES.md` ledger, with its roadmap directory. */
+/** The ledger's text in a roadmap directory, `_index.md` read before `_ISSUES.md`, or undefined where it holds neither. */
+const ledger = async (repository: string, directory: string): Promise<string | undefined> => {
+  for (const name of LEDGERS) {
+    const text = await readFile(join(repository, directory, name), 'utf8').catch(() => undefined)
+    if (text !== undefined) return text
+  }
+  return undefined
+}
+
+/** The issuing area's high-water mark in the repository's roadmap ledger, with its roadmap directory. */
 const issued = async (
   repository: string,
   area: string
 ): Promise<{ readonly directory: string; readonly mark: number } | undefined> => {
   for (const directory of roadmapDirectories) {
-    const text = await readFile(join(repository, directory, ISSUE_LEDGER), 'utf8').catch(() => undefined)
+    const text = await ledger(repository, directory)
     if (text === undefined) continue
     const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1]
     const areas = (front === undefined ? undefined : (parse(front) as { areas?: unknown })?.areas) as

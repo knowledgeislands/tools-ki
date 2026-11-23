@@ -1,21 +1,13 @@
-import { lstat, readdir, readFile, stat } from 'node:fs/promises'
-import { basename, join } from 'node:path'
-import { parse as parseToml } from 'smol-toml'
-import { parse } from 'yaml'
-import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
-import { KiError } from '../errors.ts'
-import { skillTable } from '../territory/declaration.ts'
-import { bothEntryFilesWarning, LEGACY_WORK_ENTRY_FILE, WORK_ENTRY_FILE, workEntryFile } from './entry.ts'
-import { isMainStateOfPlay, subPackageParent, workNames } from './identity.ts'
+import { readStorePackages, type StorePackage } from './store.ts'
 
-export const WORK_STATUS_SCHEMA = 'ki/work-status/v1' as const
+/**
+ * `ki work status` reads the work packages in the Cairn store, under the `ki-work-package` standard: each package's
+ * `_index.md` front matter is its definition and state, `ki-repositories` maps a repository to the packages working in
+ * it, and `ki-parent` places each package in its territory's tree. Nothing else in a package is read.
+ */
+export const WORK_STATUS_SCHEMA = 'ki/work-status/v2' as const
 
-/** The work folders and, for the work model's tolerance window, the thread-model checkpoints. */
-export const WORK_DIRECTORY = '+/_WORK'
-export const WORK_REVIEW_DIRECTORY = '+/_WORK_REVIEW'
-const CHECKPOINTS_DIRECTORY = '+/_CHECKPOINTS'
-
-export const workLevels = ['territory', 'regular', 'project'] as const
+export const workLevels = ['root', 'territory', 'regular', 'project'] as const
 export const workStates = [
   'with-worker',
   'handoff-to-supervisor',
@@ -25,89 +17,90 @@ export const workStates = [
   'on-hold',
   'finished'
 ] as const
+export const holdReasons = ['paused', 'more-expected', 'snoozing'] as const
 export type WorkLevel = (typeof workLevels)[number]
 export type WorkState = (typeof workStates)[number]
-export type WorkRole = 'worker' | 'supervisor'
+export type WorkHoldReason = (typeof holdReasons)[number]
+/** Whether the holder holds the work as its worker or its supervisor. */
+export type WorkHolderRole = 'worker' | 'supervisor'
 
 export interface WorkHold {
-  readonly reason: 'paused' | 'more-expected'
+  readonly reason: WorkHoldReason
   readonly release: string | null
 }
 
-export interface WorkStatusItem {
-  readonly id: string
-  readonly kind: 'record' | 'run' | 'person'
-  readonly holder: string | null
-  readonly role: WorkRole | null
-  readonly state: WorkState
-  readonly target: string | null
-  readonly blocking: boolean
-  readonly since: string
+/** One seat under `ki-workers`, each key as written or null. */
+export interface WorkSeat {
+  readonly role: string | null
+  readonly tier: string | null
+  readonly id: string | null
+  readonly since: string | null
+  readonly status: string | null
 }
 
 export interface WorkStatusEntry {
-  readonly identity: string
   readonly id: string
   readonly level: WorkLevel
-  readonly title: string
-  /** The work's thread label from its work file, or null when it declares none and the title serves. */
   readonly label: string | null
-  readonly theme: string | null
-  /** The State of play that supervises the work, or a sub-package's parent package; null where none is declared. */
+  readonly project: string | null
+  /** The node or parent package the package sits beneath; null on the root and a territory's summit. */
   readonly parent: string | null
-  /** The work ids a secondary State of play coordinates; empty for all other work. */
-  readonly covers: readonly string[]
+  /** The package's role, `ki-role`, or null where it declares none. */
+  readonly role: string | null
+  /** The routing description, or null where it declares none. */
+  readonly description: string | null
   readonly worker: string
   readonly supervisor: string
+  /** The repositories the package mainly works in, each `<territory folder>/<repository>`. */
+  readonly repositories: readonly string[]
+  /** The records it works, by full record id. */
+  readonly records: readonly string[]
   readonly state: WorkState
   readonly hold: WorkHold | null
+  /** The holder the work lies with now, derived from its state and never stored. */
   readonly holder: string | null
-  readonly role: WorkRole | null
+  readonly holderRole: WorkHolderRole | null
   readonly target: string | null
   readonly blocking: boolean
   readonly since: string
   readonly received: string | null
   readonly beat: string | null
-  /** The work file's routing description, or null when it declares none. */
-  readonly description: string | null
-  /** The backpack revision whose guidance the worker last read, from the state file, or null. */
+  readonly mark: string | null
+  /** The backpack revision whose guidance the worker last read, or null. */
   readonly method_read: string | null
-  /** Lines waiting in the work's message queue. */
-  readonly messages: number
+  readonly workers: readonly WorkSeat[]
+  /** The entry file's path within the store. */
   readonly path: string
-  readonly items: readonly WorkStatusItem[]
+  /** The package's own change documents, by path within the store. */
+  readonly changes: readonly string[]
 }
 
 export interface WorkStatusReport {
   readonly schema: typeof WORK_STATUS_SCHEMA
-  readonly repository: string
+  /** The store read. */
+  readonly store: string
+  /** The repository whose packages are listed, `<owner>/<name>`, or null when every package is. */
+  readonly repository: string | null
   readonly generatedAt: string
   readonly work: readonly WorkStatusEntry[]
 }
 
 export interface WorkStatus {
   readonly report: WorkStatusReport
-  /** Work files held in `+/_WORK_REVIEW/`, shown only as a count. */
-  readonly review: number
+  /** Every readable package in the store, in folder order, so a view can place the listed ones in their tree. */
+  readonly packages: readonly WorkStatusEntry[]
   readonly warnings: readonly string[]
 }
 
 export interface WorkStatusRequest {
-  readonly root: string
-  readonly identity: string
+  readonly store: string
+  /** The repository to list the packages of, `<owner>/<name>`; every package when absent. */
+  readonly repository?: string
   readonly now: Date
 }
 
 const SEGMENT = '[a-z0-9]+(?:-[a-z0-9]+)*'
-const WORK_ID = new RegExp(`^${SEGMENT}(?:\\.${SEGMENT})*$`)
-const HOLDER = new RegExp(`^(?:owner|agent|(?:run|person|repo)/[A-Za-z0-9_-]+|work/${SEGMENT}(?:\\.${SEGMENT})*)$`)
-
-/** The reserved second id segment of a secondary State of play, `<territory>.sop.<name>`. */
-export const SECONDARY_SEGMENT = 'sop'
-
-/** Whether the id names a secondary State of play, `<territory>.sop.<name>`. */
-export const isSecondaryStateOfPlay = (id: string): boolean =>
-  id.split('.')[1] === SECONDARY_SEGMENT && !isMainStateOfPlay(id)
+const WORK_ID = new RegExp(`^${SEGMENT}(?:\\.${SEGMENT})*(?:\\+${SEGMENT})*$`)
 
 /** A UTC RFC 3339 time at second precision, or undefined when the value is not a time. */
 const utc = (value: unknown): string | undefined => {
@@ -116,18 +109,17 @@ const utc = (value: unknown): string | undefined => {
   return Number.isNaN(time.getTime()) ? undefined : `${time.toISOString().slice(0, 19)}Z`
 }
 
-const frontmatter = (text: string): Record<string, unknown> | undefined => {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text)
-  if (!match) return undefined
-  try {
-    const values: unknown = parse(match[1] as string)
-    return values && typeof values === 'object' && !Array.isArray(values)
-      ? (values as Record<string, unknown>)
-      : undefined
-  } catch {
-    return undefined
-  }
-}
+/** A revision as written, a bare number such as an all-digit short hash read back as its digits. */
+const revision = (value: unknown): string | null =>
+  typeof value === 'string' ? value : typeof value === 'number' ? String(value) : null
+
+const text = (value: unknown): string | null => (typeof value === 'string' && value.trim() ? value : null)
+
+const names = (value: unknown): readonly string[] | undefined =>
+  Array.isArray(value) && value.every((name) => typeof name === 'string') ? value : undefined
+
+/** The territory a package belongs to: its id's first segment. */
+const territoryOf = (id: string): string => id.split(/[.+]/)[0] as string
 
 /** The party the work lies with now and that party's role, derived from its state and never stored. */
 export const workHolder = (
@@ -135,350 +127,159 @@ export const workHolder = (
   worker: string,
   supervisor: string,
   target: string | null
-): { readonly holder: string | null; readonly role: WorkRole | null } => {
-  if (state === 'with-worker' || state === 'handoff-to-worker') return { holder: worker, role: 'worker' }
+): { readonly holder: string | null; readonly holderRole: WorkHolderRole | null } => {
+  if (state === 'with-worker' || state === 'handoff-to-worker') return { holder: worker, holderRole: 'worker' }
   if (state === 'with-supervisor' || state === 'handoff-to-supervisor')
-    return { holder: supervisor, role: 'supervisor' }
-  if (state === 'handoff') return { holder: target, role: null }
-  return { holder: null, role: null }
+    return { holder: supervisor, holderRole: 'supervisor' }
+  if (state === 'handoff') return { holder: target, holderRole: null }
+  return { holder: null, holderRole: null }
 }
 
-const directories = async (path: string): Promise<readonly string[]> =>
-  (await readdir(path, { withFileTypes: true }).catch(() => []))
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort()
+const seats = (value: unknown): readonly WorkSeat[] =>
+  (Array.isArray(value) ? value : []).flatMap((seat: unknown) => {
+    if (!seat || typeof seat !== 'object') return []
+    const fields = seat as Record<string, unknown>
+    return [
+      {
+        role: text(fields['role']),
+        tier: text(fields['tier']),
+        id: text(fields['id']),
+        since: utc(fields['since']) ?? null,
+        status: text(fields['status'])
+      }
+    ]
+  })
 
-const isFile = async (path: string): Promise<boolean> => (await lstat(path).catch(() => undefined))?.isFile() === true
-
-/** Whether the path is a file, following a symbolic link as reading it does. */
-const readsAsFile = async (path: string): Promise<boolean> =>
-  (await stat(path).catch(() => undefined))?.isFile() === true
-
-/** The fields a package keeps in `state.md`; any of them left in its entry file is stale. */
-const STATE_FIELDS = ['state', 'target', 'hold', 'blocking', 'since', 'received', 'beat', 'mark', 'method_read']
-
-/** A revision as written, a bare number such as an all-digit short hash read back as its digits. */
-const revision = (value: unknown): string | null =>
-  typeof value === 'string' ? value : typeof value === 'number' ? String(value) : null
-
-/** The top-level list lines of a message queue, each one pending message; `None.` and prose count nothing. */
-const pending = (text: string): number => text.split(/\r?\n/).filter((line) => line.startsWith('- ')).length
-
-/** The lines beneath one heading of a work file, up to the next heading of the same or a higher level. */
-const section = (text: string, heading: string): string => {
-  const lines = text.split(/\r?\n/)
-  const start = lines.indexOf(heading)
-  if (start < 0) return ''
-  const end = lines.findIndex((line, index) => index > start && /^#{1,2} /.test(line))
-  return lines.slice(start + 1, end < 0 ? undefined : end).join('\n')
-}
-
-/** Valid same-territory supervision and State of play coverage, independent of session role. */
-const statePlacement = (
-  id: string,
-  level: WorkLevel,
-  values: Record<string, unknown>
-): { readonly parent: string | null; readonly covers: readonly string[] } | string => {
-  const segments = id.split('.')
-  const territory = segments[0] as string
-  const { parent, covers } = values
-  if (level !== 'territory') {
-    if (segments[1] === SECONDARY_SEGMENT) return `a ${territory}.${SECONDARY_SEGMENT}.<name> id is territory work`
-    if (covers !== undefined) return 'covers belongs to State of play'
-    const owner = subPackageParent(id)
-    if (owner !== undefined) {
-      if (parent !== owner) return `parent must name the sub-package's parent package, ${owner}`
-      return { parent: owner, covers: [] }
-    }
-    if (
-      parent !== undefined &&
-      (typeof parent !== 'string' ||
-        !WORK_ID.test(parent) ||
-        parent === id ||
-        (parent !== territory && parent !== `${territory}.sop.main` && !isSecondaryStateOfPlay(parent)) ||
-        parent.split('.')[0] !== territory)
-    )
-      return `parent must name a State of play of territory ${territory}`
-    return { parent: (parent as string | undefined) ?? null, covers: [] }
-  }
-  const main = isMainStateOfPlay(id)
-  if (main && parent !== undefined) return 'the main State of play takes no parent'
-  if (!main) {
-    if (segments.length !== 3 || !isSecondaryStateOfPlay(id))
-      return `territory work id must be ${territory} or ${territory}.${SECONDARY_SEGMENT}.<name>`
-    if (parent !== territory && parent !== `${territory}.sop.main`)
-      return `parent must name the main State of play, ${territory}`
-  }
-  if (main && covers === undefined) return { parent: null, covers: [] }
-  if (!Array.isArray(covers) || (!main && !covers.length))
-    return 'covers must list the work ids this State of play coordinates'
-  for (const covered of covers) {
-    if (typeof covered !== 'string' || !WORK_ID.test(covered)) return 'covers must list dotted work ids'
-    if (!covered.startsWith(`${territory}.`) || covered === `${territory}.sop.main` || isSecondaryStateOfPlay(covered))
-      return `covers names ${covered}, which is not other work of territory ${territory}`
-  }
-  return { parent: main ? null : (parent as string), covers: covers as string[] }
-}
-
-/** The work file's identity and supervision, or the reason it cannot be read. */
-const workDefinition = (folder: string, values: Record<string, unknown>) => {
-  const { id, level, title, worker, supervisor } = values
-  if (typeof id !== 'string' || !WORK_ID.test(id)) return 'id must be a dotted work id'
-  if (id !== folder) return `id ${id} must name its folder`
-  if (!workLevels.includes(level as WorkLevel)) return `level must be one of ${workLevels.join(', ')}`
-  const kind = id.split('.')[1]
-  if ((kind === 'prj' && level !== 'project') || ((kind === 'reg' || kind === 'regular') && level !== 'regular'))
-    return 'work type segment must agree with level'
-  if (typeof title !== 'string' || !title.trim()) return 'title must be a non-empty string'
-  if (typeof worker !== 'string' || !HOLDER.test(worker)) return 'worker must name a holder'
-  if (typeof supervisor !== 'string' || !HOLDER.test(supervisor)) return 'supervisor must name a holder'
-  const placement = statePlacement(id, level as WorkLevel, values)
-  if (typeof placement === 'string') return placement
+/** The definition: identity, level, placement and the holders, or the reason it cannot be read. */
+const definition = (found: StorePackage, values: Record<string, unknown>) => {
+  const id = values['ki-id']
+  if (typeof id !== 'string' || !WORK_ID.test(id)) return 'ki-id must be a dotted work id'
+  if (id !== found.folderId) return `ki-id ${id} must agree with its folder, ${found.folderId}`
+  const level = values['ki-level']
+  if (!workLevels.includes(level as WorkLevel)) return `ki-level must be one of ${workLevels.join(', ')}`
+  const parent = values['ki-parent'] ?? null
+  if (found.enclosing !== null && parent !== found.enclosing)
+    return `ki-parent must name the parent package, ${found.enclosing}`
+  if (parent !== null && (typeof parent !== 'string' || !WORK_ID.test(parent)))
+    return 'ki-parent must be a dotted work id'
+  const worker = text(values['ki-worker'])
+  if (worker === null) return 'ki-worker must name a holder'
+  const supervisor = text(values['ki-supervisor'])
+  if (supervisor === null) return 'ki-supervisor must name a holder'
+  const repositories = names(values['ki-repositories'])
+  if (repositories === undefined) return 'ki-repositories must be a list of <territory folder>/<repository> names'
+  const records = names(values['ki-records'] ?? [])
+  if (records === undefined) return 'ki-records must be a list of record ids'
   return {
     id,
     level: level as WorkLevel,
-    title,
-    label: typeof values['label'] === 'string' ? values['label'] : null,
-    theme: typeof values['theme'] === 'string' ? values['theme'] : null,
-    ...placement,
+    label: text(values['ki-label']),
+    project: text(values['ki-project']),
+    parent: parent as string | null,
+    role: text(values['ki-role']),
+    description: text(values['ki-description']),
     worker,
     supervisor,
-    description: typeof values['description'] === 'string' ? values['description'] : null
+    repositories,
+    records
   }
 }
 
-/** A work file's definition and its path: what a work is, read apart from its state. */
-export type WorkDefinition = Exclude<ReturnType<typeof workDefinition>, string> & { readonly path: string }
-
-/**
- * Reads each work definition under `+/_WORK/` without its state, so that a work whose `state.md` cannot be read is
- * still known by its id, title and placement. It writes nothing; `readWorkStatus` names any unreadable file.
- */
-export const readWorkDefinitions = async (root: string): Promise<readonly WorkDefinition[]> => {
-  const work: WorkDefinition[] = []
-  for (const folder of await directories(join(root, WORK_DIRECTORY))) {
-    const entry = await workEntryFile(join(root, WORK_DIRECTORY, folder), readsAsFile)
-    const path = `${WORK_DIRECTORY}/${folder}/${entry?.name ?? WORK_ENTRY_FILE}`
-    const values = frontmatter(await readFile(join(root, path), 'utf8').catch(() => ''))
-    const definition = values ? workDefinition(folder, values) : undefined
-    if (definition && typeof definition !== 'string') work.push({ ...definition, path })
-  }
-  const names = new Map<string, string>()
-  for (const definition of work)
-    for (const name of workNames(definition.id, definition.level)) {
-      const previous = names.get(name)
-      if (previous !== undefined && previous !== definition.id)
-        throw new KiError(`ambiguous work ${name}: ${previous} and ${definition.id}`, 2)
-      names.set(name, definition.id)
-    }
-  return work
-}
-
-/** Reads the state fields, from `state.md` in a package and the work file otherwise, or the reason it cannot. */
+/** The state fields, or the reason they cannot be read. */
 const workState = (values: Record<string, unknown>, worker: string, supervisor: string) => {
-  const { state } = values
-  if (!workStates.includes(state as WorkState)) return `state must be one of ${workStates.join(', ')}`
-  const since = utc(values['since'])
-  if (!since) return 'since must be a UTC time'
-  const target = typeof values['target'] === 'string' ? values['target'] : null
-  if (state === 'handoff' && (target === null || !HOLDER.test(target))) return 'target must name a holder in handoff'
-  const declaredHold = values['hold'] as Record<string, unknown> | null | undefined
-  const reason = declaredHold?.['reason']
-  if (state === 'on-hold' && reason !== 'paused' && reason !== 'more-expected')
-    return 'hold.reason must be paused or more-expected while on hold'
-  const hold =
-    state === 'on-hold'
-      ? {
-          reason: reason as WorkHold['reason'],
-          release: typeof declaredHold?.['release'] === 'string' ? declaredHold['release'] : null
-        }
-      : null
+  const state = values['ki-state']
+  if (!workStates.includes(state as WorkState)) return `ki-state must be one of ${workStates.join(', ')}`
+  const since = utc(values['ki-since'])
+  if (!since) return 'ki-since must be a UTC time'
+  const target = text(values['ki-target'])
+  if (state === 'handoff' && target === null) return 'ki-target must name a holder in handoff'
+  const declaredHold: Record<string, unknown> = Object(values['ki-hold'])
+  const reason = declaredHold['reason']
+  if (state === 'on-hold' && !holdReasons.includes(reason as WorkHoldReason))
+    return `ki-hold.reason must be one of ${holdReasons.join(', ')} while on hold`
   return {
     state: state as WorkState,
-    hold,
+    hold: state === 'on-hold' ? { reason: reason as WorkHoldReason, release: text(declaredHold['release']) } : null,
     ...workHolder(state as WorkState, worker, supervisor, target),
     target: state === 'handoff' ? target : null,
-    blocking: values['blocking'] === true,
+    blocking: values['ki-blocking'] === true,
     since,
-    received: utc(values['received']) ?? null,
-    beat: utc(values['beat']) ?? null,
-    method_read: revision(values['method_read'])
+    received: utc(values['ki-received']) ?? null,
+    beat: utc(values['ki-beat']) ?? null,
+    mark: utc(values['ki-mark']) ?? null,
+    method_read: revision(values['ki-method_read'])
   }
+}
+
+/** One package's entry, or the reason its entry file cannot be read. */
+const packageEntry = (found: StorePackage): WorkStatusEntry | string => {
+  if (found.fields === undefined) return 'has no YAML front matter'
+  const defined = definition(found, found.fields)
+  if (typeof defined === 'string') return defined
+  const state = workState(found.fields, defined.worker, defined.supervisor)
+  if (typeof state === 'string') return state
+  return {
+    ...defined,
+    ...state,
+    workers: seats(found.fields['ki-workers']),
+    path: found.path,
+    changes: found.changes
+  }
+}
+
+/** Each `ki-parent` that names no package, crosses into another territory or closes a cycle. */
+const treeWarnings = (work: readonly WorkStatusEntry[]): readonly string[] => {
+  const byId = new Map(work.map((entry) => [entry.id, entry]))
+  const warnings: string[] = []
+  for (const entry of work) {
+    if (entry.parent === null) continue
+    const parent = byId.get(entry.parent)
+    if (parent === undefined) warnings.push(`${entry.path}: ki-parent ${entry.parent} names no package in the store`)
+    else if (territoryOf(parent.id) !== territoryOf(entry.id))
+      warnings.push(`${entry.path}: ki-parent ${entry.parent} is outside territory ${territoryOf(entry.id)}`)
+    const seen = new Set<string>()
+    for (let next = parent; next !== undefined && !seen.has(next.id); next = byId.get(next.parent as string)) {
+      if (next.id === entry.id) {
+        warnings.push(`${entry.path}: ki-parent closes a cycle back to ${entry.id}`)
+        break
+      }
+      seen.add(next.id)
+    }
+  }
+  return warnings
+}
+
+/** Whether a package names the repository, `<owner>/<name>`, among its own: by the repository's name. */
+const listsRepository = (entry: WorkStatusEntry, repository: string): boolean => {
+  const name = repository.split('/').at(-1)
+  return entry.repositories.some((named) => named.split('/').at(-1) === name)
 }
 
 /**
- * Reads one work folder in either shape the work-package standard allows: a package, told by its `state.md`, takes
- * its state fields from that file and its queue from `messages.md`; a single-file folder takes both from its entry
- * file, `_index.md` or the former `work.md`. Returns the entry, if any, and the warnings that name each file it could
- * not read.
- */
-const workEntry = async (
-  root: string,
-  folder: string,
-  file: string,
-  identity: string
-): Promise<{ readonly entry?: WorkStatusEntry; readonly warnings: readonly string[] }> => {
-  const relative = (name: string): string => `${WORK_DIRECTORY}/${folder}/${name}`
-  const read = (name: string): Promise<string> => readFile(join(root, WORK_DIRECTORY, folder, name), 'utf8')
-  const text = await read(file)
-  const values = frontmatter(text)
-  if (!values) return { warnings: [`${relative(file)}: has no YAML front matter`] }
-  const definition = workDefinition(folder, values)
-  if (typeof definition === 'string') return { warnings: [`${relative(file)}: ${definition}`] }
-  const packaged = await isFile(join(root, WORK_DIRECTORY, folder, 'state.md'))
-  const source = relative(packaged ? 'state.md' : file)
-  const stateValues = packaged ? frontmatter(await read('state.md')) : values
-  if (!stateValues) return { warnings: [`${source}: has no YAML front matter`] }
-  if (packaged && stateValues['id'] !== folder)
-    return { warnings: [`${source}: id ${String(stateValues['id'])} must name its folder`] }
-  const state = workState(stateValues, definition.worker, definition.supervisor)
-  if (typeof state === 'string') return { warnings: [`${source}: ${state}`] }
-  const queue = packaged ? await read('messages.md').catch(() => '') : section(text, '## Messages')
-  const stale = packaged && STATE_FIELDS.some((field) => field in values)
-  return {
-    entry: { identity, ...definition, ...state, messages: pending(queue), path: source, items: [] },
-    warnings: stale ? [`${relative(file)}: carries state fields beside state.md; state.md governs`] : []
-  }
-}
-
-/** The territory alias legacy ids take: a work file's, else the Capital's first alias or handle, else the folder. */
-const territoryAlias = async (root: string, work: readonly WorkStatusEntry[]): Promise<string> => {
-  const own = work[0]?.id.split('.')[0]
-  if (own) return own
-  // The caller has already read this declaration's [skills.ki-repo] table for the repository identity.
-  const document = parseToml(await readFile(join(root, REPOSITORY_DECLARATION_FILE), 'utf8'))
-  const table = skillTable(document, 'ki-repo') as Record<string, unknown>
-  const aliases = table['territory_aliases']
-  const alias = Array.isArray(aliases) && typeof aliases[0] === 'string' ? aliases[0] : undefined
-  const prefix = typeof table['territory_prefix'] === 'string' ? table['territory_prefix'] : undefined
-  return alias ?? prefix ?? basename(root)
-}
-
-const legacyStates: Readonly<Record<string, { readonly state: WorkState; readonly hold: WorkHold | null }>> = {
-  rest: { state: 'with-supervisor', hold: null },
-  busy: { state: 'with-worker', hold: null },
-  hold: { state: 'on-hold', hold: { reason: 'paused', release: null } }
-}
-
-/** Maps one thread-model checkpoint to an entry under the ki-coordination Work naming rules, or undefined if it is not one. */
-const checkpointEntry = (
-  stem: string,
-  text: string,
-  identity: string,
-  territory: string
-): WorkStatusEntry | string | undefined => {
-  const values = frontmatter(text)
-  if (values?.['type'] !== 'ki-checkpoint') return undefined
-  const since = utc(values['updated_at']) ?? utc(values['created_at'])
-  if (!since) return 'updated_at must be a UTC time'
-  const project = stem.split('.').slice(1).at(-1)
-  const mapped: { readonly id: string; readonly level: WorkLevel } =
-    stem === '_state-of-play'
-      ? { id: territory, level: 'territory' }
-      : project
-        ? { id: `${territory}.${project}`, level: 'project' }
-        : { id: `${territory}.regular.${stem}`, level: 'regular' }
-  const pickUp = /\*\*Status:\*\*\s*([a-z]+)/.exec(text)?.[1] ?? 'rest'
-  const { state, hold } = legacyStates[pickUp] ?? (legacyStates['rest'] as (typeof legacyStates)[string])
-  return {
-    identity,
-    ...mapped,
-    title: typeof values['label'] === 'string' ? values['label'] : stem,
-    label: null,
-    theme: null,
-    parent: null,
-    covers: [],
-    worker: 'agent',
-    supervisor: 'owner',
-    state,
-    hold,
-    ...workHolder(state, 'agent', 'owner', null),
-    target: null,
-    blocking: false,
-    since,
-    received: null,
-    beat: null,
-    description: null,
-    method_read: null,
-    messages: 0,
-    path: `${CHECKPOINTS_DIRECTORY}/${stem}.md`,
-    items: []
-  }
-}
-
-/**
- * Reads every `+/_WORK/<id>/` work folder in one repository, package or single-file, into the `ki/work-status/v1`
- * report, and counts `+/_WORK_REVIEW/`. Through the work model's tolerance
- * window each `+/_CHECKPOINTS/*.md` maps to an entry whose path is the checkpoint, with a warning naming its new home.
- * It writes nothing; an unreadable work file is a warning, never a failure.
+ * Reads every package in the store into the `ki/work-status/v2` report, listing those that name the repository, or
+ * every package when none is given. It writes nothing; an unreadable entry file is a warning, never a failure, and a
+ * `ki-parent` that does not resolve, leaves its territory or closes a cycle is a warning beside its entry.
  */
 export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkStatus> => {
-  const warnings: string[] = []
-  const work: WorkStatusEntry[] = []
-  // Refuses ambiguous work names before reading any state.
-  await readWorkDefinitions(request.root)
-  for (const folder of await directories(join(request.root, WORK_DIRECTORY))) {
-    const file = await workEntryFile(join(request.root, WORK_DIRECTORY, folder), isFile)
-    if (!file) {
-      warnings.push(`${WORK_DIRECTORY}/${folder}/ has no ${WORK_ENTRY_FILE} or ${LEGACY_WORK_ENTRY_FILE}`)
-      continue
-    }
-    if (file.both) warnings.push(bothEntryFilesWarning(`${WORK_DIRECTORY}/${folder}`))
-    const read = await workEntry(request.root, folder, file.name, request.identity)
-    warnings.push(...read.warnings)
-    if (read.entry) work.push(read.entry)
+  const store = await readStorePackages(request.store)
+  const warnings = [...store.warnings]
+  const packages: WorkStatusEntry[] = []
+  for (const found of store.packages) {
+    const entry = packageEntry(found)
+    if (typeof entry === 'string') warnings.push(`${found.path}: ${entry}`)
+    else packages.push(entry)
   }
-  // Each covered work answers to one secondary State of play; the main covers whatever no secondary does.
-  const coveredBy = new Map<string, string>()
-  for (const entry of work)
-    for (const covered of entry.covers) {
-      const other = coveredBy.get(covered)
-      if (other) warnings.push(`${entry.path}: covers ${covered}, which ${other} already covers`)
-      else coveredBy.set(covered, entry.id)
-    }
-  const checkpoints = (await readdir(join(request.root, CHECKPOINTS_DIRECTORY)).catch(() => []))
-    .filter((name) => name.endsWith('.md') && name !== 'README.md')
-    .sort()
-  if (checkpoints.length) {
-    const territory = await territoryAlias(request.root, work)
-    for (const name of checkpoints) {
-      const path = join(request.root, CHECKPOINTS_DIRECTORY, name)
-      if (!(await isFile(path))) continue
-      const entry = checkpointEntry(
-        name.slice(0, -'.md'.length),
-        await readFile(path, 'utf8'),
-        request.identity,
-        territory
-      )
-      if (!entry) continue
-      if (typeof entry === 'string') {
-        warnings.push(`${CHECKPOINTS_DIRECTORY}/${name}: ${entry}`)
-        continue
-      }
-      warnings.push(
-        `${entry.path} is a thread-model checkpoint; move it to ${WORK_DIRECTORY}/${entry.id}/${WORK_ENTRY_FILE}`
-      )
-      work.push(entry)
-    }
-  }
-  const review = (
-    await Promise.all(
-      (
-        await directories(join(request.root, WORK_REVIEW_DIRECTORY))
-      ).map(
-        async (folder) => (await workEntryFile(join(request.root, WORK_REVIEW_DIRECTORY, folder), isFile)) !== undefined
-      )
-    )
-  ).filter(Boolean).length
+  warnings.push(...treeWarnings(packages))
+  const { repository } = request
   return {
     report: {
       schema: WORK_STATUS_SCHEMA,
-      repository: request.identity,
+      store: request.store,
+      repository: repository ?? null,
       generatedAt: `${request.now.toISOString().slice(0, 19)}Z`,
-      work
+      work: repository === undefined ? packages : packages.filter((entry) => listsRepository(entry, repository))
     },
-    review,
+    packages,
     warnings
   }
 }
@@ -486,23 +287,21 @@ export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkSt
 export const workViews = ['with-you', 'stuck', 'blocked', 'moving', 'on-hold'] as const
 export type WorkView = (typeof workViews)[number]
 
-/** One line of a view: the work or item, its holder and since, and for on hold whether a paused hold is overdue. */
+/** One line of a view: the work, its holder and since, and for on hold whether a paused hold is overdue. */
 export interface WorkViewLine {
   readonly id: string
   readonly holder: string | null
   readonly since: string
   readonly overdue?: true
-  /** Lines waiting in the work's message queue, when there are any. */
-  readonly pending?: number
 }
 
 const STUCK_AFTER = 10 * 60 * 1000
 const OVERDUE_AFTER = 31 * 24 * 60 * 60 * 1000
 
 /**
- * Derives the Work Process note's five views from a report: with you holds every work or item whose holder is
- * `owner`, oldest first; stuck, a worker-held item whose later of since and beat is over 10 minutes old; blocked,
- * a blocking send or a handoff to another target; on hold, with a paused hold flagged after 31 days; moving, the rest.
+ * Derives the Work Process note's five views from a report: with you holds every work whose holder is `owner`, oldest
+ * first; stuck, worker-held work whose later of since and beat is over 10 minutes old; blocked, a blocking send or a
+ * handoff to another target; on hold, with a paused hold flagged after 31 days; moving, the rest.
  */
 export const deriveWorkViews = (
   work: readonly WorkStatusEntry[],
@@ -513,15 +312,10 @@ export const deriveWorkViews = (
   const views: Record<WorkView, WorkViewLine[]> = { 'with-you': [], stuck: [], blocked: [], moving: [], 'on-hold': [] }
   for (const entry of work) {
     if (entry.state === 'finished') continue
-    const line = {
-      id: entry.id,
-      holder: entry.holder,
-      since: entry.since,
-      ...(entry.messages ? { pending: entry.messages } : {})
-    }
+    const line = { id: entry.id, holder: entry.holder, since: entry.since }
     const placed: WorkView[] = []
     if (entry.holder === 'owner') placed.push('with-you')
-    if (entry.role === 'worker' && entry.state === 'with-worker' && age(entry.since, entry.beat) > STUCK_AFTER)
+    if (entry.holderRole === 'worker' && entry.state === 'with-worker' && age(entry.since, entry.beat) > STUCK_AFTER)
       placed.push('stuck')
     if (entry.blocking || entry.state === 'handoff') placed.push('blocked')
     if (entry.state === 'on-hold') placed.push('on-hold')

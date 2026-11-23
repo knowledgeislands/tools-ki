@@ -5,7 +5,8 @@ import { KiError } from '../errors.ts'
 import { prepareWrites, publishWrites } from '../filesystem/index.ts'
 import type { RepositoryPlanningAdapter, RepositoryPlanningSource } from './planning.ts'
 
-const ISSUE_LEDGER = '_ISSUES.md'
+/** The roadmap folder's ledger, `_index.md`, or `_ISSUES.md`, its name until every repository renames it (INDEX-ENTRY). */
+const LEDGERS: ReadonlySet<string> = new Set(['_index.md', '_ISSUES.md'])
 const IDEAS_LIST = '_IDEAS.md'
 const KB_ROADMAP_INDEX = 'Roadmap.md'
 /** The roadmap folder's area-definition index, which the ki-work-roadmap checker never reads as a record. */
@@ -46,6 +47,8 @@ type WorkItemField = RequiredField | (typeof optionalFields)[number]
 type WorkItemFields = Partial<Record<WorkItemField, string>> & { task_links?: TaskLinks; hold?: WorkItemHold }
 
 const nestedFields = ['task_links', 'hold'] as const
+/** The authoring standard's `ki-document-type`, which a record may carry and the roadmap reads past (DOC-TYPE-KEY). */
+const documentTypeField = 'ki-document-type'
 const allowedFields = new Set<string>([...requiredFields, ...optionalFields, ...nestedFields])
 /** The `ki-repo-kb` universal note fields a KB Streams record may also carry. */
 const kbNoteFields = ['note_type', 'updated', 'reviewed', 'created', 'tags', 'author'] as const
@@ -113,7 +116,7 @@ const validTaskLinkRelations = new Set<string>(taskLinkRelations)
 
 export const isWorkItemFile = (file: string, adapter: RepositoryPlanningAdapter): boolean =>
   file.endsWith('.md') &&
-  file !== ISSUE_LEDGER &&
+  !LEDGERS.has(file) &&
   file !== IDEAS_LIST &&
   file !== ROADMAP_INDEX &&
   (adapter !== 'kb-streams' || file !== KB_ROADMAP_INDEX)
@@ -312,9 +315,15 @@ const frontmatter = (
     }
     const [, key, value] = entry
     const common = allowedFields.has(key)
-    if (seen.has(key) || (adapter === 'roadmap' && !common))
+    const documentType = key === documentTypeField
+    if (seen.has(key) || (adapter === 'roadmap' && !common && !documentType))
       throw itemError(file, `has unsupported or repeated field ${key}`)
     seen.add(key)
+    if (documentType) {
+      if (!value?.trim()) throw itemError(file, `${documentTypeField} must name a document type`)
+      adapterField = undefined
+      continue
+    }
     adapterField = common ? undefined : key
     if (!common) {
       if (!kbStreamsKnownFields.has(key)) unknownFields.push(key)

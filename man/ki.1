@@ -328,11 +328,11 @@ each folder, is opened in reverse.
 .SS Work model
 \&
 .TP
-.B ki work status [--repo <dir>] [--format text|json] [--view views|routing]
-Show a repository's work by view, read-only, from its work files.
+.B ki work status [--repo <dir>|--all] [--store <dir>] [--format text|json] [--view views|routing|tree]
+Show the Cairn store's work packages naming a repository, by view, read-only.
 .TP
-.B ki work base [--repo <dir>] [--format text|json]
-Flag change documents whose touched files moved since their base.
+.B ki work base [--repo <dir>] [--store <dir>] [--format text|json]
+Flag store change documents whose ki-inputs moved past their version refs.
 .TP
 .B ki work banner [<package>] [--store <dir>] [--full|--short] [--no-art] [--running <n>] [--queued <n>] [--blocked <n>] [--item <line>]... [--heading-for <line>] [--meeting <id>]... [--host <name>]
 Print a work package's closing banner from the Cairn store.
@@ -594,7 +594,11 @@ or
 with no scope match every registered repository is walked. A live record prints
 .BR [<identifier>](<absolute path>) .
 A record no longer on disk whose number is within its area's high-water mark in
+.I _index.md
+ledger, or
 .I _ISSUES.md
+where the roadmap folder holds no
+.IR _index.md ,
 prints
 .B [<identifier> (pruned)](<repository>/blob/<last revision>/<path>)
 on the registered canonical repository, where the last revision is the first
@@ -1374,11 +1378,14 @@ it is, under the
 .B ki-work-package
 work-package standard. These commands change nothing.
 .TP
-.B ki work status [--repo <dir>] [--format text|json] [--view views|routing]
-Read every
-.I +/_WORK/<id>/
-work folder in the repository, default the working directory's KI
-repository, and show it in five views:
+.B ki work status [--repo <dir>|--all] [--store <dir>] [--format text|json] [--view views|routing|tree]
+Read the work packages of the Cairn store,
+.IR work/<territory>/<id>/ ,
+and each sub-package folder of the same shape inside its parent, and show
+those whose
+.B ki-repositories
+names the repository, default the working directory's KI repository, in
+five views:
 .B with you
 (held by
 .BR owner ,
@@ -1387,146 +1394,155 @@ oldest first),
 (with the worker and silent for more than ten minutes),
 .B blocked
 (marked
-.B blocking
+.B ki-blocking
 or in
 .BR handoff ),
 .B moving
 (the rest) and
 .B on hold
 (a paused hold older than 31 days flagged). Finished work is in no view.
+.B --all
+lists every package in the store instead.
 .B --view routing
 replaces the five views with the routing listing State of play reads to
-choose which work takes a unit of work: one line per unfinished work in
-folder order, its id, state, pending message count and routing
-description cut to one line of at most 96 characters, or
+choose which work takes a unit of work: one line per unfinished package,
+its id, state and routing description cut to one line of at most 96
+characters, or
 .B no description
-when the work file declares none, followed by the same awaiting-review
-count, warnings and a summary with the pending total.
+when the package declares none.
+.B --view tree
+places the listed packages in their work tree by
+.BR ki-parent ,
+each with its state, holder and since time, and names each ancestor not
+listed for context.
 .B --view
 applies to the text form only.
-A work package, a folder holding
-.IR state.md ,
-takes its state from that file, which must name the folder's id, and its
-identity and routing description from its entry file, with a warning when
-the entry file still carries a state field; a single-file work folder takes
-both from its entry file.
-The entry file is
-.IR _index.md ,
+.PP
+The command reads only each package's
+.I _index.md
+front matter and the names of its
+.I *.change.md
+change documents, never
+.I work-legacy/
+or a repository's
+.IR +/_WORK/ .
+A sub-package's id is
+.IR "<parent id>+<folder>" ,
+and its
+.B ki-parent
+must name the package whose folder holds it. Its
+.B ki-repositories
+entries are
+.I <territory folder>/<repository>
+names, matched to the repository by its name. A package whose
+.B ki-id
+disagrees with its folder, or whose
+.BR ki-level ,
+.BR ki-state ,
+.BR ki-since ,
+.BR ki-hold ,
+.B ki-repositories
 or
-.IR work.md ,
-its former name, where the folder holds no
-.IR _index.md ;
-a folder holding both is a warning.
-A work with lines waiting in its
-.I messages.md
-queue, or a single-file work file's
-.B Messages
-section, ends its view line with the pending count.
+.B ki-records
+is malformed, and a folder under a territory without
+.IR _index.md ,
+is a warning that leaves the rest listed; a
+.B ki-parent
+that names no package, leaves its territory or closes a cycle is a
+warning on a package still listed.
 The holder, and whether it is the worker or the supervisor, is derived
 from the state, never stored.
-.PP
-Territory work is the main State of play,
-.IR <territory> ,
-with no parent or covers, or a secondary State of play,
-.IR <territory>.sop.<name> ,
-whose work file names the main as
-.I parent
-and lists in
-.I covers
-the other work ids of the territory it coordinates. Any other territory
-id, a
-.I sop
-id at another level, or parent or covers anywhere else is an unreadable
-work file, and a work covered by two secondaries is a warning.
-.PP
-A sub-package,
-.IR "<parent id>.<focus id>" ,
-is a typed regular or Project package's own short-lived package for one
-of its focus areas, such as
-.IR <territory>.reg.<name>.<focus> ;
-its work file must name that package as
-.IR parent ,
-and it answers to no other name.
-.PP
-.I +/_WORK_REVIEW/
-is shown only as an awaiting-review count, and an unreadable work file is
-a warning that leaves the rest listed. Through the work model's tolerance
-window each old checkpoint in
-.I +/_CHECKPOINTS/
-still reads as one work file, with a warning naming its new home: its
-.B Status
-word maps rest, busy and hold to with-supervisor, with-worker and a paused
-hold, and its id takes the territory alias from the first work file, else
-the Capital's
-.IR territory_aliases ,
-else its
-.IR territory_prefix ,
-else the folder name.
+The store is
+.BR --store ,
+.BR MCP_CAIRN_STORE ,
+or
+.B [store] path
+in the rig's
+.IR cairn/config.toml .
 .B --format json
 writes the versioned
-.I ki/work-status/v1
-report, one entry per work with its id, level, title, label, theme,
-parent, covers, worker, supervisor, description, state, hold, holder,
-role, target, blocking,
-since, received, beat, method_read, messages (the pending count), path
-(the file its state came from) and items, and sends the warnings to
-standard error.
+.I ki/work-status/v2
+report: the store, the repository identity, or null under
+.BR --all ,
+and one entry per listed package with its id, level, label, project,
+parent, role, description, worker, supervisor, repositories, records,
+state, hold, holder, holderRole, target, blocking, since, received, beat,
+mark, method_read, workers, path (its
+.IR _index.md )
+and changes (its change documents), and sends the warnings to standard
+error.
 .TP
-.B ki work base [--repo <dir>] [--format text|json]
-Read every change document,
+.B ki work base [--repo <dir>] [--store <dir>] [--format text|json]
+Read the change documents,
 .IR *.change.md ,
-under
-.I +/_WORK/
-in every repository the local registry holds, or only in the
-repository
+of every package in the Cairn store, found as
+.B ki work status
+finds them, or only of the packages whose
+.B ki-repositories
+names the repository
 .B --repo
-names, and every design note,
-.IR *.design.md ,
-that already carries a
-.B Base:
-line, and check each against its base under the
-.B ki-authoring
-document-types standard. A document's
-.B Base: <repository>@<commit>
-line names a registered checkout by its registry key and the commit it
-was written against; its
-.B Touches:
-line names the files it changes, each backticked or in a comma
-separated list, and an
-.I <owner>/<name>
-entry whose owner owns a registered repository names the repository the
-entries after it belong to. A document whose
-.B Status:
-line says graduated is skipped. Each other document is
+names, and check each document's
+.B ki-inputs
+against their version refs under the
+.B ki-work-package
+standard. A document whose
+.B ki-status
+is
+.B done
+or
+.B replaced
+is closed and not checked. Each input is a whole repository,
+.IR <org>/<repo>@<ref> ,
+resolved in the local registry by its identity; a file or folder in one,
+.IR <org>/<repo>:<path>@<ref> ,
+whose path may use
+.BR * ,
+.B **
+and
+.B ?
+wildcards; or a file in the store,
+.IR <file>@<ref> ,
+found beside the document and then from the store root, its ref a
+.B ki-revised
+date or a commit. A repository input is
 .B moved
-when a touched file, or a file under a touched folder, was modified,
-added, deleted or renamed, either way, between the base and the
-checkout's
+when a matching file was modified, added, deleted or renamed, either way,
+between the ref and the checkout's
 .IR origin/main ,
 as
 .B git diff --name-status --find-renames
-reports it;
+reports it, and
 .B current
-when none was; or
+when none was. A store file is moved when its
+.B ki-revised
+is later than a date ref, a date alone read as the end of that day, or
+when Git shows it changed between a commit ref and the store's
+.IR origin/main .
+An input is
 .BR unknown ,
-never a pass, with the reason: a missing or malformed
-.B Base:
-or
-.B Touches:
-line, a base repository not in the registry, a checkout with no
+never a pass, with the reason: no version ref, a repository not in the
+registry, a checkout with no
 .IR origin/main ,
-a base commit not in the checkout or not on its
+a ref not in the checkout or not on its
 .I origin/main
-(unpushed, or on another branch), or touched files in another
-repository. The command fetches nothing, so fetch the base checkout
-first for a current answer, and changes nothing.
+(unpushed, or on another branch), a date ref on a repository input, a
+store file that is absent or has no
+.BR ki-revised ,
+or a store ref that is neither a commit nor a date; a URL is
+.BR unchecked .
+A document is moved when any input moved, else unknown when any input is
+unknown, it has no
+.BR ki-inputs ,
+or none of its inputs can be checked, else current. The command fetches
+nothing, so fetch each checkout and the store first for a current answer,
+and changes nothing.
 .B --format json
 writes the versioned
-.I ki/work-base/v1
-report, each document with its repository, path, base, touches, status,
-verdict, files and reason, and the graduated documents. The command
-exits 0 when every checked document is current and 1 when any is moved
-or unknown.
+.I ki/work-base/v2
+report, each document with its package, path, status, verdict, inputs
+and reason, each input with its verdict, files and reason, and the closed
+documents. The command exits 0 when every checked document is current and
+1 when any is moved or unknown.
 .TP
 .B ki work banner [<package>] [--store <dir>] [--full|--short] [--no-art] [--running <n>] [--queued <n>] [--blocked <n>] [--item <line>]... [--heading-for <line>] [--meeting <id>]... [--host <name>]
 Print a work package's closing banner, read-only, exactly as the

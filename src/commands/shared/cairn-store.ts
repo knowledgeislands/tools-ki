@@ -1,6 +1,6 @@
 import type { KiContext } from '../../context.ts'
 import { xdgConfigHome } from '../../core/paths.ts'
-import { configuredCairnStore, readCairnConfiguration } from '../../core/work/package.ts'
+import { configuredCairnStore, readCairnConfiguration } from '../../core/work/store.ts'
 
 /**
  * Finds the rig's Cairn store, whose territory register ranks territories, where `ki work banner`

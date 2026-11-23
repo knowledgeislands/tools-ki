@@ -78,4 +78,21 @@ describe('ki link', () => {
       ].join('; ')}\n`
     )
   })
+
+  test('reads the renamed _index.md ledger before a stale _ISSUES.md beside it', async () => {
+    const box = await sandbox()
+    box.setRunner(runCommand)
+    await box.root.write('renamed/.ki.toml', declaration('KI-REN'))
+    await box.root.write('renamed/docs/roadmap/_index.md', '---\nareas: { CLI: 5 }\n---\n')
+    await box.root.write('renamed/docs/roadmap/_ISSUES.md', '---\nareas: { CLI: 1 }\n---\n')
+    await box.state.write(
+      'ki/registry.toml',
+      `schema = 1\n\n[repositories."renamed"]\nrepository = "https://github.com/knowledgeislands/renamed"\npath = ${JSON.stringify(`${box.root.path}/renamed`)}\n`
+    )
+    const result = await box.run('ki link KI-REN-CLI-3 KI-REN-CLI-6')
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toBe(
+      'ki: error: KI-REN-CLI-3 has no record in renamed and no commit there deleted one; KI-REN-CLI-6 has not been issued in renamed\n'
+    )
+  })
 })

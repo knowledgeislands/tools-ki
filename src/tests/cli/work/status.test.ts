@@ -1,12 +1,10 @@
-import { mkdir } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 
-const NOW = Date.parse('2026-10-18T03:00:00Z')
+const NOW = Date.parse('2026-11-23T09:00:00Z')
 const now = () => NOW
-const REPOSITORY = 'https://github.com/example/principal'
 
-const declaration = (territory: readonly string[] = []): string =>
+const declaration = (repository: string): string =>
   [
     '[repo]',
     'backpacks = ["example/backpack"]',
@@ -16,720 +14,347 @@ const declaration = (territory: readonly string[] = []): string =>
     '[skills.ki-repo]',
     'repo_type = "project"',
     'primary_shape = "ki-repo-project"',
-    `repository = ${JSON.stringify(REPOSITORY)}`,
-    ...territory,
+    `repository = ${JSON.stringify(repository)}`,
     ''
   ].join('\n')
 
-const capital = (extra: readonly string[]): readonly string[] => [
-  `capital = ${JSON.stringify(REPOSITORY)}`,
-  'territory_name = "Example"',
-  `territory_members = ${JSON.stringify([REPOSITORY])}`,
-  ...extra
-]
+type Fields = Readonly<Record<string, string | undefined>>
 
-const workFile = (id: string, fields: Readonly<Record<string, string>> = {}): string => {
-  const values: Record<string, string> = {
-    id,
-    level: 'project',
-    title: `'EX > ${id}'`,
-    worker: 'agent',
-    supervisor: 'owner',
-    state: 'with-supervisor',
-    since: '2026-10-18T02:00:00Z',
+/** A package's `_index.md`: the standard's required fields with the given ones over them, a field set undefined left out. */
+const entry = (id: string, fields: Fields = {}): string => {
+  const values: Fields = {
+    'ki-id': id,
+    'ki-level': 'regular',
+    'ki-description': `>-\n  Runs ${id}. Takes its units.`,
+    'ki-worker': 'agent',
+    'ki-supervisor': 'owner',
+    'ki-role': 'warden',
+    'ki-repositories': '\n  - ex/app',
+    'ki-state': 'with-supervisor',
+    'ki-since': '2026-11-23T08:00:00Z',
     ...fields
   }
   return `---\n${Object.entries(values)
-    .map(([key, value]) => `${key}: ${value}`)
-    .join('\n')}\n---\n\n# ${id}\n\n## Next steps\n\n## Messages\n\n## Parked\n`
+    .flatMap(([key, value]) => (value === undefined ? [] : [`${key}: ${value}`]))
+    .join(
+      '\n'
+    )}\n---\n\n# ${id}\n\n## Goals\n\nNone.\n\n## Scope\n\nNone.\n\n## Now\n\nNone.\n\n## Held\n\nNone.\n\n## Changes\n\nNone.\n`
 }
 
-const checkpoint = (fields: readonly string[], status?: string): string =>
-  `---\ntype: ki-checkpoint\n${fields.join('\n')}\n---\n\n${status ? `**Pick-up**\n\n- **Status:** ${status}\n` : ''}`
+const write = (box: Sandbox, folder: string, id: string, fields?: Fields) =>
+  box.project.write(`store/work/${folder}/_index.md`, entry(id, fields))
 
-const writeWork = (box: Sandbox, id: string, fields?: Readonly<Record<string, string>>) =>
-  box.project.write(`repo/+/_WORK/${id}/work.md`, workFile(id, fields))
+/** A store with a territory's summit, its nodes and a sub-package, and a repository, `app`, that several name. */
+const setup = async (): Promise<Sandbox> => {
+  const box = await sandbox()
+  box.setEnv({ MCP_CAIRN_STORE: `${box.project.path}/store` })
+  await box.project.write('app/.ki.toml', declaration('https://github.com/example/app'))
+  await write(box, 'ex/ex.summit', 'ex.summit', {
+    'ki-level': 'territory',
+    'ki-repositories': '\n  - ex/principal',
+    'ki-state': 'with-worker',
+    'ki-since': '2026-11-23T07:00:00Z',
+    'ki-beat': '2026-11-23T08:55:00Z'
+  })
+  await write(box, 'ex/ex.alpha', 'ex.alpha', {
+    'ki-level': 'project',
+    'ki-project': 'alpha',
+    'ki-label': "'EX > Alpha'",
+    'ki-parent': 'ex.summit',
+    'ki-records': '\n  - EX-APP-CLI-001',
+    'ki-state': 'handoff-to-supervisor',
+    'ki-blocking': 'true',
+    'ki-since': '2026-11-23T06:00:00Z',
+    'ki-received': '2026-11-23T06:30:00Z',
+    'ki-mark': '2026-11-23T05:00:00Z',
+    'ki-method_read': '1234567',
+    'ki-workers':
+      '\n  - id: actor:ward\n    role: warden\n    tier: managers\n    since: 2026-11-20T00:00:00Z\n    status: active\n  - role: journeyman\n    tier: makers\n    status: vacant\n  - not a seat'
+  })
+  await box.project.write('store/work/ex/ex.alpha/10-first.change.md', '# First\n')
+  await box.project.write('store/work/ex/ex.alpha/notes.md', '# Not a change document\n')
+  await write(box, 'ex/ex.beta', 'ex.beta', {
+    'ki-parent': 'ex.summit',
+    'ki-repositories': '\n  - elsewhere/app',
+    'ki-state': 'handoff',
+    'ki-target': 'run/review',
+    'ki-method_read': "'abc1234'",
+    'ki-role': undefined,
+    'ki-description': undefined
+  })
+  await write(box, 'ex/ex.gamma', 'ex.gamma', {
+    'ki-parent': 'ex.summit',
+    'ki-state': 'on-hold',
+    'ki-since': '2026-10-01T00:00:00Z',
+    'ki-hold': '\n  reason: paused\n  release: after the migration\n  set_by: owner'
+  })
+  await write(box, 'ex/ex.delta', 'ex.delta', {
+    'ki-parent': 'ex.alpha',
+    'ki-state': 'on-hold',
+    'ki-hold': '{reason: snoozing}',
+    'ki-workers': 'none'
+  })
+  await write(box, 'ex/ex.epsilon', 'ex.epsilon', { 'ki-parent': 'ex.summit', 'ki-state': 'handoff-to-worker' })
+  await write(box, 'ex/ex.zeta', 'ex.zeta', { 'ki-parent': 'ex.summit', 'ki-state': 'finished' })
+  await write(box, 'ex/ex.summit/sub', 'ex.summit+sub', {
+    'ki-parent': 'ex.summit',
+    'ki-since': '2026-11-22T00:00:00Z'
+  })
+  await box.project.write('store/work/ex/ex.summit/sub/10-strand.change.md', '# Strand\n')
+  await box.project.write('store/work/ex/ex.summit/notes/plain.md', '# Not a sub-package\n')
+  await write(box, 'ex/ex.other', 'ex.other', { 'ki-parent': 'ex.summit', 'ki-repositories': '[]' })
+  await write(box, 'oth/oth.summit', 'oth.summit', {
+    'ki-level': 'territory',
+    'ki-repositories': '\n  - oth/principal'
+  })
+  await box.project.write('store/work/README.md', '# Work\n')
+  await box.project.write('store/work-legacy/ex/ex.old/_index.md', entry('ex.old'))
+  return box
+}
+
+const status = (box: Sandbox, arguments_: string) => box.run(`ki work status ${arguments_}`.trim(), { now })
 
 describe('ki work status', () => {
-  test('reads every work file into ki/work-status/v1 and counts work awaiting review', async () => {
-    const box = await sandbox()
-    await box.project.write('repo/.ki.toml', declaration())
-    await writeWork(box, 'ex.alpha', {
-      theme: 'model',
-      state: 'with-worker',
-      since: '2026-10-18T02:00:00Z',
-      beat: '2026-10-18T02:58:00Z',
-      received: '2026-10-18T01:00:00Z'
-    })
-    await writeWork(box, 'ex.beta', { state: 'with-worker', since: '2026-10-18T02:00:00Z' })
-    await writeWork(box, 'ex.gamma', { state: 'handoff-to-supervisor', blocking: 'true' })
-    await writeWork(box, 'ex.regular', { level: 'regular', since: '2026-10-17T02:00:00Z' })
-    await writeWork(box, 'ex.delta', { state: 'handoff-to-worker' })
-    await writeWork(box, 'ex.epsilon', { state: 'handoff', target: 'run/review' })
-    await writeWork(box, 'ex', {
-      level: 'territory',
-      state: 'on-hold',
-      since: '2026-09-01T00:00:00Z',
-      hold: '\n  reason: paused\n  release: "after the migration"'
-    })
-    await writeWork(box, 'ex.zeta', {
-      state: 'on-hold',
-      since: '2026-09-01T00:00:00Z',
-      hold: '{reason: more-expected}'
-    })
-    await writeWork(box, 'ex.eta', { state: 'on-hold', hold: '{reason: paused}' })
-    await writeWork(box, 'ex.theta', { state: 'finished' })
-    await writeWork(box, 'ex.iota', { state: 'with-supervisor', supervisor: 'run/coordinator' })
-    await box.project.write('repo/+/_WORK_REVIEW/ex.old/work.md', workFile('ex.old'))
-    await mkdir(`${box.project.path}/repo/+/_WORK_REVIEW/ex.empty`, { recursive: true })
-
-    const json = await box.run('ki work status --repo repo --format json', { now })
-    const text = await box.run('ki work status --repo repo', { now })
+  test('reads the packages naming the repository from the Cairn store into ki/work-status/v2 and its views', async () => {
+    const box = await setup()
+    const json = await status(box, '--repo app --format json')
+    const text = await status(box, '--repo app')
 
     expect(json.exitCode).toBe(0)
+    expect(json.stderr).toBe('')
     const report = JSON.parse(json.stdout)
-    expect(report).toMatchObject({ schema: 'ki/work-status/v1', repository: 'example/principal' })
-    expect(report.generatedAt).toBe('2026-10-18T03:00:00Z')
-    const byId = Object.fromEntries(report.work.map((entry: { id: string }) => [entry.id, entry]))
+    expect(report).toMatchObject({
+      schema: 'ki/work-status/v2',
+      store: `${box.project.path}/store`,
+      repository: 'example/app',
+      generatedAt: '2026-11-23T09:00:00Z'
+    })
+    expect(report.work.map((work: { id: string }) => work.id)).toEqual([
+      'ex.alpha',
+      'ex.beta',
+      'ex.delta',
+      'ex.epsilon',
+      'ex.gamma',
+      'ex.summit+sub',
+      'ex.zeta'
+    ])
+    const byId = Object.fromEntries(report.work.map((work: { id: string }) => [work.id, work]))
     expect(byId['ex.alpha']).toEqual({
-      identity: 'example/principal',
       id: 'ex.alpha',
       level: 'project',
-      title: 'EX > ex.alpha',
-      label: null,
-      theme: 'model',
-      parent: null,
-      covers: [],
+      label: 'EX > Alpha',
+      project: 'alpha',
+      parent: 'ex.summit',
+      role: 'warden',
+      description: 'Runs ex.alpha. Takes its units.',
       worker: 'agent',
       supervisor: 'owner',
-      state: 'with-worker',
+      repositories: ['ex/app'],
+      records: ['EX-APP-CLI-001'],
+      state: 'handoff-to-supervisor',
       hold: null,
-      holder: 'agent',
-      role: 'worker',
+      holder: 'owner',
+      holderRole: 'supervisor',
       target: null,
-      blocking: false,
-      since: '2026-10-18T02:00:00Z',
-      received: '2026-10-18T01:00:00Z',
-      beat: '2026-10-18T02:58:00Z',
-      description: null,
-      method_read: null,
-      messages: 0,
-      path: '+/_WORK/ex.alpha/work.md',
-      items: []
+      blocking: true,
+      since: '2026-11-23T06:00:00Z',
+      received: '2026-11-23T06:30:00Z',
+      beat: null,
+      mark: '2026-11-23T05:00:00Z',
+      method_read: '1234567',
+      workers: [
+        { role: 'warden', tier: 'managers', id: 'actor:ward', since: '2026-11-20T00:00:00Z', status: 'active' },
+        { role: 'journeyman', tier: 'makers', id: null, since: null, status: 'vacant' }
+      ],
+      path: 'work/ex/ex.alpha/_index.md',
+      changes: ['work/ex/ex.alpha/10-first.change.md']
     })
-    expect(byId['ex.beta'].items).toEqual([])
-    expect(byId['ex.gamma']).toMatchObject({ holder: 'owner', role: 'supervisor', blocking: true })
-    expect(byId['ex.delta']).toMatchObject({ holder: 'agent', role: 'worker' })
-    expect(byId['ex.epsilon']).toMatchObject({ holder: 'run/review', role: null, target: 'run/review' })
-    expect(byId['ex']).toMatchObject({
-      level: 'territory',
-      holder: null,
+    expect(byId['ex.beta']).toMatchObject({
       role: null,
-      hold: { reason: 'paused', release: 'after the migration' }
+      description: null,
+      holder: 'run/review',
+      holderRole: null,
+      target: 'run/review',
+      method_read: 'abc1234'
     })
-    expect(byId['ex.zeta'].hold).toEqual({ reason: 'more-expected', release: null })
-    expect(byId['ex.theta']).toMatchObject({ state: 'finished', holder: null })
-    expect(json.stderr).toBe('')
+    expect(byId['ex.gamma'].hold).toEqual({ reason: 'paused', release: 'after the migration' })
+    expect(byId['ex.delta']).toMatchObject({ hold: { reason: 'snoozing', release: null }, workers: [] })
+    expect(byId['ex.epsilon']).toMatchObject({ holder: 'agent', holderRole: 'worker' })
+    expect(byId['ex.summit+sub']).toMatchObject({
+      parent: 'ex.summit',
+      path: 'work/ex/ex.summit/sub/_index.md',
+      changes: ['work/ex/ex.summit/sub/10-strand.change.md']
+    })
 
     expect(text.exitCode).toBe(0)
     expect(text.stdout).toBe(
-      [
-        '╭─ KI WORK STATUS example/principal',
+      `${[
+        '╭─ KI WORK STATUS example/app',
         '├─ with you (2)',
-        '│  ├─ 👤 ex.regular · owner · since 2026-10-17T02:00:00Z',
-        '│  ╰─ 👤 ex.gamma · owner · since 2026-10-18T02:00:00Z',
-        '├─ stuck (1)',
-        '│  ╰─ ⏳ ex.beta · agent · since 2026-10-18T02:00:00Z',
+        '│  ├─ 👤 ex.summit+sub · owner · since 2026-11-22T00:00:00Z',
+        '│  ╰─ 👤 ex.alpha · owner · since 2026-11-23T06:00:00Z',
+        '├─ stuck (0)',
         '├─ blocked (2)',
-        '│  ├─ ⛔ ex.epsilon · run/review · since 2026-10-18T02:00:00Z',
-        '│  ╰─ ⛔ ex.gamma · owner · since 2026-10-18T02:00:00Z',
-        '├─ moving (3)',
-        '│  ├─ 🤖 ex.alpha · agent · since 2026-10-18T02:00:00Z',
-        '│  ├─ 🤖 ex.delta · agent · since 2026-10-18T02:00:00Z',
-        '│  ╰─ 🤖 ex.iota · run/coordinator · since 2026-10-18T02:00:00Z',
-        '├─ on hold (3)',
-        '│  ├─ ⏸️ ex · nobody · since 2026-09-01T00:00:00Z · paused over 31 days',
-        '│  ├─ ⏸️ ex.eta · nobody · since 2026-10-18T02:00:00Z',
-        '│  ╰─ ⏸️ ex.zeta · nobody · since 2026-09-01T00:00:00Z',
-        '├─ awaiting review (1)',
-        '╰─ summary: WORK=11 WITH_YOU=2 STUCK=1 BLOCKED=2 MOVING=3 ON_HOLD=3 REVIEW=1',
-        ''
-      ].join('\n')
+        '│  ├─ ⛔ ex.alpha · owner · since 2026-11-23T06:00:00Z',
+        '│  ╰─ ⛔ ex.beta · run/review · since 2026-11-23T08:00:00Z',
+        '├─ moving (1)',
+        '│  ╰─ 🤖 ex.epsilon · agent · since 2026-11-23T08:00:00Z',
+        '├─ on hold (2)',
+        '│  ├─ ⏸️ ex.delta · nobody · since 2026-11-23T08:00:00Z',
+        '│  ╰─ ⏸️ ex.gamma · nobody · since 2026-10-01T00:00:00Z · paused over 31 days',
+        '╰─ summary: WORK=7 WITH_YOU=2 STUCK=0 BLOCKED=2 MOVING=1 ON_HOLD=2'
+      ].join('\n')}\n`
     )
   })
 
-  test('reads a package from state.md and work.md beside a single-file folder, counting each pending message', async () => {
-    const box = await sandbox()
-    await box.project.write('repo/.ki.toml', declaration())
-    await box.project.write(
-      'repo/+/_WORK/ex.pack/work.md',
-      [
-        '---',
-        'id: ex.pack',
-        'level: project',
-        "title: 'EX > Pack'",
-        'project: pack',
-        'theme: model',
-        'description: >-',
-        '  Packs things. Takes packing. Not for unpacking (ex.unpack).',
-        'worker: agent',
-        'supervisor: owner',
-        '---',
-        '',
-        '# ex.pack',
-        '',
-        '## Goals',
-        '',
-        '## Scope',
-        ''
-      ].join('\n')
-    )
-    await box.project.write(
-      'repo/+/_WORK/ex.pack/state.md',
-      [
-        '---',
-        'id: ex.pack',
-        'state: handoff',
-        'target: work/ex',
-        'blocking: true',
-        "since: '2026-10-18T02:10:00Z'",
-        'received: 2026-10-18T01:10:00Z',
-        'beat: null',
-        'mark: 2026-10-18T01:00:00Z',
-        'method_read: eff6163b',
-        '---',
-        '',
-        '# ex.pack state',
-        ''
-      ].join('\n')
-    )
-    await box.project.write(
-      'repo/+/_WORK/ex.pack/messages.md',
-      '# ex.pack messages\n\n- IMPORTANT · 2026-10-18 · REFRESH · EX: re-read.\n- 2026-10-18 · ROUTE · EX: take this.\n'
-    )
-    await box.project.write(
-      'repo/+/_WORK/ex.held/work.md',
-      "---\nid: ex.held\nlevel: regular\ntitle: 'EX > Held'\nworker: agent\nsupervisor: owner\n---\n"
-    )
-    await box.project.write(
-      'repo/+/_WORK/ex.held/state.md',
-      '---\nid: ex.held\nstate: on-hold\nhold:\n  reason: more-expected\nsince: 2026-10-18T02:00:00Z\nmethod_read: 2026-10-18T01:00:00+01:00\n---\n'
-    )
-    await box.project.write('repo/+/_WORK/ex.held/messages.md', '# ex.held messages\n\nNone.\n')
-    await box.project.write(
-      'repo/+/_WORK/ex.single/work.md',
-      `${workFile('ex.single').replace(
-        '## Messages\n',
-        '## Messages\n\n- 2026-10-18 · ASK · EX: one.\n  continued, not a new line\n- 2026-10-18 · ASK · EX: two.\n'
-      )}\n- a parked line, not a message\n`
-    )
-    await box.project.write(
-      'repo/+/_WORK/ex.last/work.md',
-      `${workFile('ex.last').replace('## Parked\n', '')}\n- 2026-10-18 · ASK · EX: last.\n`
-    )
-    await box.project.write('repo/+/_WORK/ex.plain/work.md', workFile('ex.plain').replace('## Messages\n', ''))
-    await box.project.write('repo/+/_WORK/ex.number/work.md', workFile('ex.number').replace('## Messages\n', ''))
-    await box.project.write(
-      'repo/+/_WORK/ex.number/state.md',
-      '---\nid: ex.number\nstate: with-supervisor\nsince: 2026-10-18T02:00:00Z\nmethod_read: 1234567\n---\n'
-    )
+  test('lists every package with --all, flags a silent worker as stuck, and reads the working directory by default', async () => {
+    const box = await setup()
+    const all = await status(box, '--all --format json')
+    expect(all.exitCode).toBe(0)
+    const report = JSON.parse(all.stdout)
+    expect(report.repository).toBeNull()
+    expect(report.work.map((work: { id: string }) => work.id)).toContain('ex.other')
+    expect(report.work.map((work: { id: string }) => work.id)).not.toContain('ex.old')
 
-    const json = await box.run('ki work status --repo repo --format json', { now })
-    const text = await box.run('ki work status --repo repo', { now })
+    await write(box, 'ex/ex.silent', 'ex.silent', {
+      'ki-parent': 'ex.summit',
+      'ki-state': 'with-worker',
+      'ki-since': '2026-11-23T07:00:00Z'
+    })
+    const text = await status(box, '--all')
+    expect(text.stdout).toContain('╭─ KI WORK STATUS all packages')
+    expect(text.stdout).toContain('├─ stuck (1)\n│  ╰─ ⏳ ex.silent · agent · since 2026-11-23T07:00:00Z\n')
+    expect(text.stdout).toContain('│  ├─ 🤖 ex.epsilon · agent · since 2026-11-23T08:00:00Z\n')
+    expect(text.stdout).toContain('│  ╰─ 🤖 ex.summit · agent · since 2026-11-23T07:00:00Z\n')
 
-    expect(json.exitCode).toBe(0)
-    const byId = Object.fromEntries(JSON.parse(json.stdout).work.map((entry: { id: string }) => [entry.id, entry]))
-    expect(byId['ex.pack']).toEqual({
-      identity: 'example/principal',
-      id: 'ex.pack',
-      level: 'project',
-      title: 'EX > Pack',
-      label: null,
-      theme: 'model',
-      parent: null,
-      covers: [],
-      worker: 'agent',
-      supervisor: 'owner',
-      description: 'Packs things. Takes packing. Not for unpacking (ex.unpack).',
-      state: 'handoff',
-      hold: null,
-      holder: 'work/ex',
-      role: null,
-      target: 'work/ex',
-      blocking: true,
-      since: '2026-10-18T02:10:00Z',
-      received: '2026-10-18T01:10:00Z',
-      beat: null,
-      method_read: 'eff6163b',
-      messages: 2,
-      path: '+/_WORK/ex.pack/state.md',
-      items: []
-    })
-    expect(byId['ex.held']).toMatchObject({
-      state: 'on-hold',
-      hold: { reason: 'more-expected', release: null },
-      description: null,
-      method_read: '2026-10-18T01:00:00+01:00',
-      messages: 0,
-      path: '+/_WORK/ex.held/state.md'
-    })
-    expect(byId['ex.single']).toMatchObject({
-      state: 'with-supervisor',
-      method_read: null,
-      messages: 2,
-      path: '+/_WORK/ex.single/work.md'
-    })
-    expect(byId['ex.last'].messages).toBe(1)
-    expect(byId['ex.plain'].messages).toBe(0)
-    expect(byId['ex.number']).toMatchObject({ method_read: '1234567', messages: 0 })
-    expect(json.stderr).toBe(
-      'ki: warning: +/_WORK/ex.number/work.md: carries state fields beside state.md; state.md governs\n'
-    )
-    expect(text.stdout).toContain('│  ╰─ ⛔ ex.pack · work/ex · since 2026-10-18T02:10:00Z · 2 pending\n')
-    expect(text.stdout).toContain('│  ├─ 👤 ex.number · owner · since 2026-10-18T02:00:00Z\n')
-    expect(text.stdout).toContain('👤 ex.single · owner · since 2026-10-18T02:00:00Z · 2 pending\n')
+    box.cd('app')
+    const here = await status(box, '--format json')
+    expect(JSON.parse(here.stdout).repository).toBe('example/app')
   })
 
-  test('warns of each unreadable work file and lists the rest', async () => {
-    const box = await sandbox()
-    await box.project.write('repo/.ki.toml', declaration())
-    const cases: readonly (readonly [string, string, string])[] = [
-      ['ex.a', '# no front matter\n', 'has no YAML front matter'],
-      ['ex.b', '---\nid: [unclosed\n---\n', 'has no YAML front matter'],
-      ['ex.c', '---\n- one\n---\n', 'has no YAML front matter'],
-      ['ex.d', workFile('Ex_D'), 'id must be a dotted work id'],
-      ['ex.e', workFile('ex.other'), 'id ex.other must name its folder'],
-      ['ex.f', workFile('ex.f', { level: 'initiative' }), 'level must be one of territory, regular, project'],
-      ['ex.g', workFile('ex.g', { title: "' '" }), 'title must be a non-empty string'],
-      ['ex.h', workFile('ex.h', { worker: 'someone' }), 'worker must name a holder'],
-      ['ex.i', workFile('ex.i', { supervisor: 'work/Bad' }), 'supervisor must name a holder'],
-      ['ex.j', workFile('ex.j', { state: 'busy' }), 'state must be one of with-worker, handoff-to-supervisor'],
-      ['ex.k', workFile('ex.k', { since: 'yesterday' }), 'since must be a UTC time'],
-      ['ex.l', workFile('ex.l', { state: 'handoff' }), 'target must name a holder in handoff'],
-      ['ex.m', workFile('ex.m', { state: 'on-hold' }), 'hold.reason must be paused or more-expected while on hold']
-    ]
-    for (const [folder, contents] of cases) await box.project.write(`repo/+/_WORK/${folder}/work.md`, contents)
-    await mkdir(`${box.project.path}/repo/+/_WORK/ex.n`, { recursive: true })
-    const states: readonly (readonly [string, string, string])[] = [
-      ['ex.s1', '# no front matter\n', 'has no YAML front matter'],
-      [
-        'ex.s2',
-        '---\nid: ex.other\nstate: with-worker\nsince: 2026-10-18T02:00:00Z\n---\n',
-        'id ex.other must name its folder'
-      ],
-      ['ex.s3', '---\nstate: with-worker\nsince: 2026-10-18T02:00:00Z\n---\n', 'id undefined must name its folder'],
-      ['ex.s4', '---\nid: ex.s4\nstate: busy\nsince: 2026-10-18T02:00:00Z\n---\n', 'state must be one of with-worker'],
-      ['ex.s5', '---\nid: ex.s5\nstate: on-hold\nsince: 2026-10-18T02:00:00Z\n---\n', 'hold.reason must be paused']
-    ]
-    for (const [folder, contents] of states) {
-      await box.project.write(
-        `repo/+/_WORK/${folder}/work.md`,
-        workFile(folder).replace(/^state: .*\nsince: .*\n/m, '')
-      )
-      await box.project.write(`repo/+/_WORK/${folder}/state.md`, contents)
-    }
-    await writeWork(box, 'ex.ok', { worker: 'person/kris', supervisor: 'work/ex', since: '2026-10-18T02:00:00+01:00' })
-
-    const json = await box.run('ki work status --repo repo --format json', { now })
-    const text = await box.run('ki work status --repo repo', { now })
-
-    expect(json.exitCode).toBe(0)
-    expect(JSON.parse(json.stdout).work.map((entry: { id: string }) => entry.id)).toEqual(['ex.ok'])
-    expect(JSON.parse(json.stdout).work[0].since).toBe('2026-10-18T01:00:00Z')
-    for (const [folder, , message] of cases)
-      expect(json.stderr).toContain(`ki: warning: +/_WORK/${folder}/work.md: ${message}`)
-    for (const [folder, , message] of states)
-      expect(json.stderr).toContain(`ki: warning: +/_WORK/${folder}/state.md: ${message}`)
-    expect(json.stderr).not.toContain('carries state fields')
-    expect(json.stderr).toContain('ki: warning: +/_WORK/ex.n/ has no _index.md or work.md\n')
-    expect(text.stdout).toContain(`├─ warnings (${cases.length + states.length + 1})`)
-    expect(text.stdout).toContain('│  ├─ ! +/_WORK/ex.a/work.md: has no YAML front matter')
-  })
-
-  test('reads _index.md as the entry file, work.md where it is absent, and flags a folder holding both', async () => {
-    const box = await sandbox()
-    await box.project.write('repo/.ki.toml', declaration())
-    await box.project.write('repo/+/_WORK/ex.new/_index.md', workFile('ex.new', { title: "'EX > new'" }))
-    await writeWork(box, 'ex.old', { title: "'EX > old'" })
-    await box.project.write('repo/+/_WORK/ex.both/_index.md', workFile('ex.both', { title: "'EX > index'" }))
-    await box.project.write('repo/+/_WORK/ex.both/work.md', workFile('ex.other', { title: "'EX > former'" }))
-    await box.project.write('repo/+/_WORK/ex.pack/_index.md', workFile('ex.pack'))
-    await box.project.write(
-      'repo/+/_WORK/ex.pack/state.md',
-      '---\nid: ex.pack\nstate: with-worker\nsince: 2026-10-18T02:00:00Z\n---\n'
-    )
-    await box.project.write('repo/+/_WORK/ex.pack/messages.md', '# Messages\n\n- one\n')
-    await box.project.write('repo/+/_WORK_REVIEW/ex.done/_index.md', workFile('ex.done'))
-    await box.project.write('repo/+/_WORK_REVIEW/ex.older/work.md', workFile('ex.older'))
-
-    const json = await box.run('ki work status --repo repo --format json', { now })
-
-    expect(json.exitCode).toBe(0)
-    const work = JSON.parse(json.stdout).work as readonly { id: string; title: string; path: string }[]
-    expect(work.map(({ id, title, path }) => ({ id, title, path }))).toEqual([
-      { id: 'ex.both', title: 'EX > index', path: '+/_WORK/ex.both/_index.md' },
-      { id: 'ex.new', title: 'EX > new', path: '+/_WORK/ex.new/_index.md' },
-      { id: 'ex.old', title: 'EX > old', path: '+/_WORK/ex.old/work.md' },
-      { id: 'ex.pack', title: 'EX > ex.pack', path: '+/_WORK/ex.pack/state.md' }
-    ])
-    expect(json.stderr).toBe(
-      [
-        'ki: warning: +/_WORK/ex.both/ holds both _index.md and work.md; _index.md governs, so remove work.md',
-        'ki: warning: +/_WORK/ex.pack/_index.md: carries state fields beside state.md; state.md governs',
-        ''
-      ].join('\n')
-    )
-    const text = await box.run('ki work status --repo repo', { now })
-    expect(text.stdout).toContain('├─ awaiting review (2)')
-  })
-
-  test('reads thread-model checkpoints through the tolerance window, warning of each new home', async () => {
-    const box = await sandbox()
-    await box.project.write('repo/.ki.toml', declaration(capital(['territory_aliases = ["ex", "example"]'])))
-    await box.project.write('repo/+/_CHECKPOINTS/README.md', checkpoint(['thread: readme']))
-    await box.project.write(
-      'repo/+/_CHECKPOINTS/_state-of-play.md',
-      checkpoint(["label: 'Master: state-of-play'", 'updated_at: 2026-10-17T12:58:00Z'], 'rest, wrapped up')
-    )
-    await box.project.write(
-      'repo/+/_CHECKPOINTS/model.ways-of-working.md',
-      checkpoint(["updated_at: '2026-10-18T01:28:00Z'"], 'busy. a run is out')
-    )
-    await box.project.write(
-      'repo/+/_CHECKPOINTS/rig.mac-studio.md',
-      checkpoint(['created_at: 2026-10-01T00:00:00Z'], 'hold until the hardware arrives')
-    )
-    await box.project.write(
-      'repo/+/_CHECKPOINTS/registry-removal.md',
-      checkpoint(['updated_at: 2026-10-15T12:19:09Z'], 'paused')
-    )
-    await box.project.write('repo/+/_CHECKPOINTS/undated.md', checkpoint(['thread: undated']))
-    await box.project.write('repo/+/_CHECKPOINTS/notes.md', '---\ntype: note\n---\n')
-    await box.project.write('repo/+/_CHECKPOINTS/plain.md', '# not a checkpoint\n')
-    await box.project.write('repo/+/_CHECKPOINTS/log.txt', 'not markdown\n')
-    await mkdir(`${box.project.path}/repo/+/_CHECKPOINTS/folder.md`, { recursive: true })
-
-    const json = await box.run('ki work status --repo repo --format json', { now })
-
-    expect(json.exitCode).toBe(0)
-    const byId = Object.fromEntries(JSON.parse(json.stdout).work.map((entry: { id: string }) => [entry.id, entry]))
-    expect(Object.keys(byId)).toEqual(['ex', 'ex.ways-of-working', 'ex.regular.registry-removal', 'ex.mac-studio'])
-    expect(byId['ex']).toMatchObject({
-      level: 'territory',
-      title: 'Master: state-of-play',
-      state: 'with-supervisor',
-      holder: 'owner',
-      since: '2026-10-17T12:58:00Z',
-      description: null,
-      method_read: null,
-      messages: 0,
-      path: '+/_CHECKPOINTS/_state-of-play.md',
-      items: []
+  test('lists each unfinished package for routing, and places the listed packages in their work tree', async () => {
+    const box = await setup()
+    await write(box, 'ex/ex.long', 'ex.long', {
+      'ki-parent': 'ex.summit',
+      'ki-description': `>-\n  ${'A very long routing description that runs on and on '.repeat(3)}`
     })
-    expect(byId['ex.ways-of-working']).toMatchObject({
-      level: 'project',
-      title: 'model.ways-of-working',
-      state: 'with-worker',
-      holder: 'agent'
-    })
-    expect(byId['ex.mac-studio']).toMatchObject({
-      state: 'on-hold',
-      hold: { reason: 'paused', release: null },
-      since: '2026-10-01T00:00:00Z'
-    })
-    expect(byId['ex.regular.registry-removal']).toMatchObject({ level: 'regular', state: 'with-supervisor' })
-    expect(json.stderr).toContain(
-      'ki: warning: +/_CHECKPOINTS/_state-of-play.md is a thread-model checkpoint; move it to +/_WORK/ex/_index.md\n'
-    )
-    expect(json.stderr).toContain('ki: warning: +/_CHECKPOINTS/undated.md: updated_at must be a UTC time\n')
-    expect(json.stderr).not.toContain('README')
-  })
-
-  test("takes a legacy id's territory from a work file, else the Capital's handle, else the folder", async () => {
-    const box = await sandbox()
-    await box.project.write('repo/.ki.toml', declaration())
-    await writeWork(box, 'ki.ways-of-working')
-    await box.project.write('repo/+/_CHECKPOINTS/rig.chezmoi.md', checkpoint(['updated_at: 2026-10-18T01:31:20Z']))
-    await box.project.write('prefixed/.ki.toml', declaration(capital(['territory_prefix = "example-islands"'])))
-    await box.project.write('prefixed/+/_CHECKPOINTS/rig.chezmoi.md', checkpoint(['updated_at: 2026-10-18T01:31:20Z']))
-    await box.project.write('bare/.ki.toml', declaration())
-    await box.project.write('bare/+/_CHECKPOINTS/rig.chezmoi.md', checkpoint(['updated_at: 2026-10-18T01:31:20Z']))
-
-    const ids = async (repository: string) =>
-      JSON.parse((await box.run(`ki work status --repo ${repository} --format json`, { now })).stdout).work.map(
-        (entry: { id: string }) => entry.id
-      )
-
-    expect(await ids('repo')).toEqual(['ki.ways-of-working', 'ki.chezmoi'])
-    expect(await ids('prefixed')).toEqual(['example-islands.chezmoi'])
-    expect(await ids('bare')).toEqual(['bare.chezmoi'])
-  })
-
-  test('shows empty views for a repository with no work, from the working directory by default', async () => {
-    const box = await sandbox()
-    await box.project.write('repo/.ki.toml', declaration())
-    box.cd('repo')
-
-    const result = await box.run('ki work status', { now })
-
-    expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('├─ with you (0)\n├─ stuck (0)')
-    expect(result.stdout).toContain('╰─ summary: WORK=0 WITH_YOU=0 STUCK=0 BLOCKED=0 MOVING=0 ON_HOLD=0 REVIEW=0\n')
-  })
-
-  test('reads a secondary State of play with its parent and covers, and rejects a misplaced one', async () => {
-    const box = await sandbox()
-    await box.project.write('repo/.ki.toml', declaration())
-    await writeWork(box, 'ex', { level: 'territory', title: "'EX > SoP'" })
-    await writeWork(box, 'ex.sop.sites', {
-      level: 'territory',
-      title: "'EX > SoP (sites)'",
-      label: "'EX > SoP (sites)'",
-      parent: 'ex',
-      covers: '[ex.site-home, ex.site-sales]'
-    })
-    await writeWork(box, 'ex.sop.labs', { level: 'territory', parent: 'ex', covers: '[ex.site-home]' })
-    const rejected: readonly (readonly [string, Readonly<Record<string, string>>, string])[] = [
-      [
-        'ex.sop.none',
-        { level: 'territory', parent: 'ex' },
-        'covers must list the work ids this State of play coordinates'
-      ],
-      [
-        'ex.sop.stray',
-        { level: 'territory', parent: 'other', covers: '[ex.a]' },
-        'parent must name the main State of play, ex'
-      ],
-      [
-        'ex.sop.wide',
-        { level: 'territory', parent: 'ex', covers: '[other.a]' },
-        'covers names other.a, which is not other work of territory ex'
-      ],
-      [
-        'ex.sop.self',
-        { level: 'territory', parent: 'ex', covers: '[ex.sop.sites]' },
-        'covers names ex.sop.sites, which is not other work of territory ex'
-      ],
-      ['ex.sop.odd', { level: 'territory', parent: 'ex', covers: '[1]' }, 'covers must list dotted work ids'],
-      ['ex.sop.case', { level: 'territory', parent: 'ex', covers: '[Ex.A]' }, 'covers must list dotted work ids'],
-      ['ex.hub', { level: 'territory' }, 'territory work id must be ex or ex.sop.<name>'],
-      ['ex.sop.proj', { level: 'project' }, 'a ex.sop.<name> id is territory work'],
-      ['ex.proj', { covers: '[ex.other]' }, 'covers belongs to State of play']
-    ]
-    for (const [id, fields] of rejected) await writeWork(box, id, fields)
-    await box.project.write(
-      'repo/+/_WORK/main/work.md',
-      workFile('main', { level: 'territory', parent: 'main', covers: '[main.a]' })
-    )
-
-    const json = await box.run('ki work status --repo repo --format json', { now })
-
-    expect(json.exitCode).toBe(0)
-    const byId = Object.fromEntries(JSON.parse(json.stdout).work.map((entry: { id: string }) => [entry.id, entry]))
-    expect(Object.keys(byId).sort()).toEqual(['ex', 'ex.sop.labs', 'ex.sop.sites'])
-    expect(byId['ex']).toMatchObject({ level: 'territory', parent: null, covers: [], label: null })
-    expect(byId['ex.sop.sites']).toMatchObject({
-      level: 'territory',
-      label: 'EX > SoP (sites)',
-      parent: 'ex',
-      covers: ['ex.site-home', 'ex.site-sales']
-    })
-    for (const [id, , message] of rejected)
-      expect(json.stderr).toContain(`ki: warning: +/_WORK/${id}/work.md: ${message}\n`)
-    expect(json.stderr).toContain('ki: warning: +/_WORK/main/work.md: the main State of play takes no parent\n')
-    expect(json.stderr).toContain(
-      'ki: warning: +/_WORK/ex.sop.sites/work.md: covers ex.site-home, which ex.sop.labs already covers\n'
-    )
-  })
-
-  test('preserves main coverage and regular supervision without creating another home', async () => {
-    const box = await sandbox()
-    await box.project.write('repo/.ki.toml', declaration())
-    await writeWork(box, 'ex', { level: 'territory', covers: '[ex.regular, ex.regular.intake, ex.project]' })
-    await writeWork(box, 'ex.regular', { level: 'regular', parent: 'ex' })
-    await writeWork(box, 'ex.regular.intake', { level: 'regular', parent: 'ex' })
-    await writeWork(box, 'ex.project', { parent: 'ex' })
-    await writeWork(box, 'ex.regular.secondary', { level: 'regular', parent: 'ex.sop.sites' })
-    for (const [id, parent] of [
-      ['ex.bad', 'other'],
-      ['ex.self', 'ex.self'],
-      ['ex.stray', 'other.sop.sites'],
-      ['ex.child', 'ex.project'],
-      ['ex.scalar', '[ex]']
-    ])
-      await writeWork(box, id as string, { level: 'regular', parent: parent as string })
-    const result = await box.run('ki work status --repo repo --format json', { now })
-    expect(result.exitCode).toBe(0)
-    const entries = JSON.parse(result.stdout).work
-    expect(entries.map((entry: { id: string }) => entry.id)).toEqual([
-      'ex',
-      'ex.project',
-      'ex.regular',
-      'ex.regular.intake',
-      'ex.regular.secondary'
-    ])
-    expect(entries[0]).toMatchObject({ parent: null, covers: ['ex.regular', 'ex.regular.intake', 'ex.project'] })
-    expect(entries[3]).toMatchObject({
-      level: 'regular',
-      parent: 'ex',
-      state: 'with-supervisor',
-      identity: 'example/principal',
-      path: '+/_WORK/ex.regular.intake/work.md'
-    })
-    expect(entries[4]).toMatchObject({ parent: 'ex.sop.sites' })
-    for (const id of ['ex.bad', 'ex.self', 'ex.stray', 'ex.child', 'ex.scalar'])
-      expect(result.stderr).toContain(`+/_WORK/${id}/work.md: parent must name a State of play of territory ex`)
-  })
-
-  test('lists each unfinished work for routing with its id, state, pending count and description on one line', async () => {
-    const box = await sandbox()
-    await box.project.write('repo/.ki.toml', declaration())
-    const long = `${'Routes everything the territory sends, '.repeat(3)}and more besides, far past one line.`
-    await box.project.write(
-      'repo/+/_WORK/ex.pack/work.md',
-      `---\nid: ex.pack\nlevel: project\ntitle: 'EX > Pack'\ndescription: >-\n  Packs things.\n  Takes packing.\nworker: agent\nsupervisor: owner\n---\n`
-    )
-    await box.project.write(
-      'repo/+/_WORK/ex.pack/state.md',
-      '---\nid: ex.pack\nstate: with-supervisor\nsince: 2026-10-18T02:10:00Z\n---\n'
-    )
-    await box.project.write('repo/+/_WORK/ex.pack/messages.md', '# ex.pack messages\n\n- one.\n- two.\n')
-    await writeWork(box, 'ex.long', { state: 'on-hold', hold: '{reason: paused}', description: `'${long}'` })
-    await writeWork(box, 'ex.bare', { state: 'with-worker' })
-    await writeWork(box, 'ex.done', { state: 'finished', description: 'Finished, so not listed.' })
-    await box.project.write('repo/+/_WORK_REVIEW/ex.old/work.md', workFile('ex.old'))
-    await box.project.write('repo/+/_WORK/ex.broken/work.md', '---\nid: ex.other\n---\n')
-
-    const routing = await box.run('ki work status --repo repo --view routing', { now })
-    const json = await box.run('ki work status --repo repo --view routing --format json', { now })
-    const bad = await box.run('ki work status --repo repo --view sideways', { now })
-
+    const routing = await status(box, '--repo app --view routing')
     expect(routing.exitCode).toBe(0)
     expect(routing.stdout).toBe(
-      [
-        '╭─ KI WORK ROUTING example/principal',
-        '├─ ex.bare · with-worker · 0 pending · no description',
-        `├─ ex.long · on-hold · 0 pending · ${long.slice(0, 93)}...`,
-        '├─ ex.pack · with-supervisor · 2 pending · Packs things. Takes packing.',
-        '├─ awaiting review (1)',
-        '├─ warnings (1)',
-        '│  ╰─ ! +/_WORK/ex.broken/work.md: id ex.other must name its folder',
-        '╰─ summary: WORK=4 PENDING=2 REVIEW=1',
-        ''
-      ].join('\n')
+      `${[
+        '╭─ KI WORK ROUTING example/app',
+        '├─ ex.alpha · handoff-to-supervisor · Runs ex.alpha. Takes its units.',
+        '├─ ex.beta · handoff · no description',
+        '├─ ex.delta · on-hold · Runs ex.delta. Takes its units.',
+        '├─ ex.epsilon · handoff-to-worker · Runs ex.epsilon. Takes its units.',
+        '├─ ex.gamma · on-hold · Runs ex.gamma. Takes its units.',
+        '├─ ex.long · with-supervisor · A very long routing description that runs on and on A very long routing description that runs...',
+        '├─ ex.summit+sub · with-supervisor · Runs ex.summit+sub. Takes its units.',
+        '╰─ summary: WORK=8 LIVE=7'
+      ].join('\n')}\n`
     )
-    expect(routing.stdout).not.toContain('ex.done')
+
+    await write(box, 'ex/ex.alpha/deep', 'ex.alpha+deep', { 'ki-parent': 'ex.alpha', 'ki-repositories': '[]' })
+    await write(box, 'ex/ex.alpha/deep/deeper', 'ex.alpha+deep+deeper', { 'ki-parent': 'ex.alpha+deep' })
+    const tree = await status(box, '--repo app --view tree')
+    expect(tree.exitCode).toBe(0)
+    expect(tree.stdout).toBe(
+      `${[
+        '╭─ KI WORK TREE example/app',
+        '├─ ex.summit',
+        '│  ├─ ex.alpha · handoff-to-supervisor · owner · since 2026-11-23T06:00:00Z',
+        '│  │  ├─ ex.alpha+deep',
+        '│  │  │  ╰─ ex.alpha+deep+deeper · with-supervisor · owner · since 2026-11-23T08:00:00Z',
+        '│  │  ╰─ ex.delta · on-hold · nobody · since 2026-11-23T08:00:00Z',
+        '│  ├─ ex.beta · handoff · run/review · since 2026-11-23T08:00:00Z',
+        '│  ├─ ex.epsilon · handoff-to-worker · agent · since 2026-11-23T08:00:00Z',
+        '│  ├─ ex.gamma · on-hold · nobody · since 2026-10-01T00:00:00Z',
+        '│  ├─ ex.long · with-supervisor · owner · since 2026-11-23T08:00:00Z',
+        '│  ├─ ex.summit+sub · with-supervisor · owner · since 2026-11-22T00:00:00Z',
+        '│  ╰─ ex.zeta · finished · nobody · since 2026-11-23T08:00:00Z',
+        '╰─ summary: WORK=9 SHOWN=11'
+      ].join('\n')}\n`
+    )
+  })
+
+  test('warns of each unreadable package and each parent that names none, leaves its territory or closes a cycle', async () => {
+    const box = await setup()
+    const bad = (folder: string, id: string, fields: Fields) => write(box, `bad/${folder}`, id, fields)
+    await box.project.write('store/work/bad/bad.empty/10-orphan.change.md', '# Orphan\n')
+    await box.project.write('store/work/bad/bad.bare/_index.md', '# No front matter\n')
+    await bad('bad.id', 'Bad_Id', {})
+    await bad('bad.folder', 'bad.elsewhere', {})
+    await bad('bad.level', 'bad.level', { 'ki-level': 'summit' })
+    await bad('bad.summit', 'bad.summit', { 'ki-level': 'territory' })
+    await bad('bad.summit/strand', 'bad.summit+strand', { 'ki-parent': 'bad.other' })
+    await bad('bad.parent', 'bad.parent', { 'ki-parent': '[bad.summit]' })
+    await bad('bad.worker', 'bad.worker', { 'ki-worker': "''" })
+    await bad('bad.supervisor', 'bad.supervisor', { 'ki-supervisor': undefined })
+    await bad('bad.repositories', 'bad.repositories', { 'ki-repositories': undefined })
+    await bad('bad.records', 'bad.records', { 'ki-records': '\n  - 7' })
+    await bad('bad.state', 'bad.state', { 'ki-state': 'resting' })
+    await bad('bad.since', 'bad.since', { 'ki-since': 'yesterday' })
+    await bad('bad.handoff', 'bad.handoff', { 'ki-state': 'handoff' })
+    await bad('bad.hold', 'bad.hold', { 'ki-state': 'on-hold', 'ki-hold': '{reason: bored}' })
+    await bad('bad.lost', 'bad.lost', { 'ki-parent': 'bad.missing' })
+    await bad('bad.abroad', 'bad.abroad', { 'ki-parent': 'ex.summit' })
+    await bad('bad.one', 'bad.one', { 'ki-parent': 'bad.two' })
+    await bad('bad.two', 'bad.two', { 'ki-parent': 'bad.one' })
+    await bad('bad.tail', 'bad.tail', { 'ki-parent': 'bad.one' })
+
+    const json = await status(box, '--all --format json')
     expect(json.exitCode).toBe(0)
-    expect(JSON.parse(json.stdout).schema).toBe('ki/work-status/v1')
-    expect(bad.exitCode).toBe(2)
-    expect(bad.output).toContain("argument 'sideways' is invalid")
+    const ids = JSON.parse(json.stdout).work.map((work: { id: string }) => work.id)
+    expect(ids).toEqual(expect.arrayContaining(['bad.lost', 'bad.abroad', 'bad.one', 'bad.two', 'bad.tail']))
+    expect(ids).not.toContain('bad.summit+strand')
+    const warnings = [
+      'work/bad/bad.empty/ has no _index.md',
+      'work/bad/bad.abroad/_index.md: ki-parent ex.summit is outside territory bad',
+      'work/bad/bad.bare/_index.md: has no YAML front matter',
+      'work/bad/bad.folder/_index.md: ki-id bad.elsewhere must agree with its folder, bad.folder',
+      'work/bad/bad.handoff/_index.md: ki-target must name a holder in handoff',
+      'work/bad/bad.hold/_index.md: ki-hold.reason must be one of paused, more-expected, snoozing while on hold',
+      'work/bad/bad.id/_index.md: ki-id must be a dotted work id',
+      'work/bad/bad.level/_index.md: ki-level must be one of root, territory, regular, project',
+      'work/bad/bad.lost/_index.md: ki-parent bad.missing names no package in the store',
+      'work/bad/bad.one/_index.md: ki-parent closes a cycle back to bad.one',
+      'work/bad/bad.parent/_index.md: ki-parent must be a dotted work id',
+      'work/bad/bad.records/_index.md: ki-records must be a list of record ids',
+      'work/bad/bad.repositories/_index.md: ki-repositories must be a list of <territory folder>/<repository> names',
+      'work/bad/bad.since/_index.md: ki-since must be a UTC time',
+      'work/bad/bad.state/_index.md: ki-state must be one of with-worker, handoff-to-supervisor, with-supervisor, handoff-to-worker, handoff, on-hold, finished',
+      'work/bad/bad.summit/strand/_index.md: ki-parent must name the parent package, bad.summit',
+      'work/bad/bad.supervisor/_index.md: ki-supervisor must name a holder',
+      'work/bad/bad.two/_index.md: ki-parent closes a cycle back to bad.two',
+      'work/bad/bad.worker/_index.md: ki-worker must name a holder'
+    ]
+    for (const warning of warnings) expect(json.stderr).toContain(`ki: warning: ${warning}\n`)
+    expect(json.stderr).not.toContain('bad.tail/_index.md')
+    expect(json.stderr.split('\n').filter(Boolean)).toHaveLength(warnings.length)
+
+    const text = await status(box, '--all --view tree')
+    expect(text.stdout).toContain(`├─ warnings (${warnings.length})\n`)
+    expect(text.stdout).toContain('├─ bad.lost · with-supervisor · owner')
+    expect(text.stdout).not.toContain('bad.tail')
   })
 
-  test('rejects an unknown format and a directory that is not a KI repository', async () => {
-    const box = await sandbox()
-    await box.project.write('repo/.ki.toml', declaration())
-    await box.project.mkdir('plain')
+  test('reads the store --store names, and refuses an unknown form or --all with --repo', async () => {
+    const box = await setup()
+    box.setEnv({ MCP_CAIRN_STORE: undefined })
+    await box.project.write('elsewhere/work/zz/zz.summit/_index.md', entry('zz.summit', { 'ki-level': 'territory' }))
+    const given = await status(box, '--all --store elsewhere --format json')
+    expect(JSON.parse(given.stdout).work.map((work: { id: string }) => work.id)).toEqual(['zz.summit'])
 
-    const format = await box.run('ki work status --repo repo --format yaml', { now })
-    const plain = await box.run('ki work status --repo plain', { now })
+    const none = await status(box, '--all')
+    expect(none.exitCode).toBe(1)
+    expect(none.stderr).toContain('no Cairn store: pass --store <dir>')
 
-    expect(format.exitCode).toBe(2)
-    expect(format.output).toContain("argument 'yaml' is invalid")
-    expect(plain.exitCode).toBe(2)
-    expect(plain.output).toContain('--repo must name a repository containing .ki.toml')
+    const format = await status(box, '--all --format yaml')
+    expect(format.exitCode).not.toBe(0)
+    const both = await status(box, '--all --repo app')
+    expect(both.exitCode).not.toBe(0)
+    expect(both.stderr).toContain("option '--all' cannot be used with option '--repo <dir>'")
+    const outside = await status(box, '--repo store')
+    expect(outside.exitCode).toBe(2)
   })
-})
-
-test('typed main, Project, regular and secondary shapes retain parent continuity', async () => {
-  const box = await sandbox()
-  await box.project.write('repo/.ki.toml', declaration(capital([])))
-  await writeWork(box, 'ex.sop.main', {
-    level: 'territory',
-    covers: '[ex.prj.alpha, ex.regular.main, ex.regular.topic]'
-  })
-  await writeWork(box, 'ex.sop.sites', { level: 'territory', parent: 'ex.sop.main', covers: '[ex.prj.alpha]' })
-  await writeWork(box, 'ex.prj.alpha', { parent: 'ex.sop.sites', project: 'alpha' })
-  await writeWork(box, 'ex.reg.main', { level: 'regular', parent: 'ex.sop.main' })
-  await writeWork(box, 'ex.reg.topic', { level: 'regular', parent: 'ex.sop.main' })
-  const result = await box.run('ki work status --repo repo --format json', { now })
-  expect(result.exitCode).toBe(0)
-  const report = JSON.parse(result.stdout)
-  expect(report.work.map((entry: { id: string }) => entry.id)).toEqual([
-    'ex.prj.alpha',
-    'ex.reg.main',
-    'ex.reg.topic',
-    'ex.sop.main',
-    'ex.sop.sites'
-  ])
-  expect(report.work.find((entry: { id: string }) => entry.id === 'ex.sop.main').parent).toBeNull()
-  expect(report.work.find((entry: { id: string }) => entry.id === 'ex.sop.sites').parent).toBe('ex.sop.main')
-})
-
-test('typed status refuses duplicate old/new homes and excludes typed parent cycles', async () => {
-  const box = await sandbox()
-  await box.project.write('repo/.ki.toml', declaration(capital([])))
-  await writeWork(box, 'ex.sop.main', { level: 'territory', parent: 'ex.sop.main', covers: '[]' })
-  const cycle = await box.run('ki work status --repo repo --format json', { now })
-  expect(cycle.exitCode).toBe(0)
-  expect(JSON.parse(cycle.stdout).work).toEqual([])
-  expect(cycle.stderr).toContain('takes no parent')
-  await writeWork(box, 'ex.alpha')
-  await writeWork(box, 'ex.prj.alpha')
-  const duplicate = await box.run('ki work status --repo repo --format json', { now })
-  expect(duplicate.exitCode).toBe(2)
-  expect(duplicate.stderr).toContain('ambiguous work')
-})
-
-test('reg status rejects duplicate legacy topic homes and mismatched levels', async () => {
-  const box = await sandbox()
-  await box.project.write('repo/.ki.toml', declaration(capital([])))
-  await writeWork(box, 'ex.reg.topic', { level: 'project' })
-  const invalid = await box.run('ki work status --repo repo --format json', { now })
-  expect(invalid.stderr).toContain('work type segment must agree with level')
-  await writeWork(box, 'ex.reg.topic', { level: 'regular' })
-  await writeWork(box, 'ex.regular.topic', { level: 'regular' })
-  const duplicate = await box.run('ki work status --repo repo --format json', { now })
-  expect(duplicate.exitCode).toBe(2)
-  expect(duplicate.stderr).toContain('ambiguous work')
-})
-
-test('a sub-package names its parent package and aliases no other work', async () => {
-  const box = await sandbox()
-  await box.project.write('repo/.ki.toml', declaration(capital([])))
-  await writeWork(box, 'ex.reg.intake', { level: 'regular' })
-  await writeWork(box, 'ex.reg.intake.viewer', { level: 'regular', parent: 'ex.reg.intake' })
-  await writeWork(box, 'ex.prj.alpha')
-  await writeWork(box, 'ex.prj.alpha.site', { parent: 'ex.prj.alpha' })
-  await writeWork(box, 'ex.reg.intake.stray', { level: 'regular', parent: 'ex.sop.main' })
-  await writeWork(box, 'ex.reg.intake.loose', { level: 'regular' })
-  const result = await box.run('ki work status --repo repo --format json', { now })
-  expect(result.exitCode, result.output).toBe(0)
-  const entries = JSON.parse(result.stdout).work
-  expect(entries.map((entry: { id: string }) => entry.id)).toEqual([
-    'ex.prj.alpha',
-    'ex.prj.alpha.site',
-    'ex.reg.intake',
-    'ex.reg.intake.viewer'
-  ])
-  expect(entries[1]).toMatchObject({ level: 'project', parent: 'ex.prj.alpha' })
-  expect(entries[3]).toMatchObject({ level: 'regular', parent: 'ex.reg.intake' })
-  for (const id of ['ex.reg.intake.stray', 'ex.reg.intake.loose'])
-    expect(result.stderr).toContain(
-      `+/_WORK/${id}/work.md: parent must name the sub-package's parent package, ex.reg.intake`
-    )
-})
-
-test('an untyped three-part identity keeps only its own name and aliases no other work', async () => {
-  const box = await sandbox()
-  await box.project.write('repo/.ki.toml', declaration(capital([])))
-  await writeWork(box, 'ex.prj.alpha')
-  await writeWork(box, 'ex.lab.alpha')
-  await writeWork(box, 'ex.ops.alpha', { level: 'regular' })
-  const result = await box.run('ki work status --repo repo --format json', { now })
-  expect(result.exitCode, result.output).toBe(0)
-  expect(JSON.parse(result.stdout).work.map((entry: { id: string }) => entry.id)).toEqual([
-    'ex.lab.alpha',
-    'ex.ops.alpha',
-    'ex.prj.alpha'
-  ])
 })

@@ -4,6 +4,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 
 ## Pre-1.0 baseline
 
+- Work packages from the Cairn store (ki.summit change 11): `ki work status` and `ki work base` read the work packages in the Cairn store, `work/<territory>/<id>/` with each sub-package, `<parent id>+<folder>`, inside its parent, and no longer read a repository's `+/_WORK/`, `+/_WORK_REVIEW/` or `+/_CHECKPOINTS/`, nor `state.md`, `messages.md` or `work.md`; only each package's `_index.md` and its `*.change.md` change documents are read, and never `work-legacy/`. The store is found as `ki work banner` finds it: `--store`, `MCP_CAIRN_STORE`, then `[store] path` in the rig's `cairn/config.toml`. `ki work status` lists the packages whose `ki-repositories` names the repository, or every one with `--all`, places them in their work tree by `ki-parent` with `--view tree`, and writes `ki/work-status/v2`: entries gain `project`, `repositories`, `records`, `workers`, `mark` and `changes`, `role` is now the package's `ki-role` and the holder's role moves to `holderRole`, and `title`, `theme`, `covers`, `messages` and `items` are gone. `ki work base` checks each change document's `ki-inputs`, a repository or a path in one at a commit or tag, or a store file at a `ki-revised` date or commit, closes `done` and `replaced` documents unchecked, and writes `ki/work-base/v2`; `Base:`, `Touches:` and `.design.md` are no longer read. A roadmap's ledger may be `_index.md`, read before `_ISSUES.md`, by `ki link` and the roadmap listing, and a roadmap record may carry `ki-document-type`.
 - VS Code projections removed: `ki vscode` and its `check` and `sync` subcommands have left `ki`, with the projection code behind them. chezmoi's `workspaces vscode populate` and `workspaces vscode clean` took over VS Code workspaces on 31 October 2026, so `ki vscode sync` no longer found the workspace folder it wrote to, and the trusted-folder list is now maintained by hand in the chezmoi source, which `chezmoi apply` renders for Claude Desktop, Claude Code and Codex. `ki repo open` and `ki territory open --target vscode`, which only open existing workspaces, are unchanged. The MANAGE-011, MANAGE-012, MANAGE-013 and MANAGE-018 requirements are retired and the VS Code projection guide removed. Entries below that describe `ki vscode` record its history only.
 - Standing prune (PRUNE-RECORDS a): `ki repo roadmap prune --standing` prunes, without an identifier and without asking, only the records whose `done` or `cancelled` state was first committed at least 7 days ago and whose terminal commit, with every commit of the repository the record names, has landed on the upstream default branch as last fetched. Every other terminal record stays, on a `not due` line with its reason. Acceptance still asks the owner.
 - Retired GitHub Issues adapter (REMOTE-TRACKERS a): `ki-work-github-issues` folded into `ki-work-linear`, so `[skills.ki-work].adapter = "github-issues"` is no longer supported. A repository still declaring it gets a diagnostic, exit 2, pointing to `linear` with `[skills.ki-work-linear]` or to the local `roadmap` adapter.
@@ -183,8 +184,8 @@ This baseline describes the `v0.17.0` release. Domain imports and extracted type
 
 #### Work model
 
-- `ki work status [--repo <dir>] [--format <text|json>] [--view <views|routing>]`
-- `ki work base [--repo <dir>] [--format <text|json>]`
+- `ki work status [--repo <dir>|--all] [--store <dir>] [--format <text|json>] [--view <views|routing|tree>]`
+- `ki work base [--repo <dir>] [--store <dir>] [--format <text|json>]`
 
 #### Estate convergence
 

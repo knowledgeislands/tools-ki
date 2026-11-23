@@ -306,7 +306,8 @@ describe('[ki repo roadmap]', () => {
         note_type: 'roadmap',
         tags: '[roadmap]',
         author: 'Knowledge Islands',
-        created: '2026-09-01'
+        created: '2026-09-01',
+        'ki-document-type': 'roadmap-record@2026-11-01'
       })
     )
 
@@ -320,7 +321,7 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('KBS-002-owned.md: unknown field aliases\n')
     expect(result.output).toContain('KBS-002-owned.md: unknown field audience\n')
     expect(result.output).not.toContain('KBS-003-known.md')
-    expect(result.output).not.toMatch(/unknown field (tags|note_type|author|created)/)
+    expect(result.output).not.toMatch(/unknown field (tags|note_type|author|created|ki-document-type)/)
 
     const summary = await box.run('ki repo --repo knowledge roadmap summary')
     expect(summary.exitCode).toBe(0)
@@ -645,6 +646,30 @@ describe('[ki repo roadmap]', () => {
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('roadmap (1)')
     expect(result.output).toContain('KI-TOOL-KI-CLI-003 [draft] Inspect governed work')
+  })
+
+  test('reads past the renamed _index.md ledger and a record’s ki-document-type', async () => {
+    const box = await sandbox()
+    await box.project.write(
+      'repo/.ki.toml',
+      '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
+    )
+    await box.project.write('repo/docs/roadmap/_index.md', '---\nareas: { CLI: 3 }\n---\n')
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md',
+      item({ 'ki-document-type': 'roadmap-record@2026-11-01' })
+    )
+
+    const result = await box.run('ki repo --repo repo roadmap list')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('roadmap (1)')
+    expect(result.output).toContain('KI-TOOL-KI-CLI-003 [draft] Inspect governed work')
+
+    await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md', item({ 'ki-document-type': '' }))
+    const empty = await box.run('ki repo --repo repo roadmap list')
+    expect(empty.exitCode).not.toBe(0)
+    expect(empty.output).toContain('ki-document-type must name a document type')
   })
 
   test('aggregates selected roadmaps while treating absent roots as empty', async () => {

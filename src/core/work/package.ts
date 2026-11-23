@@ -1,60 +1,12 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { basename, join, resolve, sep } from 'node:path'
-import { parse as parseToml } from 'smol-toml'
-import { parse } from 'yaml'
 import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import type { LocalRegistryEntry } from '../storage/local-registry.ts'
 import { readWorkItemInventoryIfPresent, workItemLane } from './items.ts'
 import { readDeclaredPlanningSource } from './planning.ts'
 import { type WorkState, workStates } from './status.ts'
-
-/** A package's entry file in the Cairn store, `work/<territory>/<id>/_index.md`. */
-const ENTRY = '_index.md'
-const WORK = 'work'
-
-/** The rig's Cairn configuration, which chezmoi renders and the Cairn app reads, under the user's XDG configuration home. */
-const CAIRN_CONFIGURATION = join('cairn', 'config.toml')
-
-export interface CairnConfiguration {
-  /** The store clone, from `[store] path`, with a leading `~` expanded. */
-  readonly store?: string
-  /** This rig's name, from `[rig] name`. */
-  readonly rig?: string
-}
-
-/** Reads the rig's Cairn configuration; a missing file reads as empty, a malformed one is an error naming it. */
-export const readCairnConfiguration = async (configHome: string, home: string): Promise<CairnConfiguration> => {
-  const path = join(configHome, CAIRN_CONFIGURATION)
-  const text = await readFile(path, 'utf8').catch(() => undefined)
-  if (text === undefined) return {}
-  let values: Record<string, unknown>
-  try {
-    values = parseToml(text)
-  } catch (error) {
-    throw new KiError(`${path} is not valid TOML: ${(error as Error).message}`)
-  }
-  const table = (name: string): Record<string, unknown> => Object(values[name])
-  const store = table('store')['path']
-  const rig = table('rig')['name']
-  return {
-    ...(typeof store === 'string' ? { store: store.replace(/^~(?=$|\/)/, home) } : {}),
-    ...(typeof rig === 'string' ? { rig } : {})
-  }
-}
-
-const frontMatter = (text: string): Record<string, unknown> | undefined => {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text)
-  if (!match) return undefined
-  try {
-    const values: unknown = parse(match[1] as string)
-    return values && typeof values === 'object' && !Array.isArray(values)
-      ? (values as Record<string, unknown>)
-      : undefined
-  } catch {
-    return undefined
-  }
-}
+import { directories, frontMatter, PACKAGE_ENTRY, STORE_WORK } from './store.ts'
 
 interface MarkdownFile {
   readonly path: string
@@ -85,12 +37,6 @@ const timeField = (file: MarkdownFile, field: string): string => {
   return value
 }
 
-const directories = async (path: string): Promise<readonly string[]> =>
-  (await readdir(path, { withFileTypes: true }).catch(() => []))
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort()
-
 /**
  * The folder of a package named by its id: `work/<territory>/<id>/`, a sub-package `<id>+<name>` one folder down,
  * its entry file's `ki-id` confirming it.
@@ -98,11 +44,11 @@ const directories = async (path: string): Promise<readonly string[]> =>
 export const locateWorkPackage = async (store: string, id: string): Promise<string> => {
   const [base, ...subs] = id.split('+')
   const territory = (base as string).split('.')[0] as string
-  const folder = join(store, WORK, territory, base as string, ...subs)
-  const entry = await readMarkdown(join(folder, ENTRY))
+  const folder = join(store, STORE_WORK, territory, base as string, ...subs)
+  const entry = await readMarkdown(join(folder, PACKAGE_ENTRY))
   if (entry?.fields['ki-id'] !== id)
     throw new KiError(
-      `no work package ${id} in ${join(store, WORK)}`,
+      `no work package ${id} in ${join(store, STORE_WORK)}`,
       1,
       'name a package by its ki-id, as ki.summit, or pass --store <dir> for another store'
     )
@@ -114,11 +60,11 @@ export const enclosingWorkPackage = async (
   workingDirectory: string
 ): Promise<{ readonly store: string; readonly folder: string }> => {
   const parts = resolve(workingDirectory).split(sep)
-  const index = parts.lastIndexOf(WORK)
+  const index = parts.lastIndexOf(STORE_WORK)
   if (index > 0)
     for (let end = parts.length; end > index + 2; end--) {
       const folder = parts.slice(0, end).join(sep)
-      if ((await readMarkdown(join(folder, ENTRY)))?.fields['ki-id'] !== undefined)
+      if ((await readMarkdown(join(folder, PACKAGE_ENTRY)))?.fields['ki-id'] !== undefined)
         return { store: parts.slice(0, index).join(sep), folder }
     }
   throw new KiError(
@@ -291,7 +237,7 @@ const changeDocuments = async (folder: string): Promise<readonly MarkdownFile[]>
   const own = await Promise.all(files.map((name) => readMarkdown(join(folder, name)) as Promise<MarkdownFile>))
   const subs = await Promise.all(
     (await directories(folder)).map(async (name) =>
-      (await readMarkdown(join(folder, name, ENTRY))) ? changeDocuments(join(folder, name)) : []
+      (await readMarkdown(join(folder, name, PACKAGE_ENTRY))) ? changeDocuments(join(folder, name)) : []
     )
   )
   return [...own, ...subs.flat()]
@@ -319,7 +265,9 @@ const meetingEntries = async (store: string): Promise<readonly MarkdownFile[]> =
       ])
     )
   ).flat()
-  const entries = await Promise.all(folders.map((folder) => readMarkdown(join(folder, ENTRY)).catch(() => undefined)))
+  const entries = await Promise.all(
+    folders.map((folder) => readMarkdown(join(folder, PACKAGE_ENTRY)).catch(() => undefined))
+  )
   return entries.filter((entry): entry is MarkdownFile => entry?.fields['ki-document-type'] === 'meeting')
 }
 
@@ -334,9 +282,8 @@ const openMeetings = async (store: string, id: string, actors: readonly string[]
 
 /** An actor's `ki-name` in the store's roster, or undefined where its roster file names none. */
 const rosterName = async (store: string, actor: string): Promise<string | undefined> => {
-  const name = (await readMarkdown(join(store, 'roster', 'actors', actor.replace(/^actor:/, ''), ENTRY)))?.fields[
-    'ki-name'
-  ]
+  const name = (await readMarkdown(join(store, 'roster', 'actors', actor.replace(/^actor:/, ''), PACKAGE_ENTRY)))
+    ?.fields['ki-name']
   return typeof name === 'string' && name.trim() ? name : undefined
 }
 
@@ -385,7 +332,7 @@ const seat = async (
 ): Promise<{ readonly glyph: string | null; readonly name: string | null; readonly actor: string | null }> => {
   const role = entry.fields['ki-role']
   if (typeof role !== 'string') return { glyph: null, name: null, actor: null }
-  const rolePage = join(store, 'roster', 'roles', role, ENTRY)
+  const rolePage = join(store, 'roster', 'roles', role, PACKAGE_ENTRY)
   const page = await readMarkdown(rolePage)
   if (!page) throw missing(rolePage, 'ki-glyph', `is missing: no role page for ki-role ${role} in ${entry.path}`)
   const glyph = textField(page, 'ki-glyph')
@@ -457,7 +404,7 @@ export const readWorkPackageBanner = async (
   folder: string,
   registry: readonly LocalRegistryEntry[]
 ): Promise<WorkPackageBanner> => {
-  const entry = (await readMarkdown(join(folder, ENTRY))) as MarkdownFile
+  const entry = (await readMarkdown(join(folder, PACKAGE_ENTRY))) as MarkdownFile
   const id = textField(entry, 'ki-id')
   const state = textField(entry, 'ki-state') as WorkState
   if (!workStates.includes(state))
@@ -489,33 +436,4 @@ export const readWorkPackageBanner = async (
     meetings: await openMeetings(store, id, actorIds(entry.fields['ki-workers'])),
     roadmap: await roadmapCounts(entry, registry)
   }
-}
-
-/** The rig's store: `MCP_CAIRN_STORE`, then the rig's Cairn configuration, or undefined where neither names one. */
-export const configuredCairnStore = (
-  environment: NodeJS.ProcessEnv,
-  configuration: CairnConfiguration,
-  workingDirectory: string
-): string | undefined => {
-  const store = (environment['MCP_CAIRN_STORE'] || undefined) ?? configuration.store
-  return store === undefined ? undefined : resolve(workingDirectory, store)
-}
-
-/** The store a named package is read from: the given folder, then the rig's store. */
-export const resolveCairnStore = (
-  given: string | undefined,
-  environment: NodeJS.ProcessEnv,
-  configuration: CairnConfiguration,
-  workingDirectory: string
-): string => {
-  const store =
-    given === undefined
-      ? configuredCairnStore(environment, configuration, workingDirectory)
-      : resolve(workingDirectory, given)
-  if (store === undefined)
-    throw new KiError(
-      "no Cairn store: pass --store <dir>, set MCP_CAIRN_STORE, or set [store] path in the rig's cairn/config.toml",
-      1
-    )
-  return store
 }
