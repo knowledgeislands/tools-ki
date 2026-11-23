@@ -137,7 +137,8 @@ const shapeError = (path: string, detail: string): KiError => new KiError(`${bas
 /**
  * Skills retired on 22 November 2026. The shape skills went into ki-repo and ki-repo-tools (REPO-CORE a,
  * REPO-OTHERS a); three knowledge-base satellites went into ki-repo-kb, and ki-repo-kb-streams was split between
- * ki-repo-kb, ki-work-roadmap and ki-work (KB-FOLD b).
+ * ki-repo-kb, ki-work-roadmap and ki-work (KB-FOLD b). ki-repo-website-app was renamed ki-repo-website-interactive
+ * (WEBSITE-APP-NAME a).
  */
 const RETIRED_SKILLS: readonly string[] = [
   'ki-repo-project',
@@ -146,7 +147,8 @@ const RETIRED_SKILLS: readonly string[] = [
   'ki-repo-kb-activities',
   'ki-repo-kb-live-artifacts',
   'ki-repo-kb-principal',
-  'ki-repo-kb-streams'
+  'ki-repo-kb-streams',
+  'ki-repo-website-app'
 ]
 
 /** The `[repo]` key naming a repository's backpacks; it was `harnesses` until the rename of 14 November 2026. */

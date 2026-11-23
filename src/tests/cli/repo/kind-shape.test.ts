@@ -29,7 +29,8 @@ test.each([
   'ki-repo-kb-activities',
   'ki-repo-kb-live-artifacts',
   'ki-repo-kb-principal',
-  'ki-repo-kb-streams'
+  'ki-repo-kb-streams',
+  'ki-repo-website-app'
 ])('skips the retired [skills.%s] table a repository has not yet removed', async (retired) => {
   const box = await sandbox()
   await box.project.write(
@@ -88,8 +89,8 @@ test.each([
   ['repo_type = "project"\nprimary_shape = "tools"', ['ki-repo-tools'], 'primary_shape is required'],
   ['repo_type = "project"\nprimary_shape = "ki-engineering"', ['ki-engineering'], 'primary_shape is required'],
   [
-    'repo_type = "project"\nprimary_shape = "ki-repo-website-app"',
-    ['ki-repo-website-app'],
+    'repo_type = "project"\nprimary_shape = "ki-repo-website-interactive"',
+    ['ki-repo-website-interactive'],
     'primary_shape is required'
   ],
   ['repo_type = "project"\nprimary_shape = "ki-repo-kb"', ['ki-repo-kb'], 'primary_shape is required'],
