@@ -4,7 +4,6 @@ import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../config
 import { KiError } from '../errors.ts'
 import { prepareWrites, publishWrites } from '../filesystem/index.ts'
 import { resolveRepositoryTargets } from '../repository/index.ts'
-import type { LocatedTrade } from '../trade/model.ts'
 import {
   hasWorkItemRoot,
   isAllowedHorizon,
@@ -59,7 +58,6 @@ export interface RoadmapOperationContext {
   /** Finds the Cairn store whose territory register ranks an estate or the Capitals. */
   readonly store: () => Promise<string | undefined>
   readonly now: () => number
-  readonly locateTrades: () => Promise<readonly LocatedTrade[]>
 }
 
 export interface RoadmapPruneOptions {
@@ -108,23 +106,10 @@ interface RoadmapItemEvidence {
   readonly grouping?: RoadmapGroupingResult
 }
 
-export interface RoadmapItemResult extends RoadmapItemEvidence {
-  readonly tradeInventory: 'not-requested'
-}
-
-export interface RoadmapListResult extends RoadmapItemEvidence {
-  readonly tradeInventory: 'available' | 'unavailable'
-  readonly trades: readonly LocatedTrade[]
-  readonly tradeDiagnostic?: string
-}
+export type RoadmapItemResult = RoadmapItemEvidence
 
 export interface RoadmapItemList {
   readonly results: readonly RoadmapItemResult[]
-}
-
-export interface RoadmapList {
-  readonly estate: readonly LocatedTrade[]
-  readonly results: readonly RoadmapListResult[]
 }
 
 export interface RoadmapPruneResult {
@@ -368,7 +353,6 @@ export const listRoadmapItems = async (
         return {
           repository: repository.root,
           ...projection,
-          tradeInventory: 'not-requested',
           ...(planning === undefined || inventory === undefined
             ? { roadmap: 'absent' as const }
             : {
@@ -395,42 +379,12 @@ export const listRoadmapItems = async (
         return {
           repository: repository.root,
           ...projection,
-          tradeInventory: 'not-requested',
           diagnostic
         }
       }
     })
   )
   return { results }
-}
-
-export const listRoadmap = async (
-  context: RoadmapOperationContext,
-  selection: RoadmapSelection,
-  options: RoadmapListOptions
-): Promise<RoadmapList> => {
-  const [items, inventory] = await Promise.all([
-    listRoadmapItems(context, selection, options),
-    context
-      .locateTrades()
-      .then((estate) => ({ state: 'available' as const, estate }))
-      .catch((error) => ({
-        state: 'unavailable' as const,
-        estate: [] as readonly LocatedTrade[],
-        // locateTrades normalizes every failure to a KiError before this boundary.
-        /* v8 ignore next */
-        diagnostic: error instanceof Error ? error.message : String(error)
-      }))
-  ])
-  return {
-    estate: inventory.estate,
-    results: items.results.map((item) => ({
-      ...item,
-      tradeInventory: inventory.state,
-      trades: inventory.estate.filter((trade) => trade.root === item.repository),
-      ...('diagnostic' in inventory ? { tradeDiagnostic: inventory.diagnostic } : {})
-    }))
-  }
 }
 
 export const pruneRoadmap = async (

@@ -27,7 +27,7 @@ const fixture = async (prefix: string | null = 'ki') => {
       `${prefix === null ? '' : `territory_prefix = ${JSON.stringify(prefix)}\n`}territory_name =`
     )
   )
-  await box.project.write('nested/Tool [*]\nname/.ki.toml', memberConfiguration('example/member', { trades: false }))
+  await box.project.write('nested/Tool [*]\nname/.ki.toml', memberConfiguration('example/member'))
   const entries = [
     { key: 'capital-key', repository: home('example/capital'), path: capital },
     { key: 'member-key', repository: home('example/member'), path: member }
@@ -57,6 +57,20 @@ describe('territory selection', () => {
       expect(failed.stdout).toBe('')
     }
     expect((await box.run(['ki', 'territory', 'roots', '-t', 'ki', '--filter', 'Capital'])).stdout).toBe(`${capital}\n`)
+  })
+  test('orders equally ranked estate roots by root path, whatever their identity order', async () => {
+    const { box, entries } = await fixture()
+    const early = await box.project.mkdir('aaa checkout')
+    const late = await box.project.mkdir('zzz checkout')
+    await box.project.write('aaa checkout/.ki.toml', memberConfiguration('example/zzz'))
+    await box.project.write('zzz checkout/.ki.toml', memberConfiguration('example/aaa'))
+    await registry(box, [
+      ...entries,
+      { key: 'zzz-key', repository: home('example/zzz'), path: early },
+      { key: 'aaa-key', repository: home('example/aaa'), path: late }
+    ])
+    const selected = await roots(box, '--estate', '--filter', 'aaa', '--filter', 'zzz')
+    expect(selected.stdout).toBe(`${early}\0${late}\0`)
   })
   test('fallback follows the Capital registry key while explicit prefixes survive key changes', async () => {
     const { box, entries } = await fixture(null)
@@ -103,6 +117,22 @@ describe('territory selection', () => {
     expect((await roots(box, '--estate')).stderr).toContain('has no checkout at')
     // Selections that read repositories rather than list them stay strict.
     expect((await box.run(['ki', 'repo', 'audit', '-t', 'ki'])).stderr).toContain('physical directory')
+  })
+  test('treats a member declaration that claims no readable identity as its own fault', async () => {
+    const { box, capital } = await fixture()
+    const warning = `ki: warning: territory ki member ${home('example/member')} cannot be read at`
+    const cases: readonly (readonly [string, number, string])[] = [
+      ['skills = 1\n', 0, warning],
+      ['[skills.ki-repo]\nrepository = "example/member"\n', 0, warning],
+      ['[skills]\nki-repo = 1\n', 2, 'must use canonical HTTPS GitHub repository form']
+    ]
+    for (const [contents, exitCode, detail] of cases) {
+      await box.project.write('nested/Tool [*]\nname/.ki.toml', contents)
+      const result = await roots(box, '-t', 'ki')
+      expect(result.exitCode, contents).toBe(exitCode)
+      expect(result.stdout, contents).toBe(exitCode ? '' : `${capital}\0`)
+      expect(result.stderr, contents).toContain(detail)
+    }
   })
   test('show and audit name each unregistered member, check the rest and exit 1', async () => {
     const { box, entries } = await fixture()
@@ -221,6 +251,49 @@ describe('territory selection', () => {
     )
     expect((await roots(box, '-t', 'ki')).stderr).toContain('lower-case hyphenated')
   })
+  test('rejects each malformed Capital territory declaration', async () => {
+    const { box } = await fixture()
+    const capitalHome = home('example/capital')
+    const memberHome = home('example/member')
+    const list = (values: readonly string[]): string => `[${values.map((value) => JSON.stringify(value)).join(', ')}]`
+    const header = memberConfiguration('example/capital')
+    const N = '[skills.ki-repo].territory_name'
+    const M = '[skills.ki-repo].territory_members'
+    const repositories = 'must be a non-empty array of canonical HTTPS GitHub repositories'
+    const named = (members: string) => `${header}territory_name = "Example territory"\nterritory_members = ${members}\n`
+    const cases: readonly (readonly [string, string])[] = [
+      [header, `is a territory Capital and must declare ${N} and ${M}`],
+      [
+        `${named(list([capitalHome, memberHome]))}\n[skills.ki-repo.territory]\nname = "Example territory"\n`,
+        '[skills.ki-repo.territory] is retired'
+      ],
+      [`${header}territory_name = "Example territory"\n`, `${M} ${repositories}`],
+      [`${header}territory_members = ${list([capitalHome])}\n`, `${N} must be a non-empty string`],
+      [
+        `${header}territory_name = " "\nterritory_members = ${list([capitalHome])}\n`,
+        `${N} must be a non-empty string`
+      ],
+      [named('[]'), `${M} ${repositories}`],
+      [named('"all"'), `${M} ${repositories}`],
+      [named('[1]'), `${M} ${repositories}`],
+      [named(list(['https://github.com/Example/Capital'])), `${M} ${repositories}`],
+      [named(list([capitalHome, capitalHome])), `${M} must not repeat a repository`],
+      [named(list([memberHome])), `${M} must include the Capital itself`],
+      [named(list([memberHome, capitalHome])), `${M} must be sorted ascending`],
+      // Code-point order, not locale collation: `_` (U+005F) sorts after `-` (U+002D).
+      [named(list([home('example/a_b'), home('example/a-b'), capitalHome])), `${M} must be sorted ascending`],
+      [
+        header.replace(`repository = "${capitalHome}"`, 'repository = "example/capital"'),
+        'must use canonical HTTPS GitHub repository form'
+      ]
+    ]
+    for (const [contents, detail] of cases) {
+      await box.project.write('Capital checkout/.ki.toml', contents)
+      const result = await roots(box, '--estate')
+      expect(result.stderr, detail).toContain(detail)
+    }
+  })
+
   test('rejects invalid grammar and ignored selectors; filter alone narrows native default', async () => {
     const { box } = await fixture()
     for (const args of [[], ['-t', 'ki', '--estate'], ['team'], ['--agora', 'team']]) {

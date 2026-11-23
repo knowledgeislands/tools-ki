@@ -1,4 +1,4 @@
-.TH KI 1 "2026-11-19" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-11-23" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -268,68 +268,6 @@ Replace one inactive installed backpack with a verified archive.
 .TP
 .B ki backpack uninstall <backpack-id>
 Remove one installed non-canonical backpack.
-.SS Trades
-\&
-.TP
-.B ki repo [repo-options] trade routes list [--incomplete] [--format text|json]
-List selected local typed trade routes, or aggregate selected declarations
-with parent \fB--estate\fR, \fB--principals\fR or \fB--territory\fR.
-Limit either view to incomplete routes.
-Emit versioned machine-readable estate evidence with
-.BR "--format json" .
-.TP
-.B ki repo [repo-options] trade routes check [repository] [--direction export|import] [--kind work|knowledge]
-Check Capital-granted typed trade routes and their activation state.
-.TP
-.B ki repo [repo-options] trade policy show
-Show the territory Capital's channels, standing grants, and knowledge
-subtypes.
-.TP
-.B ki repo [repo-options] trade policy check
-Check every territory member against the Capital policy through the
-local registry.
-.TP
-.B ki repo [repo-options] trade policy compare --baseline <path>
-Compare active routes with a saved
-.B ki/trade-routes/v1
-report.
-.TP
-.B ki repo [repo-options] trade standing list [--incomplete]
-List Capital-granted standing grants and their activation state.
-.TP
-.B ki repo [repo-options] trade standing check [repository] [--direction export|import] [--subtype <subtype>]
-Check exact standing knowledge-intake activation.
-.TP
-.B ki repo [repo-options] trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>
-Append one validated receiver-local standing-intake provenance block.
-.TP
-.B ki repo [repo-options] trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
-Create one mutable local trade preparation on a declared export route.
-.TP
-.B ki repo [repo-options] trade observe <trade-id>
-Inspect one sender's committed mutable preparation.
-.TP
-.B ki repo [repo-options] trade submit <trade-id>
-Freeze one local preparation as an outbound submission.
-.TP
-.B ki repo [repo-options] trade abandon <trade-id> --yes
-Remove one local mutable preparation.
-.TP
-.B ki repo [repo-options] trade receive <trade-id> | --all [--yes]
-Receive one committed submission, or preview and confirm an explicit batch.
-.TP
-.B ki repo [repo-options] trade list [--direction prepare|import|export] [--status <status>] [--kind work|knowledge]
-List visible trade copies in selected repositories, including imports
-awaiting receipt.
-.TP
-.B ki repo [repo-options] trade show <trade-id>
-Show selected visible copies of one trade.
-.TP
-.B ki repo [repo-options] trade release <trade-id> | --eligible [--yes]
-Release one eligible local outbound submission, or preview and confirm a batch.
-.TP
-.B ki repo [repo-options] trade prune <trade-id> | --eligible [--yes]
-Prune one eligible local inbound copy, or preview and confirm a batch.
 .SS Territory management
 \&
 .PP
@@ -504,7 +442,7 @@ the verified archive and re-pointing the configured canonical skills to it.
 During a refresh only, KI imports the retired
 \fB[repositories].paths\fR list into keyed records in
 \fB$XDG_STATE_HOME/ki/registry.toml\fR and removes that list from user
-configuration. Normal repository, trade, and Territory resolution never reads
+configuration. Normal repository and Territory resolution never reads
 the
 retired path list.
 .SS Local management
@@ -1029,7 +967,7 @@ Backpack checker's wording, counted in \fBGAPS=\fR without changing the exit
 status. JSON items add \fBpriority\fR, \fBsize\fR and \fBgaps\fR.
 A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other
-selected repositories still report, and any roadmap or trade diagnostic makes
+selected repositories still report, and any roadmap diagnostic makes
 the command exit with status 1 after rendering the inventory. The command
 never creates, transitions, accepts, prunes, or repairs a work item.
 .TP
@@ -1042,8 +980,8 @@ ar (awaiting-review), x (done), and c (cancelled).
 A dash means no items in that cell; a question mark means
 unavailable. Repositories without a roadmap are named below the table.
 Invalid roadmap evidence
-remains diagnostic and makes the command exit with status 1. Item identifiers,
-titles, and trade records are omitted.
+remains diagnostic and makes the command exit with status 1. Item identifiers
+and titles are omitted.
 \fB--by project\fR, \fB--by theme\fR or \fB--by area\fR replaces the
 repository rows with one row per group, aggregated across the selected set as
 for \fBroadmap list --by\fR, and appends any grouping warnings.
@@ -1146,8 +1084,7 @@ with a hold reason and a condition lifted from the record prose, or a
 .B REVIEW
 placeholder when none is found;
 .B waiting_on_trades
-to
-.BR hold.trades ;
+is dropped;
 and a done Triage intake disposition to
 .B status: cancelled
 with its
@@ -1394,143 +1331,6 @@ Remove one non-canonical backpack with only recognised payload directories. The
 canonical backpack cannot be removed, and a backpack that supplies active user
 skills cannot be removed. A successful removal deletes its identifier from
 .BR [backpacks].ids .
-.SS Trades
-\&
-.PP
-Use these commands with repositories that declare the portable
-\fBki-repo-trades\fR capability and are present in the local registered
-repository
-estate. Routes and standing grants come only from the territory Capital's
-\fB[skills.ki-trades.territory]\fR policy, resolved through each repository's
-declared \fB[skills.ki-repo].capital\fR; no command edits that policy, and a
-member declaration carries no route table. Parent \fB--repo\fR,
-\fB--territory\fR,
-\fB--estate\fR and \fB--principals\fR selectors scope reads; mutations require exactly one selected
-registered repository. Every mutation writes only the selected repository, a
-granted route gives visibility rather than acceptance or retention, and no
-command changes a peer roadmap or knowledge.
-.PP
-A repository that declares \fBki-trades\fR but whose Capital does not resolve
-is never dropped silently. Aggregate \fBroutes list\fR and \fBtrade list\fR
-views, and \fBpolicy compare\fR, print
-\fBskipped: <identity> (<reason>)\fR for it and add \fBSKIPPED=\fR\fIn\fR to
-the summary; under \fB--format json\fR, and for \fBtrade show\fR, the line is
-written to standard error so standard output is unchanged. Selected alone,
-such a repository fails closed with the reason.
-.TP
-.B ki repo [repo-options] trade routes list [--incomplete] [--format text|json]
-List selected local typed routes with their registered-estate state. With a
-parent aggregate selection such as \fBki repo --estate trade routes list\fR,
-list valid selected repository declarations as lexical repository pairs.
-The left and right endpoint cells span the two directional rows, which show
-what each repository sends with a right or left arrow; a missing direction is
-shown as an em dash. The table adapts to the live terminal width, preserving
-the same pairs in a stacked narrow view. With
-.BR --incomplete ,
-show only routes that await reciprocity or have ambiguous peers. With
-.BR "--format json" ,
-emit the versioned \fBki/trade-routes/v1\fR contract. JSON requires
-an aggregate parent repository selection. It contains canonical identities,
-route evidence, peer resolution, and declared
-map bonuses without local registry paths, declaration paths, or presentation
-layout values. Text remains the default renderer. Interactive visualisation is
-owned by Knowledge Islands Observatory rather than this command.
-.TP
-.B ki repo [repo-options] trade routes check [repository] [--direction export|import] [--kind work|knowledge]
-Check the routes the territory Capital policy grants this repository. A route
-is active when its peer is registered once, declares \fBki-trades\fR, and
-resolves the same Capital; otherwise an export awaits the receiver and an
-import awaits the sender.
-.TP
-.B ki repo [repo-options] trade policy show
-Show the trade policy of the selected repository's territory Capital: its
-channels, standing grants, and knowledge subtype vocabulary. The policy is
-resolved through the repository's declared \fB[skills.ki-repo].capital\fR; an
-unregistered Capital fails with
-\fBterritory policy lives in <url>, not available here\fR.
-.TP
-.B ki repo [repo-options] trade policy check
-Sweep the selected repository's territory through the local registry. Each
-listed member is reported conforming, warning (declares \fBki-trades\fR but
-no channel names it), failing (registered twice, invalid, declaring another
-Capital, or named by a channel without declaring \fBki-trades\fR), or
-unverifiable (not checked out here). A registered repository that claims the
-Capital without being listed also fails. Any failure exits 1 after rendering.
-.TP
-.B ki repo [repo-options] trade policy compare --baseline <path>
-Compare the active directed routes of a saved
-.B ki/trade-routes/v1
-report with the routes the current registry and Capital policies make active,
-listing lost and newly granted routes. The current side always sweeps the whole
-local registry, whatever the parent repository selection. A baseline route
-lacking string source and peer repositories, an \fBexport\fR or \fBimport\fR
-direction, or a known trade kind is rejected as malformed. A lost route exits 1
-after rendering.
-.TP
-.B ki repo [repo-options] trade standing list [--incomplete]
-List the standing grants the territory Capital policy gives this repository.
-A grant is active exactly when its ordinary knowledge route is active. With
-.BR --incomplete ,
-show only grants that are not active.
-.TP
-.B ki repo [repo-options] trade standing check [repository] [--direction export|import] [--subtype <subtype>]
-Check all Capital-granted standing grants or select one repository,
-direction, and subtype.
-.TP
-.B ki repo [repo-options] trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>
-From the receiver repository, append one marked
-.B ki-trades/standing-intake/v1
-TOML provenance block to an existing local Markdown file. The command requires
-an active exact standing import, a full source commit, and a source path that
-resolves in the locally registered source checkout. It never writes to the
-source repository. Standing intake grants no roadmap, publication,
-implementation, acceptance, completion, Territory, or peer-write authority; use
-an
-itemized knowledge trade when the exact standing contract does not fit.
-.TP
-.B ki repo [repo-options] trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
-Create one mutable preparation in the current repository when it declares the
-matching export route. The mandatory observation policy selects whether receipt,
-a terminal decision, or completion of adopted work is required before release;
-\fBunattended\fR requires no receiver follow-up beyond an observable receipt.
-.TP
-.B ki repo [repo-options] trade observe <trade-id>
-Read one sender's committed mutable preparation without receiving or acting on
-it. Compare it with the commit last observed by this receiver, or show the full
-current contents when no usable earlier Git evidence exists.
-.TP
-.B ki repo [repo-options] trade submit <trade-id>
-Freeze one local preparation and move it to the outbound submitted path.
-.TP
-.B ki repo [repo-options] trade abandon <trade-id> --yes
-Remove one unsubmitted mutable preparation after explicit confirmation.
-.TP
-.B ki repo [repo-options] trade receive <trade-id> | --all [--yes]
-Import one committed outbound submission into the current repository and record
-its source commit. The \fB--all\fR form previews every receivable submission and
-changes nothing unless \fB--yes\fR is also supplied.
-.TP
-.B ki repo [repo-options] trade list [--direction prepare|import|export] [--status <status>] [--kind work|knowledge]
-Read visible preparations, imports, and exports in selected repositories,
-including each selected receiver's imports awaiting receipt. The parent
-\fB--estate\fR selector combines all registered repository views. Each record
-reports its observation policy, delivery and decision state, and cleanup
-eligibility.
-An unsupported \fB--status\fR decision value fails with a usage error.
-.TP
-.B ki repo [repo-options] trade show <trade-id>
-Show selected visible copies of a trade; use parent \fB--estate\fR to
-inspect all registered copies.
-.TP
-.B ki repo [repo-options] trade release <trade-id> | --eligible [--yes]
-Remove one current-repository outbound submission only after its observation
-policy is satisfied. The \fB--eligible\fR form previews all eligible submissions
-and changes nothing unless \fB--yes\fR is also supplied.
-.TP
-.B ki repo [repo-options] trade prune <trade-id> | --eligible [--yes]
-Remove one eligible current-repository inbound copy only after sender release is
-observable. The \fB--eligible\fR form previews all eligible copies and changes
-nothing unless \fB--yes\fR is also supplied.
 .SS Territory management
 \&
 .PP
@@ -2026,8 +1826,7 @@ the same backpack. The retired \fB[repo]\fR harnesses key is still read, with a
 warning, when backpacks is absent, and
 .B ki repo repair
 renames it; a declaration with both is invalid.
-Repository identity and metadata live in \fB[skills.ki-repo]\fR, and trade
-routes in \fB[skills.ki-trades.routes]\fR, keyed once per partner.
+Repository identity and metadata live in \fB[skills.ki-repo]\fR.
 .SH DEVELOPMENT INSTALLATIONS
 \&
 .PP

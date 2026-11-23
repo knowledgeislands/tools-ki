@@ -101,7 +101,7 @@ describe('principals selection', () => {
     expect(calls).toEqual([['code', '--new-window', ...ordered]])
   })
 
-  test('inspects a projection and serves repository, registry and trade selection', async () => {
+  test('inspects a projection and serves repository and registry selection', async () => {
     const { box, ordered } = await fixture()
     await box.project.write('principals.code-workspace', JSON.stringify({ folders: ordered.map((path) => ({ path })) }))
     const inspected = await box.run([
@@ -118,7 +118,7 @@ describe('principals selection', () => {
     expect(inspected.output).toContain('status: exact')
     const added = await box.run('ki registry --principals add --dry-run')
     expect(added.exitCode).toBe(0)
-    expect((await box.run('ki repo --principals trade list')).exitCode).toBe(0)
+    expect((await box.run('ki repo --principals roadmap summary')).exitCode).toBe(0)
   })
 
   test('conflicts with every other primary scope and is rejected where selectors do not apply', async () => {

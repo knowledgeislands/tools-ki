@@ -1,7 +1,5 @@
 export type { Output } from './output.ts'
 export { presentation, presentationText } from './registry.ts'
-export type { PairTableRow } from './table.ts'
-export { renderMatrixTable, renderPairTable } from './table.ts'
-export { renderTradeRelation, routeState, tradeKindText } from './trade.ts'
+export { renderMatrixTable } from './table.ts'
 export type { TreeEntry, TreeReporter } from './tree.ts'
 export { createTreeReporter, renderTree, treeProgressPrefix } from './tree.ts'

@@ -82,7 +82,7 @@ const fixture = async () => {
       'territory_prefix = "ki"\nterritory_name ='
     )
   )
-  await box.project.write('member/.ki.toml', memberConfiguration('example/member', { trades: false }))
+  await box.project.write('member/.ki.toml', memberConfiguration('example/member'))
   await box.state.write(
     'ki/registry.toml',
     [
@@ -99,10 +99,7 @@ const fixture = async () => {
 const declare = (box: Sandbox, maturity: string): Promise<void> =>
   box.project.write(
     'member/.ki.toml',
-    memberConfiguration('example/member', { trades: false }).replace(
-      'repo_code = "TEST"',
-      `repo_code = "TEST"\nmaturity = ${maturity}`
-    )
+    memberConfiguration('example/member').replace('repo_code = "TEST"', `repo_code = "TEST"\nmaturity = ${maturity}`)
   )
 
 const findings = (box: Sandbox, values: readonly (readonly string[])[]): Promise<void> =>
@@ -166,7 +163,7 @@ describe('[ki territory show island condition]', () => {
     }
     await box.project.write(
       'member/.ki.toml',
-      memberConfiguration('example/member', { trades: false })
+      memberConfiguration('example/member')
         .replace('backpacks = ["example/backpack"]', 'backpacks = []')
         .replace('repo_code = "TEST"', 'repo_code = "TEST"\nmaturity = "settled"')
     )

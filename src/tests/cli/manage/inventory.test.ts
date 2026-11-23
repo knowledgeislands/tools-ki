@@ -47,7 +47,6 @@ const repoCommands = [
   'roadmap',
   'skill',
   'store',
-  'trade',
   'upgrade'
 ]
 const batchCommands = ['close', 'prepare', 'run', 'validate']
@@ -74,23 +73,6 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   markdown: ['gfm'],
   git: ['check-message'],
   backpack: ['info', 'install', 'list', 'missing', 'outdated', 'reinstall', 'search', 'uninstall'],
-  'repo trade': [
-    'abandon',
-    'list',
-    'observe',
-    'policy',
-    'prepare',
-    'prune',
-    'receive',
-    'release',
-    'routes',
-    'show',
-    'standing',
-    'submit'
-  ],
-  'repo trade policy': ['check', 'compare', 'show'],
-  'repo trade routes': ['check', 'list'],
-  'repo trade standing': ['capture', 'check', 'list'],
   dev: ['local', 'skill'],
   'dev local': ['off', 'on', 'set'],
   'dev skill': ['generate', 'rubric'],
@@ -223,7 +205,7 @@ describe('[ki command inventory]', () => {
     for (const command of territoryChangelogCommands) expect(changelog).toContain(command)
     expect(manual.indexOf('.SS Repository options')).toBeLessThan(manual.indexOf('.SS Repository management'))
     expect(manual.indexOf('.SS Repository management')).toBeLessThan(manual.indexOf('.SS Registry management'))
-    expect(manual.indexOf('.SS Trades')).toBeLessThan(manual.indexOf('.SS Territory management'))
+    expect(manual).not.toContain('.SS Trades')
     expect(changelog.indexOf('#### Territory management')).toBeLessThan(changelog.indexOf('#### Repository options'))
     expect(changelog.indexOf('#### Repository options')).toBeLessThan(changelog.indexOf('#### Repository management'))
     expect(changelog.indexOf('#### Repository management')).toBeLessThan(changelog.indexOf('#### Registry management'))

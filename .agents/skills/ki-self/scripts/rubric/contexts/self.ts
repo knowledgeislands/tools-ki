@@ -12,7 +12,6 @@ export const SELF_SOURCE_PATHS = [
   'src/commands/repo/diag.ts',
   'src/commands/repo/repair.ts',
   'src/commands/repo/upgrade.ts',
-  'src/commands/trade/records.ts',
   'src/core/backpack/bootstrap-capabilities.ts',
   'src/core/manage/doctor.ts',
   'src/core/manage/repair.ts',

@@ -83,28 +83,7 @@ const commandPaths = [
   'repo upgrade',
   'skill',
   'skill add',
-  'skill remove',
-  'repo trade',
-  'repo trade abandon',
-  'repo trade list',
-  'repo trade observe',
-  'repo trade prepare',
-  'repo trade policy',
-  'repo trade policy check',
-  'repo trade policy compare',
-  'repo trade policy show',
-  'repo trade prune',
-  'repo trade receive',
-  'repo trade release',
-  'repo trade routes',
-  'repo trade routes check',
-  'repo trade routes list',
-  'repo trade standing',
-  'repo trade standing capture',
-  'repo trade standing check',
-  'repo trade standing list',
-  'repo trade show',
-  'repo trade submit'
+  'skill remove'
 ] as const
 
 describe('[ki completion]', () => {
@@ -117,13 +96,9 @@ describe('[ki completion]', () => {
     expect(zsh.output).toContain("zstyle ':completion:*:ki-commands' verbose yes")
     expect(zsh.output).toContain("'repo roadmap')")
     expect(zsh.output).toContain("'repo skill')")
-    expect(zsh.output).toContain("'repo trade routes')")
-    expect(zsh.output).toContain("'repo trade standing')")
-    expect(zsh.output).toContain("'repo trade policy')")
-    expect(zsh.output).not.toContain("'repo trade subtypes')")
+    expect(zsh.output).not.toContain("'repo trade")
+    expect(bash.output).not.toContain("'repo trade")
     expect(zsh.output).toContain('--estate:select every repository in the registered estate')
-    expect(zsh.output).toContain('--incomplete:show only routes that are not active')
-    expect(zsh.output).toContain('--format:render estate route evidence as text or versioned JSON')
     expect(zsh.output).toContain("'territory open:--target') printf '%s\\n' 'zed vscode delta'")
     expect(bash.output).toContain("'territory open:--target') printf '%s\\n' 'zed vscode delta'")
     expect(zsh.output).toContain("'repo open:--target') printf '%s\\n' 'zed vscode delta'")
@@ -135,15 +110,8 @@ describe('[ki completion]', () => {
     expect(zsh.output).toContain("'dev local')")
     expect(zsh.output).toContain('-h:display help for command')
     expect(zsh.output).toContain("_describe -t ki-commands 'command or option' candidates")
-    expect(zsh.output).toContain('trade:submit and inspect typed cross-repository work and knowledge trades')
     expect(bash.output).toContain('_ki_value_strategy()')
     expect(bash.output).toContain("'repo roadmap')")
-    expect(bash.output).toContain("'repo trade routes')")
-    expect(bash.output).toContain(
-      "'repo trade routes list') printf '%s\\n' '-V --version -h --help --repo -t --territory --filter --estate --principals --incomplete --format'"
-    )
-    expect(bash.output).toContain("'repo trade standing capture:--capture')")
-    expect(bash.output).toContain("'repo trade policy compare:--baseline')")
     expect(bash.output).toContain("'repo batch') printf '%s\\n' 'close prepare run validate'")
     expect(bash.output).toContain("'repo batch prepare:--item')")
     expect(bash.output).toContain("'repo batch prepare:--repo')")
@@ -173,14 +141,8 @@ describe('[ki completion]', () => {
       expect(output).toContain("'registry list:--format') printf '%s\\n' 'text json'")
       expect(output).toContain("'repo roadmap list:--format') printf '%s\\n' 'text json'")
       expect(output).toContain("'repo store list:--format') printf '%s\\n' 'text json'")
-      expect(output).toContain("'repo trade standing capture:--capture') printf '%s\\n' 'path'")
       expect(output).toContain("'docs:0') printf '%s\\n' 'overview site manual roadmap'")
       expect(output).toContain("'mcp update:--auth') printf '%s\\n' 'github-cli'")
-      expect(output).toContain(
-        "'repo trade prepare:--observation') printf '%s\\n' 'unattended receipt decision completion'"
-      )
-      expect(output).toContain("'repo trade prepare:--title') printf '%s\\n' ''")
-      expect(output).toContain("'repo trade standing capture:--capture')")
       expect(output).toContain("'repo init:--repository') printf '%s\\n' ''")
     }
   })
@@ -251,26 +213,6 @@ describe('[ki completion]', () => {
       'awaiting-review',
       'done',
       'cancelled'
-    ])
-
-    const tradeStatusCompletion = await execute(
-      'bash',
-      [
-        '-c',
-        `source completion.bash; COMP_WORDS=(ki repo trade list --status ""); COMP_CWORD=5; _ki; printf "%s\\n" "\${COMPREPLY[@]}"`
-      ],
-      { cwd: box.root.path }
-    )
-    expect(tradeStatusCompletion.stdout.trim().split('\n')).toEqual([
-      'unconsidered',
-      'in_progress',
-      'parked',
-      'clarify',
-      'applied',
-      'adopted',
-      'retained',
-      'declined',
-      'superseded'
     ])
 
     const horizonCompletion = await execute(

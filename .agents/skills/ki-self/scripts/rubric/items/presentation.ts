@@ -10,8 +10,7 @@ const framedCommands = [
   'src/commands/manage/update.ts',
   'src/commands/repo/diag.ts',
   'src/commands/repo/repair.ts',
-  'src/commands/repo/upgrade.ts',
-  'src/commands/trade/records.ts'
+  'src/commands/repo/upgrade.ts'
 ] as const
 
 export const PRESENTATION: RubricFamily<SelfRubricContext, SelfRubricContext> = {

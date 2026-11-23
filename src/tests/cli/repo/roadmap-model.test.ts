@@ -223,7 +223,7 @@ describe('[ki repo roadmap] model fields', () => {
         theme: 'init-one',
         component: 'cli',
         horizon: 'hold',
-        hold: '\n  reason: waiting-for\n  condition: "The backpack release"\n  review: "2026-11-01"\n  trades: [TRD-0000000a]'
+        hold: '\n  reason: waiting-for\n  condition: "The backpack release"\n  review: "2026-11-01"'
       })
     )
     await roadmapFile(
@@ -267,8 +267,7 @@ describe('[ki repo roadmap] model fields', () => {
       hold: {
         reason: 'waiting-for',
         condition: 'The backpack release',
-        review: '2026-11-01',
-        trades: ['TRD-0000000a']
+        review: '2026-11-01'
       },
       legacy: []
     })
@@ -325,7 +324,7 @@ describe('[ki repo roadmap] model fields', () => {
       [
         'extra hold key',
         { horizon: 'hold', hold: '\n  reason: parked\n  condition: Later\n  owner: me' },
-        'hold may contain only reason, condition, review and trades'
+        'hold may contain only reason, condition and review'
       ],
       ['hold reason', { horizon: 'hold', hold: '\n  reason: bored\n  condition: Later' }, 'hold.reason must be one of'],
       [
@@ -340,13 +339,8 @@ describe('[ki repo roadmap] model fields', () => {
       ],
       [
         'hold trades',
-        { horizon: 'hold', hold: '\n  reason: parked\n  condition: Later\n  trades: [TRD-0000000a, TRD-0000000a]' },
-        'hold.trades must list unique TRD identities'
-      ],
-      [
-        'hold trade shape',
-        { horizon: 'hold', hold: '\n  reason: parked\n  condition: Later\n  trades: TRD-0000000a' },
-        'hold.trades must list unique TRD identities'
+        { horizon: 'hold', hold: '\n  reason: parked\n  condition: Later\n  trades: [TRD-0000000a]' },
+        'hold may contain only reason, condition and review'
       ],
       ['missing resolution', { horizon: undefined, status: 'cancelled' }, 'must carry a resolution exactly when'],
       ['open resolution', { resolution: 'obsolete' }, 'must carry a resolution exactly when'],
@@ -977,7 +971,8 @@ describe('[ki repo roadmap migrate]', () => {
     expect(output).toContain('+ resolution_target: KI-TOOL-KI-CLI-001')
     expect(output).toContain('+ resolution: rejected')
     expect(output).toContain('add a ## Cancelled section recording the approved disposition')
-    expect(output).toContain('+ trades: [TRD-0000000a, TRD-0000000b]')
+    expect(output).not.toContain('+ trades:')
+    expect(output).toContain('name the trade it waited on in the hold condition')
     expect(output).toContain('+ condition: "Blocked by the slow upstream dependency')
     expect(output).toContain('..."')
     expect(output).toContain('+ condition: "Parked until the spring review!"')

@@ -6,7 +6,7 @@ This area specifies KI's implementation of the [accepted territory decision](htt
 
 ### TERRITORY-001 — Canonical Capital membership
 
-KI MUST derive territory membership from the Capital's flat `ki-repo.territory_name` and `territory_members`. The optional Capital-only `territory_prefix` MUST be a lower-case hyphenated slug; without it the handle MUST be the Capital's registry key. An explicit prefix MUST replace the key as a selector. Duplicate handles, including prefix/key collisions, MUST fail. A Capital MAY declare optional [aliases](#territory-007--territory-aliases). Selection MUST NOT depend on valid trade routing.
+KI MUST derive territory membership from the Capital's flat `ki-repo.territory_name` and `territory_members`. The optional Capital-only `territory_prefix` MUST be a lower-case hyphenated slug; without it the handle MUST be the Capital's registry key. An explicit prefix MUST replace the key as a selector. Duplicate handles, including prefix/key collisions, MUST fail. A Capital MAY declare optional [aliases](#territory-007--territory-aliases).
 
 _Conformance:_ conforming
 
@@ -50,7 +50,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 _Conformance:_ conforming
 
-_Verify:_ `src/core/territory/resolution.ts`; `src/tests/cli/territory/principals.test.ts` exercises ordering, filters, conflicts, inspection, repository, registry and trade selection, and the Zed, VS Code and Delta invocation order.
+_Verify:_ `src/core/territory/resolution.ts`; `src/tests/cli/territory/principals.test.ts` exercises ordering, filters, conflicts, inspection, repository and registry selection, and the Zed, VS Code and Delta invocation order.
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

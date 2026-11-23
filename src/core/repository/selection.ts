@@ -155,6 +155,7 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
     Number(options.territory !== undefined) +
     Number(Boolean(options.estate)) +
     Number(Boolean(options.principals))
+  /* v8 ignore next -- the CLI's repeatable --filter option always supplies an array, empty by default. */
   const filters = options.filters ?? []
   validateFilters(filters)
   if (selectorCount > 1) throw new KiError('--repo, --territory, --estate, and --principals cannot be used together', 2)

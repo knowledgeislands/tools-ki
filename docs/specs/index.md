@@ -48,4 +48,3 @@ Unbuilt or uncertain behaviour belongs in an area's unnumbered `## Gaps` section
 | repository-audit.md      | `REPO-AUDIT` | `ki repo audit` selection, results, output, and multi-repo use |
 | repository-operations.md | `REPO-OPS`   | Repository targeting, conform, repair, and provider upgrades   |
 | skills.md                | `SKILL`      | User and repository skill activation plus rubrics              |
-| trades.md                | `TRADE`      | Local directional cross-repository trade operations            |

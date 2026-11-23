@@ -45,7 +45,7 @@ const field = (lines: readonly string[], key: string): string | undefined => {
 
 /**
  * Applies the mechanical pass to one record: Triage horizon to `status: triage`; Waiting for and Parked to Hold with
- * a lifted or placeholder condition and `waiting_on_trades` as `hold.trades`; a terminal Triage disposition to
+ * a lifted or placeholder condition, dropping `waiting_on_trades`; a terminal Triage disposition to
  * `status: cancelled` with its `resolution`. It never touches `theme`, `kind`, `project` or `purpose`. Returns
  * undefined when the record needs no mechanical change, which makes the pass idempotent.
  */
@@ -70,13 +70,10 @@ export const migrateWorkItem = (
     notes.push('add a ## Cancelled section recording the approved disposition')
   } else if ((item.horizon === 'waiting-for' || item.horizon === 'parked') && item.status !== 'done') {
     const lifted = liftHoldCondition(contents)
-    const held = [...new Set(field(before, 'waiting_on_trades')?.match(/TRD-[0-9a-f]{8}/g) ?? [])]
-    hold = {
-      reason: item.horizon as HoldReason,
-      condition: lifted ?? HOLD_CONDITION_PLACEHOLDER,
-      ...(held.length ? { trades: held } : {})
-    }
+    hold = { reason: item.horizon as HoldReason, condition: lifted ?? HOLD_CONDITION_PLACEHOLDER }
     notes.push(lifted ? 'review the hold condition lifted from the record prose' : 'state the hold release condition')
+    // Trades were dropped (TRADES-DROP a): a trade the record waited on now belongs in the hold condition.
+    if (field(before, 'waiting_on_trades')) notes.push('name the trade it waited on in the hold condition')
   } else return undefined
   const updatedAt = advancedTimestamp(item.updatedAt, now)
   const after: string[] = []

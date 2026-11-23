@@ -47,4 +47,4 @@ Refresh only this committed source catalogue, its local standards, and generated
 
 ### Mode HELP
 
-Describe the local-governance boundary, covered product goals, and off-ramps to `ki-engineering`, `ki-authoring`, `ki-repo-tools`, `ki-repo`, `ki-git`, and `ki-trades`.
+Describe the local-governance boundary, covered product goals, and off-ramps to `ki-engineering`, `ki-authoring`, `ki-repo-tools`, `ki-repo`, and `ki-git`.

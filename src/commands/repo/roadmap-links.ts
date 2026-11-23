@@ -4,7 +4,6 @@ import type { TreeEntry } from '../presentation/index.ts'
 
 export interface RoadmapTextOptions {
   readonly links: 'compact' | 'all'
-  readonly icons: boolean
   readonly dim: boolean
   /** Show each item's lane, for groupings that are not already by lane. */
   readonly lane?: boolean

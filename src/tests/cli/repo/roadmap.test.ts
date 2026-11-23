@@ -2,7 +2,6 @@ import { execFileSync } from 'node:child_process'
 import { chmod, realpath, rm, symlink } from 'node:fs/promises'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { runCommand, sandbox } from '../_cli_helper.ts'
-import { capitalHome, home, writeCapital } from '../_territory_helper.ts'
 
 // A normal CLI invocation cannot force a filesystem stat failure other than a
 // missing path. This narrow boundary injection verifies that such a failure
@@ -130,9 +129,9 @@ describe('[ki repo roadmap]', () => {
         'ki: error: roadmap list --status must be one of triage, draft, ready, in-progress, awaiting-review, done, cancelled\n'
     })
   })
-  test('summarizes selected roadmaps without listing records or reading trades', async () => {
+  test('summarizes selected roadmaps without listing records', async () => {
     const box = await sandbox()
-    const configuration = knowledgeBaseConfiguration('\n[skills.ki-trades]\n')
+    const configuration = knowledgeBaseConfiguration()
     for (const repository of ['knowledge', 'delivery', 'empty', 'absent'])
       await box.project.write(`${repository}/.ki.toml`, configuration)
     await box.project.mkdir('empty/Streams/Roadmap')
@@ -148,7 +147,6 @@ describe('[ki repo roadmap]', () => {
       'knowledge/Streams/Roadmap/KBS-003-triage.md',
       item({ id: 'KBS-003', title: 'Third item', horizon: 'triage', status: 'draft' })
     )
-    await box.project.write('knowledge/-/_TRADES/example/receiver/TRD-00000001.md', 'not a trade record\n')
     for (const [index, status] of ['in-progress', 'awaiting-review', 'done'].entries())
       await box.project.write(
         `delivery/Streams/Roadmap/KBS-00${index + 4}-item.md`,
@@ -259,7 +257,7 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('├─ roadmap (2)')
     expect(result.output).toContain('KBS-001 [awaiting-review] Native proposal')
     expect(result.output).toContain('KBS-002 [draft] Later proposal')
-    expect(result.output).toContain('╰─ summary: ITEMS=2 NOW=1 NOT_DONE=2 DONE=0 GAPS=2 TRADES=0 IMPORTS=0 EXPORTS=0')
+    expect(result.output).toContain('╰─ summary: ITEMS=2 NOW=1 NOT_DONE=2 DONE=0 GAPS=2')
     expect(result.output).not.toContain('_ISSUES')
     expect(result.output).not.toContain('_IDEAS')
     expect(result.output).not.toContain('Roadmap.md')
@@ -282,9 +280,7 @@ describe('[ki repo roadmap]', () => {
     )
     await box.project.write('project/docs/roadmap/KI-TOOL-KI-CLI-003-project-item.md', item())
 
-    const result = await box.run(
-      'ki repo --repo project --repo knowledge roadmap list --horizon next --status draft --no-icons'
-    )
+    const result = await box.run('ki repo --repo project --repo knowledge roadmap list --horizon next --status draft')
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('KI-TOOL-KI-CLI-003 [draft] Inspect governed work')
@@ -314,7 +310,7 @@ describe('[ki repo roadmap]', () => {
       })
     )
 
-    const result = await box.run('ki repo --repo knowledge roadmap list --no-icons')
+    const result = await box.run('ki repo --repo knowledge roadmap list')
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('├─ roadmap (3)')
@@ -421,7 +417,7 @@ describe('[ki repo roadmap]', () => {
     )
     const undeclared = await realpath(`${box.project.path}/undeclared`)
 
-    const listed = await box.run('ki repo --repo undeclared --repo remote roadmap list --no-icons')
+    const listed = await box.run('ki repo --repo undeclared --repo remote roadmap list')
     const pruned = await box.run('ki repo --repo undeclared --repo remote roadmap prune')
     const exact = await box.run('ki repo --repo undeclared roadmap prune KI-TOOL-KI-CLI-003')
     const moved = await box.run('ki repo --repo remote roadmap promote KI-TOOL-KI-CLI-003')
@@ -505,45 +501,6 @@ describe('[ki repo roadmap]', () => {
     await expect(box.project.read('malformed/docs/roadmap')).rejects.toThrow()
   })
 
-  test('reports unavailable trade inventory alongside an otherwise valid Knowledge Base roadmap', async () => {
-    const box = await sandbox()
-    const knowledge = await box.project.mkdir('knowledge')
-    const broken = await box.project.mkdir('broken')
-    const configuration = knowledgeBaseConfiguration('\n[skills.ki-trades]\n')
-    await box.project.write('knowledge/.ki.toml', configuration)
-    await box.project.write('broken/.ki.toml', configuration.replace('example/knowledge', 'example/broken'))
-    await box.project.write('broken/Streams/Roadmap', 'not a directory\n')
-    await box.project.write(
-      'knowledge/Streams/Roadmap/KBS-001-native-proposal.md',
-      item({ id: 'KBS-001', title: 'Native proposal', status: 'awaiting-review' })
-    )
-    await box.project.write('knowledge/-/_TRADES/example/receiver/TRD-00000001.md', 'not a trade record\n')
-    const capital = await writeCapital(box, {
-      members: [home('example/broken'), capitalHome, home('example/knowledge')]
-    })
-    await box.state.write(
-      'ki/registry.toml',
-      localRegistry([
-        { key: 'knowledge', repository: 'https://github.com/example/knowledge', path: knowledge },
-        { key: 'broken', repository: 'https://github.com/example/broken', path: broken },
-        { key: 'capital', repository: capitalHome, path: capital }
-      ])
-    )
-
-    const result = await box.run('ki repo --repo knowledge --repo broken roadmap list')
-    const aggregate = await box.run('ki repo --repo knowledge --repo broken roadmap list --aggregate --no-icons')
-
-    expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('trades (0)')
-    expect(result.output).toContain('❌ unavailable:')
-    expect(result.output).toContain('TRADES=unavailable')
-    expect(result.output).toContain('has no physical')
-    expect(aggregate.exitCode).toBe(1)
-    expect(aggregate.output).toContain('trades (0)')
-    expect(aggregate.output).toContain('❌ unavailable:')
-    expect(aggregate.output).toContain('TRADES=unavailable')
-  })
-
   test('promotes and prunes flat Knowledge Base work items without changing the ledger', async () => {
     const box = await sandbox()
     await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())
@@ -613,14 +570,14 @@ describe('[ki repo roadmap]', () => {
 
     expect(text).toEqual({
       exitCode: 0,
-      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-KI-CLI-003 [draft] Inspect governed work\n├─ gaps (2)\n│  ├─ ! KI-TOOL-KI-CLI-003: migration window: a record should declare size: s, m, l or xl\n│  ╰─ ! KI-TOOL-KI-CLI-003: assignee window: an open record should declare an assignee: owner, work/<id>, run/<name>, person/<handle> or repo/<name>\n├─ trades (0)\n│  ├─ import (0)\n│  ╰─ export (0)\n╰─ summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0 GAPS=1 TRADES=0 IMPORTS=0 EXPORTS=0\n`
+      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-KI-CLI-003 [draft] Inspect governed work\n├─ gaps (2)\n│  ├─ ! KI-TOOL-KI-CLI-003: migration window: a record should declare size: s, m, l or xl\n│  ╰─ ! KI-TOOL-KI-CLI-003: assignee window: an open record should declare an assignee: owner, work/<id>, run/<name>, person/<handle> or repo/<name>\n╰─ summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0 GAPS=1\n`
     })
     expect(accepted.output).toContain('KI-TOOL-KI-CLI-010 [awaiting-review] Cleanup')
     expect(accepted.output).toContain('summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0')
     expect(done.output).toContain('summary: ITEMS=1 NOW=0 NOT_DONE=0 DONE=1')
     expect(accepted.output).not.toContain('KI-TOOL-KI-CLI-003')
     expect(territory.output).toContain('KI-TOOL-KI-CLI-010 [awaiting-review] Cleanup')
-    expect(empty.output).toContain('├─ roadmap (0)\n├─ trades (0)')
+    expect(empty.output).toContain('├─ roadmap (0)\n╰─ summary')
     expect(empty.output).toContain('summary: ITEMS=0 NOW=0 NOT_DONE=0 DONE=0')
     expect(empty.output).not.toContain('items: none')
     expect(format.exitCode).toBe(0)
@@ -710,9 +667,9 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/absent"\n'
     )
 
-    const result = await box.run('ki repo --repo first --repo second --repo absent roadmap list --aggregate --no-icons')
+    const result = await box.run('ki repo --repo first --repo second --repo absent roadmap list --aggregate')
     const json = await box.run(
-      'ki repo --repo first --repo second --repo absent roadmap list --aggregate --no-icons --format json --horizon next'
+      'ki repo --repo first --repo second --repo absent roadmap list --aggregate --format json --horizon next'
     )
 
     expect(result.exitCode).toBe(0)
@@ -726,7 +683,7 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('no roadmap (1)')
     expect(result.output).toContain('📁 absent')
     expect(result.output).toContain(
-      'summary: REPOSITORIES=3 ROADMAPS=2 NO_ROADMAP=1 ITEMS=2 NOW=1 NOT_DONE=2 DONE=0 GAPS=2 TRADES=0'
+      'summary: REPOSITORIES=3 ROADMAPS=2 NO_ROADMAP=1 ITEMS=2 NOW=1 NOT_DONE=2 DONE=0 GAPS=2'
     )
     expect(json.exitCode).toBe(0)
     expect(JSON.parse(json.output)).toEqual({
@@ -774,7 +731,7 @@ describe('[ki repo roadmap]', () => {
     const unreadable = await box.project.mkdir('unreadable')
     roadmapStatFailure.path = `${unreadable}/Streams/Roadmap`
 
-    const result = await box.run('ki repo --repo file --repo unreadable roadmap list --aggregate --no-icons')
+    const result = await box.run('ki repo --repo file --repo unreadable roadmap list --aggregate')
     const json = await box.run(
       'ki repo --repo file --repo unreadable --repo unidentified roadmap list --aggregate --format json'
     )
@@ -948,7 +905,7 @@ describe('[ki repo roadmap]', () => {
     )
 
     const result = await box.run('ki repo --repo repo roadmap list')
-    const aggregate = await box.run('ki repo --repo repo roadmap list --aggregate --no-icons')
+    const aggregate = await box.run('ki repo --repo repo roadmap list --aggregate')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('roadmap (2)')
@@ -1044,7 +1001,7 @@ describe('[ki repo roadmap]', () => {
     ]
     for (const fields of items) await box.project.write(`repo/docs/roadmap/${fields['id']}-item.md`, item(fields))
 
-    const result = await box.run('ki repo --repo repo roadmap list --no-icons')
+    const result = await box.run('ki repo --repo repo roadmap list')
     const json = await box.run('ki repo --repo repo roadmap list --format json')
 
     expect(result.exitCode).toBe(0)
@@ -1067,7 +1024,7 @@ describe('[ki repo roadmap]', () => {
       previous = index
     }
     expect(result.output).not.toContain('unknown field')
-    expect(result.output).toContain('summary: ITEMS=6 NOW=1 NOT_DONE=6 DONE=0 GAPS=1 ')
+    expect(result.output).toContain('summary: ITEMS=6 NOW=1 NOT_DONE=6 DONE=0 GAPS=1\n')
     const parsed = JSON.parse(json.output)
     expect(parsed.items.map((entry: { id: string }) => entry.id)).toEqual(items.map((fields) => fields['id']))
     expect(parsed.items[0]).toMatchObject({ priority: 'low', size: 's', assignee: 'owner', gaps: [] })
@@ -1099,7 +1056,7 @@ describe('[ki repo roadmap]', () => {
       item({ id: 'KI-TOOL-KI-CLI-006', status: 'in-progress', size: 'xl' })
     )
 
-    const result = await box.run('ki repo --repo repo roadmap list --no-icons')
+    const result = await box.run('ki repo --repo repo roadmap list')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('roadmap (1)')
@@ -1129,7 +1086,7 @@ describe('[ki repo roadmap]', () => {
     ]
     for (const fields of items) await box.project.write(`repo/docs/roadmap/${fields['id']}-item.md`, item(fields))
 
-    const result = await box.run('ki repo --repo repo roadmap list --no-icons')
+    const result = await box.run('ki repo --repo repo roadmap list')
     const summary = await box.run('ki repo --repo repo roadmap summary')
     const json = await box.run('ki repo --repo repo roadmap list --format json')
 
@@ -1152,7 +1109,7 @@ describe('[ki repo roadmap]', () => {
       '! KI-TOOL-KI-CLI-008: migration window: a record should declare size: s, m, l or xl'
     )
     expect(result.output).not.toMatch(/! KI-TOOL-KI-CLI-00(8: .*kind|9)|! KI-TOOL-KI-CLI-010/)
-    expect(result.output).toContain(' GAPS=6 ')
+    expect(result.output).toContain(' GAPS=6\n')
     expect(summary.output).toContain('Gaps: 6 record(s) in the field migration window; ki repo roadmap list names each')
     expect(JSON.parse(json.output).items.at(-1).gaps).toEqual([])
   })
@@ -1171,7 +1128,7 @@ describe('[ki repo roadmap]', () => {
     ]
     for (const fields of items) await box.project.write(`repo/docs/roadmap/${fields['id']}-item.md`, item(fields))
 
-    const all = await box.run('ki repo --repo repo roadmap list --no-icons')
+    const all = await box.run('ki repo --repo repo roadmap list')
     const held = await box.run('ki repo --repo repo roadmap list --assignee work/personal.reg.household-terra')
     const none = await box.run('ki repo --repo repo roadmap list --assignee none')
     const invalid = await box.run('ki repo --repo repo roadmap list --assignee Kris')
@@ -1207,95 +1164,12 @@ describe('[ki repo roadmap]', () => {
     )
     await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-item.md', item({ size: 's', assignee: 'Kris' }))
 
-    const result = await box.run('ki repo --repo repo roadmap list --no-icons')
+    const result = await box.run('ki repo --repo repo roadmap list')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain(
       'work item KI-TOOL-KI-CLI-003-item.md assignee must be owner, work/<id>, run/<name>, person/<handle> or repo/<name>'
     )
-  })
-
-  test('includes registered inbound and outbound trade context for each selected repository', async () => {
-    const box = await sandbox()
-    const source = await box.project.mkdir('source')
-    const receiver = await box.project.mkdir('receiver')
-    const sourceHome = 'https://github.com/example/source'
-    const receiverHome = 'https://github.com/example/receiver'
-    const id = 'TRD-00000000'
-    // Members carry only their Capital; the Capital's policy grants the source -> receiver channel.
-    const configuration = (repository: string): string =>
-      [
-        '[repo]\nbackpacks = ["example/backpack"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"',
-        `repository = ${JSON.stringify(repository)}`,
-        `capital = ${JSON.stringify(capitalHome)}`,
-        '',
-        '[skills.ki-trades]',
-        ''
-      ].join('\n')
-    const capital = await writeCapital(box, {
-      channels: [{ from: [sourceHome], to: [receiverHome], kinds: ['work', 'knowledge'] }]
-    })
-    const record = (recordId: string, kind: 'work' | 'knowledge', status = ''): string =>
-      `---\nid: ${recordId}\ntitle: Trade-aware planning\ncreated_at: 2026-08-05T12:00:00Z\nsender: example/source\nreceiver: example/receiver\nkind: ${kind}\nsource_ref: KI-TOOL-KI-CLI-012\nobservation: decision\nphase: ${status ? 'received' : 'submitted'}${status}\n---\n# ${recordId}: Trade-aware planning\n\n## Context\n\nTrade context.\n\n## Submission\n\nShow trades with roadmap work.\n\n## Constraints\n\nRemain read-only.\n`
-    await box.project.write('source/.ki.toml', configuration(sourceHome))
-    await box.project.write('receiver/.ki.toml', configuration(receiverHome))
-    await box.project.write('source/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md', item())
-    await box.project.write('receiver/docs/roadmap/KI-TOOL-KI-CLI-004-inspect.md', item({ id: 'KI-TOOL-KI-CLI-004' }))
-    await box.project.write(`source/-/_TRADES/example/receiver/${id}.md`, record(id, 'work'))
-    await box.project.write(
-      `receiver/+/_TRADES/example/source/${id}.md`,
-      record(id, 'work', '\ndecision_status: unconsidered')
-    )
-    await box.project.write('source/-/_TRADES/example/receiver/TRD-00000002.md', record('TRD-00000002', 'work'))
-    await box.project.write(
-      'receiver/+/_TRADES/example/source/TRD-00000002.md',
-      record('TRD-00000002', 'work', '\ndecision_status: unconsidered')
-    )
-    await box.project.write('source/-/_TRADES/example/receiver/TRD-00000001.md', record('TRD-00000001', 'knowledge'))
-    await box.project.write(
-      'receiver/+/_TRADES/example/source/TRD-00000001.md',
-      record('TRD-00000001', 'knowledge', '\ndecision_status: unconsidered')
-    )
-    await box.state.write(
-      'ki/registry.toml',
-      localRegistry([
-        { key: 'source', repository: 'https://github.com/example/source', path: source },
-        { key: 'receiver', repository: 'https://github.com/example/receiver', path: receiver },
-        { key: 'capital', repository: capitalHome, path: capital }
-      ])
-    )
-
-    const result = await box.run('ki repo --repo source --repo receiver roadmap list')
-    const plain = await box.run('ki repo --repo source roadmap list --no-icons')
-
-    expect(result.output).toContain(
-      `│  ╰─ export (3)\n│     ├─ ${id} [⚒ work] → [? decision] receiver [unconsidered] Trade-aware planning\n│     ├─ TRD-00000001 [ⓘ knowledge] → [? decision] receiver [unconsidered] Trade-aware planning\n│     ╰─ TRD-00000002 [⚒ work] → [? decision] receiver [unconsidered] Trade-aware planning`
-    )
-    expect(result.output).toContain(
-      `│  ├─ import (3)\n│  │  ├─ ${id} [? decision] ← [⚒ work] source [unconsidered] Trade-aware planning\n│  │  ├─ TRD-00000001 [? decision] ← [ⓘ knowledge] source [unconsidered] Trade-aware planning\n│  │  ╰─ TRD-00000002 [? decision] ← [⚒ work] source [unconsidered] Trade-aware planning`
-    )
-    expect(plain.output).toContain(`${id} [work] → [decision] receiver [unconsidered] Trade-aware planning`)
-    expect(result.output).toContain('TRADES=3 IMPORTS=0 EXPORTS=3')
-    expect(result.output).toContain('TRADES=3 IMPORTS=3 EXPORTS=0')
-    expect(result.exitCode).toBe(0)
-
-    await box.project.write(
-      `source/-/_TRADES/example/receiver/TRD-00000003.md`,
-      record('TRD-00000003', 'work').replace('Trade context.', '')
-    )
-
-    const bodyIncomplete = await box.run('ki repo --repo source roadmap list')
-
-    expect(bodyIncomplete.exitCode).toBe(1)
-    expect(bodyIncomplete.output).toContain('TRD-00000003.md requires non-empty Context section')
-
-    await box.project.write(`source/-/_TRADES/example/receiver/TRD-00000003.md`, record('TRD-00000003', 'work'))
-    await box.project.write('source/docs/roadmap/malformed.md', 'not a governed work item\n')
-    const malformedRoadmap = await box.run('ki repo --repo source roadmap list')
-
-    expect(malformedRoadmap.exitCode).toBe(1)
-    expect(malformedRoadmap.output).toContain('must declare canonical frontmatter')
-    expect(malformedRoadmap.output).toContain('├─ trades (4)')
   })
 
   test('rejects every malformed canonical frontmatter shape', async () => {
@@ -1474,7 +1348,7 @@ describe('[ki repo roadmap]', () => {
     await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-linked.md', item({ task_links: taskLinks }))
     await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-004-unlinked.md', item({ id: 'KI-TOOL-KI-CLI-004' }))
 
-    for (const view of ['', '--aggregate --no-icons']) {
+    for (const view of ['', '--aggregate']) {
       const compact = await box.run(`ki repo --repo repo roadmap list ${view}`)
       expect(compact.exitCode).toBe(0)
       expect(compact.output).toContain('KI-TOOL-KI-CLI-003 [draft] Inspect governed work · PC:KIS-5 +2\n')

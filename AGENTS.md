@@ -5,7 +5,7 @@
 ## Governing sources
 
 - Use the repository-local `ki-self` skill for changes to CLI architecture, command/core boundaries, bootstrap or backpack resolution, native operations, contract testing, coverage evidence, or human-facing output. Its [product-engineering standard](.agents/skills/ki-self/references/standards-product-engineering.md) is the source of truth for tools-ki-specific expectations.
-- Use the declared portable skills for concerns they own: `ki-engineering` for TypeScript/Bun design and toolchain, `ki-authoring` for Markdown and TOML presentation, `ki-repo-tools` for executable distribution and release readiness, `ki-git` for shared-tree commits, `ki-repo` for repository and cross-repository authority, and `ki-trades` for trade semantics. Do not restate those standards here.
+- Use the declared portable skills for concerns they own: `ki-engineering` for TypeScript/Bun design and toolchain, `ki-authoring` for Markdown and TOML presentation, `ki-repo-tools` for executable distribution and release readiness, `ki-git` for shared-tree commits, and `ki-repo` for repository and cross-repository authority. Do not restate those standards here.
 - Compatible backpacks own reusable skill semantics; KI Specifications owns portable normative contracts; `tools-ki` owns the public `ki` executable, native-operation host, installation, resolution, and projections.
 
 ## Working contract

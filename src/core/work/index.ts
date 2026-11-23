@@ -12,12 +12,10 @@ export {
 export { recordLink } from './links.ts'
 export type {
   RoadmapItemResult,
-  RoadmapListResult,
   RoadmapOperationContext,
   RoadmapStatisticsResult
 } from './operations.ts'
 export {
-  listRoadmap,
   listRoadmapItems,
   migrateRoadmap,
   moveRoadmapItem,

@@ -41,10 +41,8 @@ const optionNames = (option: Option): readonly string[] =>
   )
 
 const closedOptionValues: Readonly<Record<string, readonly string[]>> = {
-  '--direction': ['import', 'export'],
   '--format': ['text', 'json'],
   '--horizon': workItemHorizons,
-  '--kind': ['work', 'knowledge'],
   '--progress': ['auto', 'always', 'never'],
   '--progress-style': ['single', 'multi'],
   '--reporter-levels': ['levels', 'all'],
@@ -58,26 +56,8 @@ const noValue: CompletionValueStrategy = { kind: 'none' }
 const optionValueStrategy = (path: string, option: Option): CompletionValueStrategy => {
   const name = option.long as string
   if (option.argChoices) return { kind: 'values', values: option.argChoices }
-  if (name === '--status' && path === 'repo trade list')
-    return {
-      kind: 'values',
-      values: [
-        'unconsidered',
-        'in_progress',
-        'parked',
-        'clarify',
-        'applied',
-        'adopted',
-        'retained',
-        'declined',
-        'superseded'
-      ]
-    }
-  if (name === '--direction' && path === 'repo trade list')
-    return { kind: 'values', values: ['prepare', 'import', 'export'] }
-  if (name === '--observation') return { kind: 'values', values: ['unattended', 'receipt', 'decision', 'completion'] }
   if (closedOptionValues[name]) return { kind: 'values', values: closedOptionValues[name] }
-  if (name === '--capture' || (name === '--repo' && /^(repo|registry)( |$)/.test(path))) return { kind: 'path' }
+  if (name === '--repo' && /^(repo|registry)( |$)/.test(path)) return { kind: 'path' }
   return noValue
 }
 

@@ -68,6 +68,6 @@ The evidence commit must resolve in the repository. Closing appends structural e
 
 ## Clean up inactive records
 
-A batch record is a temporary authority envelope, not a durable history store. Once a run is inactive and every useful outcome or follow-up has been routed to its canonical work, decision, guide, specification, trade, or commit evidence, remove the record immediately. Git retains the committed execution evidence.
+A batch record is a temporary authority envelope, not a durable history store. Once a run is inactive and every useful outcome or follow-up has been routed to its canonical work, decision, guide, specification, or commit evidence, remove the record immediately. Git retains the committed execution evidence.
 
 If useful follow-up remains, route it before cleanup. Seven days after inactivity is the overdue deadline for making that decision, not a minimum retention period: record that no useful follow-up remains or move the useful material to its owner, then remove the batch in the same review cycle. Active, malformed, unsafe, or incompletely evidenced records remain in place until their state can be resolved safely.

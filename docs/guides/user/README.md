@@ -15,10 +15,6 @@ If `ki` is not yet on this machine, or you have never run it, read these three i
 - [Maintain a local installation](local-installation.md) — update the executable and backpacks, install shell completion, diagnose with `diag` and `doctor`, and repair user skill links or recognised legacy configuration metadata.
 - [Manage local VS Code projections](vscode-management.md) — reconcile the chezmoi-owned workspace inventory and trusted-folder source state against the registry.
 
-## Bring material in
-
-- [Standing knowledge intake](standing-knowledge-intake.md) — establish reciprocal knowledge grants and capture commit-pinned provenance into an existing note.
-
 ## Govern work across repositories
 
 - [Select territories and the estate](territory-selection.md) - discover Capital handles, narrow literal directory basenames and consume atomic roots.

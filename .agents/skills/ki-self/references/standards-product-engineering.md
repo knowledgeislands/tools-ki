@@ -1,6 +1,6 @@
 # Tools-ki product-engineering standard
 
-This standard records the repository-specific engineering goals that make `tools-ki` a trustworthy runtime-neutral command host. Portable TypeScript, authoring, repository, Git, trade, and release rules remain owned by their declared backpack skills; this file states how those standards meet the product.
+This standard records the repository-specific engineering goals that make `tools-ki` a trustworthy runtime-neutral command host. Portable TypeScript, authoring, repository, Git, and release rules remain owned by their declared backpack skills; this file states how those standards meet the product.
 
 ## Architecture goals
 

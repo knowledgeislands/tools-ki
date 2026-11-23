@@ -2,19 +2,16 @@ import { basename } from 'node:path'
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError, KiExit } from '../../core/errors.ts'
-import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade/index.ts'
 import {
   compareSelection,
   holdReasons,
   isOpenWorkItem,
-  listRoadmap,
   listRoadmapItems,
   migrateRoadmap,
   moveRoadmapItem,
   pruneRoadmap,
   type RoadmapGrouping,
   type RoadmapItemResult,
-  type RoadmapListResult,
   type RoadmapOperationContext,
   type RoadmapStatisticsResult,
   roadmapReport,
@@ -29,13 +26,7 @@ import {
   workItemLanes,
   workItemStatuses
 } from '../../core/work/index.ts'
-import {
-  presentation,
-  renderMatrixTable,
-  renderTradeRelation,
-  renderTree,
-  type TreeEntry
-} from '../presentation/index.ts'
+import { presentation, renderMatrixTable, renderTree, type TreeEntry } from '../presentation/index.ts'
 import { cairnStoreLocator } from '../shared/cairn-store.ts'
 import { type RoadmapTextOptions, renderRoadmapItem, roadmapLinkLegend } from './roadmap-links.ts'
 
@@ -45,7 +36,6 @@ interface RoadmapOptions {
   readonly status?: string
   readonly assignee?: string
   readonly aggregate?: boolean
-  readonly icons?: boolean
   readonly format?: string
   readonly links: 'compact' | 'all'
 }
@@ -67,8 +57,7 @@ const operationContext = (context: KiContext): RoadmapOperationContext => ({
   workingDirectory: context.workingDirectory,
   homeDirectory: context.homeDirectory,
   store: cairnStoreLocator(context),
-  now: context.now,
-  locateTrades: () => locateTrades(context)
+  now: context.now
 })
 
 type ItemOrder = (left: WorkItem, right: WorkItem) => number
@@ -161,7 +150,7 @@ const mergedGroups = (results: readonly GroupedResult[]): readonly MergedGroup[]
 const groupName = (group: MergedGroup): string => (group.lifecycle ? `${group.name} [${group.lifecycle}]` : group.name)
 
 const groupedEntries = (
-  results: readonly RoadmapListResult[],
+  results: readonly RoadmapItemResult[],
   by: RoadmapGrouping,
   options: RoadmapTextOptions
 ): readonly TreeEntry[] => {
@@ -228,52 +217,10 @@ const itemSummary = (items: readonly WorkItem[]): string => {
   )
 }
 
-const renderTradeEntries = (
-  trades: readonly LocatedTrade[],
-  estate: readonly LocatedTrade[],
-  diagnostic?: string,
-  icons = true
-): readonly TreeEntry[] => {
-  if (diagnostic) return [{ label: `${presentation('status.unavailable').terminal} unavailable: ${diagnostic}` }]
-  const directions = [
-    ['import', 'inbound'],
-    ['export', 'outbound']
-  ] as const
-  return directions.map(([label, direction]) => {
-    const selected = trades.filter((trade) => trade.direction === direction)
-    return {
-      label: `${label} (${selected.length})`,
-      children: selected.map((trade) => {
-        const lifecycle = tradeLifecycle(trade, estate)
-        return {
-          label: `${trade.record.id} ${renderTradeRelation(trade.record, direction, lifecycle, icons)} ${trade.record.title}`
-        }
-      })
-    }
-  })
-}
-
-const countTradeDirections = (
-  trades: readonly LocatedTrade[]
-): { readonly inbound: number; readonly outbound: number } => {
-  let inbound = 0
-  let outbound = 0
-  for (const trade of trades) {
-    if (trade.direction === 'inbound') inbound += 1
-    else outbound += 1
-  }
-  return { inbound, outbound }
-}
-
-const renderTextResult = (
-  result: RoadmapListResult,
-  estate: readonly LocatedTrade[],
-  options: RoadmapTextOptions
-): string => {
+const renderTextResult = (result: RoadmapItemResult, options: RoadmapTextOptions): string => {
   const context = [
     { label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${result.repository})` }
   ]
-  const trades = result.trades
   const items = result.items ?? []
   const faults = result.faults ?? []
   const roadmap = result.diagnostic
@@ -286,10 +233,6 @@ const renderTextResult = (
             label: `${presentation('status.unavailable').terminal} ${fault.message}`
           }))
         ]
-  const { inbound, outbound } = countTradeDirections(trades)
-  const tradeSummary = result.tradeDiagnostic
-    ? 'unavailable'
-    : `${trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
   return renderTree({
     title: 'KI REPO ROADMAP',
     context,
@@ -298,20 +241,12 @@ const renderTextResult = (
       ...gapEntries(items),
       ...groupingWarnings([result]),
       ...roadmapLinkLegend(items, options),
-      {
-        label: `trades (${trades.length})`,
-        children: renderTradeEntries(trades, estate, result.tradeDiagnostic, options.icons)
-      },
-      { label: `summary: ${itemSummary(items)} TRADES=${tradeSummary}` }
+      { label: `summary: ${itemSummary(items)}` }
     ]
   }).join('\n')
 }
 
-const renderAggregateResult = (
-  results: readonly RoadmapListResult[],
-  estate: readonly LocatedTrade[],
-  options: RoadmapTextOptions
-): string => {
+const renderAggregateResult = (results: readonly RoadmapItemResult[], options: RoadmapTextOptions): string => {
   const entries: TreeEntry[] = []
   const items = results.flatMap((result) => result.items ?? [])
   const absent = results.filter((result) => result.roadmap === 'absent')
@@ -346,22 +281,10 @@ const renderAggregateResult = (
         ...faultEntries
       ]
     })
-  const tradeResults = results.filter((result) => result.trades.length || result.tradeDiagnostic)
-  const tradeCount = results.reduce((total, result) => total + result.trades.length, 0)
-  if (tradeResults.length)
-    entries.push({
-      label: `trades (${tradeCount})`,
-      children: tradeResults.map((result) => ({
-        label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${result.trades.length})`,
-        children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, options.icons)
-      }))
-    })
-  const tradeDiagnostic = results.some((result) => result.tradeDiagnostic)
   entries.push({
     label:
       `summary: REPOSITORIES=${results.length} ROADMAPS=${results.length - absent.length} ` +
-      `NO_ROADMAP=${absent.length} ${itemSummary(items)} ` +
-      `TRADES=${tradeDiagnostic ? 'unavailable' : tradeCount}`
+      `NO_ROADMAP=${absent.length} ${itemSummary(items)}`
   })
   return renderTree({ title: 'KI AGGREGATE ROADMAP', entries }).join('\n')
 }
@@ -537,7 +460,6 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
     .option('--status <status>', 'only items at this status')
     .option('--assignee <holder>', 'only items held by this assignee, or none for unassigned items')
     .addOption(byOption('group text output across the selected set; implies --aggregate'))
-    .option('--no-icons', 'omit decorative trade badge icons')
     .option('--format <text|json>', 'render roadmap evidence as text or versioned JSON', 'text')
     .addOption(
       new Option('--links <compact|all>', 'show compact task references or nested tasks and URLs in text output')
@@ -555,7 +477,7 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
           'roadmap list --assignee must be owner, work/<id>, run/<name>, person/<handle>, repo/<name> or none'
         )
       if (options.by && options.format === 'json') throw grammarError('roadmap list --by applies only to text output')
-      const { estate, results } = await listRoadmap(operationContext(context), selectedRepositories(), {
+      const { results } = await listRoadmapItems(operationContext(context), selectedRepositories(), {
         horizons,
         status: options.status,
         ...(options.assignee ? { assignee: options.assignee } : {}),
@@ -564,18 +486,16 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
       })
       const textOptions: RoadmapTextOptions = {
         links: options.links,
-        icons: options.icons !== false,
         dim: Boolean(context.stdout.isTTY && !context.environment['NO_COLOR'] && context.environment['TERM'] !== 'dumb')
       }
       const output =
         options.format === 'json'
           ? JSON.stringify(roadmapReport(results), null, 2)
           : options.aggregate || options.by
-            ? renderAggregateResult(results, estate, textOptions)
-            : results.map((result) => renderTextResult(result, estate, textOptions)).join('\n\n')
+            ? renderAggregateResult(results, textOptions)
+            : results.map((result) => renderTextResult(result, textOptions)).join('\n\n')
       context.stdout.write(`${output}\n`)
-      if (results.some((result) => result.tradeDiagnostic || result.diagnostic || result.faults?.length))
-        throw new KiExit(1)
+      if (results.some((result) => result.diagnostic || result.faults?.length)) throw new KiExit(1)
     })
 
 const summaryCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
@@ -726,7 +646,7 @@ const migrateCommand = (context: KiContext, selectedRepositories: RepositorySele
       'after',
       '\nThe mechanical pass moves the Triage horizon to status triage, Waiting for and\n' +
         'Parked to the Hold horizon with a hold reason and a condition lifted from the\n' +
-        'record prose or a REVIEW placeholder, waiting_on_trades to hold.trades, and a\n' +
+        'record prose or a REVIEW placeholder, dropping waiting_on_trades, and a\n' +
         'terminal Triage disposition to status cancelled with its resolution. It\n' +
         'advances updated_at, never touches theme, kind, project or purpose, and never\n' +
         'stages or commits. Without --apply it only prints the comparison.'

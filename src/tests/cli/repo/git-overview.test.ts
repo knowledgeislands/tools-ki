@@ -445,10 +445,6 @@ export default { contract: 1, name: 'ki-other', concern: 'Session observer', fam
     const box = await sandbox()
     await installGitCatalogue(box)
     await box.setupExampleBackpack({
-      name: 'ki-trades',
-      rubric: `export default { contract: 1, name: 'ki-trades', concern: 'Fixture', families: [], createSession: async () => ({ subjects: [], proposal: () => ({ writes: [] }) }) }`
-    })
-    await box.setupExampleBackpack({
       name: 'ki-repo',
       rubric: `export default { contract: 1, name: 'ki-repo', concern: 'Selection fixture', families: [], createSession: async () => ({ subjects: [], proposal: () => ({ writes: [] }) }) }`
     })
@@ -462,7 +458,7 @@ export default { contract: 1, name: 'ki-other', concern: 'Session observer', fam
     )
     await box.project.write(
       'member/.ki.toml',
-      `${memberConfiguration('example/member', { capital: capitalIdentity, trades: false })}\n[skills.ki-git]\n`
+      `${memberConfiguration('example/member', { capital: capitalIdentity })}\n[skills.ki-git]\n`
     )
     await box.state.write(
       'ki/registry.toml',

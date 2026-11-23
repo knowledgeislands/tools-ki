@@ -107,7 +107,6 @@ const allowedHorizons: Readonly<Record<WorkItemStatus, readonly WorkItemHorizon[
 }
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const WORK_ITEM_ID = /^[A-Z0-9][A-Z0-9-]{1,23}-\d{3,}$/
-const TRADE_ID = /^TRD-[0-9a-f]{8}$/
 const taskLinkRelations = ['evaluation', 'implementation', 'review', 'integration', 'coordination', 'related'] as const
 export type TaskLinkRelation = (typeof taskLinkRelations)[number]
 const validTaskLinkRelations = new Set<string>(taskLinkRelations)
@@ -126,7 +125,6 @@ export interface WorkItemHold {
   readonly reason: HoldReason
   readonly condition: string
   readonly review?: string
-  readonly trades?: readonly string[]
 }
 
 export interface TaskLink {
@@ -275,8 +273,8 @@ const parseHold = (lines: readonly string[], file: string): WorkItemHold => {
   if (!hold || typeof hold !== 'object' || Array.isArray(hold))
     throw itemError(file, 'hold must be a mapping with reason and condition')
   const record = hold as Record<string, unknown>
-  if (Object.keys(record).some((key) => !['reason', 'condition', 'review', 'trades'].includes(key)))
-    throw itemError(file, 'hold may contain only reason, condition, review and trades')
+  if (Object.keys(record).some((key) => !['reason', 'condition', 'review'].includes(key)))
+    throw itemError(file, 'hold may contain only reason, condition and review')
   if (!holdReasons.includes(record['reason'] as HoldReason))
     throw itemError(file, `hold.reason must be one of ${holdReasons.join(', ')}`)
   if (typeof record['condition'] !== 'string' || !record['condition'].trim())
@@ -286,19 +284,10 @@ const parseHold = (lines: readonly string[], file: string): WorkItemHold => {
     (typeof record['review'] !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(record['review']))
   )
     throw itemError(file, 'hold.review must be an ISO date')
-  const trades = record['trades']
-  if (
-    trades !== undefined &&
-    (!Array.isArray(trades) ||
-      trades.some((trade) => typeof trade !== 'string' || !TRADE_ID.test(trade)) ||
-      new Set(trades).size !== trades.length)
-  )
-    throw itemError(file, 'hold.trades must list unique TRD identities')
   return {
     reason: record['reason'] as HoldReason,
     condition: record['condition'],
-    ...(record['review'] === undefined ? {} : { review: record['review'] as string }),
-    ...(trades === undefined ? {} : { trades: trades as string[] })
+    ...(record['review'] === undefined ? {} : { review: record['review'] as string })
   }
 }
 
@@ -709,8 +698,7 @@ export const renderHold = (hold: WorkItemHold): readonly string[] => [
   'hold:',
   `  reason: ${hold.reason}`,
   `  condition: ${JSON.stringify(hold.condition)}`,
-  ...(hold.review ? [`  review: ${JSON.stringify(hold.review)}`] : []),
-  ...(hold.trades?.length ? [`  trades: [${hold.trades.join(', ')}]`] : [])
+  ...(hold.review ? [`  review: ${JSON.stringify(hold.review)}`] : [])
 ]
 
 const renderHorizon = (

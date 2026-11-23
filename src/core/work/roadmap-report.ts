@@ -6,7 +6,7 @@ import {
   type WorkItemSize,
   workItemLane
 } from './items.ts'
-import type { RoadmapListResult } from './operations.ts'
+import type { RoadmapItemResult } from './operations.ts'
 
 const ROADMAP_REPORT_SCHEMA = 'ki/roadmap/v1' as const
 
@@ -52,13 +52,13 @@ interface RoadmapReport {
   }[]
 }
 
-const roadmapState = (result: RoadmapListResult): 'present' | 'absent' | 'unavailable' => {
+const roadmapState = (result: RoadmapItemResult): 'present' | 'absent' | 'unavailable' => {
   if (result.diagnostic || result.faults?.length) return 'unavailable'
   return result.roadmap === 'absent' ? 'absent' : 'present'
 }
 
 /** Projects validated work evidence without exposing repository roots or renderer state. */
-export const roadmapReport = (results: readonly RoadmapListResult[]): RoadmapReport => ({
+export const roadmapReport = (results: readonly RoadmapItemResult[]): RoadmapReport => ({
   schema: ROADMAP_REPORT_SCHEMA,
   repositories: results.map((result) => ({
     identity: result.repositoryIdentity ?? null,
