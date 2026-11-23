@@ -176,7 +176,7 @@ Show repository-by-lane counts and totals without listing records.
 .B ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]
 Report timestamp coverage, age, and inactivity for governed work items.
 .TP
-.B ki repo [repo-options] roadmap prune [id] [--no-commit] [--dry-run]
+.B ki repo [repo-options] roadmap prune [id | --standing] [--no-commit] [--dry-run]
 Delete done or cancelled canonical work-item records and commit the deletions.
 .TP
 .B ki repo [repo-options] roadmap promote <id> [horizon]
@@ -1001,7 +1001,7 @@ Use
 .B --format json
 for a versioned machine-readable report.
 .TP
-.B ki repo [repo-options] roadmap prune [id] [--no-commit] [--dry-run]
+.B ki repo [repo-options] roadmap prune [id | --standing] [--no-commit] [--dry-run]
 Without an ID, delete every canonical work-item record whose lifecycle status
 is
 .B done
@@ -1027,6 +1027,20 @@ only deletes the records and skips the Git checks.
 .B --dry-run
 makes the same selection and checks, then reports the records and planned
 commits without deleting or committing.
+.B --standing
+applies the standing prune (PRUNE-RECORDS a) and cannot be combined with an
+ID. It keeps only records whose done or cancelled state was first committed at
+least 7 days ago and whose terminal commit, with every commit of the repository
+the record names, is on the upstream default branch:
+.BR origin/HEAD ,
+else
+.B origin/main
+or
+.BR origin/master ,
+as last fetched. Each other terminal record stays and gets a
+.B not due
+line with its reason. It never closes or cancels a record; acceptance stays
+with the owner.
 .TP
 .B ki repo [repo-options] roadmap promote <id> [horizon]
 Move exactly one selected repository's named work item one horizon toward

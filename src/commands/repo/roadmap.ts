@@ -544,6 +544,7 @@ const pruneCommand = (context: KiContext, selectedRepositories: RepositorySelect
     .argument('[id]', 'canonical done or cancelled work-item identifier')
     .option('--no-commit', 'delete the records without staging or committing them')
     .option('--dry-run', 'report the records and commits a prune would make without changing anything')
+    .option('--standing', 'prune only records terminal for 7 days whose commits have landed upstream')
     .addHelpText(
       'after',
       '\nBy default each repository with records to prune gets one commit containing\n' +
@@ -555,37 +556,62 @@ const pruneCommand = (context: KiContext, selectedRepositories: RepositorySelect
         'and a commit that a hook widened with other paths is reported as an error.\n' +
         '--no-commit only deletes the records and skips those Git checks. --dry-run\n' +
         'makes the same selection and checks, then reports without deleting or\n' +
-        'committing.'
+        'committing.\n' +
+        '\n' +
+        '--standing applies the standing prune (PRUNE-RECORDS a): it keeps only records\n' +
+        'whose done or cancelled state was first committed at least 7 days ago, and\n' +
+        'whose terminal commit, with every commit of the repository the record names,\n' +
+        'is on the upstream default branch (origin/HEAD, else origin/main or\n' +
+        'origin/master, as last fetched). Each other terminal record stays and gets a\n' +
+        '"not due" line with its reason. It never closes or cancels a record, and it\n' +
+        'cannot be combined with an identifier.'
     )
-    .action(async (id: string | undefined, options: { readonly commit: boolean; readonly dryRun?: boolean }) => {
-      const dryRun = Boolean(options.dryRun)
-      const removed = await pruneRoadmap(
-        { ...operationContext(context), runner: context.runner, environment: context.environment },
-        selectedRepositories(),
-        id,
-        { commit: options.commit, dryRun }
-      )
-      const entries = removed.flatMap(({ repository, items }) =>
-        items.map(
-          (item) => `${dryRun ? 'would prune' : 'pruned'} ${repository}: ${item.id} [${item.status}] ${item.title}`
+    .action(
+      async (
+        id: string | undefined,
+        options: { readonly commit: boolean; readonly dryRun?: boolean; readonly standing?: boolean }
+      ) => {
+        const dryRun = Boolean(options.dryRun)
+        const standing = Boolean(options.standing)
+        if (standing && id !== undefined)
+          throw grammarError('roadmap prune --standing selects records itself; omit the identifier')
+        const removed = await pruneRoadmap(
+          { ...operationContext(context), runner: context.runner, environment: context.environment },
+          selectedRepositories(),
+          id,
+          { commit: options.commit, dryRun, standing }
         )
-      )
-      if (!entries.length) {
-        context.stdout.write('ki repo roadmap prune: no done or cancelled work items\n')
-        return
+        const waiting = removed.flatMap(({ repository, notDue = [] }) =>
+          notDue.map(
+            ({ item, reason }) => `not due ${repository}: ${item.id} [${item.status}] ${item.title} (${reason})`
+          )
+        )
+        const entries = removed.flatMap(({ repository, items }) =>
+          items.map(
+            (item) => `${dryRun ? 'would prune' : 'pruned'} ${repository}: ${item.id} [${item.status}] ${item.title}`
+          )
+        )
+        if (!entries.length) {
+          context.stdout.write(
+            `${waiting.map((line) => `${line}\n`).join('')}ki repo roadmap prune: ${
+              standing ? 'no records due under the standing prune' : 'no done or cancelled work items'
+            }\n`
+          )
+          return
+        }
+        const commits = removed.flatMap(({ repository, commit, plannedCommit }) =>
+          commit
+            ? [`committed ${repository}: ${commit.id.slice(0, 12)} ${commit.message.subject}`]
+            : plannedCommit
+              ? [`would commit ${repository}: ${plannedCommit.subject}`]
+              : []
+        )
+        const summary = dryRun
+          ? `would remove ${entries.length} terminal work item(s)${options.commit ? '' : ' without committing'}`
+          : `removed ${entries.length} terminal work item(s)${options.commit ? '' : ' without committing'}`
+        context.stdout.write(`${[...waiting, ...entries, ...commits].join('\n')}\nki repo roadmap prune: ${summary}\n`)
       }
-      const commits = removed.flatMap(({ repository, commit, plannedCommit }) =>
-        commit
-          ? [`committed ${repository}: ${commit.id.slice(0, 12)} ${commit.message.subject}`]
-          : plannedCommit
-            ? [`would commit ${repository}: ${plannedCommit.subject}`]
-            : []
-      )
-      const summary = dryRun
-        ? `would remove ${entries.length} terminal work item(s)${options.commit ? '' : ' without committing'}`
-        : `removed ${entries.length} terminal work item(s)${options.commit ? '' : ' without committing'}`
-      context.stdout.write(`${[...entries, ...commits].join('\n')}\nki repo roadmap prune: ${summary}\n`)
-    })
+    )
 
 interface MoveOptions {
   readonly reason?: string

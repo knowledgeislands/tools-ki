@@ -743,10 +743,11 @@ export const updateWorkItemHorizon = async (
   return { ...item, horizon, ...(hold ? { hold } : {}), updatedAt }
 }
 
-/** A selected terminal (`done` or `cancelled`) record: its item and repository-relative record path. */
+/** A selected terminal (`done` or `cancelled`) record: its item, repository-relative record path and text. */
 export interface PrunableWorkItem {
   readonly item: WorkItem
   readonly path: string
+  readonly contents: string
 }
 
 /** Selects every terminal record, or exactly the named terminal record, without changing the repository. */
@@ -765,7 +766,7 @@ export const selectTerminalWorkItems = async (
   if (id !== undefined && selected.length !== 1)
     throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
   if (selected.some(isOpenRecord)) throw new KiError(`work item ${id} must be done or cancelled before pruning`, 2)
-  return selected.map(({ item, file }) => ({ item, path: join(planning.directory, file) }))
+  return selected.map(({ item, file, contents }) => ({ item, path: join(planning.directory, file), contents }))
 }
 
 export const removeWorkItemRecords = async (

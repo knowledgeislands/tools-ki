@@ -8,6 +8,7 @@ import {
   hasWorkItemRoot,
   isAllowedHorizon,
   type LegacyWorkItemHorizon,
+  type PrunableWorkItem,
   parseRegistryReference,
   readWorkItemInventoryIfPresent,
   readWorkItemRecordInventory,
@@ -40,6 +41,7 @@ import {
   type WorkItemGroup,
   workItemGroup
 } from './registry.ts'
+import { evaluateStandingPrune, type StandingPruneOutcome } from './standing-prune.ts'
 import { type RoadmapStatistics, roadmapStatistics } from './statistics.ts'
 
 export interface RoadmapSelection {
@@ -65,6 +67,8 @@ export interface RoadmapPruneOptions {
   readonly commit: boolean
   /** Select and preflight exactly as a real prune would, then report without deleting or committing. */
   readonly dryRun?: boolean
+  /** Keep only records the standing prune makes due (PRUNE-RECORDS a): terminal for 7 days and landed upstream. */
+  readonly standing?: boolean
 }
 
 export interface RoadmapListOptions {
@@ -119,6 +123,8 @@ export interface RoadmapPruneResult {
   readonly commit?: { readonly id: string; readonly message: PruneCommitMessage }
   /** Present on a committing dry run: the message the prune commit would carry. */
   readonly plannedCommit?: PruneCommitMessage
+  /** Under the standing prune, the terminal records left in place and why each is not yet due. */
+  readonly notDue?: readonly { readonly item: WorkItem; readonly reason: string }[]
 }
 
 export interface RoadmapMoveResult {
@@ -407,35 +413,56 @@ export const pruneRoadmap = async (
     )
   ).flat()
   await Promise.all(sources.map(({ repository, planning }) => readWorkItems(repository.root, planning)))
-  const selected = await Promise.all(
+  const terminal = await Promise.all(
     sources.map(async ({ repository, planning }) => ({
       repository: repository.root,
       records: await selectTerminalWorkItems(repository.root, planning, id)
     }))
   )
+  const selected = options.standing
+    ? await Promise.all(
+        terminal.map(async ({ repository, records }) => {
+          const outcomes = await evaluateStandingPrune(context, repository, records)
+          const reasonOf = (record: PrunableWorkItem): string | undefined => {
+            const outcome = outcomes.get(record.item.id) as StandingPruneOutcome
+            return outcome.due ? undefined : outcome.reason
+          }
+          return {
+            repository,
+            records: records.filter((record) => reasonOf(record) === undefined),
+            notDue: records.flatMap((record) => {
+              const reason = reasonOf(record)
+              return reason === undefined ? [] : [{ item: record.item, reason }]
+            })
+          }
+        })
+      )
+    : terminal.map((entry) => ({ ...entry, notDue: undefined }))
   // Validate every repository before deleting anything, so one refusal leaves the whole selection untouched.
   if (options.commit)
     for (const { repository, records } of selected)
       if (records.length) await preflightPruneCommit(context, repository, records)
   if (options.dryRun)
-    return selected.map(({ repository, records }) => ({
+    return selected.map(({ repository, records, notDue }) => ({
       repository,
       items: records.map(({ item }) => item),
+      ...(notDue ? { notDue } : {}),
       ...(options.commit && records.length
         ? { plannedCommit: pruneCommitMessage(records.map(({ item }) => item.id)) }
         : {})
     }))
   const results: RoadmapPruneResult[] = []
-  for (const { repository, records } of selected) {
+  for (const { repository, records, notDue } of selected) {
     const items = records.map(({ item }) => item)
+    const held = notDue ? { notDue } : {}
     if (!records.length || !options.commit) {
       await removeWorkItemRecords(repository, records)
-      results.push({ repository, items })
+      results.push({ repository, items, ...held })
       continue
     }
     try {
       const { commit, message } = await commitPrune(context, repository, records)
-      results.push({ repository, items, commit: { id: commit, message } })
+      results.push({ repository, items, ...held, commit: { id: commit, message } })
     } catch (error) {
       const committed = results.flatMap(({ repository: root, commit }) => (commit ? [`${root} at ${commit.id}`] : []))
       if (!committed.length) throw error

@@ -2416,6 +2416,107 @@ describe('[ki repo roadmap prune] commits', () => {
     await expect(box.project.read('plain/docs/roadmap/KI-TOOL-KI-CLI-003-done.md')).resolves.toContain('status: done')
   })
 
+  test('prunes under --standing only records terminal for 7 days whose commits have landed upstream', async () => {
+    const box = await sandbox()
+    const day = 86_400_000
+    const id = (number: string) => `KI-TOOL-KI-CLI-${number}`
+    const record = (number: string, status: string, title = 'Inspect governed work') =>
+      item({
+        id: id(number),
+        status,
+        title,
+        ...(status === 'cancelled' ? { horizon: undefined, resolution: 'obsolete' } : {})
+      })
+    const write = async (repository: string, records: Readonly<Record<string, string>>) => {
+      for (const [number, contents] of Object.entries(records))
+        await box.project.write(`${repository}/docs/roadmap/${id(number)}-record.md`, contents)
+    }
+    const commitAt = (repository: string, days: number, message: string): string => {
+      const date = `@${Math.floor((Date.now() - days * day) / 1000)} +0000`
+      git(box, repository, 'add', '--all')
+      execFileSync('git', ['-C', `${box.project.path}/${repository}`, 'commit', '--quiet', '-m', message], {
+        env: { ...gitEnvironment(box), GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date },
+        encoding: 'utf8'
+      })
+      return git(box, repository, 'rev-parse', 'HEAD').trim()
+    }
+    const seeded = async (repository: string, records: Readonly<Record<string, string>>): Promise<string> => {
+      await box.project.write(`${repository}/.ki.toml`, declaration)
+      await write(repository, records)
+      git(box, repository, 'init', '--quiet', '--initial-branch=main')
+      commitAt(repository, 10, 'chore: seed roadmap')
+      return realpath(`${box.project.path}/${repository}`)
+    }
+
+    // repo tracks origin/HEAD; each record shows one reason the standing prune may or may not apply.
+    const root = await seeded('repo', {
+      '010': record('010', 'done'),
+      '011': record('011', 'done'),
+      '012': record('012', 'draft'),
+      '013': record('013', 'draft'),
+      '014': record('014', 'done'),
+      '015': record('015', 'draft'),
+      '016': record('016', 'draft')
+    })
+    await write('repo', { '011': record('011', 'done', 'Renamed after closing'), '012': record('012', 'done') })
+    commitAt('repo', 3, 'chore: close 012')
+    git(box, 'repo', 'update-ref', 'refs/remotes/origin/main', 'HEAD')
+    git(box, 'repo', 'symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/main')
+    await write('repo', { '013': record('013', 'done') })
+    const unlanded = commitAt('repo', 1, 'chore: close 013')
+    await write('repo', {
+      '014': `${record('014', 'done')}\nDelivered in ${unlanded}; deadbeef00 is not a commit here.\n`,
+      '015': record('015', 'done')
+    })
+    // master-repo knows only origin/master, loose has no upstream, and quiet has no terminal record.
+    const master = await seeded('master-repo', { '020': record('020', 'cancelled') })
+    git(box, 'master-repo', 'update-ref', 'refs/remotes/origin/master', 'HEAD')
+    const loose = await seeded('loose', { '030': record('030', 'done') })
+    await seeded('quiet', { '040': record('040', 'draft') })
+    const selection = 'ki repo --repo repo --repo master-repo --repo loose --repo quiet roadmap prune --standing'
+
+    const notDue = [
+      `not due ${root}: ${id('012')} [done] Inspect governed work (terminal for 3 of 7 days)`,
+      `not due ${root}: ${id('013')} [done] Inspect governed work (not landed on origin/main: ${unlanded.slice(0, 12)})`,
+      `not due ${root}: ${id('014')} [done] Inspect governed work (not landed on origin/main: ${unlanded.slice(0, 12)})`,
+      `not due ${root}: ${id('015')} [done] Inspect governed work (its terminal state is not committed)`,
+      `not due ${loose}: ${id('030')} [done] Inspect governed work (no upstream default branch is known)`
+    ]
+    const preview = await run(box, `${selection} --dry-run`)
+    expect(preview).toEqual({
+      exitCode: 0,
+      output: [
+        ...notDue,
+        `would prune ${root}: ${id('010')} [done] Inspect governed work`,
+        `would prune ${root}: ${id('011')} [done] Renamed after closing`,
+        `would prune ${master}: ${id('020')} [cancelled] Inspect governed work`,
+        `would commit ${root}: chore(roadmap): prune 2 done work records`,
+        `would commit ${master}: chore(roadmap): prune 1 done work record`,
+        'ki repo roadmap prune: would remove 3 terminal work item(s)',
+        ''
+      ].join('\n')
+    })
+
+    const pruned = await run(box, selection)
+    expect(pruned.exitCode, pruned.output).toBe(0)
+    expect(pruned.output).toContain(notDue.join('\n'))
+    expect(git(box, 'repo', 'show', '--name-status', '--format=', 'HEAD')).toBe(
+      `D\tdocs/roadmap/${id('010')}-record.md\nD\tdocs/roadmap/${id('011')}-record.md\n`
+    )
+    expect(git(box, 'master-repo', 'log', '-1', '--format=%s')).toBe('chore(roadmap): prune 1 done work record\n')
+    expect(git(box, 'repo', 'status', '--porcelain')).toBe(
+      ` M docs/roadmap/${id('014')}-record.md\n M docs/roadmap/${id('015')}-record.md\n`
+    )
+
+    expect(await run(box, 'ki repo --repo loose roadmap prune --standing')).toEqual({
+      exitCode: 0,
+      output: `${notDue[4]}\nki repo roadmap prune: no records due under the standing prune\n`
+    })
+    const refused = await run(box, `ki repo --repo repo roadmap prune --standing ${id('012')}`)
+    expect(refused.exitCode).toBe(2)
+    expect(refused.output).toContain('roadmap prune --standing selects records itself; omit the identifier')
+  })
+
   test('names no earlier commit when only a repository without done records preceded the rejected prune', async () => {
     const box = await sandbox()
     await committedRepository(box, 'open', { 'KI-TOOL-KI-CLI-004-draft.md': item({ id: 'KI-TOOL-KI-CLI-004' }) })
