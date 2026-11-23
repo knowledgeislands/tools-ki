@@ -19,9 +19,14 @@ export interface RepositoryPlanningSource {
 const adapterSkills = {
   roadmap: 'ki-work-roadmap',
   'kb-streams': 'ki-work-roadmap',
-  'github-issues': 'ki-work-github-issues',
   linear: 'ki-work-linear'
 } as const
+
+// ki-work-github-issues folded into ki-work-linear, the one remote-tracker skill (REMOTE-TRACKERS a).
+const RETIRED_ADAPTERS: Readonly<Record<string, string>> = {
+  'github-issues':
+    'ki-work-github-issues folded into ki-work-linear; declare "linear" with [skills.ki-work-linear], or "roadmap" for a local roadmap'
+}
 
 type DeclaredAdapter = keyof typeof adapterSkills
 
@@ -81,6 +86,8 @@ export const readDeclaredPlanningSource = async (
   const work = declaration.skills.find((skill) => skill.name === 'ki-work')
   if (!work) return undefined
   const adapter = work.configuration['adapter']
+  if (typeof adapter === 'string' && Object.hasOwn(RETIRED_ADAPTERS, adapter))
+    throw new KiError(`[skills.ki-work].adapter = "${adapter}" is no longer supported: ${RETIRED_ADAPTERS[adapter]}`, 2)
   if (!isDeclaredAdapter(adapter))
     throw new KiError(
       `[skills.ki-work].adapter must be one of ${Object.keys(adapterSkills)

@@ -409,11 +409,12 @@ describe('[ki repo roadmap]', () => {
     await box.project.write('undeclared/docs/roadmap/KI-TOOL-KI-CLI-003-done.md', item({ status: 'done' }))
     await box.project.write(
       'remote/.ki.toml',
-      `${project}\n[skills.ki-work]\nadapter = "github-issues"\n\n[skills.ki-work-github-issues]\n`
+      `${project}\n[skills.ki-work]\nadapter = "linear"\n\n[skills.ki-work-linear]\n`
     )
     await box.project.write('remote/docs/roadmap/KI-TOOL-KI-CLI-003-done.md', item({ status: 'done' }))
     await box.project.write('untabled/.ki.toml', `${project}\n[skills.ki-work]\nadapter = "roadmap"\n`)
     await box.project.write('unknown/.ki.toml', `${project}\n[skills.ki-work]\nadapter = "jira"\n`)
+    await box.project.write('retired/.ki.toml', `${project}\n[skills.ki-work]\nadapter = "github-issues"\n`)
     await box.project.write(
       'inapplicable/.ki.toml',
       `${project}\n[skills.ki-work]\nadapter = "kb-streams"\n\n[skills.ki-work-roadmap]\n`
@@ -426,6 +427,7 @@ describe('[ki repo roadmap]', () => {
     const moved = await box.run('ki repo --repo remote roadmap promote KI-TOOL-KI-CLI-003')
     const untabled = await box.run('ki repo --repo untabled roadmap list')
     const unknown = await box.run('ki repo --repo unknown roadmap prune')
+    const retired = await box.run('ki repo --repo retired roadmap prune')
     const inapplicable = await box.run('ki repo --repo inapplicable roadmap list')
 
     expect(listed.exitCode).toBe(0)
@@ -441,7 +443,11 @@ describe('[ki repo roadmap]', () => {
     expect(untabled.exitCode).toBe(1)
     expect(untabled.output).toContain('[skills.ki-work].adapter = "roadmap" requires [skills.ki-work-roadmap]')
     expect(unknown.exitCode).toBe(2)
-    expect(unknown.output).toContain('[skills.ki-work].adapter must be one of "roadmap", "kb-streams"')
+    expect(unknown.output).toContain('[skills.ki-work].adapter must be one of "roadmap", "kb-streams", "linear"\n')
+    expect(retired.exitCode).toBe(2)
+    expect(retired.output).toContain(
+      '[skills.ki-work].adapter = "github-issues" is no longer supported: ki-work-github-issues folded into ki-work-linear'
+    )
     expect(inapplicable.exitCode).toBe(1)
     expect(inapplicable.output).toContain(
       '[skills.ki-work].adapter = "kb-streams" does not apply to repo_type = "project"'

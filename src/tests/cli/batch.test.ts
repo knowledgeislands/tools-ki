@@ -605,7 +605,7 @@ describe('[ki repo batch]', () => {
 
     await box.project.write(
       'repository/.ki.toml',
-      configuration.replace('adapter = "roadmap"', 'adapter = "github-issues"')
+      configuration.replace('adapter = "roadmap"', 'adapter = "linear"\n\n[skills.ki-work-linear]')
     )
     const remote = await box.run(prepare('EXAMPLE-001'), { now: () => now })
     expect(remote.stderr).toContain('requires a locally executable roadmap or kb-streams adapter')
