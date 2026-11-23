@@ -1448,8 +1448,16 @@ is malformed, and a folder under a territory without
 .IR _index.md ,
 is a warning that leaves the rest listed; a
 .B ki-parent
-that names no package, leaves its territory or closes a cycle is a
-warning on a package still listed.
+that names no package, or one that cannot be read, leaves its territory
+or closes a cycle is a warning on a package still listed, as is a package
+outside its territory's folder. A sub-package id in the earlier
+.I "<parent id>.<folder>"
+form, and a field written without the
+.B ki-
+prefix, are read as their current forms with a warning; where a field is
+written both ways the
+.B ki-
+one stands.
 The holder, and whether it is the worker or the supervisor, is derived
 from the state, never stored.
 The store is
@@ -1481,11 +1489,12 @@ finds them, or only of the packages whose
 .B ki-repositories
 names the repository
 .B --repo
-names, and check each document's
+names, an unreadable package's documents included, and check each
+document's
 .B ki-inputs
 against their version refs under the
-.B ki-work-package
-standard. A document whose
+.B ki-authoring
+change-document format. A document whose
 .B ki-status
 is
 .B done
@@ -1504,7 +1513,8 @@ wildcards; or a file in the store,
 .IR <file>@<ref> ,
 found beside the document and then from the store root, its ref a
 .B ki-revised
-date or a commit. A repository input is
+date or a commit; an input that names a store file is read as one even
+where it has a repository's shape. A repository input is
 .B moved
 when a matching file was modified, added, deleted or renamed, either way,
 between the ref and the checkout's
@@ -1528,7 +1538,9 @@ a ref not in the checkout or not on its
 (unpushed, or on another branch), a date ref on a repository input, a
 store file that is absent or has no
 .BR ki-revised ,
-or a store ref that is neither a commit nor a date; a URL is
+or a store ref that is neither a commit nor a date. A URL, an input
+versioned by its URL, and a dated input outside Git, one whose name holds
+a space, are
 .BR unchecked .
 A document is moved when any input moved, else unknown when any input is
 unknown, it has no
@@ -1539,7 +1551,7 @@ and changes nothing.
 .B --format json
 writes the versioned
 .I ki/work-base/v2
-report, each document with its package, path, status, verdict, inputs
+report: the store, each document with its package, path, status, verdict, inputs
 and reason, each input with its verdict, files and reason, and the closed
 documents. The command exits 0 when every checked document is current and
 1 when any is moved or unknown.

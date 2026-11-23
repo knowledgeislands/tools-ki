@@ -281,9 +281,10 @@ export const createWorkCommand = (context: KiContext): Command => {
           })
           const report = await checkChangeDocumentInputs({
             store,
-            documents: status.report.work.flatMap((entry) =>
-              entry.changes.map((path) => ({ package: entry.id, path }))
-            ),
+            // An unreadable package's change documents are still checked: its warning is not theirs.
+            documents: [...status.report.work, ...status.unreadable]
+              .flatMap((entry) => entry.changes.map((path) => ({ package: entry.id, path })))
+              .sort((left, right) => (left.path < right.path ? -1 : 1)),
             checkouts: registry,
             runner: context.runner,
             environment: context.environment

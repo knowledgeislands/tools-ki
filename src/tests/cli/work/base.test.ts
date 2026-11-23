@@ -180,7 +180,10 @@ describe('ki work base', () => {
         `${BACKPACK}:skills/d/steady.md@${base}`,
         'https://example.com/a/page',
         '../ex.other/11-other.change.md@2026-11-20',
-        `roster/actors/ward/_index.md@${storeBase}`
+        `roster/actors/ward/_index.md@${storeBase}`,
+        'sub/10-strand.change.md@2026-11-20',
+        'Companies House register, company 1@2026-11-18',
+        'Board minutes@https://example.com/minutes'
       ])
     )
     await box.root.write(
@@ -196,7 +199,8 @@ describe('ki work base', () => {
         'missing.change.md@2026-11-01',
         '../../../../outside.md@2026-11-01',
         'work/ex/ex.other/11-other.change.md@v1',
-        '../ex.other/plain.md@2026-11-01'
+        '../ex.other/plain.md@2026-11-01',
+        'Board minutes@v2'
       ])
     )
     await box.root.write(
@@ -273,7 +277,18 @@ describe('ki work base', () => {
       [`${BACKPACK}:skills/d/steady.md@${base}`]: { verdict: 'current', files: [], reason: null },
       'https://example.com/a/page': { verdict: 'unchecked', files: [], reason: 'a URL, outside Git and the store' },
       '../ex.other/11-other.change.md@2026-11-20': { verdict: 'current', files: [], reason: null },
-      [`roster/actors/ward/_index.md@${storeBase}`]: { verdict: 'current', files: [], reason: null }
+      [`roster/actors/ward/_index.md@${storeBase}`]: { verdict: 'current', files: [], reason: null },
+      'sub/10-strand.change.md@2026-11-20': { verdict: 'current', files: [], reason: null },
+      'Companies House register, company 1@2026-11-18': {
+        verdict: 'unchecked',
+        files: [],
+        reason: 'dated, outside Git and the store'
+      },
+      'Board minutes@https://example.com/minutes': {
+        verdict: 'unchecked',
+        files: [],
+        reason: 'versioned by its URL, outside Git and the store'
+      }
     })
     const checkout = await realpath(box.root.path)
     expect(inputsOf(json, '30-unknown.change.md')).toEqual({
@@ -323,7 +338,8 @@ describe('ki work base', () => {
         verdict: 'unknown',
         files: [],
         reason: 'work/ex/ex.other/plain.md has no ki-revised to compare with 2026-11-01'
-      }
+      },
+      'Board minutes@v2': { verdict: 'unknown', files: [], reason: 'Board minutes is not in the store' }
     })
     const whole = inputsOf(json, '40-whole.change.md')
     expect(whole[`${BACKPACK}@${base}`]).toMatchObject({ verdict: 'moved', reason: null })
@@ -416,7 +432,7 @@ describe('ki work base', () => {
     )
   })
 
-  test('reads only the packages naming the repository --repo names, and warns of an unreadable package', async () => {
+  test('reads only the packages naming the repository --repo names, and checks an unreadable package’s documents', async () => {
     const box = await sandbox()
     const { base } = await backpack(box)
     await register(box)
@@ -424,17 +440,34 @@ describe('ki work base', () => {
     await packages(box)
     await box.root.write(`${SUMMIT}/10-steady.change.md`, change('draft', [`${BACKPACK}:skills/d@${base}`]))
     await box.root.write('store/work/ex/ex.broken/_index.md', '---\nki-id: ex.broken\n---\n')
-    await box.root.write('store/work/ex/ex.broken/10-hidden.change.md', change('draft', []))
+    await box.root.write('store/work/ex/ex.broken/10-elsewhere.change.md', change('draft', []))
+    await box.root.write(
+      'store/work/ex/ex.held/_index.md',
+      '---\nki-id: ex.held\nki-repositories: [ex/app]\nki-state: on-hold\n---\n'
+    )
+    await box.root.write('store/work/ex/ex.held/10-held.change.md', change('draft', [`${BACKPACK}:skills/d@${base}`]))
     box.cd('..')
 
     const { result, json } = await report(box, `ki work base --repo ${box.root.path}/app --format json`)
 
     expect(result.exitCode).toBe(0)
-    expect(json.documents.map((document: { path: string }) => document.path)).toEqual([
-      'work/ex/ex.summit/10-steady.change.md'
+    expect(
+      json.documents.map((document: { package: string; path: string }) => [document.package, document.path])
+    ).toEqual([
+      ['ex.held', 'work/ex/ex.held/10-held.change.md'],
+      ['ex.summit', 'work/ex/ex.summit/10-steady.change.md']
     ])
     expect(result.stderr).toBe(
-      'ki: warning: work/ex/ex.broken/_index.md: ki-level must be one of root, territory, regular, project\n'
+      [
+        'ki: warning: work/ex/ex.broken/_index.md: ki-level must be one of root, territory, regular, project',
+        'ki: warning: work/ex/ex.held/_index.md: ki-level must be one of root, territory, regular, project',
+        ''
+      ].join('\n')
+    )
+
+    const every = await report(box, `ki work base --store ${box.root.path}/store --format json`)
+    expect(every.json.documents.map((document: { path: string }) => document.path)).toContain(
+      'work/ex/ex.broken/10-elsewhere.change.md'
     )
   })
 })

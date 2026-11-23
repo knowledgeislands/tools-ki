@@ -198,26 +198,28 @@ const gitInput = async (
 const refTime = (ref: string): number =>
   ref.includes('T') ? Date.parse(ref) : Date.parse(`${ref}T00:00:00Z`) + 24 * 60 * 60 * 1000 - 1
 
-/** A store input: a file found beside the document, else from the store's root, never outside the store. */
+/** A store file an input names, found beside the document, else from the store's root, never outside the store. */
+const findStoreFile = async (
+  file: string,
+  document: BaseDocumentSource,
+  store: string
+): Promise<{ readonly path: string; readonly text: string } | undefined> => {
+  for (const path of [posix.normalize(posix.join(posix.dirname(document.path), file)), posix.normalize(file)]) {
+    if (path.startsWith('../')) continue
+    const text = await readFile(join(store, path), 'utf8').catch(() => undefined)
+    if (text !== undefined) return { path, text }
+  }
+  return undefined
+}
+
+/** A store input, checked against a store commit through Git or against its `ki-revised` for a date ref. */
 const storeInput = async (
   written: string,
-  file: string,
+  found: { readonly path: string; readonly text: string },
   ref: string,
-  document: BaseDocumentSource,
   request: BaseCheckRequest,
   git: Git
 ): Promise<BaseInput> => {
-  const candidates = [posix.normalize(posix.join(posix.dirname(document.path), file)), posix.normalize(file)]
-  let found: { readonly path: string; readonly text: string } | undefined
-  for (const path of candidates) {
-    if (path.startsWith('../')) continue
-    const text = await readFile(join(request.store, path), 'utf8').catch(() => undefined)
-    if (text !== undefined) {
-      found = { path, text }
-      break
-    }
-  }
-  if (found === undefined) return input(written, 'unknown', `${file} is not in the store`)
   if (COMMIT_REF.test(ref))
     return gitInput(written, { name: 'the Cairn store', path: request.store }, found.path, ref, git)
   if (!DATE_REF.test(ref)) return input(written, 'unknown', `version ref ${ref} is neither a commit nor a date`)
@@ -229,7 +231,11 @@ const storeInput = async (
     : input(written, 'current', null)
 }
 
-/** One input's verdict, from its form. */
+/**
+ * One input's verdict, from its form. A repository-shaped input that names a file in the store, as a parent's
+ * `<sub-package>/<file>`, is a store input. An input that names neither a repository nor a file path, as a register by
+ * its name, lies outside Git: dated, or versioned by its URL, it is unchecked.
+ */
 const checkInput = async (
   written: unknown,
   document: BaseDocumentSource,
@@ -246,8 +252,14 @@ const checkInput = async (
     .slice(at + 1)
     .trim()
     .split(/\s/)[0] as string
+  if (URL_INPUT.test(ref)) return input(written, 'unchecked', 'versioned by its URL, outside Git and the store')
   const repository = REPOSITORY_INPUT.exec(head)
-  if (repository === null) return storeInput(written, head, ref, document, request, git)
+  const found = repository?.[2] === undefined ? await findStoreFile(head, document, request.store) : undefined
+  if (found !== undefined) return storeInput(written, found, ref, request, git)
+  if (repository === null) {
+    if (/\s/.test(head) && DATE_REF.test(ref)) return input(written, 'unchecked', 'dated, outside Git and the store')
+    return input(written, 'unknown', `${head} is not in the store`)
+  }
   const identity = `https://github.com/${(repository[1] as string).toLowerCase()}`
   const checkout = request.checkouts.find((candidate) => candidate.repository.toLowerCase() === identity)
   if (checkout === undefined) return input(written, 'unknown', `${repository[1]} is not in the local registry`)

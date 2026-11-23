@@ -301,11 +301,35 @@ describe('ki work status', () => {
     await bad('bad.one', 'bad.one', { 'ki-parent': 'bad.two' })
     await bad('bad.two', 'bad.two', { 'ki-parent': 'bad.one' })
     await bad('bad.tail', 'bad.tail', { 'ki-parent': 'bad.one' })
+    await bad('bad.orphan', 'bad.orphan', { 'ki-parent': 'bad.level' })
+    await bad('zz.misplaced', 'zz.misplaced', {})
+    await bad('bad.summit/earlier', 'bad.summit.earlier', { 'ki-parent': 'bad.summit' })
+    await box.project.write(
+      'store/work/bad/bad.plain/_index.md',
+      '---\nid: bad.plain\nki-level: regular\nworker: agent\nki-supervisor: owner\nki-repositories: [ex/app]\nstate: with-supervisor\nki-state: with-worker\nki-since: 2026-11-23T08:00:00Z\n---\n'
+    )
 
     const json = await status(box, '--all --format json')
     expect(json.exitCode).toBe(0)
-    const ids = JSON.parse(json.stdout).work.map((work: { id: string }) => work.id)
-    expect(ids).toEqual(expect.arrayContaining(['bad.lost', 'bad.abroad', 'bad.one', 'bad.two', 'bad.tail']))
+    const work = JSON.parse(json.stdout).work
+    const ids = work.map((each: { id: string }) => each.id)
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        'bad.lost',
+        'bad.abroad',
+        'bad.one',
+        'bad.two',
+        'bad.tail',
+        'bad.orphan',
+        'zz.misplaced',
+        'bad.summit+earlier',
+        'bad.plain'
+      ])
+    )
+    expect(work.find((each: { id: string }) => each.id === 'bad.plain')).toMatchObject({
+      worker: 'agent',
+      state: 'with-worker'
+    })
     expect(ids).not.toContain('bad.summit+strand')
     const warnings = [
       'work/bad/bad.empty/ has no _index.md',
@@ -318,6 +342,10 @@ describe('ki work status', () => {
       'work/bad/bad.level/_index.md: ki-level must be one of root, territory, regular, project',
       'work/bad/bad.lost/_index.md: ki-parent bad.missing names no package in the store',
       'work/bad/bad.one/_index.md: ki-parent closes a cycle back to bad.one',
+      'work/bad/bad.orphan/_index.md: ki-parent bad.level names a package that cannot be read',
+      'work/bad/bad.plain/_index.md: reads id, worker without the ki- prefix',
+      'work/bad/bad.summit/earlier/_index.md: ki-id bad.summit.earlier is the earlier sub-package form, read as bad.summit+earlier',
+      "work/bad/zz.misplaced/_index.md: ki-id zz.misplaced stands outside its territory's folder, work/bad/",
       'work/bad/bad.parent/_index.md: ki-parent must be a dotted work id',
       'work/bad/bad.records/_index.md: ki-records must be a list of record ids',
       'work/bad/bad.repositories/_index.md: ki-repositories must be a list of <territory folder>/<repository> names',

@@ -89,7 +89,16 @@ export interface WorkStatus {
   readonly report: WorkStatusReport
   /** Every readable package in the store, in folder order, so a view can place the listed ones in their tree. */
   readonly packages: readonly WorkStatusEntry[]
+  /** Each package whose entry file cannot be read, listed when it names the repository as far as it can be read. */
+  readonly unreadable: readonly UnreadablePackage[]
   readonly warnings: readonly string[]
+}
+
+/** A package whose entry file fails the standard, still found by its folder, with its change documents. */
+export interface UnreadablePackage {
+  readonly id: string
+  readonly path: string
+  readonly changes: readonly string[]
 }
 
 export interface WorkStatusRequest {
@@ -150,11 +159,19 @@ const seats = (value: unknown): readonly WorkSeat[] =>
     ]
   })
 
+/** A sub-package's id in the form before SUMMIT-SUB-PACKAGES, `<parent id>.<folder>`, read as `<parent id>+<folder>`. */
+const earlierSubPackageId = (found: StorePackage): string | undefined =>
+  found.enclosing === null ? undefined : `${found.enclosing}.${found.folderId.slice(found.enclosing.length + 1)}`
+
 /** The definition: identity, level, placement and the holders, or the reason it cannot be read. */
-const definition = (found: StorePackage, values: Record<string, unknown>) => {
-  const id = values['ki-id']
-  if (typeof id !== 'string' || !WORK_ID.test(id)) return 'ki-id must be a dotted work id'
-  if (id !== found.folderId) return `ki-id ${id} must agree with its folder, ${found.folderId}`
+const definition = (found: StorePackage, values: Record<string, unknown>, notes: string[]) => {
+  const written = values['ki-id']
+  if (typeof written !== 'string' || !WORK_ID.test(written)) return 'ki-id must be a dotted work id'
+  const id = written === earlierSubPackageId(found) ? found.folderId : written
+  if (id !== found.folderId) return `ki-id ${written} must agree with its folder, ${found.folderId}`
+  if (id !== written) notes.push(`ki-id ${written} is the earlier sub-package form, read as ${id}`)
+  const territory = found.path.split('/')[1]
+  if (territoryOf(id) !== territory) notes.push(`ki-id ${id} stands outside its territory's folder, work/${territory}/`)
   const level = values['ki-level']
   if (!workLevels.includes(level as WorkLevel)) return `ki-level must be one of ${workLevels.join(', ')}`
   const parent = values['ki-parent'] ?? null
@@ -211,30 +228,46 @@ const workState = (values: Record<string, unknown>, worker: string, supervisor: 
   }
 }
 
-/** One package's entry, or the reason its entry file cannot be read. */
-const packageEntry = (found: StorePackage): WorkStatusEntry | string => {
+/**
+ * The entry file's fields, each written without the `ki-` prefix read under its `ki-` name, as packages written before
+ * KI-PREFIX are; where a field is written both ways the `ki-` one stands.
+ */
+const prefixed = (raw: Record<string, unknown>, notes: string[]): Record<string, unknown> => {
+  const fields: Record<string, unknown> = { ...raw }
+  const unprefixed = Object.keys(raw).filter((key) => !key.startsWith('ki-') && !(`ki-${key}` in raw))
+  for (const key of unprefixed) fields[`ki-${key}`] = raw[key]
+  if (unprefixed.length) notes.push(`reads ${unprefixed.join(', ')} without the ki- prefix`)
+  return fields
+}
+
+/** One package's entry, or the reason its entry file cannot be read, with any warnings on an entry still read. */
+const packageEntry = (found: StorePackage, notes: string[]): WorkStatusEntry | string => {
   if (found.fields === undefined) return 'has no YAML front matter'
-  const defined = definition(found, found.fields)
+  const fields = prefixed(found.fields, notes)
+  const defined = definition(found, fields, notes)
   if (typeof defined === 'string') return defined
-  const state = workState(found.fields, defined.worker, defined.supervisor)
+  const state = workState(fields, defined.worker, defined.supervisor)
   if (typeof state === 'string') return state
   return {
     ...defined,
     ...state,
-    workers: seats(found.fields['ki-workers']),
+    workers: seats(fields['ki-workers']),
     path: found.path,
     changes: found.changes
   }
 }
 
-/** Each `ki-parent` that names no package, crosses into another territory or closes a cycle. */
-const treeWarnings = (work: readonly WorkStatusEntry[]): readonly string[] => {
+/** Each `ki-parent` that names no package, or one that cannot be read, crosses into another territory or closes a cycle. */
+const treeWarnings = (work: readonly WorkStatusEntry[], unreadable: ReadonlySet<string>): readonly string[] => {
   const byId = new Map(work.map((entry) => [entry.id, entry]))
   const warnings: string[] = []
   for (const entry of work) {
     if (entry.parent === null) continue
     const parent = byId.get(entry.parent)
-    if (parent === undefined) warnings.push(`${entry.path}: ki-parent ${entry.parent} names no package in the store`)
+    if (parent === undefined)
+      warnings.push(
+        `${entry.path}: ki-parent ${entry.parent} ${unreadable.has(entry.parent) ? 'names a package that cannot be read' : 'names no package in the store'}`
+      )
     else if (territoryOf(parent.id) !== territoryOf(entry.id))
       warnings.push(`${entry.path}: ki-parent ${entry.parent} is outside territory ${territoryOf(entry.id)}`)
     const seen = new Set<string>()
@@ -249,10 +282,10 @@ const treeWarnings = (work: readonly WorkStatusEntry[]): readonly string[] => {
   return warnings
 }
 
-/** Whether a package names the repository, `<owner>/<name>`, among its own: by the repository's name. */
-const listsRepository = (entry: WorkStatusEntry, repository: string): boolean => {
+/** Whether a package's `ki-repositories` names the repository, `<owner>/<name>`: by the repository's name. */
+const listsRepository = (repositories: unknown, repository: string): boolean => {
   const name = repository.split('/').at(-1)
-  return entry.repositories.some((named) => named.split('/').at(-1) === name)
+  return (names(repositories) ?? []).some((named) => named.split('/').at(-1) === name)
 }
 
 /**
@@ -264,22 +297,34 @@ export const readWorkStatus = async (request: WorkStatusRequest): Promise<WorkSt
   const store = await readStorePackages(request.store)
   const warnings = [...store.warnings]
   const packages: WorkStatusEntry[] = []
-  for (const found of store.packages) {
-    const entry = packageEntry(found)
-    if (typeof entry === 'string') warnings.push(`${found.path}: ${entry}`)
-    else packages.push(entry)
-  }
-  warnings.push(...treeWarnings(packages))
+  const unreadable: UnreadablePackage[] = []
   const { repository } = request
+  for (const found of store.packages) {
+    const notes: string[] = []
+    const entry = packageEntry(found, notes)
+    warnings.push(...notes.map((note) => `${found.path}: ${note}`))
+    if (typeof entry !== 'string') packages.push(entry)
+    else {
+      warnings.push(`${found.path}: ${entry}`)
+      const fields = found.fields ?? {}
+      if (repository === undefined || listsRepository(fields['ki-repositories'] ?? fields['repositories'], repository))
+        unreadable.push({ id: found.folderId, path: found.path, changes: found.changes })
+    }
+  }
+  warnings.push(...treeWarnings(packages, new Set(store.packages.map((found) => found.folderId))))
   return {
     report: {
       schema: WORK_STATUS_SCHEMA,
       store: request.store,
       repository: repository ?? null,
       generatedAt: `${request.now.toISOString().slice(0, 19)}Z`,
-      work: repository === undefined ? packages : packages.filter((entry) => listsRepository(entry, repository))
+      work:
+        repository === undefined
+          ? packages
+          : packages.filter((entry) => listsRepository(entry.repositories, repository))
     },
     packages,
+    unreadable,
     warnings
   }
 }
