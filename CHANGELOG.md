@@ -4,6 +4,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 
 ## Pre-1.0 baseline
 
+- VS Code projections removed: `ki vscode` and its `check` and `sync` subcommands have left `ki`, with the projection code behind them. chezmoi's `workspaces vscode populate` and `workspaces vscode clean` took over VS Code workspaces on 31 October 2026, so `ki vscode sync` no longer found the workspace folder it wrote to, and the trusted-folder list is now maintained by hand in the chezmoi source, which `chezmoi apply` renders for Claude Desktop, Claude Code and Codex. `ki repo open` and `ki territory open --target vscode`, which only open existing workspaces, are unchanged. The MANAGE-011, MANAGE-012, MANAGE-013 and MANAGE-018 requirements are retired and the VS Code projection guide removed. Entries below that describe `ki vscode` record its history only.
 - Standing prune (PRUNE-RECORDS a): `ki repo roadmap prune --standing` prunes, without an identifier and without asking, only the records whose `done` or `cancelled` state was first committed at least 7 days ago and whose terminal commit, with every commit of the repository the record names, has landed on the upstream default branch as last fetched. Every other terminal record stays, on a `not due` line with its reason. Acceptance still asks the owner.
 - Retired GitHub Issues adapter (REMOTE-TRACKERS a): `ki-work-github-issues` folded into `ki-work-linear`, so `[skills.ki-work].adapter = "github-issues"` is no longer supported. A repository still declaring it gets a diagnostic, exit 2, pointing to `linear` with `[skills.ki-work-linear]` or to the local `roadmap` adapter.
 - Trades removed (TRADES-DROP a): `ki repo trade` and all its subcommands, among them `routes`, `policy`, `standing`, `prepare`, `observe`, `submit`, `abandon`, `receive`, `list`, `show`, `release` and `prune`, have left `ki` with the trade code behind them, as `ki-trades` and `ki-trade` left the backpack on 22 November 2026. `ki repo roadmap list` no longer shows import and export trade context, its summary no longer counts `TRADES=`, and its `--no-icons` option, which only dropped trade badge icons, is gone. A record's `hold` takes only `reason`, `condition` and `review`, so a `hold.trades` list makes the record unreadable, and `ki repo roadmap migrate` drops `waiting_on_trades` and asks for the trade to be named in the hold condition. Git keeps the trade records; the TRADE specification area and the standing knowledge-intake guide are retired.
@@ -89,8 +90,6 @@ This baseline describes the `v0.17.0` release. Domain imports and extracted type
 - `ki mcp uninstall <owner/repository>`
 - `ki mcp list [owner/repository] [--format text|json]`
 - `ki backpack search`
-- `ki vscode check`
-- `ki vscode sync [--write]`
 
 #### User management
 

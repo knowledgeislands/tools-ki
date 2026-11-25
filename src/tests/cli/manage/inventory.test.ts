@@ -26,7 +26,6 @@ const rootHelpCommands = [
   'skill',
   'territory',
   'update',
-  'vscode',
   'work'
 ]
 const territoryCommands = ['audit', 'inspect', 'list', 'open', 'roots', 'show']
@@ -60,7 +59,6 @@ const commandNames = (output: string): string[] =>
 
 const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   mcp: ['install', 'list', 'rollback', 'uninstall', 'update'],
-  vscode: ['check', 'sync'],
   repo: repoCommands,
   'repo roadmap': ['demote', 'list', 'migrate', 'promote', 'prune', 'stats', 'summary'],
   'repo store': ['absent', 'bind', 'create', 'list', 'scan', 'unbind'],

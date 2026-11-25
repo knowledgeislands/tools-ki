@@ -118,14 +118,6 @@
         {
           "invocation": "ki mcp list [owner/repository] [--format text|json]",
           "description": "List active and retained source versions deterministically. Text marks the active version with * . JSON emits the versioned, path-free ki/mcp-sources/v1 projection with repository, tag, full commit, package version, entry point, installation time, authentication mode, and active state. Source installations live below $KI_DATA_HOME/mcp/ ; complete versions remain available until explicit uninstall."
-        },
-        {
-          "invocation": "ki vscode check",
-          "description": "Compare chezmoi-managed VS Code workspaces and trusted-folder source state with the local KI repository registry. Explicit sources bindings join their notes workspace and trusted-client projection; a bound sources folder missing on this host is left out with a warning naming its fix. Legacy bindings and unbound directories are ignored. Preview removal of folder paths that no longer resolve to directories and deletion of projects with no live folders. Existing projects outside the registry and intentionally empty workspaces are preserved. Missing registered checkouts are skipped without changing the registry. Report a source diff and exit non-zero when drift exists. This command never writes."
-        },
-        {
-          "invocation": "ki vscode sync [--write]",
-          "description": "Preview the same reconciliation. With --write , publish the reviewed changes to chezmoi source state. This command never runs chezmoi apply ."
         }
       ]
     },
@@ -251,7 +243,7 @@
         },
         {
           "invocation": "ki repo [repo-options] repair [--dry-run]",
-          "description": "Record each selected physical repository root in the local user register, then reconcile only missing, dangling, or stale KI-managed compatible projections. It never creates a declaration, adds an undeclared skill, overwrites foreign content, guesses a provider or runtime, or follows a symbolic declaration. A Knowledge Base's declared external store that is unavailable on this host is a warning naming its fix, and one marked absent is reported as information; neither fails the repair. The command writes by default. --dry-run reports the same actions without creating state directories or changing disk state. Store mutations and VS Code sync instead preview by default and require --write."
+          "description": "Record each selected physical repository root in the local user register, then reconcile only missing, dangling, or stale KI-managed compatible projections. It never creates a declaration, adds an undeclared skill, overwrites foreign content, guesses a provider or runtime, or follows a symbolic declaration. A Knowledge Base's declared external store that is unavailable on this host is a warning naming its fix, and one marked absent is reported as information; neither fails the repair. The command writes by default. --dry-run reports the same actions without creating state directories or changing disk state. Store mutations instead preview by default and require --write."
         },
         {
           "invocation": "ki repo [repo-options] skill add <skill> [--replace]",

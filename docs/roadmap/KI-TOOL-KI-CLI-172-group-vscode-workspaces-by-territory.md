@@ -5,13 +5,14 @@ title: Group VS Code workspaces
 component: manage
 priority: medium
 size: m
-status: triage
+status: cancelled
+resolution: superseded
 assignee: work/ki.tools
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-27T03:48:28Z
-updated_at: 2026-11-22T18:15:54Z
+updated_at: 2026-11-25T00:33:19Z
 ---
 
 # KI-TOOL-KI-CLI-172: Group VS Code workspaces
@@ -34,9 +35,9 @@ In: native territory grouping in source reconciliation, recursive discovery of g
 
 Out: applying chezmoi, changing editor state, registry cleanup, inventing source stores, deleting `.DS_Store`, deleting unrelated files or work records, and automatically deleting customised, external or intentionally empty workspaces without a reviewed ownership policy.
 
-## Dependencies / blocks
+## Cancelled
 
-No build-order dependencies. Planning must settle membership resolution for repositories outside the estate root, ownership evidence for pruning, preservation of custom workspaces, and the migration contract. This intake record does not authorise implementation or adoption.
+Kris approved the cancellation on 25 November 2026 when `ki vscode` was retired. The dotfiles repository, `krisb/dotfiles`, superseded it: its `bin/executable_workspaces` script, `workspaces vscode populate` and `workspaces vscode clean`, writes one workspace per repository grouped by territory under `~/workspaces/vscode/` and removes those whose repository has gone. No changes are outstanding here.
 
 ## Discussion
 

@@ -106,49 +106,23 @@ _Verify:_ `src/tests/cli/manage/completions.test.ts` — `emits loadable scripts
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
-## Local editor projections
+## Retired local editor projections
 
-### MANAGE-011 — VS Code projection diagnosis
+### MANAGE-011 — ~~VS Code projection diagnosis~~ (deprecated)
 
-`ki vscode check` MUST compare the chezmoi-managed VS Code workspace and trusted-folder source state with the local KI repository registry without writing.
+Superseded on 25 November 2026, when `ki vscode` was retired: chezmoi's `workspaces vscode populate` and `workspaces vscode clean` own VS Code workspaces, and the trusted-folder list is maintained by hand in the chezmoi source, which `chezmoi apply` renders for each client.
 
-_Conformance:_ conforming
+### MANAGE-012 — ~~Explicit VS Code projection publication~~ (deprecated)
 
-_Verify:_ `src/tests/cli/manage/vscode.test.ts` — `synchronises missing workspaces and runtime-scoped trusted folders` proves the check reports drift before the write and passes after reconciliation.
+Superseded on 25 November 2026, when `ki vscode` was retired: chezmoi's `workspaces vscode populate` and `workspaces vscode clean` own VS Code workspaces, and the trusted-folder list is maintained by hand in the chezmoi source, which `chezmoi apply` renders for each client.
 
-_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+### MANAGE-013 — ~~Typed VS Code store projection~~ (deprecated)
 
-### MANAGE-012 — Explicit VS Code projection publication
+Superseded on 25 November 2026, when `ki vscode` was retired: chezmoi's `workspaces vscode populate` and `workspaces vscode clean` own VS Code workspaces, and the trusted-folder list is maintained by hand in the chezmoi source, which `chezmoi apply` renders for each client.
 
-`ki vscode sync` MUST preview source-state drift by default and MUST publish it only when `--write` is supplied, without running `chezmoi apply`.
+### MANAGE-018 — ~~Obsolete VS Code project removal~~ (deprecated)
 
-_Conformance:_ conforming
-
-_Verify:_ `src/tests/cli/manage/vscode.test.ts` — `synchronises missing workspaces and runtime-scoped trusted folders`.
-
-_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
-
-### MANAGE-013 — Typed VS Code store projection
-
-`ki vscode check|sync` MUST consume only explicit local `sources` bindings for registered repositories, project each bound source beside its notes root with the same trusted runtime clients, and ignore `legacy` bindings and unbound filesystem directories. It MUST NOT infer associations from directory names.
-
-_Conformance:_ conforming
-
-_Verify:_ `src/tests/cli/manage/vscode.test.ts` — `consumes explicit sources bindings and ignores legacy and unbound directories` and `fails closed for unsafe workspace names, collisions, and invalid bound sources`.
-
-_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
-
-### MANAGE-018 — Obsolete VS Code project removal
-
-`ki vscode check|sync` MUST preview removal of workspace folders whose paths no longer resolve to directories and deletion of non-empty projects with no remaining live folders, applying these changes only with `sync --write` and rebuilding trusted folders from retained projects.
-
-Live folders, folder metadata, settings, custom filenames, and intentionally empty workspaces remain preserved, including projects outside the registry. Missing registered checkouts are skipped without changing registry state. A conventional project for a moved repository is regenerated for its current registered path.
-
-_Conformance:_ conforming
-
-_Verify:_ `src/tests/cli/manage/vscode.test.ts` — `previews and removes obsolete projects and missing folders while preserving live workspaces`, `replaces an obsolete conventional project when its repository moves`, `removes the last obsolete project and its trust without changing the registry`, and `validates the complete source plan before deleting obsolete projects`.
-
-_Evidence:_ The named CLI contract tests exercise preview, deletion, preservation, trust removal, registry preservation, and validation before writes through the public CLI seam as part of `bun run test:coverage`.
+Superseded on 25 November 2026, when `ki vscode` was retired: chezmoi's `workspaces vscode populate` and `workspaces vscode clean` own VS Code workspaces, and the trusted-folder list is maintained by hand in the chezmoi source, which `chezmoi apply` renders for each client.
 
 ## MCP source releases
 

@@ -99,7 +99,7 @@ ki repo store absent sources --write
 ki repo store absent sources --clear --write
 ```
 
-A bound store must be unbound before it can be marked absent, so its fix names `store unbind` before `store absent`. An absent store is reported once as information and never warned about. A missing or unavailable store only warns: `ki repo open` opens the repository without it, `ki repo repair` still passes, `ki vscode sync` leaves its folder out of the workspace, and `ki doctor` warns once per store without changing its exit status. Each warning names the fix.
+A bound store must be unbound before it can be marked absent, so its fix names `store unbind` before `store absent`. An absent store is reported once as information and never warned about. A missing or unavailable store only warns: `ki repo open` opens the repository without it, `ki repo repair` still passes, and `ki doctor` warns once per store without changing its exit status. Each warning names the fix.
 
 A folder the host refuses to read is reported as `access denied`, never as missing or empty. On macOS, privacy protection refuses a OneDrive folder to a process without Full Disk Access, which is common over SSH; the fix is to grant Full Disk Access to the terminal app, or to `sshd-keygen-wrapper` over SSH, in System Settings > Privacy & Security, or to run `ki` at the Mac's screen. Elsewhere the fix is the folder's permissions. A denied bound store is `unavailable` with that reason, `store create` and `store bind` refuse a denied folder, and a denied conventional folder is not offered as a fix. An error with a known remedy prints it on a `next:` line after the error.
 

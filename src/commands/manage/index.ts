@@ -12,7 +12,6 @@ import { createOutdatedCommand } from './outdated.ts'
 import { createRepairCommand } from './repair.ts'
 import { createSearchCommand } from './search.ts'
 import { createUpdateCommand } from './update.ts'
-import { createVscodeCommand } from './vscode.ts'
 
 export const createSupportCommands = (context: KiContext): Command[] => [
   createCleanupCommand(context),
@@ -23,8 +22,7 @@ export const createSupportCommands = (context: KiContext): Command[] => [
   createListCommand(context).name('inventory'),
   createMcpCommand(context),
   createRepairCommand(context),
-  createUpdateCommand(context),
-  createVscodeCommand(context)
+  createUpdateCommand(context)
 ]
 
 export const createBackpackStatusCommands = (context: KiContext): Command[] => [

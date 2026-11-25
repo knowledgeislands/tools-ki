@@ -1,4 +1,4 @@
-.TH KI 1 "2026-11-23" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-11-25" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -90,12 +90,6 @@ Remove one validated MCP source installation and its retained versions.
 .TP
 .B ki mcp list [owner/repository] [--format text|json]
 List active and retained MCP source versions.
-.TP
-.B ki vscode check
-Report local VS Code projection drift.
-.TP
-.B ki vscode sync [--write]
-Preview or publish local VS Code projection changes.
 .SS User management
 \&
 .TP
@@ -689,24 +683,6 @@ installation time, authentication mode, and active state. Source installations
 live below
 .BR $KI_DATA_HOME/mcp/ ;
 complete versions remain available until explicit uninstall.
-.TP
-.B ki vscode check
-Compare chezmoi-managed VS Code workspaces and trusted-folder source state with
-the local KI repository registry. Explicit sources bindings join their notes
-workspace and trusted-client projection; a bound sources folder missing on this
-host is left out with a warning naming its fix. Legacy bindings and
-unbound directories are ignored. Preview removal of folder paths that no
-longer resolve to directories and deletion of projects with no live folders.
-Existing projects outside the registry and intentionally empty workspaces are
-preserved. Missing
-registered checkouts are skipped without changing the registry. Report a source
-diff and exit non-zero when drift exists. This command never writes.
-.TP
-.B ki vscode sync [--write]
-Preview the same reconciliation. With
-.BR --write ,
-publish the reviewed changes to chezmoi source state. This command never runs
-.BR "chezmoi apply" .
 .SS User management
 \&
 .PP
@@ -1206,7 +1182,7 @@ a warning naming its fix, and one marked absent is reported as information;
 neither fails the repair.
 The command writes by default. \fB--dry-run\fR reports the same actions
 without creating state directories or changing disk state. Store mutations
-and VS Code sync instead preview by default and require \fB--write\fR.
+instead preview by default and require \fB--write\fR.
 .TP
 .B ki repo [repo-options] skill add <skill> [--replace]
 Add a registered skill in each selected repository.
